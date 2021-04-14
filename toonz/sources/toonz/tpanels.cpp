@@ -26,7 +26,9 @@
 
 #include "vectorguideddrawingpane.h"
 
-#ifdef WITH_STOPMOTION
+#include "expressionreferencemanager.h"
+
+#if defined(x64)
 #include "stopmotioncontroller.h"
 #endif
 
@@ -38,6 +40,8 @@
 #include "menubarcommandids.h"
 #include "tapp.h"
 #include "mainwindow.h"
+#include "columncommand.h"
+#include "levelcommand.h"
 
 // TnzTools includes
 #include "tools/tooloptions.h"
@@ -55,6 +59,8 @@
 #include "toonzqt/tmessageviewer.h"
 #include "toonzqt/scriptconsole.h"
 #include "toonzqt/fxsettings.h"
+#include "toonzqt/fxselection.h"
+#include "stageobjectselection.h"
 
 // TnzLib includes
 #include "toonz/palettecontroller.h"
@@ -75,6 +81,8 @@
 #include "toonz/preferences.h"
 #include "tw/stringtable.h"
 #include "toonz/toonzfolders.h"
+#include "toonz/fxcommand.h"
+#include "toonz/tstageobjectcmd.h"
 
 // TnzBase includes
 #include "trasterfx.h"
@@ -217,6 +225,45 @@ int SchematicScenePanel::getViewType() {
 
 //-----------------------------------------------------------------------------
 
+void SchematicScenePanel::onDeleteFxs(const FxSelection *selection) {
+  if (selection->isEmpty()) return;
+  std::set<int> colIndices;
+  std::set<TFx *> fxs;
+  for (auto index : selection->getColumnIndexes()) colIndices.insert(index);
+  for (auto fx : selection->getFxs()) fxs.insert(fx.getPointer());
+
+  if (!ColumnCmd::checkExpressionReferences(colIndices, fxs)) return;
+
+  TApp *app = TApp::instance();
+  TFxCommand::deleteSelection(selection->getFxs().toStdList(),
+                              selection->getLinks().toStdList(),
+                              selection->getColumnIndexes().toStdList(),
+                              app->getCurrentXsheet(), app->getCurrentFx());
+}
+
+//-----------------------------------------------------------------------------
+
+void SchematicScenePanel::onDeleteStageObjects(
+    const StageObjectSelection *selection) {
+  if (!ExpressionReferenceManager::instance()->checkReferenceDeletion(
+          selection->getObjects()))
+    return;
+
+  TApp *app = TApp::instance();
+  TStageObjectCmd::deleteSelection(
+      selection->getObjects().toVector().toStdVector(),
+      selection->getLinks().toStdList(), selection->getSplines().toStdList(),
+      app->getCurrentXsheet(), app->getCurrentObject(), app->getCurrentFx());
+}
+
+//-----------------------------------------------------------------------------
+
+void SchematicScenePanel::onColumnPaste(const QList<TXshColumnP> &columns) {
+  LevelCmd::addMissingLevelsToCast(columns);
+}
+
+//-----------------------------------------------------------------------------
+
 void SchematicScenePanel::showEvent(QShowEvent *e) {
   if (m_schematicViewer->isStageSchematicViewed())
     setWindowTitle(QObject::tr("Stage Schematic"));
@@ -232,8 +279,13 @@ void SchematicScenePanel::showEvent(QShowEvent *e) {
           SLOT(onCollapse(QList<TStageObjectId>)));
   connect(m_schematicViewer, SIGNAL(doExplodeChild(const QList<TFxP> &)), this,
           SLOT(onExplodeChild(const QList<TFxP> &)));
+  connect(m_schematicViewer, SIGNAL(doDeleteFxs(const FxSelection *)), this,
+          SLOT(onDeleteFxs(const FxSelection *)));
   connect(m_schematicViewer, SIGNAL(doExplodeChild(QList<TStageObjectId>)),
           this, SLOT(onExplodeChild(QList<TStageObjectId>)));
+  connect(m_schematicViewer,
+          SIGNAL(doDeleteStageObjects(const StageObjectSelection *)), this,
+          SLOT(onDeleteStageObjects(const StageObjectSelection *)));
   connect(m_schematicViewer, SIGNAL(editObject()), this, SLOT(onEditObject()));
   connect(app->getCurrentLevel(), SIGNAL(xshLevelChanged()), m_schematicViewer,
           SLOT(updateScenes()));
@@ -245,6 +297,8 @@ void SchematicScenePanel::showEvent(QShowEvent *e) {
           SLOT(updateSchematic()));
   connect(app->getCurrentScene(), SIGNAL(sceneSwitched()), m_schematicViewer,
           SLOT(onSceneSwitched()));
+  connect(m_schematicViewer, SIGNAL(columnPasted(const QList<TXshColumnP> &)),
+          this, SLOT(onColumnPaste(const QList<TXshColumnP> &)));
   m_schematicViewer->updateSchematic();
 }
 
@@ -274,6 +328,9 @@ void SchematicScenePanel::hideEvent(QHideEvent *e) {
              m_schematicViewer, SLOT(updateSchematic()));
   disconnect(app->getCurrentScene(), SIGNAL(sceneSwitched()), m_schematicViewer,
              SLOT(onSceneSwitched()));
+  disconnect(m_schematicViewer,
+             SIGNAL(columnPasted(const QList<TXshColumnP> &)), this,
+             SLOT(onColumnPaste(const QList<TXshColumnP> &)));
 }
 
 //=============================================================================
@@ -474,7 +531,7 @@ void PaletteViewerPanel::reset() {
 void PaletteViewerPanel::initializeTitleBar() {
   m_freezeButton = new TPanelTitleBarButton(
       getTitleBar(), getIconThemePath("actions/20/pane_freeze.svg"));
-  m_freezeButton->setToolTip("Freeze");
+  m_freezeButton->setToolTip(tr("Freeze"));
   getTitleBar()->add(QPoint(-54, 0), m_freezeButton);
   m_freezeButton->setPressed(m_isFrozen);
   connect(m_freezeButton, SIGNAL(toggled(bool)),
@@ -1308,7 +1365,6 @@ public:
     panel->setObjectName(getPanelType());
     panel->setWindowTitle(QObject::tr("Viewer"));
     panel->setMinimumSize(220, 280);
-    // panel->resize(700, 600);
     return panel;
   }
   void initialize(TPanel *panel) override { assert(0); }
@@ -1360,7 +1416,7 @@ OpenFloatingPanel openHistoryPanelCommand(MI_OpenHistoryPanel, "HistoryPanel",
                                           QObject::tr("History"));
 //=============================================================================
 
-#ifdef WITH_STOPMOTION
+#if defined(x64)
 //=============================================================================
 // StopMotion Controller
 //-----------------------------------------------------------------------------
@@ -1386,7 +1442,7 @@ OpenFloatingPanel openStopMotionPanelCommand(
     QObject::tr("Stop Motion Controller"));
 //-----------------------------------------------------------------------------
 
-#endif
+#endif  // x64
 
 //=============================================================================
 // FxSettings

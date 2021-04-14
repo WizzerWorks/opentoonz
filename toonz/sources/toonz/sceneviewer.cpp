@@ -1,5 +1,5 @@
 
-#ifdef LINUX
+#if defined(LINUX) || defined(FREEBSD)
 #define GL_GLEXT_PROTOTYPES
 #endif
 
@@ -11,7 +11,9 @@
 #include "menubarcommandids.h"
 #include "ruler.h"
 #include "locatorpopup.h"
+#if defined(x64)
 #include "../stopmotion/stopmotion.h"
+#endif
 
 // TnzTools includes
 #include "tools/cursors.h"
@@ -781,7 +783,7 @@ SceneViewer::SceneViewer(ImageUtils::FullScreenWidget *parent)
     , m_isBusyOnTabletMove(false) {
   m_visualSettings.m_sceneProperties =
       TApp::instance()->getCurrentScene()->getScene()->getProperties();
-#ifdef WITH_STOPMOTION
+#if defined(x64)
   m_stopMotion = StopMotion::instance();
 #endif
   // Enables multiple key input.
@@ -831,6 +833,9 @@ void SceneViewer::setVisual(const ImagePainter::VisualSettings &settings) {
 //-----------------------------------------------------------------------------
 
 SceneViewer::~SceneViewer() {
+  // notify FilmStripFrames and safely disconnect with this
+  emit aboutToBeDestroyed();
+
   if (m_fbo) delete m_fbo;
 
   // release all the registered context (once when exit the software)
@@ -1062,13 +1067,14 @@ void SceneViewer::showEvent(QShowEvent *) {
 
   ret = ret &&
         connect(app, SIGNAL(tabletLeft()), this, SLOT(resetTabletStatus()));
-
+#if defined(x64)
   if (m_stopMotion) {
     ret = ret && connect(m_stopMotion, SIGNAL(newLiveViewImageReady()), this,
                          SLOT(onNewStopMotionImageReady()));
     ret = ret && connect(m_stopMotion, SIGNAL(liveViewStopped()), this,
                          SLOT(onStopMotionLiveViewStopped()));
   }
+#endif
   assert(ret);
 
   if (m_hRuler && m_vRuler) {
@@ -1127,12 +1133,14 @@ void SceneViewer::hideEvent(QHideEvent *) {
 
   disconnect(app, SIGNAL(tabletLeft()), this, SLOT(resetTabletStatus()));
 
+#if defined(x64)
   if (m_stopMotion) {
     disconnect(m_stopMotion, SIGNAL(newImageReady()), this,
                SLOT(onNewStopMotionImageReady()));
     disconnect(m_stopMotion, SIGNAL(liveViewStopped()), this,
                SLOT(onStopMotionLiveViewStopped()));
   }
+#endif
 
   // hide locator
   if (m_locator && m_locator->isVisible()) m_locator->hide();
@@ -1154,47 +1162,48 @@ int SceneViewer::getHGuideCount() {
 double SceneViewer::getVGuide(int index) { return m_vRuler->getGuide(index); }
 double SceneViewer::getHGuide(int index) { return m_hRuler->getGuide(index); }
 
+#if defined(x64)
 //-----------------------------------------------------------------------------
 
 void SceneViewer::onNewStopMotionImageReady() {
-#ifdef WITH_STOPMOTION
   if (m_stopMotion->m_hasLineUpImage) {
     // if (m_hasStopMotionLineUpImage) delete m_stopMotionLineUpImage;
-    // is there a way to do this without cloning the image twice?
-    // TRasterImageP image     = m_stopMotion->m_lineUpImage->clone();
     m_stopMotionLineUpImage =
         (TRasterImageP)m_stopMotion->m_lineUpImage->clone();
-    // m_stopMotionLineUpImage = (TRasterImage *)image->cloneImage();
     m_stopMotionLineUpImage->setDpi(m_stopMotion->m_liveViewDpi.x,
                                     m_stopMotion->m_liveViewDpi.y);
     m_hasStopMotionLineUpImage = true;
   }
   if (m_stopMotion->m_hasLiveViewImage) {
     // if (m_hasStopMotionImage) delete m_stopMotionImage;
-    // is there a way to do this without cloning the image twice?
-    // TRasterImageP image = m_stopMotion->m_liveViewImage->clone();
     m_stopMotionImage = m_stopMotion->m_liveViewImage->clone();
-    // m_stopMotionImage   = (TRasterImage *)image->cloneImage();
     m_stopMotionImage->setDpi(m_stopMotion->m_liveViewDpi.x,
                               m_stopMotion->m_liveViewDpi.y);
     m_hasStopMotionImage = true;
-    if (m_stopMotion->m_pickLiveViewZoom) {
+    if (m_stopMotion->m_canon->m_pickLiveViewZoom) {
       setToolCursor(this, ToolCursor::ZoomCursor);
     }
     onSceneChanged();
   }
-#endif
 }
 
 //-----------------------------------------------------------------------------
 
-void SceneViewer::onStopMotionLiveViewStopped() { onSceneChanged(); }
+void SceneViewer::onStopMotionLiveViewStopped() {
+  m_hasStopMotionImage       = false;
+  m_hasStopMotionLineUpImage = false;
+  onSceneChanged();
+}
 
+#endif  // x64
 //-----------------------------------------------------------------------------
 
 void SceneViewer::onPreferenceChanged(const QString &prefName) {
   if (prefName == "ColorCalibration") {
     if (Preferences::instance()->isColorCalibrationEnabled()) {
+      // if the window is so shriked that the gl widget is empty,
+      // showEvent can be called before creating the context.
+      if (!context()) return;
       makeCurrent();
       if (!m_lutCalibrator)
         m_lutCalibrator = new LutCalibrator();
@@ -1233,6 +1242,8 @@ void SceneViewer::initializeGL() {
     resizeGL(width(), height());
     update();
   }
+  // re-computing the display list for the table
+  m_tableDLId = -1;
 }
 
 //-----------------------------------------------------------------------------
@@ -1621,6 +1632,41 @@ void SceneViewer::drawOverlay() {
       }
     }
 
+#ifdef WITH_CANON
+    if (m_stopMotion->m_liveViewStatus == StopMotion::LiveViewOpen &&
+        app->getCurrentFrame()->getFrame() ==
+            m_stopMotion->getXSheetFrameNumber() - 1) {
+      int x0, x1, y0, y1;
+      rect().getCoords(&x0, &y0, &x1, &y1);
+      x0 = (-(x1 / 2)) + 15;
+      y0 = ((y1 / 2)) - 15;
+      tglDrawDisk(TPointD(x0, y0), 10);
+    }
+
+    // draw Stop Motion Zoom Box
+    if (m_stopMotion->m_liveViewStatus == 2 &&
+        m_stopMotion->m_canon->m_pickLiveViewZoom) {
+      glPushMatrix();
+      tglMultMatrix(m_drawCameraAff);
+      m_pixelSize = sqrt(tglGetPixelSize2()) * getDevPixRatio();
+      TRect rect  = m_stopMotion->m_canon->m_zoomRect;
+
+      glColor3d(1.0, 0.0, 0.0);
+
+      // border
+      glBegin(GL_LINE_STRIP);
+      glVertex2d(rect.x0, rect.y0);
+      glVertex2d(rect.x0, rect.y1 - m_pixelSize);
+      glVertex2d(rect.x1 - m_pixelSize, rect.y1 - m_pixelSize);
+      glVertex2d(rect.x1 - m_pixelSize, rect.y0);
+      glVertex2d(rect.x0, rect.y0);
+      glEnd();
+
+      glPopMatrix();
+    }
+
+#endif
+
     // safe area
     if (safeAreaToggle.getStatus() && m_drawEditingLevel == false &&
         !is3DView()) {
@@ -1986,40 +2032,75 @@ void SceneViewer::drawScene() {
       args.m_osm         = &osm;
       args.m_xsheetLevel = xsheetLevel;
       args.m_isPlaying   = frameHandle->isPlaying();
-      args.m_currentFrameId =
-          app->getCurrentXsheet()
-              ->getXsheet()
-              ->getCell(app->getCurrentFrame()->getFrame(), args.m_col)
-              .getFrameId();
+      if (app->getCurrentLevel() && app->getCurrentLevel()->getLevel() &&
+          !app->getCurrentLevel()->getLevel()->getSoundLevel())
+        args.m_currentFrameId =
+            app->getCurrentXsheet()
+                ->getXsheet()
+                ->getCell(app->getCurrentFrame()->getFrame(), args.m_col)
+                .getFrameId();
       args.m_isGuidedDrawingEnabled = useGuidedDrawing;
       args.m_guidedFrontStroke      = guidedFrontStroke;
       args.m_guidedBackStroke       = guidedBackStroke;
 
+#if defined(x64)
+      if (m_stopMotion->m_alwaysUseLiveViewImages &&
+          m_stopMotion->m_liveViewStatus > 0 &&
+          frame != m_stopMotion->getXSheetFrameNumber() - 1 &&
+          m_hasStopMotionImage && !m_stopMotion->m_reviewTimer->isActive()) {
+        TRaster32P image;
+        bool hasImage = m_stopMotion->loadLiveViewImage(frame, image);
+        if (hasImage) {
+          Stage::Player smPlayer;
+          double dpiX, dpiY;
+          m_stopMotionImage->getDpi(dpiX, dpiY);
+          smPlayer.m_dpiAff    = TScale(Stage::inch / dpiX, Stage::inch / dpiY);
+          smPlayer.m_opacity   = 255;
+          smPlayer.m_sl        = m_stopMotion->m_sl;
+          args.m_liveViewImage = static_cast<TRasterImageP>(image);
+          args.m_liveViewPlayer = smPlayer;
+          // painter.onRasterImage(static_cast<TRasterImageP>(image).getPointer(),
+          //                      smPlayer);
+        }
+      }
+      if (  //! m_stopMotion->m_drawBeneathLevels &&
+          m_stopMotion->m_liveViewStatus == 2 &&
+          (  //! frameHandle->isPlaying() ||
+              frame == m_stopMotion->getXSheetFrameNumber() - 1)) {
+        if (m_hasStopMotionLineUpImage && m_stopMotion->m_showLineUpImage) {
+          Stage::Player smPlayer;
+          double dpiX, dpiY;
+          m_stopMotionLineUpImage->getDpi(dpiX, dpiY);
+          smPlayer.m_dpiAff   = TScale(Stage::inch / dpiX, Stage::inch / dpiY);
+          smPlayer.m_opacity  = 255;
+          smPlayer.m_sl       = m_stopMotion->m_sl;
+          args.m_lineupImage  = m_stopMotionLineUpImage;
+          args.m_lineupPlayer = smPlayer;
+          // painter.onRasterImage(m_stopMotionLineUpImage.getPointer(),
+          // smPlayer);
+        }
+        if (m_hasStopMotionImage) {
+          Stage::Player smPlayer;
+          double dpiX, dpiY;
+          m_stopMotionImage->getDpi(dpiX, dpiY);
+          smPlayer.m_dpiAff = TScale(Stage::inch / dpiX, Stage::inch / dpiY);
+          bool hide_opacity = false;
+#ifdef WITH_CANON
+          hide_opacity = m_stopMotion->m_canon->m_zooming ||
+                         m_stopMotion->m_canon->m_pickLiveViewZoom ||
+                         !m_hasStopMotionLineUpImage;
+#endif
+          smPlayer.m_opacity =
+              hide_opacity ? 255.0 : m_stopMotion->getOpacity();
+          smPlayer.m_sl         = m_stopMotion->m_sl;
+          args.m_liveViewImage  = m_stopMotionImage;
+          args.m_liveViewPlayer = smPlayer;
+          // painter.onRasterImage(m_stopMotionImage.getPointer(), smPlayer);
+        }
+      }
+#endif  // x64
       Stage::visit(painter, args);
     }
-
-#ifdef WITH_STOPMOTION
-    if (!frameHandle->isPlaying() && m_stopMotion->m_liveViewStatus == 2) {
-      if (m_hasStopMotionLineUpImage && m_stopMotion->m_showLineUpImage) {
-        Stage::Player smPlayer;
-        double dpiX, dpiY;
-        m_stopMotionLineUpImage->getDpi(dpiX, dpiY);
-        smPlayer.m_dpiAff  = TScale(Stage::inch / dpiX, Stage::inch / dpiY);
-        smPlayer.m_opacity = 255;
-        painter.onRasterImage(m_stopMotionLineUpImage.getPointer(), smPlayer);
-      }
-      if (m_hasStopMotionImage) {
-        Stage::Player smPlayer;
-        double dpiX, dpiY;
-        m_stopMotionImage->getDpi(dpiX, dpiY);
-        smPlayer.m_dpiAff = TScale(Stage::inch / dpiX, Stage::inch / dpiY);
-        bool hide_opacity =
-            m_stopMotion->m_zooming || m_stopMotion->m_pickLiveViewZoom;
-        smPlayer.m_opacity = hide_opacity ? 255.0 : m_stopMotion->getOpacity();
-        painter.onRasterImage(m_stopMotionImage.getPointer(), smPlayer);
-      }
-    }
-#endif
 
     assert(glGetError() == 0);
     painter.flushRasterImages();
@@ -2925,8 +3006,9 @@ void SceneViewer::posToColumnIndexes(const TPointD &p,
   OnionSkinMask osm      = app->getCurrentOnionSkin()->getOnionSkinMask();
 
   TPointD pos = TPointD(p.x - width() / 2, p.y - height() / 2);
-  Stage::Picker picker(getViewMatrix(), pos, m_visualSettings);
-  picker.setDistance(distance);
+  Stage::Picker picker(getViewMatrix(), pos, m_visualSettings,
+                       getDevPixRatio());
+  picker.setMinimumDistance(distance);
 
   TXshSimpleLevel::m_rasterizePli = 0;
 
@@ -2964,8 +3046,9 @@ int SceneViewer::posToRow(const TPointD &p, double distance,
   OnionSkinMask osm   = app->getCurrentOnionSkin()->getOnionSkinMask();
 
   TPointD pos = TPointD(p.x - width() / 2, p.y - height() / 2);
-  Stage::Picker picker(getViewMatrix(), pos, m_visualSettings);
-  picker.setDistance(distance);
+  Stage::Picker picker(getViewMatrix(), pos, m_visualSettings,
+                       getDevPixRatio());
+  picker.setMinimumDistance(distance);
 
   if (app->getCurrentFrame()->isEditingLevel()) {
     Stage::visit(picker, app->getCurrentLevel()->getLevel(),
@@ -3191,6 +3274,8 @@ void SceneViewer::onContextAboutToBeDestroyed() {
   makeCurrent();
   m_lutCalibrator->cleanup();
   doneCurrent();
+  disconnect(context(), SIGNAL(aboutToBeDestroyed()), this,
+             SLOT(onContextAboutToBeDestroyed()));
 }
 
 //-----------------------------------------------------------------------------

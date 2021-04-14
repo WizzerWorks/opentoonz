@@ -13,11 +13,14 @@ Building OpenToonz from source requires the following dependencies:
 - Lzo2
 - FreeType
 - LibMyPaint (1.3 or newer)
+- Jpeg-Turbo (1.4 or newer)
+- OpenCV 3.2 or newer
 
 ### Installing Dependencies on Debian / Ubuntu
 
 ```
-$ sudo apt-get install build-essential git cmake pkg-config libboost-all-dev qt5-default qtbase5-dev libqt5svg5-dev qtscript5-dev qttools5-dev qttools5-dev-tools libqt5opengl5-dev qtmultimedia5-dev libsuperlu-dev liblz4-dev libusb-1.0-0-dev liblzo2-dev libpng-dev libjpeg-dev libglew-dev freeglut3-dev libfreetype6-dev libjson-c-dev qtwayland5 libqt5multimedia5-plugins
+$sudo apt-get install build-essential git cmake pkg-config libboost-all-dev qt5-default qtbase5-dev libqt5svg5-dev qtscript5-dev qttools5-dev qttools5-dev-tools libqt5opengl5-dev qtmultimedia5-dev libqt5multimedia5-plugins libqt5serialport5-dev libsuperlu-dev 
+liblz4-dev libusb-1.0-0-dev liblzo2-dev libpng-dev libjpeg-dev libglew-dev freeglut3-dev libfreetype6-dev libjson-c-dev qtwayland5 libmypaint-dev libopencv-dev libturbojpeg-dev
 ```
 
 For newest versions of OS you may install libmypaint from repository and don't need to build it from source:
@@ -28,6 +31,8 @@ $ sudo apt-get install libmypaint-dev
 
 Notes:
 * It's possible we also need `libgsl2` (or maybe `libopenblas-dev`)
+* We may also need `libegl1-mesa-dev libgles2-mesa-dev libglib2.0-dev liblzma-dev`
+* For Qt, MyPaint and OpenCV, you can alternatively build and install from source.
 
 ### Installing Dependencies on Fedora
 (it may include some useless packages)
@@ -108,27 +113,6 @@ $ cp -r opentoonz/stuff $HOME/.config/OpenToonz/
 ```
 
 *Currently this is required to run OpenToonz.*
-
-### Creating SystemVar.ini
-
-TODO: fix the code to discover it automatically
-
-```
-$ cat << EOF > $HOME/.config/OpenToonz/SystemVar.ini
-[General]
-OPENTOONZROOT="$HOME/.config/OpenToonz/stuff"
-OpenToonzPROFILES="$HOME/.config/OpenToonz/stuff/profiles"
-TOONZCACHEROOT="$HOME/.config/OpenToonz/stuff/cache"
-TOONZCONFIG="$HOME/.config/OpenToonz/stuff/config"
-TOONZFXPRESETS="$HOME/.config/OpenToonz/stuff/fxs"
-TOONZLIBRARY="$HOME/.config/OpenToonz/stuff/library"
-TOONZPROFILES="$HOME/.config/OpenToonz/stuff/profiles"
-TOONZPROJECTS="$HOME/.config/OpenToonz/stuff/projects"
-TOONZROOT="$HOME/.config/OpenToonz/stuff"
-TOONZSTUDIOPALETTE="$HOME/.config/OpenToonz/stuff/studiopalette"
-EOF
-```
-Note the generated file must not actually contain `$HOME`, this expands to an absolute path in the generated file.
 
 ### Building LibTIFF
 

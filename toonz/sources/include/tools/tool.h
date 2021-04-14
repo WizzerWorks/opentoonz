@@ -446,8 +446,8 @@ return true if the method execution can have changed the current tool
   int getFrame();        //!< Returns the actual frame in use.
   int getColumnIndex();  //!< Returns the actual column index.
 
-  TStageObjectId
-  getObjectId();  //!< Returns a pointer to the actual stage object.
+  TStageObjectId getObjectId()
+      const;  //!< Returns a pointer to the actual stage object.
 
   void notifyImageChanged();  //!< Notifies changes on the actual image; used to
                               //! update
@@ -466,8 +466,9 @@ return true if the method execution can have changed the current tool
   const TAffine &getMatrix() const { return m_matrix; }
   void setMatrix(const TAffine &matrix) { m_matrix = matrix; }
 
-  TAffine getCurrentColumnMatrix()
+  TAffine getCurrentColumnMatrix(int frame = -1)
       const;  //!< Returns the current column matrix transformation.
+              //!  if frame = -1 then it uses the current frame
               //!  \sa  TXsheet::getPlacement.
 
   TAffine getCurrentColumnParentMatrix()
@@ -480,9 +481,10 @@ return true if the method execution can have changed the current tool
           Returns the matrix transformation of the stage object with column
   index equal to \p index
           and frame as the current frame.
+          if frame = -1 then it uses the current frame
   \sa TXsheet::getPlacement.
   */
-  TAffine getColumnMatrix(int index) const;
+  TAffine getColumnMatrix(int index, int frame = -1) const;
 
   /*!
    Updates the current matrix transformation with the actual column matrix
@@ -503,7 +505,7 @@ transformation.
 
   QString updateEnabled();  //!< Sets the tool's \a enability and returns a
                             //!  reason in case the tool was disabled.
-  QString updateEnabled(int rowIndex, int columnIndex);
+  virtual QString updateEnabled(int rowIndex, int columnIndex);
 
   bool isColumnLocked(int columnIndex) const;
 

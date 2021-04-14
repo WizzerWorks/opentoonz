@@ -816,8 +816,8 @@
   
  <!------------------------------ Function Editor ------------------------------------------->
  
-  <item>W_NS		"N/S"		</item>
-  <item>W_EW		"E/W"		</item>
+  <item>W_Y		"Y"		</item>
+  <item>W_X		"X"		</item>
   <item>W_Z		"Z"		</item>
   <item>W_SO		"SO"		</item>
   <item>W_Rotation	"Rotation"	</item>
@@ -1310,9 +1310,16 @@
 
   <item>"STD_iwa_GlareFx" 			"Glare Iwa" 	</item>
   <item>"STD_iwa_GlareFx.renderMode"	"Render Mode"		</item>
+  <item>"STD_iwa_GlareFx.irisMode"	"Iris Shape"		</item>
+  <item>"STD_iwa_GlareFx.irisScale"	"Iris Scale"		</item>
+  <item>"STD_iwa_GlareFx.irisGearEdgeCount"	"Edges"		</item>
+  <item>"STD_iwa_GlareFx.irisRandomSeed"	"Random Seed"		</item>
+  <item>"STD_iwa_GlareFx.irisSymmetry"	"Symmetry"		</item>
+  <item>"STD_iwa_GlareFx.irisAppearance"	"Appearance"		</item>
   <item>"STD_iwa_GlareFx.intensity"	"Intensity"		</item>
   <item>"STD_iwa_GlareFx.size"	"Filter Size"		</item>
   <item>"STD_iwa_GlareFx.rotation"	"Filter Rotation"		</item>
+  <item>"STD_iwa_GlareFx.aberration"	"Chromatic Aberration"		</item>
   <item>"STD_iwa_GlareFx.noise_factor"	"Noise Factor"		</item>
   <item>"STD_iwa_GlareFx.noise_size"	"Noise Size"		</item>
   <item>"STD_iwa_GlareFx.noise_octave"	"Noise Octave"		</item>
@@ -1341,6 +1348,12 @@
   <item>"STD_iwa_FractalNoiseFx.dynamicIntensity"	"Dynamic Intensity"	</item>
   <item>"STD_iwa_FractalNoiseFx.alphaRendering"	"Alpha Rendering"	</item>
   
+  <item>"STD_iwa_BloomFx" 			"Bloom Iwa" 	</item>
+  <item>"STD_iwa_BloomFx.gamma"	"Gamma"		</item>
+  <item>"STD_iwa_BloomFx.gain"	"Gain"		</item>
+  <item>"STD_iwa_BloomFx.size"	"Size"		</item>
+  <item>"STD_iwa_BloomFx.alpha_rendering"	"Alpha Rendering"		</item>
+
  <!------------------------------ Tiled Particles Iwa ------------------------------------------->
 
   <item>STD_iwa_TiledParticlesFx "Tiled Particles Iwa" </item>

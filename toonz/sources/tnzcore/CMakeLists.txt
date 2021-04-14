@@ -258,14 +258,16 @@ elseif(BUILD_TARGET_UNIX)
     )
 endif()
 
-add_translation(tnzcore ${HEADERS} ${SOURCES})
+if(WITH_TRANSLATION)
+    add_translation(tnzcore ${HEADERS} ${SOURCES})
+endif()
 
 qt5_wrap_cpp(SOURCES ${MOC_HEADERS})
 
 add_library(tnzcore SHARED ${HEADERS} ${SOURCES})
 
 if(BUILD_ENV_APPLE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-install_name,@rpath/libtnzcore.dylib")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-install_name,@executable_path/libtnzcore.dylib")
 endif()
 
 add_definitions(
@@ -352,7 +354,7 @@ elseif(BUILD_ENV_UNIXLIKE)
 endif()
 
 target_link_libraries(tnzcore
-    Qt5::OpenGL Qt5::Network Qt5::Multimedia
+    Qt5::Core Qt5::OpenGL Qt5::Network Qt5::Multimedia
     ${GL_LIB} ${GLUT_LIB} ${QT_LIB} ${Z_LIB} ${JPEG_LIB} ${LZ4_LIB}
     ${EXTRA_LIBS}
 )

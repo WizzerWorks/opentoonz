@@ -340,6 +340,9 @@ public:
   bool useCtrlAltToResizeBrushEnabled() const {
     return getBoolValue(useCtrlAltToResizeBrush);
   }
+  int getTempToolSwitchTimer() const {
+    return getIntValue(tempToolSwitchTimer);
+  }
 
   // Xsheet  tab
   QString getXsheetLayoutPreference() const {
@@ -395,6 +398,9 @@ public:
   // Animation  tab
   int getKeyframeType() const { return getIntValue(keyframeType); }
   int getAnimationStep() const { return getIntValue(animationStep); }
+  bool isModifyExpressionOnMovingReferencesEnabled() const {
+    return getBoolValue(modifyExpressionOnMovingReferences);
+  }
 
   // Preview  tab
   void getBlankValues(int &bCount, TPixel32 &bColor) const {
@@ -463,6 +469,9 @@ public:
 
   // Tablet tab
   bool isWinInkEnabled() const { return getBoolValue(winInkEnabled); }
+  bool isQtNativeWinInkEnabled() const {
+    return getBoolValue(useQtNativeWinInk);
+  }
 
   // Others (not appeared in the popup)
   // Shortcut popup settings

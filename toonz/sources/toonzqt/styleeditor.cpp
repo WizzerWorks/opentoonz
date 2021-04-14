@@ -596,6 +596,15 @@ void HexagonalColorWheel::updateColorCalibration() {
 
 //-----------------------------------------------------------------------------
 
+void HexagonalColorWheel::showEvent(QShowEvent *) {
+  if (m_cuedCalibrationUpdate) {
+    updateColorCalibration();
+    m_cuedCalibrationUpdate = false;
+  }
+}
+
+//-----------------------------------------------------------------------------
+
 void HexagonalColorWheel::initializeGL() {
   initializeOpenGLFunctions();
 
@@ -891,6 +900,8 @@ void HexagonalColorWheel::onContextAboutToBeDestroyed() {
   makeCurrent();
   m_lutCalibrator->cleanup();
   doneCurrent();
+  disconnect(context(), SIGNAL(aboutToBeDestroyed()), this,
+             SLOT(onContextAboutToBeDestroyed()));
 }
 
 //*****************************************************************************
@@ -1417,7 +1428,9 @@ ColorParameterSelector::ColorParameterSelector(QWidget *parent)
     , m_index(-1)
     , m_chipSize(21, 21)
     , m_chipOrigin(0, 1)
-    , m_chipDelta(21, 0) {}
+    , m_chipDelta(21, 0) {
+  setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
+}
 
 //-----------------------------------------------------------------------------
 
@@ -1481,6 +1494,14 @@ void ColorParameterSelector::mousePressEvent(QMouseEvent *event) {
     emit colorParamChanged();
     update();
   }
+}
+
+//-----------------------------------------------------------------------------
+
+QSize ColorParameterSelector::sizeHint() const {
+  return QSize(m_chipOrigin.x() + (m_colors.size() - 1) * m_chipDelta.x() +
+                   m_chipSize.width(),
+               m_chipOrigin.y() + m_chipSize.height());
 }
 
 //*****************************************************************************
@@ -1716,7 +1737,10 @@ void PlainColorPage::setSplitterState(QByteArray state) {
 //-----------------------------------------------------------------------------
 
 void PlainColorPage::updateColorCalibration() {
-  m_hexagonalColorWheel->updateColorCalibration();
+  if (m_hexagonalColorWheel->isVisible())
+    m_hexagonalColorWheel->updateColorCalibration();
+  else
+    m_hexagonalColorWheel->cueCalibrationUpdate();
 }
 
 //-----------------------------------------------------------------------------
@@ -2984,9 +3008,6 @@ StyleEditor::StyleEditor(PaletteController *paletteController, QWidget *parent)
   m_toolBar->setMaximumHeight(22);
   m_toolBar->addWidget(m_colorParameterSelector);
 
-  m_colorParameterSelector->setMinimumWidth(200);
-  m_colorParameterSelector->setFixedHeight(22);
-
   QMenu *menu   = new QMenu();
   m_wheelAction = new QAction(tr("Wheel"), this);
   m_hsvAction   = new QAction(tr("HSV"), this);
@@ -3271,6 +3292,8 @@ void StyleEditor::showEvent(QShowEvent *) {
                        SLOT(onStyleChanged(bool)));
   ret      = ret && connect(m_paletteHandle, SIGNAL(paletteSwitched()), this,
                        SLOT(onStyleSwitched()));
+  ret = ret && connect(m_paletteController, SIGNAL(checkPaletteLock()), this,
+                       SLOT(checkPaletteLock()));
   if (m_cleanupPaletteHandle)
     ret =
         ret && connect(m_cleanupPaletteHandle, SIGNAL(colorStyleChanged(bool)),
@@ -3480,8 +3503,8 @@ void StyleEditor::onColorChanged(const ColorModel &color, bool isDragging) {
 
     m_newColor->setStyle(*m_editedStyle);
     m_colorParameterSelector->setStyle(*m_editedStyle);
-
-    if (m_autoButton->isChecked()) {
+    // Auto Button should be disabled with locked palette
+    if (m_autoButton->isEnabled() && m_autoButton->isChecked()) {
       copyEditedStyleToPalette(isDragging);
     }
   }
@@ -3513,13 +3536,23 @@ void StyleEditor::enable(bool enabled, bool enabledOnlyFirstTab,
     // when the palette is locked
     if (palette->isLocked()) {
       m_applyButton->setEnabled(false);
-      m_autoButton->setChecked(false);
       m_autoButton->setEnabled(false);
     } else  // when the palette is unlocked
     {
       m_applyButton->setDisabled(m_autoButton->isChecked());
       m_autoButton->setEnabled(true);
     }
+  }
+}
+//-----------------------------------------------------------------------------
+
+void StyleEditor::checkPaletteLock() {
+  if (getPalette() && getPalette()->isLocked()) {
+    m_applyButton->setEnabled(false);
+    m_autoButton->setEnabled(false);
+  } else {
+    m_applyButton->setDisabled(m_autoButton->isChecked());
+    m_autoButton->setEnabled(true);
   }
 }
 

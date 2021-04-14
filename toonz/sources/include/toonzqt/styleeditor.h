@@ -152,7 +152,8 @@ class DVAPI HexagonalColorWheel final : public GLWidgetForHighDpi {
   QOpenGLFramebufferObject *m_fbo = NULL;
   LutCalibrator *m_lutCalibrator  = NULL;
 
-  bool m_firstInitialized = true;
+  bool m_firstInitialized      = true;
+  bool m_cuedCalibrationUpdate = false;
 
 private:
   void drawCurrentColorMark();
@@ -169,6 +170,7 @@ public:
   QColor getBGColor() const { return m_bgColor; }
 
   void updateColorCalibration();
+  void cueCalibrationUpdate() { m_cuedCalibrationUpdate = true; }
 
 protected:
   void initializeGL() override;
@@ -180,6 +182,7 @@ protected:
   void mouseMoveEvent(QMouseEvent *event) override;
   void mouseReleaseEvent(QMouseEvent *event) override;
 
+  void showEvent(QShowEvent *) override;
 signals:
   void colorChanged(const ColorModel &color, bool isDragging);
 
@@ -431,6 +434,8 @@ signals:
 protected:
   void paintEvent(QPaintEvent *) override;
   void mousePressEvent(QMouseEvent *) override;
+
+  QSize sizeHint() const override;
 };
 
 //=============================================================================
@@ -724,6 +729,7 @@ protected slots:
   void onCleanupStyleChanged(bool isDragging);
   void onOldStyleClicked(const TColorStyle &);
   void updateOrientationButton();
+  void checkPaletteLock();
   // called (e.g.) by PaletteController when an other StyleEditor change the
   // toggle
   void enableColorAutoApply(bool enabled);

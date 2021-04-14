@@ -12,11 +12,11 @@
         <translation>이동:</translation>
     </message>
     <message>
-        <source>E/W:</source>
+        <source>X:</source>
         <translation></translation>
     </message>
     <message>
-        <source>N/S:</source>
+        <source>Y:</source>
         <translation></translation>
     </message>
     <message>
@@ -208,6 +208,34 @@
         <source>Auto Select Drawing</source>
         <translation>자동 그리기 선택</translation>
     </message>
+    <message>
+        <source>Snap</source>
+        <translation>스냅</translation>
+    </message>
+    <message>
+        <source>Type:</source>
+        <translation>유형:</translation>
+    </message>
+    <message>
+        <source>Rectangular</source>
+        <translation>직사각형</translation>
+    </message>
+    <message>
+        <source>Freehand</source>
+        <translation>올가미</translation>
+    </message>
+    <message>
+        <source>Low</source>
+        <translation>낮은</translation>
+    </message>
+    <message>
+        <source>Med</source>
+        <translation>중간</translation>
+    </message>
+    <message>
+        <source>High</source>
+        <translation>높은</translation>
+    </message>
 </context>
 <context>
     <name>ControlPointSelection</name>
@@ -262,19 +290,19 @@
         <translation>글로벌 키</translation>
     </message>
     <message>
-        <source>Lock Center E/W</source>
+        <source>Lock Center X</source>
         <translation>중심점 좌우 잠금</translation>
     </message>
     <message>
-        <source>Lock Center N/S</source>
+        <source>Lock Center Y</source>
         <translation>중심점 위아래 잠금</translation>
     </message>
     <message>
-        <source>Lock Position E/W</source>
+        <source>Lock Position X</source>
         <translation>위치 좌우 잠금</translation>
     </message>
     <message>
-        <source>Lock Position N/S</source>
+        <source>Lock Position Y</source>
         <translation>위치 위아래 잠금</translation>
     </message>
     <message>
@@ -302,7 +330,7 @@
         <translation>잠금 확대/축소(전체)</translation>
     </message>
     <message>
-        <source>E/W and N/S Positions</source>
+        <source>X and Y Positions</source>
         <translation>좌우/상하 위치</translation>
     </message>
     <message>
@@ -390,7 +418,7 @@
     </message>
     <message>
         <source>Polyline</source>
-        <translation>다각형</translation>
+        <translation>폴리선</translation>
     </message>
     <message>
         <source>Hardness:</source>
@@ -415,6 +443,26 @@
     <message>
         <source>Pencil Mode</source>
         <translation>연필 모드</translation>
+    </message>
+    <message>
+        <source>Segment</source>
+        <translation>세그먼트</translation>
+    </message>
+    <message>
+        <source>Linear</source>
+        <translation>선형</translation>
+    </message>
+    <message>
+        <source>Ease In</source>
+        <translation>가속</translation>
+    </message>
+    <message>
+        <source>Ease Out</source>
+        <translation>감속</translation>
+    </message>
+    <message>
+        <source>Ease In/Out</source>
+        <translation>가속/감속</translation>
     </message>
 </context>
 <context>
@@ -441,7 +489,7 @@
     </message>
     <message>
         <source>Polyline</source>
-        <translation>다각형</translation>
+        <translation>폴리선</translation>
     </message>
     <message>
         <source>Selective</source>
@@ -562,7 +610,7 @@
     </message>
     <message>
         <source>Polyline</source>
-        <translation>다각형</translation>
+        <translation>올가미</translation>
     </message>
     <message>
         <source>Invert</source>
@@ -833,7 +881,7 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>Polyline</source>
-        <translation>다각형</translation>
+        <translation>폴리선</translation>
     </message>
     <message>
         <source>Arc</source>
@@ -930,6 +978,14 @@ Do you want to proceed?</source>
     <message>
         <source>High</source>
         <translation>높은</translation>
+    </message>
+    <message>
+        <source>MultiArc</source>
+        <translation>멀티아크</translation>
+    </message>
+    <message>
+        <source>Smooth</source>
+        <translation>부드러운</translation>
     </message>
 </context>
 <context>
@@ -1129,6 +1185,10 @@ Do you want to proceed?</source>
         <source>The selection cannot be moved. It is not editable.</source>
         <translation>선택을 이동할 수 없습니다. 편집 할 수 없습니다.</translation>
     </message>
+    <message>
+        <source>Snap At Intersection</source>
+        <translation>교차점에서 스냅</translation>
+    </message>
 </context>
 <context>
     <name>RGBPickerTool</name>
@@ -1150,7 +1210,7 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>Polyline</source>
-        <translation>다각형</translation>
+        <translation>폴리선</translation>
     </message>
     <message>
         <source>Passive Pick</source>
@@ -1199,7 +1259,7 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>Polyline</source>
-        <translation>다각형</translation>
+        <translation>폴리선</translation>
     </message>
     <message>
         <source>Distance:</source>
@@ -1307,11 +1367,11 @@ Do you want to proceed?</source>
         <translation>회전</translation>
     </message>
     <message>
-        <source>E/W:</source>
+        <source>X:</source>
         <translation></translation>
     </message>
     <message>
-        <source>N/S:</source>
+        <source>Y:</source>
         <translation></translation>
     </message>
     <message>
@@ -1704,6 +1764,10 @@ moved to the end of the first page of the palette.</source>
     <message>
         <source>Miter:</source>
         <translation>마이터:</translation>
+    </message>
+    <message>
+        <source>Include Intersection</source>
+        <translation>인터페이스 포함</translation>
     </message>
 </context>
 <context>

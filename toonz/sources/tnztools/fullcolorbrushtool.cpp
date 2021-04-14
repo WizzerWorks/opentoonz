@@ -19,6 +19,7 @@
 #include "toonz/txsheethandle.h"
 #include "toonz/txshlevelhandle.h"
 #include "toonz/tobjecthandle.h"
+#include "toonz/tframehandle.h"
 #include "toonz/ttileset.h"
 #include "toonz/ttilesaver.h"
 #include "toonz/strokegenerator.h"
@@ -203,7 +204,9 @@ void FullColorBrushTool::onActivate() {
         QString::fromStdString(FullcolorBrushPreset.getValue()).toStdWString();
     if (wpreset != CUSTOM_WSTR) {
       initPresets();
+      if (!m_preset.isValue(wpreset)) wpreset = CUSTOM_WSTR;
       m_preset.setValue(wpreset);
+      FullcolorBrushPreset = m_preset.getValueAsString();
       loadPreset();
     } else
       loadLastBrush();
@@ -287,7 +290,13 @@ bool FullColorBrushTool::askWrite(const TRect &rect) {
 bool FullColorBrushTool::preLeftButtonDown() {
   touchImage();
 
-  if (m_isFrameCreated) setWorkAndBackupImages();
+  if (m_isFrameCreated) {
+    setWorkAndBackupImages();
+    // When the xsheet frame is selected, whole viewer will be updated from
+    // SceneViewer::onXsheetChanged() on adding a new frame.
+    // We need to take care of a case when the level frame is selected.
+    if (m_application->getCurrentFrame()->isEditingLevel()) invalidate();
+  }
 
   return true;
 }
@@ -580,12 +589,12 @@ void FullColorBrushTool::setWorkAndBackupImages() {
   TRasterP ras   = ri->getRaster();
   TDimension dim = ras->getSize();
 
-  if (!m_workRaster || m_workRaster->getLx() > dim.lx ||
-      m_workRaster->getLy() > dim.ly)
+  if (!m_workRaster || m_workRaster->getLx() != dim.lx ||
+      m_workRaster->getLy() != dim.ly)
     m_workRaster = TRaster32P(dim);
 
-  if (!m_backUpRas || m_backUpRas->getLx() > dim.lx ||
-      m_backUpRas->getLy() > dim.ly ||
+  if (!m_backUpRas || m_backUpRas->getLx() != dim.lx ||
+      m_backUpRas->getLy() != dim.ly ||
       m_backUpRas->getPixelSize() != ras->getPixelSize())
     m_backUpRas = ras->create(dim.lx, dim.ly);
 
@@ -707,6 +716,7 @@ void FullColorBrushTool::addPreset(QString name) {
 
   // Set the value to the specified one
   m_preset.setValue(preset.m_name);
+  FullcolorBrushPreset = m_preset.getValueAsString();
 }
 
 //------------------------------------------------------------------
@@ -720,6 +730,7 @@ void FullColorBrushTool::removePreset() {
 
   // No parameter change, and set the preset value to custom
   m_preset.setValue(CUSTOM_WSTR);
+  FullcolorBrushPreset = m_preset.getValueAsString();
 }
 
 //------------------------------------------------------------------

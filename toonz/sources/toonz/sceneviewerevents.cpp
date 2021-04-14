@@ -16,8 +16,9 @@
 #include "comboviewerpane.h"
 #include "locatorpopup.h"
 #include "cellselection.h"
+#include "styleshortcutswitchablepanel.h"
 
-#ifdef WITH_STOPMOTION
+#if defined(x64)
 #include "stopmotion.h"
 #endif
 
@@ -75,7 +76,7 @@ namespace {
 
 void initToonzEvent(TMouseEvent &toonzEvent, QMouseEvent *event,
                     int widgetHeight, double pressure, int devPixRatio) {
-  toonzEvent.m_pos = TPointD(event->pos().x() * devPixRatio,
+  toonzEvent.m_pos      = TPointD(event->pos().x() * devPixRatio,
                              widgetHeight - 1 - event->pos().y() * devPixRatio);
   toonzEvent.m_mousePos = event->pos();
   toonzEvent.m_pressure = 1.0;
@@ -309,7 +310,7 @@ void SceneViewer::tabletEvent(QTabletEvent *e) {
       m_tabletEvent = false;
 #endif
 
-#ifdef LINUX
+#if defined(LINUX) || defined(FREEBSD)
     // for Linux, create context menu on right click here.
     // could possibly merge with OSX code above
     if (e->button() == Qt::RightButton) {
@@ -356,6 +357,13 @@ void SceneViewer::tabletEvent(QTabletEvent *e) {
     }
 #endif
     QPointF curPos = e->posF() * getDevPixRatio();
+#if defined(_WIN32) && QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+    // Use the application attribute Qt::AA_CompressTabletEvents instead of the
+    // delay timer
+    if (curPos != m_lastMousePos) {
+      TMouseEvent mouseEvent;
+      initToonzEvent(mouseEvent, e, height(), m_pressure, getDevPixRatio());
+#else
     // It seems that the tabletEvent is called more often than mouseMoveEvent.
     // So I fire the interval timer in order to limit the following process
     // to be called in 50fps in maximum.
@@ -364,6 +372,8 @@ void SceneViewer::tabletEvent(QTabletEvent *e) {
       TMouseEvent mouseEvent;
       initToonzEvent(mouseEvent, e, height(), m_pressure, getDevPixRatio());
       QTimer::singleShot(20, this, SLOT(releaseBusyOnTabletMove()));
+#endif
+
       // cancel stroke to prevent drawing while floating
       // 23/1/2018 There is a case that the pressure becomes zero at the start
       // and the end of stroke. For such case, stroke should not be cancelled.
@@ -505,7 +515,7 @@ void SceneViewer::onMove(const TMouseEvent &event) {
       cursorSet = true;
       setToolCursor(this, ToolCursor::ScaleHCursor);
     } else if (std::abs((height() - curPos.y()) -
-                         height() * m_compareSettings.m_compareY) < 20) {
+                        height() * m_compareSettings.m_compareY) < 20) {
       cursorSet = true;
       setToolCursor(this, ToolCursor::ScaleVCursor);
     }
@@ -574,6 +584,15 @@ void SceneViewer::onMove(const TMouseEvent &event) {
     TPointD worldPos = winToWorld(curPos);
     TPointD pos      = tool->getMatrix().inv() * worldPos;
 
+#ifdef WITH_CANON
+    // grab screen picking for stop motion live view zoom
+    if ((event.buttons() & Qt::LeftButton) &&
+        StopMotion::instance()->m_canon->m_pickLiveViewZoom) {
+      StopMotion::instance()->m_canon->makeZoomPoint(pos);
+      return;
+    }
+#endif
+
     if (m_locator) {
       m_locator->onChangeViewAff(worldPos);
     }
@@ -610,8 +629,8 @@ void SceneViewer::onMove(const TMouseEvent &event) {
     }
     if (!cursorSet) setToolCursor(this, tool->getCursorId());
 
-#ifdef WITH_STOPMOTION
-    if (StopMotion::instance()->m_pickLiveViewZoom)
+#ifdef WITH_CANON
+    if (StopMotion::instance()->m_canon->m_pickLiveViewZoom)
       setToolCursor(this, ToolCursor::ZoomCursor);
 #endif
     m_pos          = curPos;
@@ -714,7 +733,7 @@ void SceneViewer::onPress(const TMouseEvent &event) {
       m_tabletState = None;
       return;
     } else if (std::abs((height() - m_pos.y()) -
-                         height() * m_compareSettings.m_compareY) < 20) {
+                        height() * m_compareSettings.m_compareY) < 20) {
       m_compareSettings.m_dragCompareY = true;
       m_compareSettings.m_dragCompareX = false;
       m_compareSettings.m_compareX     = ImagePainter::DefaultCompareValue;
@@ -756,13 +775,11 @@ void SceneViewer::onPress(const TMouseEvent &event) {
     pos.y /= m_dpiScale.y;
   }
 
-#ifdef WITH_STOPMOTION
+#ifdef WITH_CANON
   // grab screen picking for stop motion live view zoom
-  if (StopMotion::instance()->m_pickLiveViewZoom) {
-    StopMotion::instance()->m_pickLiveViewZoom = false;
-    StopMotion::instance()->makeZoomPoint(pos);
-    if (tool) setToolCursor(this, tool->getCursorId());
-    if (m_mouseButton != Qt::RightButton) return;
+  if (StopMotion::instance()->m_canon->m_pickLiveViewZoom) {
+    StopMotion::instance()->m_canon->makeZoomPoint(pos);
+    return;
   }
 #endif
 
@@ -879,9 +896,9 @@ quit:
   // Don't clear it out table state so the tablePress event will process
   // correctly.
   if (m_tabletState != Touched) m_tabletState = None;
-  m_mouseState                                = None;
-  m_tabletMove                                = false;
-  m_pressure                                  = 0;
+  m_mouseState = None;
+  m_tabletMove = false;
+  m_pressure   = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -933,12 +950,12 @@ void SceneViewer::wheelEvent(QWheelEvent *event) {
 
   default:  // Qt::MouseEventSynthesizedByQt,
             // Qt::MouseEventSynthesizedByApplication
-    {
-      std::cout << "not supported event: Qt::MouseEventSynthesizedByQt, "
-                   "Qt::MouseEventSynthesizedByApplication"
-                << std::endl;
-      break;
-    }
+  {
+    std::cout << "not supported event: Qt::MouseEventSynthesizedByQt, "
+                 "Qt::MouseEventSynthesizedByApplication"
+              << std::endl;
+    break;
+  }
 
   }  // end switch
 
@@ -1034,8 +1051,8 @@ void SceneViewer::gestureEvent(QGestureEvent *e) {
         qreal rotationDelta =
             gesture->rotationAngle() - gesture->lastRotationAngle();
         if (m_isFlippedX != m_isFlippedY) rotationDelta = -rotationDelta;
-        TAffine aff                                     = getViewMatrix().inv();
-        TPointD center                                  = aff * TPointD(0, 0);
+        TAffine aff    = getViewMatrix().inv();
+        TPointD center = aff * TPointD(0, 0);
         if (!m_rotating && !m_zooming) {
           m_rotationDelta += rotationDelta;
           double absDelta = std::abs(m_rotationDelta);
@@ -1176,10 +1193,9 @@ bool SceneViewer::event(QEvent *e) {
     break;
   }
   */
-  if (e->type() == QEvent::Gesture &&
-      CommandManager::instance()
-          ->getAction(MI_TouchGestureControl)
-          ->isChecked()) {
+  if (e->type() == QEvent::Gesture && CommandManager::instance()
+                                          ->getAction(MI_TouchGestureControl)
+                                          ->isChecked()) {
     gestureEvent(static_cast<QGestureEvent *>(e));
     return true;
   }
@@ -1350,6 +1366,49 @@ void SceneViewer::keyPressEvent(QKeyEvent *event) {
   if (m_freezedStatus != NO_FREEZED) return;
   int key = event->key();
 
+#ifdef WITH_CANON
+  if ((m_stopMotion->m_canon->m_pickLiveViewZoom ||
+       m_stopMotion->m_canon->m_zooming) &&
+      (key == Qt::Key_Left || key == Qt::Key_Right || key == Qt::Key_Up ||
+       key == Qt::Key_Down || key == Qt::Key_2 || key == Qt::Key_4 ||
+       key == Qt::Key_6 || key == Qt::Key_8)) {
+    if (m_stopMotion->m_canon->m_liveViewZoomReadyToPick == true) {
+      if (key == Qt::Key_Left || key == Qt::Key_4) {
+        m_stopMotion->m_canon->m_liveViewZoomPickPoint.x -= 10;
+      }
+      if (key == Qt::Key_Right || key == Qt::Key_6) {
+        m_stopMotion->m_canon->m_liveViewZoomPickPoint.x += 10;
+      }
+      if (key == Qt::Key_Up || key == Qt::Key_8) {
+        m_stopMotion->m_canon->m_liveViewZoomPickPoint.y += 10;
+      }
+      if (key == Qt::Key_Down || key == Qt::Key_2) {
+        m_stopMotion->m_canon->m_liveViewZoomPickPoint.y -= 10;
+      }
+      if (m_stopMotion->m_canon->m_zooming) {
+        m_stopMotion->m_canon->setZoomPoint();
+      }
+    }
+    m_stopMotion->m_canon->calculateZoomPoint();
+    event->accept();
+    return;
+  } else if (m_stopMotion->m_canon->m_pickLiveViewZoom &&
+             (key == Qt::Key_Escape || key == Qt::Key_Enter ||
+              key == Qt::Key_Return)) {
+    m_stopMotion->m_canon->toggleZoomPicking();
+    event->accept();
+    return;
+  } else
+#endif
+#if defined(x64)
+      if (m_stopMotion->m_liveViewStatus == 2 &&
+          (key == Qt::Key_Enter || key == Qt::Key_Return)) {
+    m_stopMotion->captureImage();
+    event->accept();
+    return;
+  }
+#endif
+
   // resolving priority and tool-specific key events in this lambda
   auto ret = [&]() -> bool {
     TTool *tool = TApp::instance()->getCurrentTool()->getTool();
@@ -1369,6 +1428,15 @@ void SceneViewer::keyPressEvent(QKeyEvent *event) {
            event->modifiers() == Qt::KeypadModifier) &&
           ((Qt::Key_0 <= key && key <= Qt::Key_9) || key == Qt::Key_Tab ||
            key == Qt::Key_Backtab)) {
+        // When the viewer is in full screen mode, directly call the style
+        // shortcut function since the viewer is retrieved from the parent
+        // panel.
+        if (parentWidget() &&
+            parentWidget()->windowState() & Qt::WindowFullScreen) {
+          StyleShortcutSwitchablePanel::onKeyPress(event);
+          return true;
+        }
+
         event->ignore();
         return true;
       }

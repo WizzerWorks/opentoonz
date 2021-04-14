@@ -12,12 +12,12 @@
         <translation>Position</translation>
     </message>
     <message>
-        <source>E/W:</source>
-        <translation>E/O:</translation>
+        <source>X:</source>
+        <translation>X:</translation>
     </message>
     <message>
-        <source>N/S:</source>
-        <translation>N/S:</translation>
+        <source>Y:</source>
+        <translation>Y:</translation>
     </message>
     <message>
         <source>Z:</source>
@@ -160,6 +160,34 @@
         <source>Auto Select Drawing</source>
         <translation>Sélection Automatique du Dessin</translation>
     </message>
+    <message>
+        <source>Snap</source>
+        <translation type="unfinished">Magnétisme</translation>
+    </message>
+    <message>
+        <source>Type:</source>
+        <translation type="unfinished">Type:</translation>
+    </message>
+    <message>
+        <source>Rectangular</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Freehand</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Low</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Med</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>High</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ControlPointSelection</name>
@@ -194,20 +222,20 @@
         <translation>Clé Globale</translation>
     </message>
     <message>
-        <source>Lock Center E/W</source>
-        <translation>Verrouiller le Centre E/O</translation>
+        <source>Lock Center X</source>
+        <translation>Verrouiller le Centre X</translation>
     </message>
     <message>
-        <source>Lock Center N/S</source>
-        <translation>Verrouiller le Centre N/S</translation>
+        <source>Lock Center Y</source>
+        <translation>Verrouiller le Centre Y</translation>
     </message>
     <message>
-        <source>Lock Position E/W</source>
-        <translation>Verrouiller la Position E/O</translation>
+        <source>Lock Position X</source>
+        <translation>Verrouiller la Position X</translation>
     </message>
     <message>
-        <source>Lock Position N/S</source>
-        <translation>Verrouiller la Position N/S</translation>
+        <source>Lock Position Y</source>
+        <translation>Verrouiller la Position Y</translation>
     </message>
     <message>
         <source>Lock Rotation</source>
@@ -234,8 +262,8 @@
         <translation>Verrouiller l&apos; Échelle Globale</translation>
     </message>
     <message>
-        <source>E/W and N/S Positions</source>
-        <translation>Positions E/O et N/S</translation>
+        <source>X and Y Positions</source>
+        <translation>Positions X et Y</translation>
     </message>
     <message>
         <source>Z Position</source>
@@ -366,6 +394,26 @@
     </message>
     <message>
         <source>Lines &amp; Areas</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Segment</source>
+        <translation type="unfinished">Segment</translation>
+    </message>
+    <message>
+        <source>Linear</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Ease In</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Ease Out</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Ease In/Out</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -896,6 +944,14 @@ Voulez-vous continuer?</translation>
         <source>Med</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>MultiArc</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Smooth</source>
+        <translation type="unfinished">Lisser</translation>
+    </message>
 </context>
 <context>
     <name>PumpTool</name>
@@ -1102,6 +1158,10 @@ Voulez-vous continuer?</translation>
         <source>The selection cannot be moved. It is not editable.</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Snap At Intersection</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>RGBPickerTool</name>
@@ -1276,12 +1336,12 @@ Voulez-vous continuer?</translation>
         <translation>Rotation</translation>
     </message>
     <message>
-        <source>E/W:</source>
-        <translation>E/O:</translation>
+        <source>X:</source>
+        <translation>X:</translation>
     </message>
     <message>
-        <source>N/S:</source>
-        <translation>N/S:</translation>
+        <source>Y:</source>
+        <translation>Y:</translation>
     </message>
     <message>
         <source>Thickness</source>
@@ -1669,6 +1729,10 @@ moved to the end of the first page of the palette.</source>
     </message>
     <message>
         <source>Bevel join</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Include Intersection</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

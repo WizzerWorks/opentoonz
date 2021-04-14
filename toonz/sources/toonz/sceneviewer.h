@@ -145,11 +145,12 @@ class SceneViewer final : public GLWidgetForHighDpi,
   TRaster32P m_3DSideL;
   TRaster32P m_3DSideR;
   TRaster32P m_3DTop;
+#if defined(x64)
   TRasterImageP m_stopMotionImage, m_stopMotionLineUpImage;
   StopMotion *m_stopMotion        = NULL;
   bool m_hasStopMotionImage       = false;
   bool m_hasStopMotionLineUpImage = false;
-
+#endif
   TPointD m_sideRasterPos;
   TPointD m_topRasterPos;
   QString m_toolDisableReason;
@@ -259,8 +260,8 @@ public:
   bool canSwapCompared() const;
 
   bool isEditPreviewSubcamera() const { return m_editPreviewSubCamera; }
-  bool getIsFlippedX() const { return m_isFlippedX; }
-  bool getIsFlippedY() const { return m_isFlippedY; }
+  bool getIsFlippedX() const override { return m_isFlippedX; }
+  bool getIsFlippedY() const override { return m_isFlippedY; }
   void setEditPreviewSubcamera(bool enabled) {
     m_editPreviewSubCamera = enabled;
   }
@@ -281,10 +282,10 @@ public:
 
   void setIsLocator() { m_isLocator = true; }
   void setIsStyleShortcutSwitchable() { m_isStyleShortcutSwitchable = true; }
-  int getVGuideCount();
-  int getHGuideCount();
-  double getVGuide(int index);
-  double getHGuide(int index);
+  int getVGuideCount() override;
+  int getHGuideCount() override;
+  double getVGuide(int index) override;
+  double getHGuide(int index) override;
 
   void bindFBO() override;
   void releaseFBO() override;
@@ -444,8 +445,10 @@ public slots:
   void releaseBusyOnTabletMove() { m_isBusyOnTabletMove = false; }
 
   void onContextAboutToBeDestroyed();
+#if defined(x64)
   void onNewStopMotionImageReady();
   void onStopMotionLiveViewStopped();
+#endif
   void onPreferenceChanged(const QString &prefName);
 
 signals:
@@ -460,6 +463,8 @@ signals:
   void refreshNavi();
   // for updating the titlebar
   void previewToggled();
+  // to notify FilmStripFrames and safely disconnect with this
+  void aboutToBeDestroyed();
 };
 
 // Functions

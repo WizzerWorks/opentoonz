@@ -75,7 +75,8 @@ FxCanGenerateState canGenerate(const std::set<TFx *> &fxsSet, TFx *fx) {
 
 //! Returns whether the specified fx is a downstream node of the xsheet node.
 bool hasTerminalUpstream(TFx *fx, TFxSet *terminalFxs) {
-  if (TZeraryFx *zfx = dynamic_cast<TZeraryFx *>(fx))
+  TZeraryFx *zfx = dynamic_cast<TZeraryFx *>(fx);
+  if (zfx && zfx->getColumnFx())
     return hasTerminalUpstream(zfx->getColumnFx(), terminalFxs);
 
   if (terminalFxs->containsFx(fx)) return true;
@@ -690,12 +691,10 @@ void StageObjectsData::storeObjects(const std::vector<TStageObjectId> &ids,
   }
 
   // Insert terminal fxs
-  set<TFx *>::iterator jt;
-  for (jt = m_originalColumnFxs.begin(); jt != m_originalColumnFxs.end();
-       ++jt) {
-    if (isColumnSelectionTerminalFx(*jt, xsh->getFxDag()->getTerminalFxs(),
+  for (auto const &e : m_originalColumnFxs) {
+    if (isColumnSelectionTerminalFx(e, xsh->getFxDag()->getTerminalFxs(),
                                     m_originalColumnFxs)) {
-      TFx *fx = m_fxTable[*jt];
+      TFx *fx = m_fxTable[e];
 
       fx->addRef();
       m_terminalFxs.insert(fx);
@@ -915,16 +914,28 @@ void StageObjectsData::storeSplines(const std::list<int> &splineIds,
 }
 
 //------------------------------------------------------------------------------
-
 std::vector<TStageObjectId> StageObjectsData::restoreObjects(
     std::set<int> &columnIndices, std::list<int> &restoredSpline, TXsheet *xsh,
     int fxFlags, const TPointD &pos) const {
+  QMap<TStageObjectId, TStageObjectId> idTable;
+  QMap<TFx *, TFx *> fxTable;
+  return restoreObjects(columnIndices, restoredSpline, xsh, fxFlags, idTable,
+                        fxTable, pos);
+}
+
+// idTable : Trace stored/restored id pairings
+// fxTable : Same for fxs
+
+std::vector<TStageObjectId> StageObjectsData::restoreObjects(
+    std::set<int> &columnIndices, std::list<int> &restoredSpline, TXsheet *xsh,
+    int fxFlags, QMap<TStageObjectId, TStageObjectId> &idTable,
+    QMap<TFx *, TFx *> &fxTable, const TPointD &pos) const {
   bool doClone             = (fxFlags & eDoClone);
   bool resetFxDagPositions = (fxFlags & eResetFxDagPositions);
 
-  QMap<TStageObjectId, TStageObjectId>
-      idTable;                     // Trace stored/restored id pairings
-  std::map<TFx *, TFx *> fxTable;  // Same for fxs here
+  // QMap<TStageObjectId, TStageObjectId>
+  //    idTable;                     // Trace stored/restored id pairings
+  // std::map<TFx *, TFx *> fxTable;  // Same for fxs here
   std::vector<TStageObjectId> restoredIds;
 
   std::set<int>::iterator idxt = columnIndices.begin();
@@ -1105,7 +1116,7 @@ std::vector<TStageObjectId> StageObjectsData::restoreObjects(
   }
 
   // Update the link, like in functions above
-  if (!fxTable.empty() && doClone) updateFxLinks(fxTable);
+  if (!fxTable.empty() && doClone) updateFxLinks(fxTable.toStdMap());
 
   // Paste any associated spline (not stored im m_splines)
   std::map<TStageObjectSpline *, TStageObjectSpline *> splines;
@@ -1195,9 +1206,9 @@ std::vector<TStageObjectId> StageObjectsData::restoreObjects(
             obj->getPlasticSkeletonDeformation())
       sd->setGrammar(grammer);
   }
-  std::map<TFx *, TFx *>::const_iterator it;
-  for (it = fxTable.begin(); it != fxTable.end(); ++it) {
-    setGrammerToParams(it->second->getParams(), grammer);
+  QMap<TFx *, TFx *>::const_iterator it;
+  for (it = fxTable.constBegin(); it != fxTable.constEnd(); ++it) {
+    setGrammerToParams(it.value()->getParams(), grammer);
   }
 
   return restoredIds;

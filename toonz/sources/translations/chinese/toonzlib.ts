@@ -451,11 +451,11 @@
         <translation>编辑旋转</translation>
     </message>
     <message>
-        <source>Move E/W</source>
+        <source>Move X</source>
         <translation>左右移动</translation>
     </message>
     <message>
-        <source>Move N/S</source>
+        <source>Move Y</source>
         <translation>上下移动</translation>
     </message>
     <message>
@@ -611,6 +611,14 @@
 </source>
         <translation>保存下面的资源失败:
 </translation>
+    </message>
+    <message>
+        <source>Failed to save palette.</source>
+        <translation>保存调色板失败。</translation>
+    </message>
+    <message>
+        <source>and %1 more item(s).</source>
+        <translation>和 %1 更多项目。</translation>
     </message>
 </context>
 <context>

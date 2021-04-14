@@ -12,11 +12,11 @@
         <translation>位置</translation>
     </message>
     <message>
-        <source>E/W:</source>
+        <source>X:</source>
         <translation>左右:</translation>
     </message>
     <message>
-        <source>N/S:</source>
+        <source>Y:</source>
         <translation>上下:</translation>
     </message>
     <message>
@@ -260,6 +260,34 @@
         <source>Auto Select Drawing</source>
         <translation>自动选择绘图</translation>
     </message>
+    <message>
+        <source>Snap</source>
+        <translation>吸附</translation>
+    </message>
+    <message>
+        <source>Type:</source>
+        <translation>类型:</translation>
+    </message>
+    <message>
+        <source>Rectangular</source>
+        <translation>矩形</translation>
+    </message>
+    <message>
+        <source>Freehand</source>
+        <translation>手绘</translation>
+    </message>
+    <message>
+        <source>Low</source>
+        <translation>低</translation>
+    </message>
+    <message>
+        <source>Med</source>
+        <translation>中</translation>
+    </message>
+    <message>
+        <source>High</source>
+        <translation>高</translation>
+    </message>
 </context>
 <context>
     <name>ControlPointSelection</name>
@@ -294,19 +322,19 @@
         <translation>全局关键帧</translation>
     </message>
     <message>
-        <source>Lock Center E/W</source>
+        <source>Lock Center X</source>
         <translation>锁定中心点(左右)</translation>
     </message>
     <message>
-        <source>Lock Center N/S</source>
+        <source>Lock Center Y</source>
         <translation>锁定中心点(上下)</translation>
     </message>
     <message>
-        <source>Lock Position E/W</source>
+        <source>Lock Position X</source>
         <translation>锁定位置(左右)</translation>
     </message>
     <message>
-        <source>Lock Position N/S</source>
+        <source>Lock Position Y</source>
         <translation>锁定位置(上下)</translation>
     </message>
     <message>
@@ -334,7 +362,7 @@
         <translation>锁定缩放(全局)</translation>
     </message>
     <message>
-        <source>E/W and N/S Positions</source>
+        <source>X and Y Positions</source>
         <translation>左右和上下位置</translation>
     </message>
     <message>
@@ -467,6 +495,26 @@
     <message>
         <source>Lines &amp; Areas</source>
         <translation>线和区域</translation>
+    </message>
+    <message>
+        <source>Segment</source>
+        <translation>自动分段</translation>
+    </message>
+    <message>
+        <source>Linear</source>
+        <translation>线性</translation>
+    </message>
+    <message>
+        <source>Ease In</source>
+        <translation>渐入</translation>
+    </message>
+    <message>
+        <source>Ease Out</source>
+        <translation>渐出</translation>
+    </message>
+    <message>
+        <source>Ease In/Out</source>
+        <translation>渐入/出</translation>
     </message>
 </context>
 <context>
@@ -999,6 +1047,14 @@ Do you want to proceed?</source>
         <source>Med</source>
         <translation>中</translation>
     </message>
+    <message>
+        <source>MultiArc</source>
+        <translation>多段弧形</translation>
+    </message>
+    <message>
+        <source>Smooth</source>
+        <translation>平滑</translation>
+    </message>
 </context>
 <context>
     <name>PumpTool</name>
@@ -1205,6 +1261,10 @@ Do you want to proceed?</source>
         <source>The selection cannot be moved. It is not editable.</source>
         <translation>所选择的不能被移动。它不是可编辑的。</translation>
     </message>
+    <message>
+        <source>Snap At Intersection</source>
+        <translation>吸附在交点</translation>
+    </message>
 </context>
 <context>
     <name>RGBPickerTool</name>
@@ -1379,11 +1439,11 @@ Do you want to proceed?</source>
         <translation>旋转</translation>
     </message>
     <message>
-        <source>E/W:</source>
+        <source>X:</source>
         <translation>左右:</translation>
     </message>
     <message>
-        <source>N/S:</source>
+        <source>Y:</source>
         <translation>上下:</translation>
     </message>
     <message>
@@ -1773,6 +1833,10 @@ moved to the end of the first page of the palette.</source>
     <message>
         <source>Bevel join</source>
         <translation>斜角连接</translation>
+    </message>
+    <message>
+        <source>Include Intersection</source>
+        <translation>包括交点</translation>
     </message>
 </context>
 <context>

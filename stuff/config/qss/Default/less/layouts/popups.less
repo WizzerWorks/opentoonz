@@ -41,7 +41,7 @@ QDialog {
    Preferences
 ----------------------------------------------------------------------------- */
 
-#PreferencesPopup {
+#PreferencesPopup, #OutputSettingsPopup {
   & QListWidget {
     background-color: @prefs-tree-bg-color;
     alternate-background-color: @prefs-tree-bg-color;
@@ -96,6 +96,13 @@ ProjectPopup {
 #GearButton {
   &::menu-indicator{
     image: url("");
+  }
+}
+
+#LiveViewButton {
+  qproperty-icon: url('@{img-url}/liveview.svg');
+  &::menu-indicator{
+    image:"";
   }
 }
 

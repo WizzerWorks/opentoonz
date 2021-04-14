@@ -51,6 +51,7 @@
 #include <QStringList>
 #include <QListWidget>
 #include <QGroupBox>
+#include <QKeySequence>
 
 using namespace DVGui;
 
@@ -574,6 +575,13 @@ void PreferencesPopup::onShowXSheetToolbarClicked() {
 
 //-----------------------------------------------------------------------------
 
+void PreferencesPopup::onModifyExpressionOnMovingReferencesChanged() {
+  TApp::instance()->getCurrentScene()->notifyPreferenceChanged(
+      "modifyExpressionOnMovingReferences");
+}
+
+//-----------------------------------------------------------------------------
+
 void PreferencesPopup::onBlankCountChanged() {
   TApp::instance()->getCurrentScene()->notifyPreferenceChanged("BlankCount");
 }
@@ -991,6 +999,13 @@ void PreferencesPopup::insertFootNote(QGridLayout* layout) {
 //-----------------------------------------------------------------------------
 
 QString PreferencesPopup::getUIString(PreferencesItemId id) {
+  auto CtrlAltStr = []() {
+    QString str =
+        QKeySequence(Qt::CTRL + Qt::ALT).toString(QKeySequence::NativeText);
+    if (str.endsWith("+")) str.chop(1);
+    return str;
+  };
+
   const static QMap<PreferencesItemId, QString> uiStringTable = {
       // General
       {defaultViewerEnabled, tr("Use Default Viewer for Movie Formats")},
@@ -1033,7 +1048,7 @@ QString PreferencesPopup::getUIString(PreferencesItemId id) {
        tr("Show Raster Images Darken Blended")},
       {showFrameNumberWithLetters,
        tr("Show \"ABC\" Appendix to the Frame Number in Xsheet Cell")},
-      {iconSize, tr("Level Strip Icon Size*:")},
+      {iconSize, tr("Level Strip Thumbnail Size*:")},
       {viewShrink, tr("Viewer Shrink:")},
       {viewStep, tr("Step:")},
       {viewerZoomCenter, tr("Viewer Zoom Center:")},
@@ -1044,6 +1059,7 @@ QString PreferencesPopup::getUIString(PreferencesItemId id) {
       {colorCalibrationLutPaths,
        tr("3DLUT File for [%1]:")
            .arg(LutManager::instance()->getMonitorName())},
+      {showIconsInMenu, tr("Show Icons In Menu*")},
 
       // Visualization
       {show0ThickLines, tr("Show Lines with Thickness 0")},
@@ -1105,7 +1121,9 @@ QString PreferencesPopup::getUIString(PreferencesItemId id) {
       {cursorBrushStyle, tr("Cursor Style:")},
       {cursorOutlineEnabled, tr("Show Cursor Size Outlines")},
       {levelBasedToolsDisplay, tr("Toolbar Display Behaviour:")},
-      {useCtrlAltToResizeBrush, tr("Use Ctrl+Alt to Resize Brush")},
+      {useCtrlAltToResizeBrush, tr("Use %1 to Resize Brush").arg(CtrlAltStr())},
+      {tempToolSwitchTimer,
+       tr("Switch Tool Temporarily Keypress Length (ms):")},
 
       // Xsheet
       {xsheetLayoutPreference, tr("Column Header Layout*:")},
@@ -1135,6 +1153,9 @@ QString PreferencesPopup::getUIString(PreferencesItemId id) {
       // Animation
       {keyframeType, tr("Default Interpolation:")},
       {animationStep, tr("Animation Step:")},
+      {modifyExpressionOnMovingReferences,
+       tr("[Experimental Feature] ") +
+           tr("Automatically Modify Expression On Moving Referenced Objects")},
 
       // Preview
       {blanksCount, tr("Blank Frames:")},
@@ -1176,7 +1197,11 @@ QString PreferencesPopup::getUIString(PreferencesItemId id) {
       // Touch / Tablet Settings
       // TounchGestureControl // Touch Gesture is a checkable command and not in
       // preferences.ini
-      {winInkEnabled, tr("Enable Windows Ink Support* (EXPERIMENTAL)")}};
+      {winInkEnabled, tr("Enable Windows Ink Support* (EXPERIMENTAL)")},
+      {useQtNativeWinInk,
+       tr("Use Qt's Native Windows Ink Support*\n(CAUTION: This options is for "
+          "maintenance purpose. \n Do not activate this option or the tablet "
+          "won't work properly.)")}};
 
   return uiStringTable.value(id, QString());
 }
@@ -1362,18 +1387,9 @@ QWidget* PreferencesPopup::createGeneralPage() {
 
   insertUI(defaultViewerEnabled, lay);
   insertUI(rasterOptimizedMemory, lay);
-  QGridLayout* autoSaveLay = insertGroupBoxUI(autosaveEnabled, lay);
-  {
-    insertUI(autosavePeriod, autoSaveLay);
-    insertUI(autosaveSceneEnabled, autoSaveLay);
-    insertUI(autosaveOtherFilesEnabled, autoSaveLay);
-  }
   insertUI(startupPopupEnabled, lay);
   insertUI(undoMemorySize, lay);
   insertUI(taskchunksize, lay);
-  insertUI(replaceAfterSaveLevelAs, lay);
-  QGridLayout* backupLay = insertGroupBoxUI(backupEnabled, lay);
-  { insertUI(backupKeepCount, backupLay); }
   insertUI(sceneNumberingEnabled, lay);
   insertUI(watchFileSystemEnabled, lay);
 
@@ -1497,6 +1513,7 @@ QWidget* PreferencesPopup::createInterfacePage() {
   insertUI(interfaceFontStyle, lay, buildFontStyleList());
   QGridLayout* colorCalibLay = insertGroupBoxUI(colorCalibrationEnabled, lay);
   { insertUI(colorCalibrationLutPaths, colorCalibLay); }
+  insertUI(showIconsInMenu, lay);
 
   lay->setRowStretch(lay->rowCount(), 1);
   insertFootNote(lay);
@@ -1611,13 +1628,21 @@ QWidget* PreferencesPopup::createSavingPage() {
   QWidget* widget  = new QWidget(this);
   QGridLayout* lay = new QGridLayout();
   setupLayout(lay);
-
+  QGridLayout* autoSaveLay = insertGroupBoxUI(autosaveEnabled, lay);
+  {
+    insertUI(autosavePeriod, autoSaveLay);
+    insertUI(autosaveSceneEnabled, autoSaveLay);
+    insertUI(autosaveOtherFilesEnabled, autoSaveLay);
+  }
+  insertUI(replaceAfterSaveLevelAs, lay);
+  QGridLayout* backupLay = insertGroupBoxUI(backupEnabled, lay);
+  { insertUI(backupKeepCount, backupLay); }
   QLabel* matteColorLabel =
       new QLabel(tr("Matte color is used for background when overwriting "
                     "raster levels with transparent pixels\nin non "
                     "alpha-enabled image format."),
                  this);
-  lay->addWidget(matteColorLabel, 0, 0, 1, 3, Qt::AlignLeft);
+  lay->addWidget(matteColorLabel, lay->rowCount(), 0, 1, 3, Qt::AlignLeft);
   insertUI(rasterBackgroundColor, lay);
   insertUI(resetUndoOnSavingLevel, lay);
 
@@ -1736,6 +1761,7 @@ QWidget* PreferencesPopup::createToolsPage() {
   insertUI(levelBasedToolsDisplay, lay,
            getComboItemList(levelBasedToolsDisplay));
   insertUI(useCtrlAltToResizeBrush, lay);
+  insertUI(tempToolSwitchTimer, lay);
 
   lay->setRowStretch(lay->rowCount(), 1);
   widget->setLayout(lay);
@@ -1795,9 +1821,15 @@ QWidget* PreferencesPopup::createAnimationPage() {
 
   insertUI(keyframeType, lay, getComboItemList(keyframeType));
   insertUI(animationStep, lay);
+  insertUI(modifyExpressionOnMovingReferences, lay);
 
   lay->setRowStretch(lay->rowCount(), 1);
   widget->setLayout(lay);
+
+  m_onEditedFuncMap.insert(
+      modifyExpressionOnMovingReferences,
+      &PreferencesPopup::onModifyExpressionOnMovingReferencesChanged);
+
   return widget;
 }
 
@@ -1941,6 +1973,9 @@ QWidget* PreferencesPopup::createTouchTabletPage() {
 
   lay->addWidget(enableTouchGestures, 0, 0, 1, 2);
   if (winInkAvailable) insertUI(winInkEnabled, lay);
+#ifdef WITH_WINTAB
+  insertUI(useQtNativeWinInk, lay);
+#endif
 
   lay->setRowStretch(lay->rowCount(), 1);
   if (winInkAvailable) insertFootNote(lay);

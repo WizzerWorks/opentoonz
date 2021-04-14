@@ -14,6 +14,7 @@
 #include "toonz/stage.h"
 #include "toonz/textureutils.h"
 #include "toonz/levelset.h"
+#include "toonz/tcamera.h"
 
 // TnzBase includes
 #include "tenv.h"
@@ -839,10 +840,15 @@ void TXshSimpleLevel::eraseFrame(const TFrameId &fid) {
   getHookSet()->eraseFrame(fid);
 
   ImageManager *im = ImageManager::instance();
+  TImageCache *ic  = TImageCache::instance();
   {
     im->unbind(getImageId(fid, Normal));
     im->unbind(getImageId(fid, Scanned));
     im->unbind(getImageId(fid, CleanupPreview));
+    // remove icon cache as well
+    ic->remove(getIconId(fid, Normal));
+    ic->remove(getIconId(fid, Scanned));
+    ic->remove(getIconId(fid, CleanupPreview));
 
     if (m_type == PLI_XSHLEVEL) im->unbind(rasterized(getImageId(fid)));
 
@@ -857,13 +863,17 @@ void TXshSimpleLevel::eraseFrame(const TFrameId &fid) {
 
 void TXshSimpleLevel::clearFrames() {
   ImageManager *im = ImageManager::instance();
-
+  TImageCache *ic  = TImageCache::instance();
   // Unbind frames
   FramesSet::iterator ft, fEnd = m_frames.end();
   for (ft = m_frames.begin(); ft != fEnd; ++ft) {
     im->unbind(getImageId(*ft, Scanned));
     im->unbind(getImageId(*ft, Cleanupped));
     im->unbind(getImageId(*ft, CleanupPreview));
+    // remove icon cache as well
+    ic->remove(getIconId(*ft, Normal));
+    ic->remove(getIconId(*ft, Scanned));
+    ic->remove(getIconId(*ft, CleanupPreview));
 
     if (m_type == PLI_XSHLEVEL) im->unbind(rasterized(getImageId(*ft)));
 
@@ -1123,8 +1133,10 @@ void TXshSimpleLevel::load() {
   } else {
     // Not a scan + cleanup level
 
-    if (m_path.getType() == "psd" &&
-        this->getScene()->getVersionNumber().first < 71)
+    // Loading PSD files via load level command needs to convert layerID in the
+    // file path to layer name here. The conversion is not needed on loading
+    // scene as the file path loaded from the scene file is already converted.
+    if (m_path.getType() == "psd" && !this->getScene()->isLoading())
       m_path = getLevelPathAndSetNameWithPsdLevelName(this);
 
     TFilePath path = getScene()->decodeFilePath(m_path);
@@ -1460,7 +1472,8 @@ void TXshSimpleLevel::save(const TFilePath &fp, const TFilePath &oldFp,
 
   // backup
   if (Preferences::instance()->isBackupEnabled() && dOldPath == dDstPath &&
-      TSystem::doesExistFileOrLevel(dDstPath))
+      TSystem::doesExistFileOrLevel(dDstPath) &&
+      !getProperties()->isStopMotionLevel())
     saveBackup(dDstPath);
 
   if (isAreadOnlyLevel(dDstPath)) {
@@ -1903,9 +1916,69 @@ void TXshSimpleLevel::invalidateFrame(const TFrameId &fid) {
 }
 
 //-----------------------------------------------------------------------------
+// note that the palette will always be replaced by the new one.
+void TXshSimpleLevel::initializePalette() {
+  assert(getScene());
+  int type = getType();
+  if (type == TZP_XSHLEVEL || type == PLI_XSHLEVEL) setPalette(new TPalette());
+  if (type == OVL_XSHLEVEL)
+    setPalette(FullColorPalette::instance()->getPalette(getScene()));
+  TPalette *palette = getPalette();
+  if (palette && type != OVL_XSHLEVEL) {
+    palette->setPaletteName(getName());
+    palette->setDirtyFlag(true);
+  }
+}
+
+//-----------------------------------------------------------------------------
+
+void TXshSimpleLevel::initializeResolutionAndDpi(const TDimension &dim,
+                                                 double dpi) {
+  assert(getScene());
+  if (getProperties()->getImageRes() != TDimension() &&
+      getProperties()->getDpi() != TPointD())
+    return;
+
+  double dpiY = dpi;
+  getProperties()->setDpiPolicy(LevelProperties::DP_ImageDpi);
+  if (dim == TDimension()) {
+    double w, h;
+    Preferences *pref = Preferences::instance();
+    if (pref->isNewLevelSizeToCameraSizeEnabled()) {
+      TDimensionD camSize = getScene()->getCurrentCamera()->getSize();
+      w                   = camSize.lx;
+      h                   = camSize.ly;
+      getProperties()->setDpiPolicy(LevelProperties::DP_CustomDpi);
+      dpi  = getScene()->getCurrentCamera()->getDpi().x;
+      dpiY = getScene()->getCurrentCamera()->getDpi().y;
+    } else {
+      w    = pref->getDefLevelWidth();
+      h    = pref->getDefLevelHeight();
+      dpi  = pref->getDefLevelDpi();
+      dpiY = dpi;
+    }
+
+    getProperties()->setImageRes(TDimension(tround(w * dpi), tround(h * dpiY)));
+  } else
+    getProperties()->setImageRes(dim);
+
+  getProperties()->setImageDpi(TPointD(dpi, dpiY));
+  getProperties()->setDpi(dpi);
+}
+
+//-----------------------------------------------------------------------------
 
 // crea un frame con tipo, dimensioni, dpi, ecc. compatibili con il livello
 TImageP TXshSimpleLevel::createEmptyFrame() {
+  // In case this is the first frame to be created in this level (i.e. the level
+  // file was missing when loading resources) initialize the level in the same
+  // manner as createNewLevel() in order to avoid crash. This can be happened if
+  // the level was not saved after creating and being placed in the xsheet.
+  if (isEmpty()) {
+    if (!getPalette()) initializePalette();
+    initializeResolutionAndDpi();
+  }
+
   TImageP result;
 
   switch (m_type) {

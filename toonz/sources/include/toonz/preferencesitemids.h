@@ -5,16 +5,9 @@ enum PreferencesItemId {
   // General
   defaultViewerEnabled,
   rasterOptimizedMemory,
-  autosaveEnabled,
-  autosavePeriod,
-  autosaveSceneEnabled,
-  autosaveOtherFilesEnabled,
   startupPopupEnabled,
   undoMemorySize,
   taskchunksize,
-  replaceAfterSaveLevelAs,
-  backupEnabled,
-  backupKeepCount,
   sceneNumberingEnabled,
   watchFileSystemEnabled,
   projectRoot,
@@ -47,6 +40,7 @@ enum PreferencesItemId {
   interfaceFontStyle,
   colorCalibrationEnabled,
   colorCalibrationLutPaths,
+  showIconsInMenu,
 
   //----------
   // Visualization
@@ -66,6 +60,13 @@ enum PreferencesItemId {
 
   //----------
   // Saving
+  autosaveEnabled,
+  autosavePeriod,
+  autosaveSceneEnabled,
+  autosaveOtherFilesEnabled,
+  replaceAfterSaveLevelAs,
+  backupEnabled,
+  backupKeepCount,
   rasterBackgroundColor,
   resetUndoOnSavingLevel,
 
@@ -107,6 +108,7 @@ enum PreferencesItemId {
   cursorOutlineEnabled,
   levelBasedToolsDisplay,
   useCtrlAltToResizeBrush,
+  tempToolSwitchTimer,
 
   //----------
   // Xsheet
@@ -131,6 +133,7 @@ enum PreferencesItemId {
   // Animation
   keyframeType,
   animationStep,
+  modifyExpressionOnMovingReferences,
 
   //----------
   // Preview
@@ -175,6 +178,8 @@ enum PreferencesItemId {
   // TounchGestureControl // Touch Gesture is a checkable command and not in
   // preferences.ini
   winInkEnabled,
+  // This option will be shown & available only when WITH_WINTAB is defined
+  useQtNativeWinInk,
 
   //----------
   // Others (not appeared in the popup)

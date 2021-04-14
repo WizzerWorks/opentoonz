@@ -83,6 +83,10 @@ set(HEADERS
     iwa_fractalnoisefx.h
 )
 
+if(OpenCV_FOUND)
+    list(APPEND HEADERS iwa_bloomfx.h)
+endif()
+
 set(SOURCES
     adjustlevelsfx.cpp
     artcontourfx.cpp
@@ -270,6 +274,10 @@ set(SOURCES
     iwa_fractalnoisefx.cpp
 )
 
+if(OpenCV_FOUND)
+    list(APPEND SOURCES iwa_bloomfx.cpp)
+endif()
+
 set(OBJCSOURCES
 )
 
@@ -280,7 +288,7 @@ add_definitions(
 )
 
 if(BUILD_ENV_APPLE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-install_name,@rpath/libtnzstdfx.dylib")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-install_name,@executable_path/libtnzstdfx.dylib")
     add_dependencies(tnzstdfx tnzcore tnzbase toonzlib)
 endif()
 
@@ -306,3 +314,7 @@ include_directories(
 _find_toonz_library(TNZLIBS "tnzcore;tnzbase;toonzlib")
 
 target_link_libraries(tnzstdfx Qt5::Core Qt5::Gui Qt5::OpenGL ${GL_LIB} ${GLEW_LIB} ${TNZLIBS} ${PTHREAD_LIBRARY})
+
+if(OpenCV_FOUND)
+    target_link_libraries(tnzstdfx ${OpenCV_LIBS})
+endif()

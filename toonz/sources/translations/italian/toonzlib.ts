@@ -450,11 +450,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Move E/W</source>
+        <source>Move X</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Move N/S</source>
+        <source>Move Y</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -608,6 +608,14 @@
     <message>
         <source>Failed to save the following resources:
 </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to save palette.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>and %1 more item(s).</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

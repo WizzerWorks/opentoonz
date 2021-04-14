@@ -506,7 +506,10 @@ void adaptLevelToPalette(TXshLevelHandle *currentLevelHandle,
   QApplication::restoreOverrideCursor();
 
   currentLevelHandle->getSimpleLevel()->setPalette(plt);
+
+  std::wstring oldGlobalName = paletteHandle->getPalette()->getGlobalName();
   paletteHandle->setPalette(plt);
+  paletteHandle->getPalette()->setGlobalName(oldGlobalName);
   plt->setDirtyFlag(true);
   paletteHandle->notifyPaletteChanged();
   currentLevelHandle->notifyLevelChange();
@@ -588,7 +591,7 @@ void StudioPaletteCmd::mergeIntoCurrentPalette(TPaletteHandle *paletteHandle,
   TUndoManager::manager()->add(
       new PaletteAssignUndo(current, old, current->clone(), paletteHandle));
 
-  palette->setDirtyFlag(true);
+  current->setDirtyFlag(true);
   paletteHandle->notifyPaletteChanged();
 }
 

@@ -145,6 +145,26 @@ Possibly the preset file has been corrupted</source>
         <source>The preset name must not use &apos;,&apos;(comma).</source>
         <translation>사전 설정 이름은 &apos;,&apos;(쉼표)를 사용해서는 안됨.</translation>
     </message>
+    <message>
+        <source>cm</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>mm</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>inch</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>field</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>pixel</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ChannelHisto</name>
@@ -172,62 +192,19 @@ Possibly the preset file has been corrupted</source>
 <context>
     <name>CleanupCameraSettingsWidget</name>
     <message>
-        <source>N/S</source>
+        <source>Y</source>
         <translation></translation>
     </message>
     <message>
-        <source>E/W</source>
+        <source>X</source>
         <translation></translation>
     </message>
 </context>
 <context>
     <name>ColorChannelControl</name>
     <message>
-        <source>R</source>
-        <translation type="vanished"></translation>
-    </message>
-    <message>
-        <source>G</source>
-        <translation type="vanished"></translation>
-    </message>
-    <message>
-        <source>B</source>
-        <translation type="vanished"></translation>
-    </message>
-    <message>
-        <source>A</source>
-        <translation type="vanished"></translation>
-    </message>
-    <message>
         <source>H</source>
         <translation type="vanished">수평</translation>
-    </message>
-    <message>
-        <source>S</source>
-        <translation type="vanished"></translation>
-    </message>
-    <message>
-        <source>V</source>
-        <translation type="vanished"></translation>
-    </message>
-</context>
-<context>
-    <name>ColorField</name>
-    <message>
-        <source>R:</source>
-        <translation type="vanished"></translation>
-    </message>
-    <message>
-        <source>G:</source>
-        <translation type="vanished"></translation>
-    </message>
-    <message>
-        <source>B:</source>
-        <translation type="vanished"></translation>
-    </message>
-    <message>
-        <source>A:</source>
-        <translation type="vanished"></translation>
     </message>
 </context>
 <context>
@@ -388,6 +365,18 @@ Possibly the preset file has been corrupted</source>
         <source>Channel:</source>
         <translation>채널:</translation>
     </message>
+    <message>
+        <source>Range:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Input:</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>DVGui::ValidatedChoiceDialog</name>
@@ -451,13 +440,6 @@ Possibly the preset file has been corrupted</source>
     <message>
         <source>%1 is already registered</source>
         <translation>%1은 이미등록되어 있음</translation>
-    </message>
-</context>
-<context>
-    <name>FileField</name>
-    <message>
-        <source>...</source>
-        <translation type="vanished"></translation>
     </message>
 </context>
 <context>
@@ -587,7 +569,7 @@ Possibly the preset file has been corrupted</source>
     </message>
     <message>
         <source>&amp;Next frame</source>
-        <translation>다음 프레임(&amp;N)</translation>
+        <translation type="vanished">다음 프레임(&amp;N)</translation>
     </message>
     <message>
         <source>&amp;Last Frame</source>
@@ -676,6 +658,18 @@ Possibly the preset file has been corrupted</source>
     <message>
         <source>&amp;Reset View</source>
         <translation>보기 재설정(&amp;R)</translation>
+    </message>
+    <message>
+        <source>Sound</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Locator</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&amp;Next Frame</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -920,6 +914,10 @@ Possibly the preset file has been corrupted</source>
         <source>????</source>
         <translation></translation>
     </message>
+    <message>
+        <source>Link/Unlink Handles</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>FunctionSelection</name>
@@ -1023,6 +1021,14 @@ Possibly the preset file has been corrupted</source>
     </message>
 </context>
 <context>
+    <name>FunctionSheetColumnHeadViewer</name>
+    <message>
+        <source>Some key(s) in this parameter loses original reference in expression.
+Manually changing any keyframe will clear the warning.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>FunctionToolbar</name>
     <message>
         <source>Value</source>
@@ -1046,6 +1052,11 @@ Possibly the preset file has been corrupted</source>
     <message>
         <source>Plastic Skeleton</source>
         <translation>플라스틱 골격</translation>
+    </message>
+    <message>
+        <source>Some key(s) in this parameter loses original reference in expression.
+Manually changing any keyframe will clear the warning.</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1516,6 +1527,26 @@ Select FX nodes and related links before copying or cutting the selection you wa
         <source>)</source>
         <translation></translation>
     </message>
+    <message>
+        <source>Hide New Style Button</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show New Style Button</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to save palette.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Set Toolbar Below Styles</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Set Toolbar Above Styles</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>PaletteViewerGUI::PageViewer</name>
@@ -1534,6 +1565,10 @@ Select FX nodes and related links before copying or cutting the selection you wa
     <message>
         <source>New Page</source>
         <translation>새로운 페이지</translation>
+    </message>
+    <message>
+        <source> + </source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1554,6 +1589,10 @@ Select FX nodes and related links before copying or cutting the selection you wa
         <source>&lt;files&gt;</source>
         <translation>&lt;파일&gt;</translation>
     </message>
+    <message>
+        <source>Failed to import palette.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ParamViewer</name>
@@ -1566,7 +1605,11 @@ Select FX nodes and related links before copying or cutting the selection you wa
     <name>ParamsPageSet</name>
     <message>
         <source>Fx Help</source>
-        <translation>Fx 도움말</translation>
+        <translation type="vanished">Fx 도움말</translation>
+    </message>
+    <message>
+        <source>View help page</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1810,7 +1853,7 @@ Are you sure?</source>
     </message>
     <message>
         <source>Palette</source>
-        <translation>팔레트</translation>
+        <translation type="vanished">팔레트</translation>
     </message>
     <message>
         <source>Overwrite</source>
@@ -2166,6 +2209,10 @@ The second line should be &quot;Mesh [Input bit depth] [Output bit depth]&quot;<
         <source>Erase</source>
         <translation>삭제</translation>
     </message>
+    <message>
+        <source>Click &amp; Drag Palette into Studio Palette</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>QPushButton</name>
@@ -2461,6 +2508,10 @@ Are you sure ?</source>
         <source>Replace</source>
         <translation>교체</translation>
     </message>
+    <message>
+        <source>Failed to save palette.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>StyleEditor</name>
@@ -2558,15 +2609,27 @@ Are you sure ?</source>
     </message>
     <message>
         <source>[CLEANUP]  </source>
-        <translation>[정리]</translation>
+        <translation type="vanished">[정리]</translation>
     </message>
     <message>
         <source>[STUDIO]  </source>
-        <translation>[스튜디오]</translation>
+        <translation type="vanished">[스튜디오]</translation>
     </message>
     <message>
         <source>[LEVEL]  </source>
-        <translation>[레벨]</translation>
+        <translation type="vanished">[레벨]</translation>
+    </message>
+    <message>
+        <source>Cleanup </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Studio </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Level </source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>

@@ -5,6 +5,7 @@
 
 // TnzLib includes
 #include "toonz/tstageobjectid.h"
+#include "toonz/txshcolumn.h"
 
 // TnzBase includes
 #include "tfx.h"
@@ -54,6 +55,8 @@ class QToolButton;
 class QAction;
 class QTouchEvent;
 class QGestureEvent;
+class FxSelection;
+class StageObjectSelection;
 
 //====================================================
 namespace {
@@ -150,9 +153,9 @@ protected:
   void showEvent(QShowEvent *se) override;
   void enterEvent(QEvent *e) override;
   void leaveEvent(QEvent *e) override;
-  void mouseDoubleClickEvent(QMouseEvent *event);
+  void mouseDoubleClickEvent(QMouseEvent *event) override;
 
-  void tabletEvent(QTabletEvent *e);
+  void tabletEvent(QTabletEvent *e) override;
   void touchEvent(QTouchEvent *e, int type);
   void gestureEvent(QGestureEvent *e);
 
@@ -564,6 +567,10 @@ signals:
   void doExplodeChild(QList<TStageObjectId>);
   void editObject();
 
+  void doDeleteFxs(const FxSelection *);
+  void doDeleteStageObjects(const StageObjectSelection *);
+
+  void columnPasted(const QList<TXshColumnP> &);
 protected slots:
 
   void onSceneChanged();
@@ -574,6 +581,9 @@ protected slots:
   void selectModeEnabled();
   void zoomModeEnabled();
   void handModeEnabled();
+
+  void deleteFxs();
+  void deleteStageObjects();
 
 private:
   SchematicSceneViewer *m_viewer;

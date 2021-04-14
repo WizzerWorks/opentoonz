@@ -701,6 +701,9 @@ void TFx::setNewIdentifier() { m_imp->m_id = ++m_imp->m_nextId; }
 //--------------------------------------------------
 
 void TFx::loadData(TIStream &is) {
+  // default version of fx is 1
+  setFxVersion(1);
+
   std::string tagName;
   VersionNumber tnzVersion = is.getVersion();
   // Prevent to load "params" tag under "super" tag on saving macro fx.
@@ -818,6 +821,10 @@ void TFx::loadData(TIStream &is) {
         is >> groupName;
         groupNames.append(groupName);
       }
+    } else if (tagName == "fxVersion") {
+      int version = 1;
+      is >> version;
+      setFxVersion(version);
     } else {
       throw TException("Unknown tag!");
     }
@@ -873,11 +880,10 @@ void TFx::saveData(TOStream &os) {
   }
 
   os.openChild("ports");
-  for (PortTable::iterator pit = m_imp->m_portTable.begin();
-       pit != m_imp->m_portTable.end(); ++pit) {
-    os.openChild(pit->first);
-    if (pit->second->isConnected())
-      os << TFxP(pit->second->getFx()).getPointer();
+  for (auto &namePort : m_imp->m_portArray) {
+    os.openChild(namePort.first);
+    if (namePort.second->isConnected())
+      os << TFxP(namePort.second->getFx()).getPointer();
     os.closeChild();
   }
   os.closeChild();
@@ -908,6 +914,7 @@ void TFx::saveData(TOStream &os) {
     for (i = 0; i < groupNameStack.size(); i++) os << groupNameStack[i];
     os.closeChild();
   }
+  if (getFxVersion() != 1) os.child("fxVersion") << getFxVersion();
 }
 
 //--------------------------------------------------
@@ -992,6 +999,14 @@ TFx *TFx::getLinkedFx() const {
   assert(m_imp->m_next->m_fx != 0);
   return m_imp->m_next->m_fx;
 }
+
+//--------------------------------------------------
+
+void TFx::setFxVersion(int v) { m_imp->m_attributes.setFxVersion(v); }
+
+//--------------------------------------------------
+
+int TFx::getFxVersion() const { return m_imp->m_attributes.getFxVersion(); }
 
 //===================================================
 //

@@ -716,8 +716,9 @@ void TStyleSelection::eraseUnusedStyle() {
         for (j = 0; j < page->getStyleCount(); j++) {
           int styleId = page->getStyleId(j);
           if (m != 0 && usedStyleIds[styleId]) continue;
-          if (i == 0 && j == 0)  // Il primo stile della prima pagina non deve
-                                 // essere mai cancellato
+          if (i == 0 &&
+              (j == 0 || j == 1))  // Il primo stile della prima pagina non deve
+                                   // essere mai cancellato
           {
             usedStyleIds[styleId] = true;
             continue;
@@ -1793,7 +1794,7 @@ void TStyleSelection::getBackOriginalStyle() {
     } else
       spPalette = palIt->second.getPointer();
 
-    // j is StudioPaletteID
+    // j is StyleID
     int j = std::stoi(gname.substr(k + 1));
 
     if (spPalette && 0 <= j && j < spPalette->getStyleCount()) {

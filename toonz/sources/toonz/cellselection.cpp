@@ -13,6 +13,8 @@
 #include "timestretchpopup.h"
 #include "tapp.h"
 #include "xsheetviewer.h"
+#include "levelcommand.h"
+#include "columncommand.h"
 
 // TnzTools includes
 #include "tools/toolutils.h"
@@ -117,8 +119,13 @@ void deleteCellsWithoutUndo(int &r0, int &c0, int &r1, int &c1) {
     TXsheet *xsh = TApp::instance()->getCurrentXsheet()->getXsheet();
     int c;
     for (c = c0; c <= c1; c++) {
+      if (xsh->isColumnEmpty(c)) continue;
       xsh->clearCells(r0, c, r1 - r0 + 1);
-      TXshColumn *column = xsh->getColumn(c);
+      // when the column becomes empty after deletion,
+      // ColumnCmd::DeleteColumn() will take care of column related operations
+      // like disconnecting from fx nodes etc.
+      /*
+      TXshColumn* column = xsh->getColumn(c);
       if (column && column->isEmpty()) {
         column->resetColumnProperties();
         TFx *fx = column->getFx();
@@ -130,8 +137,8 @@ void deleteCellsWithoutUndo(int &r0, int &c0, int &r1, int &c1) {
           }
         }
       }
+      */
     }
-    TApp::instance()->getCurrentXsheet()->notifyXsheetChanged();
   } catch (...) {
     DVGui::error(QObject::tr("It is not possible to delete the selection."));
   }
@@ -144,24 +151,51 @@ void cutCellsWithoutUndo(int &r0, int &c0, int &r1, int &c1) {
   int c;
   for (c = c0; c <= c1; c++) {
     xsh->removeCells(r0, c, r1 - r0 + 1);
-    TXshColumn *column = xsh->getColumn(c);
+    // when the column becomes empty after deletion,
+    // ColumnCmd::DeleteColumn() will take care of column related operations
+    // like disconnecting from fx nodes etc.
+    /*
+    TXshColumn* column = xsh->getColumn(c);
     if (column && column->isEmpty()) {
       column->resetColumnProperties();
-      TFx *fx = column->getFx();
+      TFx* fx = column->getFx();
       if (!fx) continue;
       int i;
       for (i = fx->getOutputConnectionCount() - 1; i >= 0; i--) {
-        TFxPort *port = fx->getOutputConnection(i);
+        TFxPort* port = fx->getOutputConnection(i);
         port->setFx(0);
       }
     }
+    */
   }
 
   // Se la selezione corrente e' TCellSelection svuoto la selezione.
   TCellSelection *cellSelection = dynamic_cast<TCellSelection *>(
       TApp::instance()->getCurrentSelection()->getSelection());
   if (cellSelection) cellSelection->selectNone();
-  TApp::instance()->getCurrentXsheet()->notifyXsheetChanged();
+}
+
+//-----------------------------------------------------------------------------
+// check if the operation may remove expression reference as column becomes
+// empty and deleted after the operation. return true to continue the operation.
+
+bool checkColumnRemoval(const int r0, const int c0, const int r1, const int c1,
+                        std::set<int> &removedColIds) {
+  TXsheet *xsh = TApp::instance()->getCurrentXsheet()->getXsheet();
+  // std::set<int> colIndicesToBeRemoved;
+  for (int c = c0; c <= c1; c++) {
+    TXshColumnP column = xsh->getColumn(c);
+    if (!column || column->isEmpty() || column->isLocked()) continue;
+    int tmp_r0, tmp_r1;
+    xsh->getCellRange(c, tmp_r0, tmp_r1);
+    if (r0 <= tmp_r0 && r1 >= tmp_r1) removedColIds.insert(c);
+  }
+
+  if (removedColIds.empty() ||
+      !Preferences::instance()->isModifyExpressionOnMovingReferencesEnabled())
+    return true;
+  std::set<TFx *> dummy_fxs;
+  return ColumnCmd::checkExpressionReferences(removedColIds, dummy_fxs, true);
 }
 
 //=============================================================================
@@ -233,13 +267,15 @@ public:
 
 //=============================================================================
 //  DeleteCellsUndo
+//  Recovering the column information (such as reconnecting nodes) when
+//  undoing deletion of entire column will be done by DeleteColumnsUndo which
+//  will be called in the same undo block. So here we only need to recover the
+//  cell arrangement.
 //-----------------------------------------------------------------------------
 
 class DeleteCellsUndo final : public TUndo {
   TCellSelection *m_selection;
   QMimeData *m_data;
-  QMap<int, QList<TFxPort *>> m_outputConnections;
-  QMap<int, TXshColumn *> m_columns;
 
 public:
   DeleteCellsUndo(TCellSelection *selection, QMimeData *data) : m_data(data) {
@@ -248,63 +284,18 @@ public:
     if (c0 < 0) c0 = 0;  // Ignore camera column
     m_selection = new TCellSelection();
     m_selection->selectCells(r0, c0, r1, c1);
-
-    TXsheet *xsh = TApp::instance()->getCurrentXsheet()->getXsheet();
-    int i;
-    for (i = c0; i <= c1; i++) {
-      TXshColumn *col = xsh->getColumn(i);
-      if (!col || col->isEmpty()) continue;
-      int colr0, colr1;
-      col->getRange(colr0, colr1);
-      if (r0 <= colr0 && r1 >= colr1 && !col->getLevelColumn()) {
-        // la colonna verra' rimossa dall'xsheet
-        m_columns[i] = col;
-        col->addRef();
-      }
-      TFx *fx = col->getFx();
-      if (!fx) continue;
-      int j;
-      QList<TFxPort *> fxPorts;
-      for (j = 0; j < fx->getOutputConnectionCount(); j++)
-        fxPorts.append(fx->getOutputConnection(j));
-      if (fxPorts.isEmpty()) continue;
-      m_outputConnections[i] = fxPorts;
-    }
   }
 
-  ~DeleteCellsUndo() {
-    delete m_selection;
-    QMap<int, TXshColumn *>::iterator it;
-    for (it = m_columns.begin(); it != m_columns.end(); it++)
-      it.value()->release();
-  }
+  ~DeleteCellsUndo() { delete m_selection; }
 
   void undo() const override {
     TXsheet *xsh = TApp::instance()->getCurrentXsheet()->getXsheet();
 
-    // devo rimettere le colonne che ho rimosso dall'xsheet
-    QMap<int, TXshColumn *>::const_iterator colIt;
-    for (colIt = m_columns.begin(); colIt != m_columns.end(); colIt++) {
-      int index          = colIt.key();
-      TXshColumn *column = colIt.value();
-      xsh->removeColumn(index);
-      xsh->insertColumn(index, column);
-    }
-
     int r0, c0, r1, c1;
     m_selection->getSelectedCells(r0, c0, r1, c1);
-    QMap<int, QList<TFxPort *>>::const_iterator it;
-    for (it = m_outputConnections.begin(); it != m_outputConnections.end();
-         it++) {
-      TXshColumn *col          = xsh->getColumn(it.key());
-      QList<TFxPort *> fxPorts = it.value();
-      int i;
-      for (i = 0; i < fxPorts.size(); i++) fxPorts[i]->setFx(col->getFx());
-    }
 
     const TCellData *cellData = dynamic_cast<const TCellData *>(m_data);
     pasteCellsWithoutUndo(cellData, r0, c0, r1, c1, false, false);
-
     TApp::instance()->getCurrentXsheet()->notifyXsheetChanged();
   }
 
@@ -312,6 +303,7 @@ public:
     int r0, c0, r1, c1;
     m_selection->getSelectedCells(r0, c0, r1, c1);
     deleteCellsWithoutUndo(r0, c0, r1, c1);
+    TApp::instance()->getCurrentXsheet()->notifyXsheetChanged();
   }
 
   int getSize() const override { return sizeof(*this); }
@@ -322,12 +314,14 @@ public:
 
 //=============================================================================
 //  CutCellsUndo
+//  Just like DeleteCellsUndo, recovering the column information (such as
+//  reconnecting nodes) when undoing deletion of entire column will be done
+//  by DeleteColumnsUndo which will be called in the same undo block.
 //-----------------------------------------------------------------------------
 
 class CutCellsUndo final : public TUndo {
   TCellSelection *m_selection;
   TCellData *m_data;
-  QMap<int, QList<TFxPort *>> m_outputConnections;
 
 public:
   CutCellsUndo(TCellSelection *selection) : m_data() {
@@ -336,21 +330,6 @@ public:
     if (c0 < 0) c0 = 0;  // Ignore camera column
     m_selection = new TCellSelection();
     m_selection->selectCells(r0, c0, r1, c1);
-
-    TXsheet *xsh = TApp::instance()->getCurrentXsheet()->getXsheet();
-    int i;
-    for (i = c0; i <= c1; i++) {
-      TXshColumn *col = xsh->getColumn(i);
-      if (!col || col->isEmpty()) continue;
-      TFx *fx = col->getFx();
-      if (!fx) continue;
-      int j;
-      QList<TFxPort *> fxPorts;
-      for (j = 0; j < fx->getOutputConnectionCount(); j++)
-        fxPorts.append(fx->getOutputConnection(j));
-      if (fxPorts.isEmpty()) continue;
-      m_outputConnections[i] = fxPorts;
-    }
   }
 
   void setCurrentData(int r0, int c0, int r1, int c1) {
@@ -368,16 +347,6 @@ public:
     int r0, c0, r1, c1;
     m_selection->getSelectedCells(r0, c0, r1, c1);
 
-    TXsheet *xsh = TApp::instance()->getCurrentXsheet()->getXsheet();
-    QMap<int, QList<TFxPort *>>::const_iterator it;
-    for (it = m_outputConnections.begin(); it != m_outputConnections.end();
-         it++) {
-      TXshColumn *col          = xsh->getColumn(it.key());
-      QList<TFxPort *> fxPorts = it.value();
-      int i;
-      for (i = 0; i < fxPorts.size(); i++) fxPorts[i]->setFx(col->getFx());
-    }
-
     pasteCellsWithoutUndo(m_data, r0, c0, r1, c1, true);
     TApp::instance()->getCurrentXsheet()->notifyXsheetChanged();
   }
@@ -391,6 +360,7 @@ public:
     cutCellsWithoutUndo(r0, c0, r1, c1);
 
     clipboard->setMimeData(currentData, QClipboard::Clipboard);
+    TApp::instance()->getCurrentXsheet()->notifyXsheetChanged();
   }
 
   int getSize() const override { return sizeof(*this); }
@@ -669,6 +639,8 @@ bool pasteRasterImageInCellWithoutUndo(int row, int col,
       app->getCurrentLevel()->setLevel(sl);
       app->getCurrentLevel()->notifyLevelChange();
       sl->save();
+      // after saving you need to obtain the image again
+      img = sl->getFrame(fid, true);
     } else {
       img = sl->createEmptyFrame();
       assert(img);
@@ -678,6 +650,8 @@ bool pasteRasterImageInCellWithoutUndo(int row, int col,
       sl->setFrame(fid, img);
     }
     xsh->setCell(row, col, TXshCell(sl, fid));
+    // to let the undo to know which frame is edited
+    TTool::m_cellsData.push_back({row, row, TTool::CellOps::BlankToNew});
   } else {
     sl  = cell.getSimpleLevel();
     fid = cell.getFrameId();
@@ -831,11 +805,11 @@ public:
 //=============================================================================
 
 void pasteDrawingsInCellWithoutUndo(TXsheet *xsh, TXshSimpleLevel *level,
-                                    const set<TFrameId> &frameIds, int r0,
+                                    const std::set<TFrameId> &frameIds, int r0,
                                     int c0) {
   int frameToInsert = frameIds.size();
   xsh->insertCells(r0, c0, frameToInsert);
-  set<TFrameId>::const_iterator it;
+  std::set<TFrameId>::const_iterator it;
   int r = r0;
   for (it = frameIds.begin(); it != frameIds.end(); it++, r++) {
     TXshCell cell(level, *it);
@@ -850,12 +824,12 @@ void pasteDrawingsInCellWithoutUndo(TXsheet *xsh, TXshSimpleLevel *level,
 class PasteDrawingsInCellUndo final : public TUndo {
   TXsheet *m_xsheet;
   int m_r0, m_c0;
-  set<TFrameId> m_frameIds;
+  std::set<TFrameId> m_frameIds;
   TXshSimpleLevelP m_level;
 
 public:
-  PasteDrawingsInCellUndo(TXshSimpleLevel *level, const set<TFrameId> &frameIds,
-                          int r0, int c0)
+  PasteDrawingsInCellUndo(TXshSimpleLevel *level,
+                          const std::set<TFrameId> &frameIds, int r0, int c0)
       : TUndo(), m_level(level), m_frameIds(frameIds), m_r0(r0), m_c0(c0) {
     m_xsheet = TApp::instance()->getCurrentXsheet()->getXsheet();
     m_xsheet->addRef();
@@ -1238,6 +1212,8 @@ public:
   void redo() const override {
     insertLevelAndFrameIfNeeded();
 
+    IconGenerator::instance()->invalidate(m_level.getPointer(), m_frameId);
+
     TApp::instance()->getCurrentXsheet()->notifyXsheetChanged();
     notifyImageChanged();
   }
@@ -1388,6 +1364,26 @@ public:
   int getHistoryType() override { return HistoryType::Xsheet; }
   //-----------------------------------------------------------------------------
 };
+
+//-----------------------------------------------------------------------------
+// obtain level set contained in the cellData
+// it is used for checking and updating the scene cast when pasting
+void getLevelSetFromData(const TCellData *cellData,
+                         std::set<TXshLevel *> &levelSet) {
+  for (int c = 0; c < cellData->getCellCount(); c++) {
+    TXshCell cell = cellData->getCell(c);
+    if (cell.isEmpty()) continue;
+    TXshLevelP tmpLevel = cell.m_level;
+    if (levelSet.count(tmpLevel.getPointer()) == 0) {
+      // gather levels in subxsheet
+      if (tmpLevel->getChildLevel()) {
+        TXsheet *childXsh = tmpLevel->getChildLevel()->getXsheet();
+        childXsh->getUsedLevels(levelSet);
+      }
+      levelSet.insert(tmpLevel.getPointer());
+    }
+  }
+}
 
 }  // namespace
 //-----------------------------------------------------------------------------
@@ -1638,6 +1634,9 @@ static void pasteStrokesInCell(int row, int col,
 
 static void pasteRasterImageInCell(int row, int col,
                                    const RasterImageData *rasterImageData) {
+  // to let the undo to know which frame is edited
+  TTool::m_cellsData.clear();
+
   TXsheet *xsh         = TApp::instance()->getCurrentXsheet()->getXsheet();
   TXshCell cell        = xsh->getCell(row, col);
   bool createdFrame    = false;
@@ -1747,8 +1746,16 @@ void TCellSelection::pasteCells() {
                                 (newCr0 == r0 && newCr1 == r1));
     }
     if (!isPaste) return;
+
     initUndo = true;
     TUndoManager::manager()->beginBlock();
+
+    // make sure that the pasting levels are registered in the scene cast
+    // it may rename the level if there is another level with the same name
+    std::set<TXshLevel *> pastedLevels;
+    getLevelSetFromData(cellData, pastedLevels);
+    LevelCmd::addMissingLevelsToCast(pastedLevels);
+
     TUndoManager::manager()->add(new PasteCellsUndo(
         r0, c0, r1, c1, oldR0, oldC0, oldR1, oldC1, areColumnsEmpty));
     TApp::instance()->getCurrentScene()->setDirtyFlag(true);
@@ -1808,7 +1815,7 @@ void TCellSelection::pasteCells() {
     if (isEmpty())  // Se la selezione delle celle e' vuota ritorno.
       return;
 
-    set<TFrameId> frameIds;
+    std::set<TFrameId> frameIds;
     drawingData->getFrames(frameIds);
     TXshSimpleLevel *level = drawingData->getLevel();
     if (level && !frameIds.empty())
@@ -2007,11 +2014,11 @@ void TCellSelection::pasteDuplicateCells() {
           DVGui::warning(
               QObject::tr("Cannot duplicate frames in read only levels"));
           return;
-        }
-        else if (level->getSimpleLevel() && it->getFrameId() == TFrameId::NO_FRAME) {
-            DVGui::warning(
-                QObject::tr("Can only duplicate frames in image sequence levels."));
-            return;
+        } else if (level->getSimpleLevel() &&
+                   it->getFrameId() == TFrameId::NO_FRAME) {
+          DVGui::warning(QObject::tr(
+              "Can only duplicate frames in image sequence levels."));
+          return;
         }
       }
       it++;
@@ -2157,6 +2164,12 @@ void TCellSelection::pasteDuplicateCells() {
       return;
     }
 
+    // make sure that the pasting levels are registered in the scene cast
+    // it may rename the level if there is another level with the same name
+    std::set<TXshLevel *> pastedLevels;
+    getLevelSetFromData(newCellData, pastedLevels);
+    LevelCmd::addMissingLevelsToCast(pastedLevels);
+
     TUndoManager::manager()->add(new PasteCellsUndo(
         r0, c0, r1, c1, oldR0, oldC0, oldR1, oldC1, areColumnsEmpty));
     TApp::instance()->getCurrentScene()->setDirtyFlag(true);
@@ -2173,9 +2186,8 @@ void TCellSelection::pasteDuplicateCells() {
       return;
     }
     TKeyframeSelection selection;
-    if (isEmpty() &&
-        TApp::instance()->getCurrentObject()->getObjectId() ==
-            TStageObjectId::CameraId(xsh->getCameraColumnIndex()))
+    if (isEmpty() && TApp::instance()->getCurrentObject()->getObjectId() ==
+                         TStageObjectId::CameraId(xsh->getCameraColumnIndex()))
     // Se la selezione e' vuota e l'objectId e' quello della camera sono nella
     // colonna di camera quindi devo selezionare la row corrente e -1.
     {
@@ -2231,12 +2243,36 @@ void TCellSelection::deleteCells() {
   TXsheet *xsh = TApp::instance()->getCurrentXsheet()->getXsheet();
   // if all the selected cells are already empty, then do nothing
   if (xsh->isRectEmpty(CellPosition(r0, c0), CellPosition(r1, c1))) return;
+
+  std::set<int> removedColIds;
+  // check if the operation may remove expression reference as column becomes
+  // empty and deleted after the operation.
+  if (!checkColumnRemoval(r0, c0, r1, c1, removedColIds)) return;
+
   TCellData *data = new TCellData();
   data->setCells(xsh, r0, c0, r1, c1);
+
+  // clear empty column
+  if (!removedColIds.empty()) {
+    TUndoManager::manager()->beginBlock();
+    // remove, then insert empty column
+    for (auto colId : removedColIds) {
+      ColumnCmd::deleteColumn(colId, true);
+      ColumnCmd::insertEmptyColumn(colId);
+    }
+  }
+
   DeleteCellsUndo *undo =
       new DeleteCellsUndo(new TCellSelection(m_range), data);
 
   deleteCellsWithoutUndo(r0, c0, r1, c1);
+
+  TUndoManager::manager()->add(undo);
+
+  if (!removedColIds.empty()) {
+    TUndoManager::manager()->endBlock();
+  }
+
   // emit selectionChanged() signal so that the rename field will update
   // accordingly
   if (Preferences::instance()->isUseArrowKeyToShiftCellSelectionEnabled())
@@ -2244,8 +2280,8 @@ void TCellSelection::deleteCells() {
   else
     selectNone();
 
-  TUndoManager::manager()->add(undo);
   TApp::instance()->getCurrentScene()->setDirtyFlag(true);
+  TApp::instance()->getCurrentXsheet()->notifyXsheetChanged();
 }
 
 //-----------------------------------------------------------------------------
@@ -2263,11 +2299,32 @@ void TCellSelection::cutCells(bool withoutCopy) {
   getSelectedCells(r0, c0, r1, c1);
   if (c0 < 0) c0 = 0;  // Ignore camera column
 
+  std::set<int> removedColIds;
+  // check if the operation may remove expression reference as column becomes
+  // empty and deleted after the operation.
+  if (!checkColumnRemoval(r0, c0, r1, c1, removedColIds)) return;
+
   undo->setCurrentData(r0, c0, r1, c1);
   if (!withoutCopy) copyCellsWithoutUndo(r0, c0, r1, c1);
+
+  // clear empty column
+  if (!removedColIds.empty()) {
+    TUndoManager::manager()->beginBlock();
+    // remove, then insert empty column
+    for (auto colId : removedColIds) {
+      ColumnCmd::deleteColumn(colId, true);
+      ColumnCmd::insertEmptyColumn(colId);
+    }
+  }
+
   cutCellsWithoutUndo(r0, c0, r1, c1);
 
   TUndoManager::manager()->add(undo);
+
+  if (!removedColIds.empty()) {
+    TUndoManager::manager()->endBlock();
+  }
+
   // cutCellsWithoutUndo will clear the selection, so select cells again
   if (Preferences::instance()->isUseArrowKeyToShiftCellSelectionEnabled()) {
     selectCells(r0, c0, r1, c1);
@@ -2404,6 +2461,11 @@ void TCellSelection::createBlankDrawing(int row, int col, bool multiple) {
   }
 
   if (!toolHandle->getTool()->m_isFrameCreated) {
+    if (!isAutoCreateEnabled)
+      Preferences::instance()->setValue(EnableAutocreation, false, false);
+    if (!isCreationInHoldCellsEnabled)
+      Preferences::instance()->setValue(EnableCreationInHoldCells, false,
+                                        false);
     if (!multiple)
       DVGui::warning(QObject::tr(
           "Unable to replace the current drawing with a blank drawing"));
@@ -2418,6 +2480,8 @@ void TCellSelection::createBlankDrawing(int row, int col, bool multiple) {
   CreateBlankDrawingUndo *undo = new CreateBlankDrawingUndo(
       sl, frame, toolHandle->getTool()->m_isLevelCreated, palette);
   TUndoManager::manager()->add(undo);
+
+  IconGenerator::instance()->invalidate(sl, frame);
 
   // Reset back to what these were
   if (!isAutoCreateEnabled)
@@ -2545,6 +2609,11 @@ void TCellSelection::duplicateFrame(int row, int col, bool multiple) {
 
   bool frameCreated = toolHandle->getTool()->m_isFrameCreated;
   if (!frameCreated) {
+    if (!isAutoCreateEnabled)
+      Preferences::instance()->setValue(EnableAutocreation, false, false);
+    if (!isCreationInHoldCellsEnabled)
+      Preferences::instance()->setValue(EnableCreationInHoldCells, false,
+                                        false);
     if (!multiple)
       DVGui::warning(
           QObject::tr("Unable to replace the current or next drawing with a "
@@ -2865,8 +2934,7 @@ static void createNewDrawing(TXsheet *xsh, int row, int col,
   const Type *Var = dynamic_cast<const Type *>(Data)
 
 void TCellSelection::dPasteCells() {
-  if (isEmpty())  // Se la selezione delle celle e' vuota ritorno.
-    return;
+  if (isEmpty()) return;
   int r0, c0, r1, c1;
   getSelectedCells(r0, c0, r1, c1);
   TUndoManager::manager()->beginBlock();
@@ -2874,7 +2942,10 @@ void TCellSelection::dPasteCells() {
   QClipboard *clipboard     = QApplication::clipboard();
   const QMimeData *mimeData = clipboard->mimeData();
   if (DYNAMIC_CAST(TCellData, cellData, mimeData)) {
-    if (!cellData->canChange(xsh, c0)) return;
+    if (!cellData->canChange(xsh, c0)) {
+      TUndoManager::manager()->endBlock();
+      return;
+    }
     for (int c = 0; c < cellData->getColCount(); c++) {
       for (int r = 0; r < cellData->getRowCount(); r++) {
         TXshCell src = cellData->getCell(r, c);
@@ -2886,12 +2957,10 @@ void TCellSelection::dPasteCells() {
   } else if (DYNAMIC_CAST(DrawingData, drawingData, mimeData)) {
     TXshSimpleLevel *level = drawingData->getLevel();
     if (level) {
-      set<TFrameId> frameIds;
+      std::set<TFrameId> frameIds;
       drawingData->getFrames(frameIds);
-      int r = r0;
-      for (set<TFrameId>::iterator it = frameIds.begin(); it != frameIds.end();
-           ++it)
-        createNewDrawing(xsh, r++, c0, level->getType());
+      for (int i = 0; i < frameIds.size(); ++i)
+        createNewDrawing(xsh, r0 + i, c0, level->getType());
     }
   } else if (DYNAMIC_CAST(StrokesData, strokesData, mimeData)) {
     createNewDrawing(xsh, r0, c0, PLI_XSHLEVEL);
@@ -2981,10 +3050,19 @@ void TCellSelection::overWritePasteCells() {
       areColumnsEmpty.push_back(!column || column->isEmpty() ||
                                 (newCr0 == r0 && newCr1 == r1));
     }
+    TUndoManager::manager()->beginBlock();
+
+    // make sure that the pasting levels are registered in the scene cast
+    // it may rename the level if there is another level with the same name
+    std::set<TXshLevel *> pastedLevels;
+    getLevelSetFromData(cellData, pastedLevels);
+    LevelCmd::addMissingLevelsToCast(pastedLevels);
+
     /*-- r0,c0,r1,c1はペーストされた範囲　old付きはペースト前の選択範囲 --*/
     TUndoManager::manager()->add(
         new OverwritePasteCellsUndo(r0, c0, r1, c1, oldR0, oldC0, oldR1, oldC1,
                                     areColumnsEmpty, beforeData));
+    TUndoManager::manager()->endBlock();
     TApp::instance()->getCurrentScene()->setDirtyFlag(true);
 
     delete beforeData;

@@ -29,7 +29,7 @@
 #include "tvectorrenderdata.h"
 #include "tofflinegl.h"
 
-#if defined(LINUX)
+#if defined(LINUX) || defined(FREEBSD)
 #include <QGuiApplication>
 #endif
 
@@ -177,7 +177,7 @@ void convertFromVI(const TLevelReaderP &lr, const TPaletteP &plt,
   }
   maxBbox = maxBbox.enlarge(2);
   if (width)  // calcolo l'affine
-    aff   = TScale((double)width / maxBbox.getLx());
+    aff = TScale((double)width / maxBbox.getLx());
   maxBbox = aff * maxBbox;
 
   for (i = 0; i < (int)images.size(); i++) {
@@ -359,12 +359,13 @@ void convert(const TFilePath &source, const TFilePath &dest,
 //------------------------------------------------------------------------
 
 int main(int argc, char *argv[]) {
-#if defined(LINUX)
+#if defined(LINUX) || defined(FREEBSD)
   QGuiApplication app(argc, argv);
 #endif
 
   TEnv::setRootVarName(rootVarName);
   TEnv::setSystemVarPrefix(systemVarPrefix);
+  TEnv::setApplicationFileName(argv[0]);
   TFilePath fp = TEnv::getStuffDir();
 
   string msg;

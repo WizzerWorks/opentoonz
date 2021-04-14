@@ -12,12 +12,12 @@
         <translation>位置</translation>
     </message>
     <message>
-        <source>E/W:</source>
-        <translation>E/W:</translation>
+        <source>X:</source>
+        <translation>X:</translation>
     </message>
     <message>
-        <source>N/S:</source>
-        <translation>N/S:</translation>
+        <source>Y:</source>
+        <translation>Y:</translation>
     </message>
     <message>
         <source>Z:</source>
@@ -260,6 +260,34 @@
         <source>Auto Select Drawing</source>
         <translation>レベルをまたいで選択</translation>
     </message>
+    <message>
+        <source>Snap</source>
+        <translation>スナップ</translation>
+    </message>
+    <message>
+        <source>Type:</source>
+        <translation>タイプ：</translation>
+    </message>
+    <message>
+        <source>Rectangular</source>
+        <translation>長方形</translation>
+    </message>
+    <message>
+        <source>Freehand</source>
+        <translation>なげなわ</translation>
+    </message>
+    <message>
+        <source>Low</source>
+        <translation>低</translation>
+    </message>
+    <message>
+        <source>Med</source>
+        <translation>中</translation>
+    </message>
+    <message>
+        <source>High</source>
+        <translation>高</translation>
+    </message>
 </context>
 <context>
     <name>ControlPointSelection</name>
@@ -294,19 +322,19 @@
         <translation>グローバルキー</translation>
     </message>
     <message>
-        <source>Lock Center E/W</source>
+        <source>Lock Center X</source>
         <translation>基準点 [X]</translation>
     </message>
     <message>
-        <source>Lock Center N/S</source>
+        <source>Lock Center Y</source>
         <translation>基準点［Y］</translation>
     </message>
     <message>
-        <source>Lock Position E/W</source>
+        <source>Lock Position X</source>
         <translation>位置 ［X］</translation>
     </message>
     <message>
-        <source>Lock Position N/S</source>
+        <source>Lock Position Y</source>
         <translation>位置［Y］</translation>
     </message>
     <message>
@@ -334,7 +362,7 @@
         <translation>拡大・縮小［全体］</translation>
     </message>
     <message>
-        <source>E/W and N/S Positions</source>
+        <source>X and Y Positions</source>
         <translation>X と Y の位置</translation>
     </message>
     <message>
@@ -467,6 +495,26 @@
     <message>
         <source>Lines &amp; Areas</source>
         <translation>線と塗り</translation>
+    </message>
+    <message>
+        <source>Segment</source>
+        <translation>線分の自動検出</translation>
+    </message>
+    <message>
+        <source>Linear</source>
+        <translation>均等割り</translation>
+    </message>
+    <message>
+        <source>Ease In</source>
+        <translation>後詰め</translation>
+    </message>
+    <message>
+        <source>Ease Out</source>
+        <translation>先詰め</translation>
+    </message>
+    <message>
+        <source>Ease In/Out</source>
+        <translation>両詰め</translation>
     </message>
 </context>
 <context>
@@ -995,6 +1043,14 @@ Do you want to proceed?</source>
         <source>High</source>
         <translation>高</translation>
     </message>
+    <message>
+        <source>MultiArc</source>
+        <translation>連続円弧</translation>
+    </message>
+    <message>
+        <source>Smooth</source>
+        <translation>滑らかに連結</translation>
+    </message>
 </context>
 <context>
     <name>PumpTool</name>
@@ -1201,6 +1257,10 @@ Do you want to proceed?</source>
         <source>The selection cannot be moved. It is not editable.</source>
         <translation>選択グループを移動できません。レベルまたは列が編集不可に設定されています。</translation>
     </message>
+    <message>
+        <source>Snap At Intersection</source>
+        <translation>交点にスナップ</translation>
+    </message>
 </context>
 <context>
     <name>RGBPickerTool</name>
@@ -1375,12 +1435,12 @@ Do you want to proceed?</source>
         <translation>回転</translation>
     </message>
     <message>
-        <source>E/W:</source>
-        <translation>E/W:</translation>
+        <source>X:</source>
+        <translation>X:</translation>
     </message>
     <message>
-        <source>N/S:</source>
-        <translation>N/S:</translation>
+        <source>Y:</source>
+        <translation>Y:</translation>
     </message>
     <message>
         <source>Thickness</source>
@@ -1770,6 +1830,10 @@ moved to the end of the first page of the palette.</source>
     <message>
         <source>Round cap</source>
         <translation>丸型線端</translation>
+    </message>
+    <message>
+        <source>Include Intersection</source>
+        <translation>交差選択</translation>
     </message>
 </context>
 <context>
