@@ -24,8 +24,8 @@ public:
   struct BucketNode {
     K m_key;
     T m_val;
-    size_t m_next;
-    size_t m_prev;
+    ::size_t m_next;
+    ::size_t m_prev;
 
     BucketNode(const K &key, const T &val)
         : m_key(key), m_val(val), m_next(-1), m_prev(-1) {}
