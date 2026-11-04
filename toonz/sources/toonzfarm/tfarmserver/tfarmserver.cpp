@@ -51,7 +51,7 @@ using namespace TVER;
 #endif
 
 #ifdef LINUX
-#include <sys/sysctl.h>
+#include <unistd.h>  // sysconf (sys/sysctl.h was removed from glibc 2.32+)
 #endif
 
 // forward declaration
