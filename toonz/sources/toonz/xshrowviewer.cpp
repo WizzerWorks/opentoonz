@@ -28,6 +28,7 @@
 #include "toonz/tpinnedrangeset.h"
 
 #include <QPainter>
+#include <QPainterPath>
 #include <QMouseEvent>
 #include <QMenu>
 #include <QToolTip>

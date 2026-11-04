@@ -19,6 +19,7 @@
 // Qt includes
 #include <QVariant>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPushButton>
 #include <QToolButton>
 #include <QMainWindow>

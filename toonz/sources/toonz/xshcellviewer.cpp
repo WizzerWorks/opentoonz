@@ -67,6 +67,7 @@
 
 // Qt includes
 #include <QPainter>
+#include <QPainterPath>
 #include <QMouseEvent>
 #include <QMenu>
 #include <QUrl>

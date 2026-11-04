@@ -38,6 +38,7 @@
 #include "tenv.h"
 
 #include <QPainter>
+#include <QPainterPath>
 #include <QScrollBar>
 #include <QMouseEvent>
 
