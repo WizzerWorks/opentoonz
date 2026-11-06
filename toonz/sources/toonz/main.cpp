@@ -1,6 +1,7 @@
 
 
 // Tnz6 includes
+#include "crashhandler.h"
 #include "mainwindow.h"
 #include "flipbook.h"
 #include "tapp.h"
@@ -8,11 +9,8 @@
 #include "previewfxmanager.h"
 #include "cleanupsettingspopup.h"
 #include "filebrowsermodel.h"
-
-#ifdef LINETEST
-#include "licensegui.h"
-#include "licensecontroller.h"
-#endif
+#include "expressionreferencemanager.h"
+#include "thirdparty.h"
 
 // TnzTools includes
 #include "tools/tool.h"
@@ -85,23 +83,17 @@
 #include <QHash>
 
 #ifdef _WIN32
+#ifndef x64
+#include <float.h>
+#endif
 #include <QtPlatformHeaders/QWindowsWindowFunctions>
 #endif
 
 using namespace DVGui;
-#if defined LINETEST
-const char *applicationName    = "Toonz LineTest";
-const char *applicationVersion = "6.4";
-const char *dllRelativePath    = "./linetest.app/Contents/Frameworks";
-TEnv::StringVar EnvSoftwareCurrentFont("SoftwareCurrentFont", "MS Sans Serif");
-TEnv::IntVar EnvSoftwareCurrentFontSize("SoftwareCurrentFontSize", 12);
-const char *applicationFullName = "LineTest 6.4 Beta";
-const char *rootVarName         = "LINETESTROOT";
-const char *systemVarPrefix     = "LINETEST";
-#endif
 
 TEnv::IntVar EnvSoftwareCurrentFontSize("SoftwareCurrentFontSize", 12);
 
+// These are the same as the default values. See tenv.cpp and tversion.h
 const char *rootVarName     = "TOONZROOT";
 const char *systemVarPrefix = "TOONZ";
 
@@ -256,14 +248,17 @@ static void script_output(int type, const QString &value) {
 
 int main(int argc, char *argv[]) {
 #ifdef Q_OS_WIN
-  //  Enable standard input/output on Windows Platform for debug
-  BOOL consoleAttached = ::AttachConsole(ATTACH_PARENT_PROCESS);
-  if (consoleAttached) {
+  // Enable standard input/output on Windows Platform for debug
+  if (::AttachConsole(ATTACH_PARENT_PROCESS)) {
     freopen("CON", "r", stdin);
     freopen("CON", "w", stdout);
     freopen("CON", "w", stderr);
+    atexit([]() { ::FreeConsole(); });
   }
 #endif
+
+  // Install signal handlers to catch crashes
+  CrashHandler::install();
 
   // parsing arguments and qualifiers
   TFilePath loadFilePath;
@@ -325,11 +320,9 @@ int main(int argc, char *argv[]) {
     argc = 1;
   }
 
-// Enables high-DPI scaling. This attribute must be set before QApplication is
-// constructed. Available from Qt 5.6.
-#if QT_VERSION >= 0x050600
+  // Enables high-DPI scaling. This attribute must be set before QApplication is
+  // constructed. Available from Qt 5.6.
   QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-#endif
 
   QApplication a(argc, argv);
 
@@ -370,12 +363,13 @@ int main(int argc, char *argv[]) {
 
 #ifdef Q_OS_WIN
   //	Since currently OpenToonz does not work with OpenGL of software or
-  // angle,
-  //	force Qt to use desktop OpenGL
+  // angle,	force Qt to use desktop OpenGL
+  // FIXME: This options should be called before constructing the application.
+  // Thus, ANGLE seems to be enabled as of now.
   a.setAttribute(Qt::AA_UseDesktopOpenGL, true);
 #endif
 
-  // Some Qt objects are destroyed badly withouth a living qApp. So, we must
+  // Some Qt objects are destroyed badly without a living qApp. So, we must
   // enforce a way to either
   // postpone the application destruction until the very end, OR ensure that
   // sensible objects are
@@ -409,10 +403,26 @@ int main(int argc, char *argv[]) {
 
   // Enable to render smooth icons on high dpi monitors
   a.setAttribute(Qt::AA_UseHighDpiPixmaps);
+#if defined(_WIN32)
+  // Compress tablet events with application attributes instead of implementing
+  // the delay-timer by ourselves
+  a.setAttribute(Qt::AA_CompressHighFrequencyEvents);
+  a.setAttribute(Qt::AA_CompressTabletEvents);
+#endif
+
+#ifdef _WIN32
+  // BUG_WORKAROUND: #20230627
+  // This attribute is set to make menubar icon to be always (16 x devPixRatio).
+  // Without this attribute the menu bar icon size becomes the same as tool bar
+  // when Windows scale is in 125%. Currently hiding the menu bar icon is done
+  // by setting transparent pixmap only in menu bar icon size. So the size must
+  // be different between for menu bar and for tool bar.
+  a.setAttribute(Qt::AA_Use96Dpi);
+#endif
 
   // Set the app's locale for numeric stuff to standard C. This is important for
   // atof() and similar
-  // calls that are locale-dependant.
+  // calls that are locale-dependent.
   setlocale(LC_NUMERIC, "C");
 
 // Set current directory to the bundle/application path - this is needed to have
@@ -427,12 +437,26 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
+  // Set show icons in menus flag (use iconVisibleInMenu to disable selectively)
+  QApplication::instance()->setAttribute(Qt::AA_DontShowIconsInMenus, false);
+
   TEnv::setApplicationFileName(argv[0]);
 
-  // splash screen
-  QPixmap splashPixmap = QIcon(":Resources/splash.svg").pixmap(QSize(610, 344));
-  splashPixmap.setDevicePixelRatio(QApplication::desktop()->devicePixelRatio());
-// QPixmap splashPixmap(":Resources/splash.png");
+// splash screen (override with local file if present)
+QString exeDir = QCoreApplication::applicationDirPath();
+QString localSplashPath = QDir(exeDir).filePath("splash.svg");
+
+QPixmap splashPixmap;
+
+if (QFileInfo(localSplashPath).exists() && QFileInfo(localSplashPath).isFile()) {
+  splashPixmap = QIcon(localSplashPath).pixmap(QSize(610, 344));
+  if (splashPixmap.isNull()) {
+    // fallback if loading fails
+    splashPixmap = QIcon(":Resources/splash.svg").pixmap(QSize(610, 344));
+  }
+} else {
+  splashPixmap = QIcon(":Resources/splash.svg").pixmap(QSize(610, 344));
+}
 #ifdef _WIN32
   QFont font("Segoe UI", -1);
 #else
@@ -464,9 +488,7 @@ int main(int argc, char *argv[]) {
   fmt.setStencil(true);
   QGLFormat::setDefaultFormat(fmt);
 
-// seems this function should be called at all systems
-// pheraps in some GLUT-implementations initalization is mere formality
-#if defined(LINUX) || (defined(_WIN32) && defined(__GNUC__))
+#ifndef __HAIKU__
   glutInit(&argc, argv);
 #endif
 
@@ -478,8 +500,21 @@ int main(int argc, char *argv[]) {
   TBigMemoryManager::instance()->setRunOutOfContiguousMemoryHandler(
       &toonzRunOutOfContMemHandler);
 
+  // Setup third party
+  ThirdParty::initialize();
+
   // Toonz environment
   initToonzEnv(argumentPathValues);
+
+  // prepare for 30bit display
+  if (Preferences::instance()->is30bitDisplayEnabled()) {
+    QSurfaceFormat sFmt = QSurfaceFormat::defaultFormat();
+    sFmt.setRedBufferSize(10);
+    sFmt.setGreenBufferSize(10);
+    sFmt.setBlueBufferSize(10);
+    sFmt.setAlphaBufferSize(2);
+    QSurfaceFormat::setDefaultFormat(sFmt);
+  }
 
   // Initialize thread components
   TThread::init();
@@ -542,11 +577,7 @@ int main(int argc, char *argv[]) {
   languagePathString += "\\" + Preferences::instance()->getCurrentLanguage();
 #endif
   QTranslator translator;
-#ifdef LINETEST
-  translator.load("linetest", languagePathString);
-#else
   translator.load("toonz", languagePathString);
-#endif
 
   // La installo
   a.installTranslator(&translator);
@@ -614,6 +645,10 @@ int main(int argc, char *argv[]) {
                      Qt::white);
   a.processEvents();
 
+  // Initialize ThemeManager before TApp
+  auto &themeManager = ThemeManager::getInstance();
+  themeManager.initialize();
+
   TTool::setApplication(TApp::instance());
   TApp::instance()->init();
 
@@ -636,13 +671,15 @@ int main(int argc, char *argv[]) {
 
   /*-- Layoutファイル名をMainWindowのctorに渡す --*/
   MainWindow w(argumentLayoutFileName);
+  CrashHandler::attachParentWindow(&w);
+  CrashHandler::reportProjectInfo(true);
 
   if (isRunScript) {
     // load script
     if (TFileStatus(loadFilePath).doesExist()) {
       // find project for this script file
-      TProjectManager *pm    = TProjectManager::instance();
-      TProjectP sceneProject = pm->loadSceneProject(loadFilePath);
+      TProjectManager *pm = TProjectManager::instance();
+      auto sceneProject   = pm->loadSceneProject(loadFilePath);
       TFilePath oldProjectPath;
       if (!sceneProject) {
         std::cerr << QObject::tr(
@@ -683,15 +720,32 @@ int main(int argc, char *argv[]) {
     QWindowsWindowFunctions::setHasBorderInFullScreen(w.windowHandle(), true);
 #endif
 
+  // Qt have started to support Windows Ink from 5.12.
+  // Unlike WinTab API used in Qt 5.9 the tablet behaviors are different and
+  // are (at least, for OT) problematic. The customized Qt5.15.2 are made with
+  // cherry-picking the WinTab feature to be officially introduced from 6.0.
+  // See https://github.com/shun-iwasawa/qt5/releases/tag/v5.15.2_wintab for
+  // details. The following feature can only be used with the customized Qt,
+  // with WITH_WINTAB build option, and in Windows-x64 build.
+
+#ifdef WITH_WINTAB
+  bool useQtNativeWinInk = Preferences::instance()->isQtNativeWinInkEnabled();
+  QWindowsWindowFunctions::setWinTabEnabled(!useQtNativeWinInk);
+#endif
+
   splash.showMessage(offsetStr + "Loading style sheet ...", Qt::AlignCenter,
                      Qt::white);
   a.processEvents();
 
   // Carico lo styleSheet
-  QString currentStyle = Preferences::instance()->getCurrentStyleSheetPath();
+  QString currentStyle = Preferences::instance()->getCurrentStyleSheet();
   a.setStyleSheet(currentStyle);
 
-  w.setWindowTitle(QString::fromStdString(TEnv::getApplicationFullName()));
+  // Parse inital stylesheet in ThemeManager
+  themeManager.parseCustomPropertiesFromStylesheet(currentStyle);
+
+  // w.setWindowTitle(QString::fromStdString(TEnv::getApplicationFullName()));
+  w.changeWindowTitle();
   if (TEnv::getIsPortable()) {
     splash.showMessage(offsetStr + "Starting OpenToonz Portable ...",
                        Qt::AlignCenter, Qt::white);
@@ -703,7 +757,12 @@ int main(int argc, char *argv[]) {
 
   TFilePath fp = ToonzFolder::getModuleFile("mainwindow.ini");
   QSettings settings(toQString(fp), QSettings::IniFormat);
-  w.restoreGeometry(settings.value("MainWindowGeometry").toByteArray());
+  if (settings.contains("MainWindowGeometry"))
+    w.restoreGeometry(settings.value("MainWindowGeometry").toByteArray());
+  else  // maximize window on the first launch
+    w.setWindowState(w.windowState() | Qt::WindowMaximized);
+
+  ExpressionReferenceManager::instance()->init();
 
 #ifndef MACOSX
   // Workaround for the maximized window case: Qt delivers two resize events,
@@ -736,7 +795,6 @@ int main(int argc, char *argv[]) {
     splash.showMessage(
         QString("Loading file '") + loadFilePath.getQString() + "'...",
         Qt::AlignCenter, Qt::white);
-    loadFilePath = loadFilePath.withType("tnz");
     if (TFileStatus(loadFilePath).doesExist()) IoCmd::loadScene(loadFilePath);
   }
 
@@ -809,12 +867,6 @@ int main(int argc, char *argv[]) {
 
   TUndoManager::manager()->reset();
   PreviewFxManager::instance()->reset();
-
-#ifdef _WIN32
-  if (consoleAttached) {
-    ::FreeConsole();
-  }
-#endif
 
   return ret;
 }

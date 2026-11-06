@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="ja_JP">
+<TS version="2.1" language="ja_JP" sourcelanguage="en_US">
 <context>
     <name>AddFxContextMenu</name>
     <message>
@@ -173,6 +173,40 @@ Possibly the preset file has been corrupted</source>
         <source>&lt;custom&gt;</source>
         <translation>&lt;カスタム&gt;</translation>
     </message>
+    <message>
+        <source>cm</source>
+        <translation>cm</translation>
+    </message>
+    <message>
+        <source>mm</source>
+        <translation>mm</translation>
+    </message>
+    <message>
+        <source>inch</source>
+        <translation>inch</translation>
+    </message>
+    <message>
+        <source>field</source>
+        <translation>フィールド</translation>
+    </message>
+    <message>
+        <source>pixel</source>
+        <translation>ピクセル</translation>
+    </message>
+    <message>
+        <source>Deleting &quot;%1&quot;.
+Are you sure?</source>
+        <translation>&quot;%1&quot;を削除します。
+よろしいですか？</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>削除</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
 </context>
 <context>
     <name>ChannelHisto</name>
@@ -194,7 +228,11 @@ Possibly the preset file has been corrupted</source>
     </message>
     <message>
         <source>RGBA</source>
-        <translation>RGBA</translation>
+        <translation type="vanished">RGBA</translation>
+    </message>
+    <message>
+        <source>RGB</source>
+        <translation>RGB</translation>
     </message>
 </context>
 <context>
@@ -204,11 +242,11 @@ Possibly the preset file has been corrupted</source>
         <translation type="vanished">フィールドの最大拡大値：</translation>
     </message>
     <message>
-        <source>E/W:</source>
+        <source>X:</source>
         <translation type="vanished">X：</translation>
     </message>
     <message>
-        <source>N/S:</source>
+        <source>Y:</source>
         <translation type="vanished">Y：</translation>
     </message>
     <message>
@@ -240,11 +278,11 @@ Possibly the preset file has been corrupted</source>
         <translation type="vanished">完成レベルの情報</translation>
     </message>
     <message>
-        <source>N/S</source>
+        <source>Y</source>
         <translation>Y</translation>
     </message>
     <message>
-        <source>E/W</source>
+        <source>X</source>
         <translation>X</translation>
     </message>
 </context>
@@ -265,6 +303,14 @@ Possibly the preset file has been corrupted</source>
         <source>R:%1 G:%2 B:%3</source>
         <translation></translation>
     </message>
+    <message>
+        <source> A:%1</source>
+        <translation></translation>
+    </message>
+    <message>
+        <source>A:%1</source>
+        <translation></translation>
+    </message>
 </context>
 <context>
     <name>ComboHistogram</name>
@@ -283,6 +329,18 @@ Possibly the preset file has been corrupted</source>
     <message>
         <source>Y:</source>
         <translation>Y：</translation>
+    </message>
+    <message>
+        <source>8bit (0-255)</source>
+        <translation>8bit (0-255)</translation>
+    </message>
+    <message>
+        <source>16bit (0-65535)</source>
+        <translation>16bit (0-65535)</translation>
+    </message>
+    <message>
+        <source>0.0-1.0</source>
+        <translation>0.0-1.0</translation>
     </message>
 </context>
 <context>
@@ -349,6 +407,18 @@ Possibly the preset file has been corrupted</source>
         <source>A:</source>
         <translation></translation>
     </message>
+    <message>
+        <source>Paste Color</source>
+        <translation>色を貼り付け</translation>
+    </message>
+    <message>
+        <source>Paste Color of %1</source>
+        <translation>%1 の色を貼り付け</translation>
+    </message>
+    <message>
+        <source>Copy Color</source>
+        <translation>色をコピー</translation>
+    </message>
 </context>
 <context>
     <name>DVGui::DvTextEdit</name>
@@ -385,9 +455,132 @@ Possibly the preset file has been corrupted</source>
     </message>
 </context>
 <context>
+    <name>DVGui::HexColorNamesEditor</name>
+    <message>
+        <source>Hex Color Names Editor</source>
+        <translation>16進数カラー名エディタ</translation>
+    </message>
+    <message>
+        <source>OK</source>
+        <translation>OK</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>適用</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>閉じる</translation>
+    </message>
+    <message>
+        <source>Unselect</source>
+        <translation>選択解除</translation>
+    </message>
+    <message>
+        <source>Add Color</source>
+        <translation>色の追加</translation>
+    </message>
+    <message>
+        <source>Delete Color</source>
+        <translation>色の削除</translation>
+    </message>
+    <message>
+        <source>User Defined Colors</source>
+        <translation>ユーザー定義色</translation>
+    </message>
+    <message>
+        <source>Default Main Colors</source>
+        <translation>既定の色</translation>
+    </message>
+    <message>
+        <source>Enable Auto-Complete</source>
+        <translation>カラー名の自動補完</translation>
+    </message>
+    <message>
+        <source>Import</source>
+        <translation>読み込み</translation>
+    </message>
+    <message>
+        <source>Export</source>
+        <translation>書き出し</translation>
+    </message>
+    <message>
+        <source>Open Color Names</source>
+        <translation>カラー名ファイルを読み込み</translation>
+    </message>
+    <message>
+        <source>Text or XML (*.txt *.xml);;Text files (*.txt);;XML files (*.xml)</source>
+        <translation>テキストまたはXML (*.txt *.xml);;テキストファイル (*.txt);;XMLファイル (*.xml)</translation>
+    </message>
+    <message>
+        <source>Hex Color Names Import</source>
+        <translation>カラー名を読み込み</translation>
+    </message>
+    <message>
+        <source>Do you want to merge with existing entries?</source>
+        <translation>既存の一覧にマージしますか？</translation>
+    </message>
+    <message>
+        <source>Error importing color names XML</source>
+        <translation type="vanished">カラー名XMLファイルの読み込みエラー</translation>
+    </message>
+    <message>
+        <source>Save Color Names</source>
+        <translation>カラー名を保存</translation>
+    </message>
+    <message>
+        <source>XML files (*.xml);;Text files (*.txt)</source>
+        <translation>XMファイル (*.xml);;テキストファイル (*.txt)</translation>
+    </message>
+    <message>
+        <source>Error exporting color names XML</source>
+        <translation>カラー名XMLファイルの書き出しエラー</translation>
+    </message>
+    <message>
+        <source>Color name is not valid.
+The following characters cannot be used: \ # &lt; &gt; &quot; &apos;</source>
+        <translation>無効な色名です。
+色名には次の記号を含むことができません： \ # &lt; &gt; &quot; &apos;</translation>
+    </message>
+    <message>
+        <source>Color name already exists.
+Please use another name.</source>
+        <translation>既に存在する色名です。
+別の名前を使用してください。</translation>
+    </message>
+    <message>
+        <source>Invalid hex color format.</source>
+        <translation>無効な16進数カラー名です。</translation>
+    </message>
+    <message>
+        <source>Error importing color names XML:
+File not found or invalid format</source>
+        <translation>色名リストのXMLの読み込みに失敗しました：
+ファイルが存在しないか、無効な形式です</translation>
+    </message>
+    <message>
+        <source>Error importing color names XML:
+The file may be corrupt or have invalid format.</source>
+        <translation>色名リストのXMLの読み込みに失敗しました：
+ファイルが壊れているか、無効な形式です</translation>
+    </message>
+    <message>
+        <source>An unexpected error occurred while importing colors.</source>
+        <translation>色名リストの読み込み中に不明なエラーが発生しました。</translation>
+    </message>
+    <message>
+        <source>Failed to save user color names file.</source>
+        <translation>ユーザー色名リストファイルの保存に失敗しました。</translation>
+    </message>
+</context>
+<context>
     <name>DVGui::LineEdit</name>
     <message>
         <source>A file name cannot contains any of the following chracters: /\:*?&quot;&lt;&gt;|.</source>
+        <translation type="vanished">ファイル名は次の記号を含むことができません： /\:*?&quot;&lt;&gt;|</translation>
+    </message>
+    <message>
+        <source>A file name cannot contains any of the following characters: /\:*?&quot;&lt;&gt;|.</source>
         <translation>ファイル名は次の記号を含むことができません： /\:*?&quot;&lt;&gt;|</translation>
     </message>
 </context>
@@ -425,6 +618,18 @@ Possibly the preset file has been corrupted</source>
     <message>
         <source>Channel:</source>
         <translation>チャンネル：</translation>
+    </message>
+    <message>
+        <source>Range:</source>
+        <translation>範囲：</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation>出力:</translation>
+    </message>
+    <message>
+        <source>Input:</source>
+        <translation>入力:</translation>
     </message>
 </context>
 <context>
@@ -609,7 +814,7 @@ Possibly the preset file has been corrupted</source>
     </message>
     <message>
         <source>&amp;Next frame</source>
-        <translation>次のフレーム (&amp;N)</translation>
+        <translation type="vanished">次のフレーム (&amp;N)</translation>
     </message>
     <message>
         <source>&amp;Last Frame</source>
@@ -718,6 +923,48 @@ Possibly the preset file has been corrupted</source>
     <message>
         <source>&amp;Reset View</source>
         <translation>表示をリセット (&amp;R)</translation>
+    </message>
+    <message>
+        <source>Sound</source>
+        <translation>サウンド</translation>
+    </message>
+    <message>
+        <source>Locator</source>
+        <translation>ロケーター</translation>
+    </message>
+    <message>
+        <source>&amp;Next Frame</source>
+        <translation>次のフレーム (&amp;N)</translation>
+    </message>
+    <message>
+        <source>Gain Controls</source>
+        <translation>ゲイン</translation>
+    </message>
+    <message>
+        <source>&amp;Reduce gain 1/2 stop (divide by sqrt(2))</source>
+        <translation>Fストップ値を1/2減らす（sqrt(2)で除算） (&amp;R)</translation>
+    </message>
+    <message>
+        <source>Toggle gain between 1 and the previous setting.
+Gain is shown as an f-stop and the &quot;neutral&quot; or 1.0 gain f-stop is f/8.</source>
+        <translation>ゲインの値を1.0と直前の値とで切り替えます。
+ゲインはFストップで表示され、「標準」あるいはゲイン1.0のFストップはf/8です。</translation>
+    </message>
+    <message>
+        <source>&amp;Increase gain 1/2 stop (multiply by sqrt(2))</source>
+        <translation>Fストップ値を1/2増やす（sqrt(2)で乗算） (&amp;I)</translation>
+    </message>
+    <message>
+        <source> (gain %1)</source>
+        <translation> (ゲイン %1)</translation>
+    </message>
+    <message>
+        <source>&amp;Rotate Left</source>
+        <translation>左に回転（&amp;R）</translation>
+    </message>
+    <message>
+        <source>&amp;Rotate Right</source>
+        <translation>右に回転（&amp;R）</translation>
     </message>
 </context>
 <context>
@@ -970,6 +1217,10 @@ Possibly the preset file has been corrupted</source>
         <source>Step</source>
         <translation>ステップ</translation>
     </message>
+    <message>
+        <source>Link/Unlink Handles</source>
+        <translation>ハンドルを連結/分離</translation>
+    </message>
 </context>
 <context>
     <name>FunctionSelection</name>
@@ -983,6 +1234,13 @@ Possibly the preset file has been corrupted</source>
     <message>
         <source>Function Editor</source>
         <translation>パラメータエディタ</translation>
+    </message>
+</context>
+<context>
+    <name>FunctionSheetButtonArea</name>
+    <message>
+        <source>Toggle synchronizing zoom with xsheet</source>
+        <translation>タイムシートとのズーム同期の切り替え</translation>
     </message>
 </context>
 <context>
@@ -1073,6 +1331,15 @@ Possibly the preset file has been corrupted</source>
     </message>
 </context>
 <context>
+    <name>FunctionSheetColumnHeadViewer</name>
+    <message>
+        <source>Some key(s) in this parameter loses original reference in expression.
+Manually changing any keyframe will clear the warning.</source>
+        <translation>このパラメータの中の１つまたは複数のキーフレームで、エクスプレッションによる参照が切れています。
+手動でいずれかのキーフレームを変更するとこの警告は消えます。</translation>
+    </message>
+</context>
+<context>
     <name>FunctionToolbar</name>
     <message>
         <source>Value</source>
@@ -1100,6 +1367,12 @@ Possibly the preset file has been corrupted</source>
     <message>
         <source>Plastic Skeleton</source>
         <translation>プラスチックのボーン</translation>
+    </message>
+    <message>
+        <source>Some key(s) in this parameter loses original reference in expression.
+Manually changing any keyframe will clear the warning.</source>
+        <translation>このパラメータの中の１つまたは複数のキーフレームで、エクスプレッションによる参照が切れています。
+手動でいずれかのキーフレームを変更するとこの警告は消えます。</translation>
     </message>
 </context>
 <context>
@@ -1262,6 +1535,17 @@ Possibly the preset file has been corrupted</source>
     </message>
 </context>
 <context>
+    <name>FxPassThroughPainter</name>
+    <message>
+        <source>&amp;Paste Add</source>
+        <translation>貼り付けて追加 (&amp;P)</translation>
+    </message>
+    <message>
+        <source>&amp;Preview</source>
+        <translation>プレビュー (&amp;P)</translation>
+    </message>
+</context>
+<context>
     <name>FxSchematicLink</name>
     <message>
         <source>&amp;Delete</source>
@@ -1277,6 +1561,13 @@ Possibly the preset file has been corrupted</source>
     <message>
         <source>Output</source>
         <translation>出力</translation>
+    </message>
+</context>
+<context>
+    <name>FxSchematicPassThroughNode</name>
+    <message>
+        <source> (Pass Through)</source>
+        <translation> (Pass Through)</translation>
     </message>
 </context>
 <context>
@@ -1598,6 +1889,50 @@ Select FX nodes and related links before copying or cutting the selection you wa
         <source>)</source>
         <translation>)</translation>
     </message>
+    <message>
+        <source>Hide New Style Button</source>
+        <translation>スタイル追加ボタンを隠す</translation>
+    </message>
+    <message>
+        <source>Show New Style Button</source>
+        <translation>スタイル追加ボタンを表示する</translation>
+    </message>
+    <message>
+        <source>Failed to save palette.</source>
+        <translation>パレットの保存に失敗しました。</translation>
+    </message>
+    <message>
+        <source>Set Toolbar Below Styles</source>
+        <translation>ツールバーを下に配置</translation>
+    </message>
+    <message>
+        <source>Set Toolbar Above Styles</source>
+        <translation>ツールバーを上に配置</translation>
+    </message>
+    <message>
+        <source>Auto Adjust Panel Width</source>
+        <translation>パネル幅を自動で調整</translation>
+    </message>
+    <message>
+        <source>Visible Toolbar Buttons</source>
+        <translation>ツールバーボタンの表示</translation>
+    </message>
+    <message>
+        <source>KeyFrame</source>
+        <translation>キーフレーム</translation>
+    </message>
+    <message>
+        <source>New Style/Page</source>
+        <translation>新規スタイル／ページ</translation>
+    </message>
+    <message>
+        <source>Palette Gizmo</source>
+        <translation>スタイルをまとめて色調整</translation>
+    </message>
+    <message>
+        <source>Name Editor</source>
+        <translation>スタイル名エディタ</translation>
+    </message>
 </context>
 <context>
     <name>PaletteViewerGUI::PageViewer</name>
@@ -1621,6 +1956,10 @@ Select FX nodes and related links before copying or cutting the selection you wa
         <source>Name Editor</source>
         <translation>スタイル名エディタ</translation>
     </message>
+    <message>
+        <source> + </source>
+        <translation></translation>
+    </message>
 </context>
 <context>
     <name>PalettesScanPopup</name>
@@ -1640,6 +1979,10 @@ Select FX nodes and related links before copying or cutting the selection you wa
         <source>&lt;files&gt;</source>
         <translation>&lt;ファイル&gt;</translation>
     </message>
+    <message>
+        <source>Failed to import palette.</source>
+        <translation>パレットの読み込みに失敗しました。</translation>
+    </message>
 </context>
 <context>
     <name>ParamViewer</name>
@@ -1652,7 +1995,18 @@ Select FX nodes and related links before copying or cutting the selection you wa
     <name>ParamsPageSet</name>
     <message>
         <source>Fx Help</source>
-        <translation>ヘルプ</translation>
+        <translation type="vanished">ヘルプ</translation>
+    </message>
+    <message>
+        <source>View help page</source>
+        <translation>ヘルプの表示</translation>
+    </message>
+    <message>
+        <source>This Fx does not support rendering in floating point channel width (32bit).
+The output pixel values from this fx will be clamped to 0.0 - 1.0
+and tone may be slightly discretized.</source>
+        <translation>このエフェクトは浮動小数（32bit）のチャンネル幅でのレンダリングをサポートしていません。
+このエフェクトから出力されるピクセル値は0.0-1.0にクランプされ、諧調がわずかに離散化されます。</translation>
     </message>
 </context>
 <context>
@@ -1806,7 +2160,7 @@ Select FX nodes and related links before copying or cutting the selection you wa
     </message>
     <message>
         <source>Palette</source>
-        <translation>パレット</translation>
+        <translation type="vanished">パレット</translation>
     </message>
     <message>
         <source>Apply</source>
@@ -1929,12 +2283,12 @@ Select FX nodes and related links before copying or cutting the selection you wa
         <translation>出力パス：</translation>
     </message>
     <message>
-        <source>Endianess:      </source>
+        <source>Endianness:      </source>
         <translation>エンディアン：</translation>
     </message>
     <message>
         <source>It is not possible to delete the style #</source>
-        <translation>スタイルを削除できません：スタイル#</translation>
+        <translation type="vanished">スタイルを削除できません：スタイル#</translation>
     </message>
     <message>
         <source>It is not possible to delete styles #0 and #1.</source>
@@ -2004,7 +2358,7 @@ Select FX nodes and related links before copying or cutting the selection you wa
     <message>
         <source>Deleting &quot;%1&quot;.
 Are you sure?</source>
-        <translation>&quot;%1&quot;を削除します。
+        <translation type="vanished">&quot;%1&quot;を削除します。
 よろしいですか？</translation>
     </message>
     <message>
@@ -2013,19 +2367,19 @@ Are you sure?</source>
     </message>
     <message>
         <source>Paste Style  in Palette : %1</source>
-        <translation>スタイルを貼り付け : パレット %1</translation>
+        <translation type="vanished">スタイルを貼り付け : パレット %1</translation>
     </message>
     <message>
         <source>Delete Style  from Palette : %1</source>
-        <translation>スタイルを削除 :パレット  %1</translation>
+        <translation type="vanished">スタイルを削除 :パレット  %1</translation>
     </message>
     <message>
         <source>Cut Style  from Palette : %1</source>
-        <translation>スタイルを切り取り : パレット %1</translation>
+        <translation type="vanished">スタイルを切り取り : パレット %1</translation>
     </message>
     <message>
         <source>  to Palette : %1</source>
-        <translation>  パレットへ : %1</translation>
+        <translation type="vanished">  パレットへ : %1</translation>
     </message>
     <message>
         <source>Paste Color &amp;&amp; Name%1</source>
@@ -2045,11 +2399,11 @@ Are you sure?</source>
     </message>
     <message>
         <source>Blend Colors  in Palette : %1</source>
-        <translation>色を混合 : パレット %1</translation>
+        <translation type="vanished">色を混合 : パレット %1</translation>
     </message>
     <message>
         <source>Toggle Link  in Palette : %1</source>
-        <translation>リンクを切り替え : パレット %1</translation>
+        <translation type="vanished">リンクを切り替え : パレット %1</translation>
     </message>
     <message>
         <source>Remove Link  in Palette : %1</source>
@@ -2159,7 +2513,7 @@ Are you sure?</source>
     </message>
     <message>
         <source>Remove Reference  in Palette : %1</source>
-        <translation>スタジオパレットへの参照を消去：パレット%1</translation>
+        <translation type="vanished">スタジオパレットへの参照を消去：パレット%1</translation>
     </message>
     <message>
         <source>It is not possible to assign a shortcut with modifiers to the visualization commands.</source>
@@ -2193,7 +2547,7 @@ Are you sure?</source>
     <message>
         <source>Failed to get attribute location of %1</source>
         <comment>gl</comment>
-        <translation>%1　のアトリビュート位置の取得に失敗しました</translation>
+        <translation>%1&#x3000;のアトリビュート位置の取得に失敗しました</translation>
     </message>
     <message>
         <source>Failed to get uniform location of %1</source>
@@ -2223,7 +2577,7 @@ The second line should be &quot;Mesh [Input bit depth] [Output bit depth]&quot;<
     <message>
         <source>Custom Texture</source>
         <comment>TextureStyleChooserPage</comment>
-        <translation>カスタムテクスチャ</translation>
+        <translation type="vanished">カスタムテクスチャ</translation>
     </message>
     <message>
         <source>Current Frame: </source>
@@ -2256,6 +2610,79 @@ The second line should be &quot;Mesh [Input bit depth] [Output bit depth]&quot;<
         <source>That is a reserved file name and cannot be used.</source>
         <translation>システムの予約語のため、使用できません。</translation>
     </message>
+    <message>
+        <source>There are no unused styles.</source>
+        <translation>使用していないスタイルがありません。</translation>
+    </message>
+    <message>
+        <source>and %1 more styles.</source>
+        <translation>さらに %1 個のスタイル。</translation>
+    </message>
+    <message>
+        <source>Erasing unused styles with following indices. Are you sure?
+
+%1</source>
+        <translation>以下の番号のスタイルを削除します。よろしいですか？
+
+%1</translation>
+    </message>
+    <message>
+        <source>Erase</source>
+        <translation>削除</translation>
+    </message>
+    <message>
+        <source>Click &amp; Drag Palette into Studio Palette</source>
+        <translation>[スタジオパレットにドラッグ] このパレットをスタジオパレットに登録する</translation>
+    </message>
+    <message>
+        <source>Plain color</source>
+        <comment>TextureStyleChooserPage</comment>
+        <translation>単色</translation>
+    </message>
+    <message>
+        <source>Sample Type: </source>
+        <translation>サンプル形式： </translation>
+    </message>
+    <message>
+        <source>It is not possible to delete style #</source>
+        <translation>スタイルを削除できません：スタイル#</translation>
+    </message>
+    <message>
+        <source>Paste Style to Palette: %1</source>
+        <translation>スタイルを貼り付け : パレット %1</translation>
+    </message>
+    <message>
+        <source>Delete Style from Palette: %1</source>
+        <translation>スタイルを削除 :パレット  %1</translation>
+    </message>
+    <message>
+        <source>Cut Style from Palette: %1</source>
+        <translation>スタイルを切り取り : パレット %1</translation>
+    </message>
+    <message>
+        <source> to Palette: %1</source>
+        <translation>  パレットへ : %1</translation>
+    </message>
+    <message>
+        <source>Blend Colors in Palette: %1</source>
+        <translation>色を混合 : パレット %1</translation>
+    </message>
+    <message>
+        <source>Toggle Link in Palette: %1</source>
+        <translation>リンクを切り替え : パレット %1</translation>
+    </message>
+    <message>
+        <source>Remove Reference in Palette: %1</source>
+        <translation>スタジオパレットへの参照を消去：パレット%1</translation>
+    </message>
+    <message>
+        <source>Set As...</source>
+        <translation>パレットを選択して下さい...</translation>
+    </message>
+    <message>
+        <source>Delete Lines and Areas</source>
+        <translation>線および塗りを削除</translation>
+    </message>
 </context>
 <context>
     <name>QPushButton</name>
@@ -2280,6 +2707,29 @@ The second line should be &quot;Mesh [Input bit depth] [Output bit depth]&quot;<
     <message>
         <source>Swap %1 and %2</source>
         <translation>%1 と %2 を入れ替える</translation>
+    </message>
+</context>
+<context>
+    <name>SchematicName</name>
+    <message>
+        <source>Cu&amp;t</source>
+        <translation>切り取り (&amp;T)</translation>
+    </message>
+    <message>
+        <source>&amp;Copy</source>
+        <translation>コピー (&amp;C)</translation>
+    </message>
+    <message>
+        <source>&amp;Paste</source>
+        <translation>貼り付け (&amp;P)</translation>
+    </message>
+    <message>
+        <source>&amp;Delete</source>
+        <translation>削除 (&amp;A)</translation>
+    </message>
+    <message>
+        <source>Select &amp;All</source>
+        <translation>すべて選択 (&amp;A)</translation>
     </message>
 </context>
 <context>
@@ -2326,7 +2776,7 @@ The second line should be &quot;Mesh [Input bit depth] [Output bit depth]&quot;<
     </message>
     <message>
         <source>&amp;Swtich output port display mode</source>
-        <translation>ポートの表示を切り替える (&amp;S)</translation>
+        <translation type="vanished">ポートの表示を切り替える (&amp;S)</translation>
     </message>
     <message>
         <source>&amp;Toggle node icons</source>
@@ -2344,12 +2794,43 @@ The second line should be &quot;Mesh [Input bit depth] [Output bit depth]&quot;<
         <source>&amp;Hand Mode</source>
         <translation>手のひらモード (&amp;H)</translation>
     </message>
+    <message>
+        <source>&amp;Switch output port display mode</source>
+        <translation>ポートの表示を切り替える (&amp;S)</translation>
+    </message>
 </context>
 <context>
     <name>SchematicWindowEditor</name>
     <message>
         <source>&amp;Close Editor</source>
         <translation>エディタを閉じる (&amp;C)</translation>
+    </message>
+</context>
+<context>
+    <name>SeeThroughWindowPopup</name>
+    <message>
+        <source>See Through Mode (Main Window)</source>
+        <translation>透過モード （メインウィンドウ）</translation>
+    </message>
+    <message>
+        <source>Opacity</source>
+        <translation>不透明度</translation>
+    </message>
+    <message>
+        <source>Quickly toggle main window semi-transparency and full opacity.</source>
+        <translation>メインウィンドウの半透明表示と不透明表示を切り替えます。</translation>
+    </message>
+    <message>
+        <source>Hold ALT while clicking to use full transparency instead.</source>
+        <translation>Altキーを押しながらクリックすると、完全に透明になります。</translation>
+    </message>
+    <message>
+        <source>When slider is at 100% it acts as ALT is held.</source>
+        <translation>スライダが100％の状態でも、Altキーを押しているのと同じ動作をします。</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>閉じる</translation>
     </message>
 </context>
 <context>
@@ -2428,7 +2909,7 @@ The second line should be &quot;Mesh [Input bit depth] [Output bit depth]&quot;<
     <name>StageSchematicNode</name>
     <message>
         <source>Toggle Autorotate Along Motion Path</source>
-        <translation>モーションパスに沿って自動回転　の切り替え</translation>
+        <translation>モーションパスに沿って自動回転&#x3000;の切り替え</translation>
     </message>
     <message>
         <source>Toggle Link Motion Path to Control Points</source>
@@ -2568,6 +3049,18 @@ Are you sure ?</source>
         <source>Convert</source>
         <translation>変換する</translation>
     </message>
+    <message>
+        <source>Failed to save palette.</source>
+        <translation>パレットの保存に失敗しました。</translation>
+    </message>
+    <message>
+        <source>Set As...</source>
+        <translation>初期値のパレットに設定...</translation>
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation>再読み込み</translation>
+    </message>
 </context>
 <context>
     <name>StudioPaletteViewer</name>
@@ -2654,15 +3147,15 @@ Apply</source>
     </message>
     <message>
         <source>[CLEANUP]  </source>
-        <translation>[トレース]  </translation>
+        <translation type="vanished">[トレース]  </translation>
     </message>
     <message>
         <source>[STUDIO]  </source>
-        <translation>[スタジオ]  </translation>
+        <translation type="vanished">[スタジオ]  </translation>
     </message>
     <message>
         <source>[LEVEL]  </source>
-        <translation>[レベル]  </translation>
+        <translation type="vanished">[レベル]  </translation>
     </message>
     <message>
         <source>- Style is Not Valid -</source>
@@ -2694,7 +3187,7 @@ Apply</source>
     </message>
     <message>
         <source>Toggle orientation of the Color Page.</source>
-        <translation>「色」タブのレイアウト方向を変更</translation>
+        <translation type="vanished">「色」タブのレイアウト方向を変更</translation>
     </message>
     <message>
         <source>No Style Selected</source>
@@ -2723,6 +3216,50 @@ Apply</source>
     <message>
         <source>Palette</source>
         <translation>パレット</translation>
+    </message>
+    <message>
+        <source>Cleanup </source>
+        <translation>トレース</translation>
+    </message>
+    <message>
+        <source>Studio </source>
+        <translation>スタジオ</translation>
+    </message>
+    <message>
+        <source>Level </source>
+        <translation>レベル</translation>
+    </message>
+    <message>
+        <source>Hex</source>
+        <translation>16進数カラー</translation>
+    </message>
+    <message>
+        <source>Relative colored + Triangle handle</source>
+        <translation>相対色表示+三角のハンドル</translation>
+    </message>
+    <message>
+        <source>Absolute colored + Line handle</source>
+        <translation>絶対色表示+線のハンドル</translation>
+    </message>
+    <message>
+        <source>Slider Appearance</source>
+        <translation>スライダの外観</translation>
+    </message>
+    <message>
+        <source>Toggle Orientation</source>
+        <translation>レイアウト向きの切り替え</translation>
+    </message>
+    <message>
+        <source>Hex Color Names...</source>
+        <translation>16進数カラー名エディタ...</translation>
+    </message>
+    <message>
+        <source>Search</source>
+        <translation>検索</translation>
+    </message>
+    <message>
+        <source>Clear Search</source>
+        <translation>検索をクリア</translation>
     </message>
 </context>
 <context>
@@ -2788,6 +3325,21 @@ Apply</source>
     <message>
         <source>Reset to default</source>
         <translation>リセット</translation>
+    </message>
+</context>
+<context>
+    <name>StyleEditorGUI::StyleChooserPage</name>
+    <message>
+        <source>Pin To Top</source>
+        <translation>トップに固定</translation>
+    </message>
+    <message>
+        <source>Set Pins To Top</source>
+        <translation>トップに固定する</translation>
+    </message>
+    <message>
+        <source>Clear Pins To Top</source>
+        <translation>トップに固定を解除</translation>
     </message>
 </context>
 <context>

@@ -6,7 +6,7 @@
 #include "tfilepath_io.h"
 #include "tfunctorinvoker.h"
 
-// TnzBase incudes
+// TnzBase includes
 #include "tunit.h"
 #include "tparamcontainer.h"
 #include "tparamset.h"
@@ -131,29 +131,45 @@ bool FunctionTreeModel::ChannelGroup::isAnimated() const {
 
 //-----------------------------------------------------------------------------
 
+bool FunctionTreeModel::ChannelGroup::isIgnored() const {
+  // Same for the ignored ones, show warning icon if any of its children is.
+  int c, childCount = getChildCount();
+  for (c = 0; c != childCount; ++c)
+    if (static_cast<Item *>(getChild(c))->isIgnored()) return true;
+
+  return false;
+}
+
+//-----------------------------------------------------------------------------
+
 QVariant FunctionTreeModel::ChannelGroup::data(int role) const {
   if (role == Qt::DisplayRole)
     return getLongName();
   else if (role == Qt::DecorationRole) {
     bool animated = isAnimated();
     bool active   = isActive();
+    bool ignored  = (animated) ? isIgnored() : false;
 
     if (active) {
-      static QIcon folderAnimOpen(":Resources/folderanim_open.svg");
-      static QIcon folderAnimClose(":Resources/folderanim_close.svg");
-      static QIcon folderOpen(":Resources/folder_open.svg");
-      static QIcon folderClose(":Resources/folder_close.svg");
+      static QIcon folderAnimOpen(createQIcon("folder_anim_on"));
+      static QIcon folderAnimClose(createQIcon("folder_anim"));
+      static QIcon folderOpen(createQIcon("folder_on"));
+      static QIcon folderClose(createQIcon("folder"));
+      static QIcon ignoredOn(":Resources/paramignored_on.svg");
 
-      return animated ? isOpen() ? folderAnimOpen : folderAnimClose
-                      : isOpen() ? folderOpen : folderClose;
+      return animated ? (isOpen() ? folderAnimOpen
+                                  : (ignored ? ignoredOn : folderAnimClose))
+                      : (isOpen() ? folderOpen : folderClose);
     } else {
-      static QIcon folderAnimOpen(":Resources/folderanim_open_off.svg");
-      static QIcon folderAnimClose(":Resources/folderanim_close_off.svg");
-      static QIcon folderOpen(":Resources/folder_open_off.svg");
-      static QIcon folderClose(":Resources/folder_close_off.svg");
+      static QIcon folderAnimOpen(createQIcon("folder_anim_inactive_on"));
+      static QIcon folderAnimClose(createQIcon("folder_anim_inactive"));
+      static QIcon folderOpen(createQIcon("folder_inactive_on"));
+      static QIcon folderClose(createQIcon("folder_inactive"));
+      static QIcon ignoredOff(":Resources/paramignored_off.svg");
 
-      return animated ? isOpen() ? folderAnimOpen : folderAnimClose
-                      : isOpen() ? folderOpen : folderClose;
+      return animated ? (isOpen() ? folderAnimOpen
+                                  : (ignored ? ignoredOff : folderAnimClose))
+                      : (isOpen() ? folderOpen : folderClose);
     }
   } else
     return Item::data(role);
@@ -256,29 +272,20 @@ QVariant StageObjectChannelGroup::data(int role) const {
     std::string name = (m_stageObject->getId().isTable())
                            ? FunctionTreeView::tr("Table").toStdString()
                            : m_stageObject->getName();
-    std::string id = m_stageObject->getId().toString();
+    std::string id   = m_stageObject->getId().toString();
 
     return (name == id) ? QString::fromStdString(name)
                         : QString::fromStdString(id + " (" + name + ")");
 
   } else if (role == Qt::ForegroundRole) {
     FunctionTreeModel *model = dynamic_cast<FunctionTreeModel *>(getModel());
-    if (!model)
-#if QT_VERSION >= 0x050000
-      return QColor(Qt::black);
-#else
-      return Qt::black;
-#endif
+    if (!model) return QColor(Qt::black);
     FunctionTreeView *view = dynamic_cast<FunctionTreeView *>(model->getView());
-    if (!view || !model->getCurrentStageObject())
-#if QT_VERSION >= 0x050000
-      return QColor(Qt::black);
-#else
-      return Qt::black;
-#endif
+    if (!view || !model->getCurrentStageObject()) return QColor(Qt::black);
     TStageObjectId currentId = model->getCurrentStageObject()->getId();
-    return m_stageObject->getId() == currentId ? view->getCurrentTextColor()
-                                               : view->getTextColor();
+    return m_stageObject->getId() == currentId
+               ? view->getViewer()->getCurrentTextColor()
+               : view->getTextColor();
   } else
     return ChannelGroup::data(role);
 }
@@ -350,22 +357,27 @@ QVariant FxChannelGroup::data(int role) const {
       isOneChildActive = true;
       break;
     }
+    bool ignored = (isAnimated) ? isIgnored() : false;
     if (isOneChildActive) {
-      static QIcon folderAnimOpen(":Resources/folderanim_open.svg");
-      static QIcon folderAnimClose(":Resources/folderanim_close.svg");
-      static QIcon folderOpen(":Resources/folder_open.svg");
-      static QIcon folderClose(":Resources/folder_close.svg");
+      static QIcon folderAnimOpen(createQIcon("folder_anim_on"));
+      static QIcon folderAnimClose(createQIcon("folder_anim"));
+      static QIcon folderOpen(createQIcon("folder_on"));
+      static QIcon folderClose(createQIcon("folder"));
+      static QIcon ignoredOn(":Resources/paramignored_on.svg");
 
-      return isAnimated ? isOpen() ? folderAnimOpen : folderAnimClose
-                        : isOpen() ? folderOpen : folderClose;
+      return isAnimated ? (isOpen() ? folderAnimOpen
+                                    : (ignored ? ignoredOn : folderAnimClose))
+                        : (isOpen() ? folderOpen : folderClose);
     } else {
-      static QIcon folderAnimOpen(":Resources/folderanim_open_off.svg");
-      static QIcon folderAnimClose(":Resources/folderanim_close_off.svg");
-      static QIcon folderOpen(":Resources/folder_open_off.svg");
-      static QIcon folderClose(":Resources/folder_close_off.svg");
+      static QIcon folderAnimOpen(createQIcon("folder_anim_inactive_on"));
+      static QIcon folderAnimClose(createQIcon("folder_anim_inactive"));
+      static QIcon folderOpen(createQIcon("folder_inactive_on"));
+      static QIcon folderClose(createQIcon("folder_inactive"));
+      static QIcon ignoredOff(":Resources/paramignored_off.svg");
 
-      return isAnimated ? isOpen() ? folderAnimOpen : folderAnimClose
-                        : isOpen() ? folderOpen : folderClose;
+      return isAnimated ? (isOpen() ? folderAnimOpen
+                                    : (ignored ? ignoredOff : folderAnimClose))
+                        : (isOpen() ? folderOpen : folderClose);
     }
   } else if (role == Qt::DisplayRole) {
     std::wstring name = m_fx->getName();
@@ -376,21 +388,11 @@ QVariant FxChannelGroup::data(int role) const {
       return QString::fromStdWString(id + L" (" + name + L")");
   } else if (role == Qt::ForegroundRole) {
     FunctionTreeModel *model = dynamic_cast<FunctionTreeModel *>(getModel());
-    if (!model)
-#if QT_VERSION >= 0x050000
-      return QColor(Qt::black);
-#else
-      return Qt::black;
-#endif
+    if (!model) return QColor(Qt::black);
     FunctionTreeView *view = dynamic_cast<FunctionTreeView *>(model->getView());
-    if (!view)
-#if QT_VERSION >= 0x050000
-      return QColor(Qt::black);
-#else
-      return Qt::black;
-#endif
+    if (!view) return QColor(Qt::black);
     TFx *currentFx = model->getCurrentFx();
-    return m_fx == currentFx ? view->getCurrentTextColor()
+    return m_fx == currentFx ? view->getViewer()->getCurrentTextColor()
                              : view->getTextColor();
   } else
     return Item::data(role);
@@ -491,19 +493,9 @@ QVariant SkVDChannelGroup::data(int role) const {
     // it selection color
     // if this group refers to current vertex
     FunctionTreeModel *model = dynamic_cast<FunctionTreeModel *>(getModel());
-    if (!model)
-#if QT_VERSION >= 0x050000
-      return QColor(Qt::black);
-#else
-      return Qt::black;
-#endif
+    if (!model) return QColor(Qt::black);
     FunctionTreeView *view = dynamic_cast<FunctionTreeView *>(model->getView());
-    if (!view || !model->getCurrentStageObject())
-#if QT_VERSION >= 0x050000
-      return QColor(Qt::black);
-#else
-      return Qt::black;
-#endif
+    if (!view || !model->getCurrentStageObject()) return QColor(Qt::black);
 
     if (PlasticVertexSelection *vxSel =
             dynamic_cast<PlasticVertexSelection *>(TSelection::getCurrent()))
@@ -515,7 +507,7 @@ QVariant SkVDChannelGroup::data(int role) const {
             if (vIdx >= 0 &&
                 sd->skeleton(vxSel->skeletonId())->vertex(vIdx).name() ==
                     getLongName())
-              return view->getCurrentTextColor();
+              return view->getViewer()->getCurrentTextColor();
           }
     return view->getTextColor();
   } else
@@ -559,15 +551,31 @@ bool FunctionTreeModel::Channel::isAnimated() const {
 
 //-----------------------------------------------------------------------------
 
+bool FunctionTreeModel::Channel::isIgnored() const {
+  if (!isAnimated()) return false;
+  TDoubleParam *dp = dynamic_cast<TDoubleParam *>(m_param.getPointer());
+  if (!dp) return false;
+  FunctionTreeView *view = dynamic_cast<FunctionTreeView *>(m_model->m_view);
+  if (!view) return false;
+  return view->getXsheetHandle()->getXsheet()->isReferenceManagementIgnored(dp);
+}
+
+//-----------------------------------------------------------------------------
+
 QVariant FunctionTreeModel::Channel::data(int role) const {
   if (role == Qt::DecorationRole) {
     static QIcon paramAnimOn(":Resources/paramanim_on.svg");
     static QIcon paramAnimOff(":Resources/paramanim_off.svg");
     static QIcon paramOn(":Resources/param_on.svg");
     static QIcon paramOff(":Resources/param_off.svg");
+    static QIcon paramIgnoredOn(":Resources/paramignored_on.svg");
+    static QIcon paramIgnoredOff(":Resources/paramignored_off.svg");
+
+    if (isIgnored()) return isActive() ? paramIgnoredOn : paramIgnoredOff;
 
     return m_param->hasKeyframes() ? isActive() ? paramAnimOn : paramAnimOff
-                                   : isActive() ? paramOn : paramOff;
+           : isActive()            ? paramOn
+                                   : paramOff;
   } else if (role == Qt::DisplayRole) {
     if (m_param->hasUILabel()) {
       return QString::fromStdString(m_param->getUILabel());
@@ -580,13 +588,23 @@ QVariant FunctionTreeModel::Channel::data(int role) const {
   } else if (role == Qt::ForegroundRole) {
     // 130221 iwasawa
     FunctionTreeView *view = dynamic_cast<FunctionTreeView *>(m_model->m_view);
-    if (!view)
-#if QT_VERSION >= 0x050000
-      return QColor(Qt::black);
-#else
-      return Qt::black;
-#endif
-    return (isCurrent()) ? view->getCurrentTextColor() : view->getTextColor();
+    if (!view) return QColor(Qt::black);
+    return (isCurrent()) ? view->getViewer()->getCurrentTextColor()
+                         : view->getTextColor();
+  } else if (role == Qt::ToolTipRole) {
+    if (m_param->hasKeyframes()) {
+      TDoubleParam *dp = dynamic_cast<TDoubleParam *>(m_param.getPointer());
+      FunctionTreeView *view =
+          dynamic_cast<FunctionTreeView *>(m_model->m_view);
+      if (dp && view &&
+          view->getXsheetHandle()->getXsheet()->isReferenceManagementIgnored(
+              dp))
+        return tr(
+            "Some key(s) in this parameter loses original reference in "
+            "expression.\nManually changing any keyframe will clear the "
+            "warning.");
+    }
+    return TreeModel::Item::data(role);
   } else
     return TreeModel::Item::data(role);
 }
@@ -628,17 +646,21 @@ void FunctionTreeModel::Channel::setParam(const TParamP &param) {
 /*! in order to show the expression name in the tooltip
  */
 QString FunctionTreeModel::Channel::getExprRefName() const {
-  QString tmpName = QString(QString::fromStdWString(
-      TStringTable::translate(m_paramNamePref + m_param->getName())));
+  QString tmpName;
+  if (m_param->hasUILabel())
+    tmpName = QString::fromStdString(m_param->getUILabel());
+  else
+    tmpName = QString::fromStdWString(
+        TStringTable::translate(m_paramNamePref + m_param->getName()));
   /*--- stage
    * objectパラメータの場合、TableにあわせてtmpNameを代表的なExpression名にする---*/
   StageObjectChannelGroup *stageGroup =
       dynamic_cast<StageObjectChannelGroup *>(m_group);
   if (stageGroup) {
-    if (tmpName == "N/S")
-      tmpName = "ns";
-    else if (tmpName == "E/W")
-      tmpName = "ew";
+    if (tmpName == "Y")
+      tmpName = "y";
+    else if (tmpName == "X")
+      tmpName = "x";
     else if (tmpName == "Z")
       tmpName = "z";
     else if (tmpName == "Rotation")
@@ -1088,8 +1110,11 @@ void FunctionTreeModel::addChannels(TFx *fx, ChannelGroup *groupItem,
   const std::string &paramNamePref = fx->getFxType() + ".";
 
   int p, pCount = params->getParamCount();
-  for (p = 0; p != pCount; ++p)
+  for (p = 0; p != pCount; ++p) {
+    // hidden parameter are not displayed in the tree
+    if (params->isParamHidden(p)) continue;
     addParameter(fxItem, paramNamePref, fxId, params->getParam(p));
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -1196,9 +1221,7 @@ void FunctionTreeModel::onParamChange(bool isDragging) {
 //-----------------------------------------------------------------------------
 
 void FunctionTreeModel::resetAll() {
-#if QT_VERSION >= 0x050000
   beginResetModel();
-#endif
   m_activeChannels.clear();
 
   TreeModel::Item *root_item = getRootItem();
@@ -1206,9 +1229,6 @@ void FunctionTreeModel::resetAll() {
 
   m_stageObjects = 0;
   m_fxs          = 0;
-#if QT_VERSION < 0x050000
-  reset();
-#endif
 
   beginRefresh();
   refreshActiveChannels();
@@ -1220,9 +1240,7 @@ void FunctionTreeModel::resetAll() {
 
   m_currentChannel = 0;
 
-#if QT_VERSION >= 0x050000
   endResetModel();
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1328,7 +1346,11 @@ void FunctionTreeModel::addParameter(TParam *parameter,
 //-----------------------------------------------------------------------------
 
 FunctionTreeView::FunctionTreeView(FunctionViewer *parent)
-    : TreeView(parent), m_scenePath(), m_clickedItem(0), m_draggingChannel(0) {
+    : TreeView(parent)
+    , m_scenePath()
+    , m_clickedItem(0)
+    , m_draggingChannel(0)
+    , m_viewer(parent) {
   assert(parent);
 
   setModel(new FunctionTreeModel(this));
@@ -1464,7 +1486,7 @@ void FunctionTreeView::onMidClick(TreeModel::Item *item, const QPoint &itemPos,
                                   QMouseEvent *e) {
   FunctionTreeModel::Channel *channel =
       dynamic_cast<FunctionTreeModel::Channel *>(item);
-  if (channel && e->button() == Qt::MidButton) {
+  if (channel && e->button() == Qt::MiddleButton) {
     m_draggingChannel   = channel;
     m_dragStartPosition = e->pos();
   } else
@@ -1476,7 +1498,7 @@ void FunctionTreeView::onMidClick(TreeModel::Item *item, const QPoint &itemPos,
 void FunctionTreeView::onDrag(TreeModel::Item *item, const QPoint &itemPos,
                               QMouseEvent *e) {
   // middle drag of the channel item can retrieve expression name
-  if ((e->buttons() & Qt::MidButton) && m_draggingChannel &&
+  if ((e->buttons() & Qt::MiddleButton) && m_draggingChannel &&
       (e->pos() - m_dragStartPosition).manhattanLength() >=
           QApplication::startDragDistance()) {
     QDrag *drag         = new QDrag(this);
@@ -1543,15 +1565,7 @@ void FunctionTreeView::openContextMenu(FunctionTreeModel::Channel *channel,
                                        const QPoint &globalPos) {
   assert(channel);
 
-  QWidget *pw = dynamic_cast<QWidget *>(parentWidget());
-  if (!pw) return;
-
-  FunctionViewer *fv = dynamic_cast<FunctionViewer *>(pw->parentWidget());
-
-  if (!fv) {
-    assert(fv);
-    return;
-  }
+  if (!m_viewer) return;
 
   QMenu menu;
 
@@ -1567,12 +1581,12 @@ void FunctionTreeView::openContextMenu(FunctionTreeModel::Channel *channel,
   TDoubleParam *curve = channel->getParam();
 
   if (action == &saveCurveAction)
-    fv->emitIoCurve((int)FunctionViewer::eSaveCurve, curve, "");
+    m_viewer->emitIoCurve((int)FunctionViewer::eSaveCurve, curve, "");
   else if (action == &loadCurveAction)
-    fv->emitIoCurve((int)FunctionViewer::eLoadCurve, curve, "");
+    m_viewer->emitIoCurve((int)FunctionViewer::eLoadCurve, curve, "");
   else if (action == &exportDataAction)
-    fv->emitIoCurve((int)FunctionViewer::eExportCurve, curve,
-                    channel->getLongName().toStdString());
+    m_viewer->emitIoCurve((int)FunctionViewer::eExportCurve, curve,
+                          channel->getLongName().toStdString());
 }
 
 //-----------------------------------------------------------------------------

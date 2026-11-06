@@ -6,16 +6,15 @@
 #include "tfilepath.h"
 #include "toonzqt/menubarcommand.h"
 
-#if QT_VERSION >= 0x050000
 #include <QtWidgets/QMainWindow>
-#else
-#include <QtGui/QMainWindow>
-#endif
 #include <map>
 #include <QAction>
 #include <QString>
+#include <QSettings>
 
 #include "../toonzqt/tdockwindows.h"
+
+#include <memory>
 
 class QStackedWidget;
 class TPanel;
@@ -29,17 +28,25 @@ class Room final : public TMainWindow {
 
   TFilePath m_path;
   QString m_name;
+  std::unique_ptr<QSettings> m_settings;
+
+  // For lazy loading
+  bool m_initialized;
 
 public:
-#if QT_VERSION >= 0x050500
-  Room(QWidget *parent = 0, Qt::WindowFlags flags = 0)
-#else
-  Room(QWidget *parent = 0, Qt::WFlags flags = 0)
-#endif
-      : TMainWindow(parent, flags) {
-  }
+  Room(QWidget *parent = 0, Qt::WindowFlags flags = Qt::WindowFlags())
+      : TMainWindow(parent, flags)
+      , m_path()
+      , m_name()
+      , m_settings(nullptr)
+      , m_initialized(false) {}
 
   ~Room() {}
+
+  struct RoomLoadParams {
+    QString activeRoomName;
+    bool forceBuildGui = false;
+  };
 
   TFilePath getPath() const { return m_path; }
   void setPath(TFilePath path) { m_path = path; }
@@ -48,7 +55,14 @@ public:
   void setName(QString name) { m_name = name; }
 
   void save();
-  void load(const TFilePath &fp);
+  void load(const TFilePath &fp, RoomLoadParams &params);
+
+  bool notInitialized() const { return !m_initialized; }
+  void initialize() {
+    RoomLoadParams params;
+    params.forceBuildGui = true;
+    load(m_path, params);
+  }
 };
 
 //-----------------------------------------------------------------------------
@@ -58,6 +72,7 @@ class MainWindow final : public QMainWindow {
 
   bool m_saveSettingsOnQuit;
   bool m_startupPopupShown = false;
+  bool m_wasMaximized      = false;
   int m_oldRoomIndex;
   QString m_currentRoomsChoice;
   UpdateChecker *m_updateChecker;
@@ -72,13 +87,8 @@ class MainWindow final : public QMainWindow {
   QString m_layoutName;
 
 public:
-#if QT_VERSION >= 0x050500
   MainWindow(const QString &argumentLayoutFileName, QWidget *parent = 0,
-             Qt::WindowFlags flags = 0);
-#else
-  MainWindow(const QString &argumentLayoutFileName, QWidget *parent = 0,
-             Qt::WFlags flags = 0);
-#endif
+             Qt::WindowFlags flags = Qt::WindowFlags());
   ~MainWindow();
 
   void startupFloatingPanels();
@@ -92,6 +102,7 @@ public:
   void resetRoomsLayout();
   void maximizePanel();
   void fullScreenWindow();
+  void seeThroughWindow();
   void autofillToggle();
   void onUpgradeTabPro();
   void onAbout();
@@ -106,18 +117,17 @@ public:
 
   Room *getCurrentRoom() const;
   void refreshWriteSettings();
-  /*-- FillAreas,FillLinesに直接切り替えるコマンド --*/
-  void toggleFillAreas();
-  void toggleFillLines();
-  /*-- StylepickerAreas,StylepickerLinesに直接切り替えるコマンド --*/
-  void togglePickStyleAreas();
-  void togglePickStyleLines();
+
   void onNewVectorLevelButtonPressed();
   void onNewToonzRasterLevelButtonPressed();
   void onNewRasterLevelButtonPressed();
   void clearCacheFolder();
+  void onNewMetaLevelButtonPressed();
 
   QString getLayoutName() { return m_layoutName; }
+
+  // Update visibility of all room-bound panels (native and custom)
+  void updatePanelVisibility();
 
 protected:
   void showEvent(QShowEvent *) override;
@@ -142,55 +152,80 @@ private:
   Room *createBatchesRoom();
   Room *createBrowserRoom();
 
-  QAction *createAction(const char *id, const QString &name,
+  QAction *createAction(const char *id, const char *name,
                         const QString &defaultShortcut,
-                        CommandType type = MenuFileCommandType);
-  QAction *createRightClickMenuAction(const char *id, const QString &name,
-                                      const QString &defaultShortcut);
-  QAction *createMenuFileAction(const char *id, const QString &name,
-                                const QString &defaultShortcut);
-  QAction *createMenuEditAction(const char *id, const QString &name,
-                                const QString &defaultShortcut);
-  QAction *createMenuScanCleanupAction(const char *id, const QString &name,
-                                       const QString &defaultShortcut);
-  QAction *createMenuLevelAction(const char *id, const QString &name,
-                                 const QString &defaultShortcut);
-  QAction *createMenuXsheetAction(const char *id, const QString &name,
-                                  const QString &defaultShortcut);
-  QAction *createMenuCellsAction(const char *id, const QString &name,
-                                 const QString &defaultShortcut);
-  QAction *createMenuViewAction(const char *id, const QString &name,
-                                const QString &defaultShortcut);
-  QAction *createMenuWindowsAction(const char *id, const QString &name,
-                                   const QString &defaultShortcut);
+                        CommandType type        = MenuFileCommandType,
+                        const char *iconSVGName = "");
+  QAction *createRightClickMenuAction(const char *id, const char *name,
+                                      const QString &defaultShortcut,
+                                      const char *iconSVGName = "");
+  QAction *createMenuFileAction(const char *id, const char *name,
+                                const QString &defaultShortcut,
+                                const char *iconSVGName = "");
+  QAction *createMenuEditAction(const char *id, const char *name,
+                                const QString &defaultShortcut,
+                                const char *iconSVGName = "");
+  QAction *createMenuScanCleanupAction(const char *id, const char *name,
+                                       const QString &defaultShortcut,
+                                       const char *iconSVGName = "");
+  QAction *createMenuLevelAction(const char *id, const char *name,
+                                 const QString &defaultShortcut,
+                                 const char *iconSVGName = "");
+  QAction *createMenuXsheetAction(const char *id, const char *name,
+                                  const QString &defaultShortcut,
+                                  const char *iconSVGName = "");
+  QAction *createMenuCellsAction(const char *id, const char *name,
+                                 const QString &defaultShortcut,
+                                 const char *iconSVGName = "");
+  QAction *createMenuViewAction(const char *id, const char *name,
+                                const QString &defaultShortcut,
+                                const char *iconSVGName = "");
+  QAction *createMenuWindowsAction(const char *id, const char *name,
+                                   const QString &defaultShortcut,
+                                   const char *iconSVGName = "");
 
-  QAction *createMenuPlayAction(const char *id, const QString &name,
-                                const QString &defaultShortcut);
-  QAction *createMenuRenderAction(const char *id, const QString &name,
-                                  const QString &defaultShortcut);
-  QAction *createMenuHelpAction(const char *id, const QString &name,
-                                const QString &defaultShortcut);
-  QAction *createRGBAAction(const char *id, const QString &name,
-                            const QString &defaultShortcut);
-  QAction *createFillAction(const char *id, const QString &name,
-                            const QString &defaultShortcut);
-  QAction *createMenuAction(const char *id, const QString &name,
-                            QList<QString> list);
-  QAction *createToggle(const char *id, const QString &name,
+  QAction *createMenuPlayAction(const char *id, const char *name,
+                                const QString &defaultShortcut,
+                                const char *iconSVGName = "");
+  QAction *createMenuRenderAction(const char *id, const char *name,
+                                  const QString &defaultShortcut,
+                                  const char *iconSVGName = "");
+  QAction *createMenuHelpAction(const char *id, const char *name,
+                                const QString &defaultShortcut,
+                                const char *iconSVGName = "");
+  QAction *createRGBAAction(const char *id, const char *name,
+                            const QString &defaultShortcut,
+                            const char *iconSVGName = "");
+  QAction *createFillAction(const char *id, const char *name,
+                            const QString &defaultShortcut,
+                            const char *iconSVGName = "");
+  QAction *createMenuAction(const char *id, const char *name,
+                            QList<QString> list, bool isForRecentFiles = true);
+  QAction *createToggle(const char *id, const char *name,
                         const QString &defaultShortcut, bool startStatus,
-                        CommandType type);
+                        CommandType type, const char *iconSVGName = "");
   QAction *createToolAction(const char *id, const char *iconName,
-                            const QString &name,
-                            const QString &defaultShortcut);
-  QAction *createViewerAction(const char *id, const QString &name,
-                              const QString &defaultShortcut);
+                            const char *name, const QString &defaultShortcut);
+  QAction *createViewerAction(const char *id, const char *name,
+                              const QString &defaultShortcut,
+                              const char *iconSVGName = "");
   // For command bar, no shortcut keys
-  QAction *createVisualizationButtonAction(const char *id, const QString &name);
+  QAction *createVisualizationButtonAction(const char *id, const char *name,
+                                           const char *iconSVGName = "");
 
-  QAction *createMiscAction(const char *id, const QString &name,
+  QAction *createMiscAction(const char *id, const char *name,
                             const char *defaultShortcut);
-  QAction *createToolOptionsAction(const char *id, const QString &name,
-                                   const QString &defaultShortcut);
+  QAction *createToolOptionsAction(const char *id, const char *name,
+                                   const QString &defaultShortcut,
+                                   const char *iconSVGName = "");
+  QAction *createStopMotionAction(const char *id, const char *name,
+                                  const QString &defaultShortcut,
+                                  const char *iconSVGName = "");
+
+  QAction *createSpecialModifierAction(const char *id, const char *name,
+                                       const QString &defaultShortcut);
+
+  void setCommandToWIP(QAction *);
 
 protected slots:
   void onCurrentRoomChanged(int newRoomIndex);
@@ -205,6 +240,7 @@ protected slots:
   void onInk1CheckTriggered(bool on);
 
   void onUpdateCheckerDone(bool);
+  void onActiveViewerChanged();
 
 public slots:
   /*--- タイトルにシーン名を入れる ---*/

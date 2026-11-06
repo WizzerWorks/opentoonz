@@ -7,7 +7,7 @@
 #include "timage.h"
 #include <QObject>
 #include <QMap>
-#include <QTime>
+#include <QElapsedTimer>
 
 // forward declaration
 class TTool;
@@ -34,8 +34,9 @@ class DVAPI ToolHandle final : public QObject {
   TTool *m_tool;
   QString m_toolName;
   int m_toolTargetType;
+
   QString m_storedToolName;
-  QTime m_storedToolTime;
+  QElapsedTimer m_storedToolTime;
   QString m_oldToolName;
   bool m_toolIsBusy;
 
@@ -44,15 +45,17 @@ public:
   ~ToolHandle();
 
   TTool *getTool() const;
-  void setTool(TTool *tool);
-
   void setTool(QString name);
-  void setTargetType(int targetType);
+  void setTargetType(int targetType);  // TODO: unused, remove?
+
+  const QString &getRequestedToolName() const { return m_toolName; }
 
   // used to change tool for a short while (e.g. while keeping pressed a
   // short-key)
   void storeTool();
   void restoreTool();
+
+  bool isViewerNavigationToolSelected();
 
   // used to set a tool that is not listed in the toolbar (e.g. the
   // ShiftTraceTool).
@@ -63,7 +66,7 @@ public:
 
   /*! Notify tool parameters change (out of toolOption bar).*/
   void notifyToolChanged() { emit toolChanged(); }
-
+  void notifyToolOptionsBoxChanged() { emit toolOptionsBoxChanged(); }
   void notifyToolCursorTypeChanged() { emit toolCursorTypeChanged(); }
 
   void notifyToolComboBoxListChanged(std::string id) {
@@ -74,6 +77,7 @@ signals:
   void toolComboBoxListChanged(std::string);
   void toolSwitched();
   void toolChanged();
+  void toolOptionsBoxChanged();
   void toolEditingFinished();
   // used for changing the tool cursor when the options changed with short cut
   // keys assigned for tool options.

@@ -50,7 +50,7 @@ TOfflineGL *currentOfflineGL = 0;
 
 #include <QProgressDialog>
 
-#ifdef MACOSX
+#if defined(MACOSX) || defined(LINUX) || defined(FREEBSD)
 #include <QSurfaceFormat>
 #include <QOffscreenSurface>
 #include <QOpenGLContext>
@@ -60,8 +60,11 @@ TOfflineGL *currentOfflineGL = 0;
 // Utility functions
 //=============================================================================
 namespace {
-
-const VersionNumber l_currentVersion(71, 0);
+// tentatively update the scene file version from 71.0 to 71.1 in order to
+// manage PNG level settings
+const VersionNumber l_currentVersion(71, 1);
+// TODO: Revise VersionNumber with OT version (converting 71.0 -> 14.0 , 71.1
+// -> 15.0)
 
 //-----------------------------------------------------------------------------
 
@@ -273,12 +276,12 @@ static void deleteAllUntitledScenes() {
 //=============================================================================
 // ToonzScene
 
-ToonzScene::ToonzScene() : m_contentHistory(0), m_isUntitled(true) {
+ToonzScene::ToonzScene()
+    : m_contentHistory(0), m_isUntitled(true), m_isLoading(false) {
   m_childStack = new ChildStack(this);
   m_properties = new TSceneProperties();
   m_levelSet   = new TLevelSet();
-  m_project    = new TProject();
-  m_project->addRef();
+  m_project    = std::make_shared<TProject>();
 }
 
 //-----------------------------------------------------------------------------
@@ -288,9 +291,6 @@ ToonzScene::~ToonzScene() {
   delete m_levelSet;
   delete m_childStack;
   delete m_contentHistory;
-
-  assert(m_project);
-  if (m_project) m_project->release();
 }
 
 //-----------------------------------------------------------------------------
@@ -315,25 +315,20 @@ void ToonzScene::clear() {
 
 //-----------------------------------------------------------------------------
 
-void ToonzScene::setProject(TProject *project) {
+void ToonzScene::setProject(std::shared_ptr<TProject> project) {
   assert(project);
-
-  if (project != m_project) {
-    if (project) project->addRef();
-    if (m_project) m_project->release();
-    m_project = project;
-  }
+  m_project = project;
 }
 
 //-----------------------------------------------------------------------------
 
-TProject *ToonzScene::getProject() const { return m_project; }
+std::shared_ptr<TProject> ToonzScene::getProject() const { return m_project; }
 
 //-----------------------------------------------------------------------------
 
-void ToonzScene::setScenePath(const TFilePath &fp) {
-  m_scenePath  = fp;
-  m_isUntitled = false;
+void ToonzScene::setScenePath(const TFilePath &fp, bool changeToTitled) {
+  m_scenePath = fp;
+  if (changeToTitled) m_isUntitled = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -345,12 +340,16 @@ bool ToonzScene::isUntitled() const {
 //-----------------------------------------------------------------------------
 
 void ToonzScene::load(const TFilePath &path, bool withProgressDialog) {
-  loadNoResources(path);              // This loads a version number ..
-  loadResources(withProgressDialog);  // .. this uses the version number ..
-
-  setVersionNumber(
-      VersionNumber());  // .. but scene instances in memory do not retain
-}  // a version number beyond resource loading
+  setIsLoading(true);
+  try {
+    loadNoResources(path);
+    loadResources(withProgressDialog);
+  } catch (...) {
+    setIsLoading(false);
+    throw;
+  }
+  setIsLoading(false);
+}
 
 //-----------------------------------------------------------------------------
 
@@ -386,14 +385,14 @@ int ToonzScene::loadFrameCount(const TFilePath &fp) {
 void ToonzScene::loadNoResources(const TFilePath &fp) {
   clear();
 
-  TProjectManager *pm    = TProjectManager::instance();
-  TProjectP sceneProject = pm->loadSceneProject(fp);
+  TProjectManager *pm = TProjectManager::instance();
+  auto sceneProject   = pm->loadSceneProject(fp, &m_standAlone);
   if (!sceneProject) return;
-
-  setProject(sceneProject.getPointer());
 
   loadTnzFile(fp);
   getXsheet()->updateFrameCount();
+
+  setProject(sceneProject);
 }
 
 //-----------------------------------------------------------------------------
@@ -456,7 +455,9 @@ void ToonzScene::loadTnzFile(const TFilePath &fp) {
       while (is.matchTag(tagName)) {
         if (tagName == "generator") {
           std::string program = is.getString();
-          reading22           = program.find("2.2") != std::string::npos;
+          // TODO: This obsolete condition should be removed before releasing OT
+          // v2.2 !
+          reading22 = program.find("2.2") != std::string::npos;
         } else if (tagName == "properties")
           m_properties->loadData(is, false);
         else if (tagName == "palette")  // per compatibilita' beta1
@@ -552,6 +553,8 @@ void ToonzScene::setUntitled() {
   m_scenePath = fp;
 }
 
+void ToonzScene::setTitled() { m_isUntitled = false; }
+
 //-----------------------------------------------------------------------------
 
 // When saving as sub-xsheet, the sub becomes top. So, its cameras must be
@@ -580,6 +583,9 @@ public:
 void ToonzScene::save(const TFilePath &fp, TXsheet *subxsh) {
   TFilePath oldScenePath = getScenePath();
   TFilePath newScenePath = fp;
+
+  if (newScenePath != oldScenePath)
+    TProjectManager::instance()->loadSceneProject(fp, &m_standAlone);
 
   CameraRedirection redir(this, subxsh);
 
@@ -615,7 +621,7 @@ void ToonzScene::save(const TFilePath &fp, TXsheet *subxsh) {
     if (!os.checkStatus())
       throw TException("Could not open temporary save file");
 
-    TXsheet *xsh      = subxsh;
+    TXsheet *xsh = subxsh;
     if (xsh == 0) xsh = m_childStack->getTopXsheet();
 
     std::map<std::string, std::string> attr;
@@ -685,6 +691,8 @@ void ToonzScene::save(const TFilePath &fp, TXsheet *subxsh) {
   } else {
     if (wasUntitled) deleteUntitledScene(oldScenePath.getParentDir());
   }
+  // update the last saved version
+  setVersionNumber(l_currentVersion);
 }
 
 //-----------------------------------------------------------------------------
@@ -769,7 +777,7 @@ void ToonzScene::renderFrame(const TRaster32P &ras, int row, const TXsheet *xsh,
   TRect clipRect(ras->getBounds());
 
 // fix for plastic tool applied to subxsheet
-#ifdef MACOSX
+#if defined(MACOSX) || defined(LINUX) || defined(FREEBSD)
   QSurfaceFormat format;
   format.setProfile(QSurfaceFormat::CompatibilityProfile);
 
@@ -786,7 +794,7 @@ void ToonzScene::renderFrame(const TRaster32P &ras, int row, const TXsheet *xsh,
   ogl.makeCurrent();
 #endif
   {
-#ifdef MACOSX
+#if defined(MACOSX) || defined(LINUX) || defined(FREEBSD)
     std::unique_ptr<QOpenGLFramebufferObject> fb(
         new QOpenGLFramebufferObject(ras->getLx(), ras->getLy()));
 
@@ -817,7 +825,7 @@ void ToonzScene::renderFrame(const TRaster32P &ras, int row, const TXsheet *xsh,
 
     painter.flushRasterImages();
     glFlush();
-#ifdef MACOSX
+#if defined(MACOSX) || defined(LINUX) || defined(FREEBSD)
     QImage img =
         fb->toImage().scaled(QSize(ras->getLx(), ras->getLy()),
                              Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
@@ -836,7 +844,7 @@ void ToonzScene::renderFrame(const TRaster32P &ras, int row, const TXsheet *xsh,
     TRop::over(ras, ogl.getRaster());
 #endif
   }
-#ifdef MACOSX
+#if defined(MACOSX) || defined(LINUX) || defined(FREEBSD)
   glMatrixMode(GL_MODELVIEW), glPopMatrix();
   glMatrixMode(GL_PROJECTION), glPopMatrix();
 
@@ -873,7 +881,7 @@ TXshLevel *ToonzScene::createNewLevel(int type, std::wstring levelName,
       /*-- LevelSetの中に同じファイルパスのLevelがあるかをチェック --*/
       if (type != CHILD_XSHLEVEL && type != PLT_XSHLEVEL) {
         if (fp.isEmpty()) fp = getDefaultLevelPath(type, levelName);
-        TFilePath actualFp   = decodeFilePath(fp);
+        TFilePath actualFp = decodeFilePath(fp);
 
         if (TSystem::doesExistFileOrLevel(
                 actualFp))  // if(TFileStatus(actualFp).doesExist()) continue;
@@ -928,46 +936,8 @@ TXshLevel *ToonzScene::createNewLevel(int type, std::wstring levelName,
     sl->setPath(fp);
     sl->setDirtyFlag(true);
 
-    if (type == TZP_XSHLEVEL || type == PLI_XSHLEVEL)
-      sl->setPalette(new TPalette());
-
-    if (type == OVL_XSHLEVEL)
-      sl->setPalette(FullColorPalette::instance()->getPalette(this));
-
-    TPalette *palette = sl->getPalette();
-    if (palette && type != OVL_XSHLEVEL) {
-      palette->setPaletteName(sl->getName());
-      palette->setDirtyFlag(true);
-    }
-
-    if (type == TZP_XSHLEVEL || type == OVL_XSHLEVEL) {
-      double dpiY = dpi;
-      sl->getProperties()->setDpiPolicy(LevelProperties::DP_ImageDpi);
-      if (dim == TDimension()) {
-        double w, h;
-        Preferences *pref = Preferences::instance();
-        if (pref->isNewLevelSizeToCameraSizeEnabled()) {
-          TDimensionD camSize = getCurrentCamera()->getSize();
-          w                   = camSize.lx;
-          h                   = camSize.ly;
-          sl->getProperties()->setDpiPolicy(LevelProperties::DP_CustomDpi);
-          dpi  = getCurrentCamera()->getDpi().x;
-          dpiY = getCurrentCamera()->getDpi().y;
-        } else {
-          w    = pref->getDefLevelWidth();
-          h    = pref->getDefLevelHeight();
-          dpi  = pref->getDefLevelDpi();
-          dpiY = dpi;
-        }
-
-        sl->getProperties()->setImageRes(
-            TDimension(tround(w * dpi), tround(h * dpiY)));
-      } else
-        sl->getProperties()->setImageRes(dim);
-
-      sl->getProperties()->setImageDpi(TPointD(dpi, dpiY));
-      sl->getProperties()->setDpi(dpi);
-    }
+    sl->initializePalette();
+    sl->initializeResolutionAndDpi();
 
     xl = sl;
   }
@@ -1025,6 +995,7 @@ static LevelType getLevelType(const TFilePath &fp) {
       ret.m_ltype = OVL_XSHLEVEL;
     break;
 
+  case TFileType::VECTOR_IMAGE:
   case TFileType::VECTOR_LEVEL:
     if (format == "svg") {
       ret.m_vectorNotPli = true;
@@ -1042,6 +1013,14 @@ static LevelType getLevelType(const TFilePath &fp) {
   case TFileType::MESH_IMAGE:
   case TFileType::MESH_LEVEL:
     ret.m_ltype = MESH_XSHLEVEL;
+    break;
+
+  case TFileType::META_IMAGE:
+  case TFileType::META_LEVEL:
+    ret.m_ltype = META_XSHLEVEL;
+    break;
+
+  default:
     break;
   }
 
@@ -1078,7 +1057,7 @@ TFilePath ToonzScene::getImportedLevelPath(const TFilePath path) const {
 
 //-----------------------------------------------------------------------------
 
-/* tzp,tzu->tlv */
+/* tzp,tzu->tlv, svg->pli */
 bool ToonzScene::convertLevelIfNeeded(TFilePath &levelPath) {
   LevelType ltype = getLevelType(levelPath);
   TFilePath fp    = levelPath;
@@ -1161,7 +1140,7 @@ TXshLevel *ToonzScene::loadLevel(const TFilePath &actualPath,
   }
 
   NameModifier nm(levelName);
-  levelName                                         = nm.getNext();
+  levelName = nm.getNext();
   while (m_levelSet->hasLevel(levelName)) levelName = nm.getNext();
 
   // Discriminate sound levels
@@ -1205,16 +1184,19 @@ TXshLevel *ToonzScene::loadLevel(const TFilePath &actualPath,
     LevelProperties *lp = xl->getProperties();
     assert(lp);
 
+    bool formatSpecified = false;
+
     if (levelOptions)
       lp->options() = *levelOptions;
     else {
       const Preferences &prefs = *Preferences::instance();
       int formatIdx            = prefs.matchLevelFormat(
           levelPath);  // Should I use actualPath here? It's mostly
-                       // irrelevant anyway, it's for old tzp/tzu...
-      if (formatIdx >= 0)
-        lp->options() = prefs.levelFormat(formatIdx).m_options;
-      else {
+                                  // irrelevant anyway, it's for old tzp/tzu...
+      if (formatIdx >= 0) {
+        lp->options()   = prefs.levelFormat(formatIdx).m_options;
+        formatSpecified = true;
+      } else {
         // Default subsampling values are assigned from scene properties
         if (xl->getType() == OVL_XSHLEVEL)
           lp->setSubsampling(getProperties()->getFullcolorSubsampling());
@@ -1242,6 +1224,17 @@ TXshLevel *ToonzScene::loadLevel(const TFilePath &actualPath,
       }
     }
 
+    // for EXR level, set the color space gamma to the same value as the output
+    // settings. skip if the loading gamma is specified in the preferences.
+    if (xl->getType() == OVL_XSHLEVEL && levelPath.getType() == "exr" &&
+        !formatSpecified) {
+      double gamma = getProperties()
+                         ->getOutputProperties()
+                         ->getRenderSettings()
+                         .m_colorSpaceGamma;
+      lp->setColorSpaceGamma(gamma);
+    }
+
     m_levelSet->insertLevel(xl);
 
     return xl;
@@ -1253,7 +1246,7 @@ TXshLevel *ToonzScene::loadLevel(const TFilePath &actualPath,
 //-----------------------------------------------------------------------------
 
 TFilePath ToonzScene::decodeFilePath(const TFilePath &path) const {
-  TProject *project   = getProject();
+  auto project        = getProject();
   bool projectIsEmpty = project->getFolderCount() ? false : true;
   TFilePath fp        = path;
 
@@ -1283,8 +1276,8 @@ TFilePath ToonzScene::decodeFilePath(const TFilePath &path) const {
           return dir + tail;
       }
       if (project) {
-        h                       = ::to_string(head.substr(1));
-        TFilePath f             = project->getFolder(h);
+        h           = ::to_string(head.substr(1));
+        TFilePath f = project->getFolder(h);
         if (f != TFilePath()) s = f.getWideString();
       }
     }
@@ -1351,11 +1344,12 @@ TFilePath ToonzScene::decodeFilePath(const TFilePath &path) const {
 
 TFilePath ToonzScene::codeFilePath(const TFilePath &path) const {
   TFilePath fp(path);
-  TProject *project = getProject();
+  auto project = getProject();
 
   Preferences::PathAliasPriority priority =
       Preferences::instance()->getPathAliasPriority();
-  if (priority == Preferences::SceneFolderAlias &&
+  if ((priority == Preferences::SceneFolderAlias ||
+       (m_standAlone && priority == Preferences::AutoByScene)) &&
       codeFilePathWithSceneFolder(fp)) {
     return fp;
   }
@@ -1378,7 +1372,6 @@ TFilePath ToonzScene::codeFilePath(const TFilePath &path) const {
 
 //-----------------------------------------------------------------------------
 // if the path is codable with $scenefolder alias, replace it and return true
-
 bool ToonzScene::codeFilePathWithSceneFolder(TFilePath &path) const {
   // if the scene is untitled, then do nothing and return false
   if (isUntitled()) return false;
@@ -1394,34 +1387,38 @@ bool ToonzScene::codeFilePathWithSceneFolder(TFilePath &path) const {
 
 TFilePath ToonzScene::getDefaultLevelPath(int levelType,
                                           std::wstring levelName) const {
-  TProject *project = getProject();
+  auto project = getProject();
   assert(project);
   TFilePath levelPath;
-  QString scanLevelType;
   switch (levelType) {
   case TZI_XSHLEVEL:
-    scanLevelType = Preferences::instance()->getScanLevelType();
-    levelPath     = TFilePath(levelName + L".." + scanLevelType.toStdWString());
-    break;
+  case OVL_XSHLEVEL: {
+    QString rasterLevelType = Preferences::instance()->getDefRasterFormat();
+    TFrameId tmplFId        = getProperties()->formatTemplateFIdForInput();
+    levelPath = TFilePath(levelName + L"." + rasterLevelType.toStdWString())
+                    .withFrame(tmplFId);
+  } break;
   case PLI_XSHLEVEL:
     levelPath = TFilePath(levelName).withType("pli");
     break;
   case TZP_XSHLEVEL:
     levelPath = TFilePath(levelName).withType("tlv");
     break;
-  case OVL_XSHLEVEL:
-    levelPath = TFilePath(levelName + L"..tif");
+  case META_XSHLEVEL:
+    levelPath = TFilePath(levelName).withType("tzm");
     break;
   default:
     levelPath = TFilePath(levelName + L"..png");
   }
 
-  if (!isUntitled() &&
-      Preferences::instance()->getPathAliasPriority() ==
-          Preferences::SceneFolderAlias)
+  Preferences::PathAliasPriority priority =
+      Preferences::instance()->getPathAliasPriority();
+  if (!isUntitled() && (priority == Preferences::SceneFolderAlias ||
+                        (m_standAlone && priority == Preferences::AutoByScene)))
     return TFilePath("$scenefolder") + levelPath;
 
   std::string folderName = getFolderName(levelType);
+
   if (project->getUseScenePath(folderName))
     return TFilePath("+" + folderName) + getSavePath() + levelPath;
   else
@@ -1480,7 +1477,7 @@ TFilePath ToonzScene::decodeSavePath(TFilePath path) const {
 //-----------------------------------------------------------------------------
 
 bool ToonzScene::isExternPath(const TFilePath &fp) const {
-  TProject *project = m_project;
+  auto project = m_project;
   assert(project);
   for (int i = 0; i < project->getFolderCount(); i++) {
     if (project->getFolderName(i) == "scenes") continue;

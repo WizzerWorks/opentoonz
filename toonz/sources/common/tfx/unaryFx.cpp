@@ -5,21 +5,16 @@
 #include "tdoubleparam.h"
 #include "tnotanimatableparam.h"
 #include "trasterfx.h"
-#include "tflash.h"
 #include "tfxparam.h"
 #include "tparamset.h"
 
-//#define ALLOW_SHEAR
+// #define ALLOW_SHEAR
 
 //==============================================================================
 
-TGeometryFx::TGeometryFx() { setName(L"Geometry"); }
-
-//--------------------------------------------------
-
-void TGeometryFx::compute(TFlash &flash, int frame) {
-  flash.multMatrix(getPlacement(frame));
-  TRasterFx::compute(flash, frame);
+TGeometryFx::TGeometryFx() {
+  setName(L"Geometry");
+  enableComputeInFloat(true);
 }
 
 //---------------------------------------------------------------
@@ -36,7 +31,8 @@ void TGeometryFx::doCompute(TTile &tile, double frame,
     return;
   }
 
-  if (!TRaster32P(tile.getRaster()) && !TRaster64P(tile.getRaster()))
+  if (!TRaster32P(tile.getRaster()) && !TRaster64P(tile.getRaster()) &&
+      !TRasterFP(tile.getRaster()))
     throw TException("AffineFx unsupported pixel type");
 
   TAffine aff1 = getPlacement(frame);
@@ -119,6 +115,13 @@ void TGeometryFx::transform(double frame, int port, const TRectD &rectOnOutput,
   infoOnInput.m_affine = infoOnInput.m_affine * aff;
 }
 
+//--------------------------------------------------
+
+bool TGeometryFx::toBeComputedInLinearColorSpace(bool settingsIsLinear,
+                                                 bool tileIsLinear) const {
+  return tileIsLinear;
+}
+
 //==================================================
 
 NaAffineFx::NaAffineFx(bool isDpiAffine)
@@ -139,27 +142,37 @@ TFx *NaAffineFx::clone(bool recursive) const {
 
 //--------------------------------------------------
 
-void NaAffineFx::compute(TFlash &flash, int frame) {
-  TGeometryFx::compute(flash, frame);
-}
-
-//==================================================
-
-void TRasterFx::compute(TFlash &flash, int frame) {
-  for (int i = getInputPortCount() - 1; i >= 0; i--) {
-    TFxPort *port = getInputPort(i);
-
-    if (port->isConnected() && !port->isaControlPort()) {
-      flash.pushMatrix();
-      ((TRasterFxP)(port->getFx()))->compute(flash, frame);
-      flash.popMatrix();
+void NaAffineFx::doDryCompute(TRectD &rect, double frame,
+                              const TRenderSettings &info) {
+  // keep the level column dpi affine for an fx which need to be applied to the
+  // full sampled image (see Iwa_SmootherFx)
+  if (getName() == L"LevelColumn AffineFx") {
+    for (auto data : info.m_data) {
+      LevelColumnAffineFxRenderData *levelColumnData =
+          dynamic_cast<LevelColumnAffineFxRenderData *>(data.getPointer());
+      if (levelColumnData && levelColumnData->m_isSet == false) {
+        levelColumnData->m_aff   = getPlacement(frame);
+        levelColumnData->m_isSet = true;
+      }
     }
   }
+  TRasterFx::doDryCompute(rect, frame, info);
 }
 
 //--------------------------------------------------
 
 FX_IDENTIFIER_IS_HIDDEN(NaAffineFx, "naAffineFx")
+
+//==================================================================
+// LevelColumnAffineFxRenderData implementation
+//==================================================================
+
+bool LevelColumnAffineFxRenderData::operator==(
+    const TRasterFxRenderData &data) const {
+  const LevelColumnAffineFxRenderData *theData =
+      dynamic_cast<const LevelColumnAffineFxRenderData *>(&data);
+  return theData->m_aff == m_aff && theData->m_isSet == m_isSet;
+}
 
 //==================================================================
 //  ColumnColorFilterFx
@@ -240,9 +253,10 @@ public:
     //   bindParam(this, "blue_channel" , m_blueChan);
     //   bindParam(this, "alpha_channel", m_alphaChan);
     setName(L"InvertFx");
+    enableComputeInFloat(true);
   };
 
-  ~InvertFx(){};
+  ~InvertFx() {};
 
   bool canHandle(const TRenderSettings &info, double frame) override {
     return true;

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="cs_CZ">
+<TS version="2.1" language="cs_CZ" sourcelanguage="en">
 <context>
     <name>BmpWriterProperties</name>
     <message>
@@ -22,12 +22,12 @@
 <context>
     <name>JpgWriterProperties</name>
     <message>
-        <location filename="../../common/tiio/tiio_jpg.cpp" line="284"/>
+        <location filename="../../common/tiio/tiio_jpg.cpp" line="423"/>
         <source>Quality</source>
         <translation>Jakost</translation>
     </message>
     <message>
-        <location filename="../../common/tiio/tiio_jpg.cpp" line="285"/>
+        <location filename="../../common/tiio/tiio_jpg.cpp" line="424"/>
         <source>Smoothing</source>
         <translation>Vyhlazování</translation>
     </message>
@@ -40,16 +40,15 @@
         <translation>barvy</translation>
     </message>
     <message>
-        <location filename="../../common/timage_io/tlevel_io.cpp" line="127"/>
         <source>Skipping frame.</source>
-        <translation>Přeskakuje se snímek.</translation>
+        <translation type="vanished">Přeskakuje se snímek.</translation>
     </message>
     <message>
         <source>Malformed frame name</source>
         <translation type="vanished">Poškozený název snímku</translation>
     </message>
     <message>
-        <location filename="../../include/tundo.h" line="46"/>
+        <location filename="../../include/tundo.h" line="49"/>
         <source>Unidentified Action</source>
         <translation>Neznámá činnost</translation>
     </message>
@@ -57,12 +56,12 @@
 <context>
     <name>TCenterLineStrokeStyle</name>
     <message>
-        <location filename="../../common/tvrender/tsimplecolorstyles.cpp" line="888"/>
+        <location filename="../../common/tvrender/tsimplecolorstyles.cpp" line="899"/>
         <source>Constant</source>
         <translation>Stálý</translation>
     </message>
     <message>
-        <location filename="../../common/tvrender/tsimplecolorstyles.cpp" line="921"/>
+        <location filename="../../common/tvrender/tsimplecolorstyles.cpp" line="938"/>
         <source>Thickness</source>
         <translation>Tloušťka</translation>
     </message>
@@ -70,12 +69,12 @@
 <context>
     <name>TRasterImagePatternStrokeStyle</name>
     <message>
-        <location filename="../../common/tvrender/tsimplecolorstyles.cpp" line="1026"/>
+        <location filename="../../common/tvrender/tsimplecolorstyles.cpp" line="1066"/>
         <source>Distance</source>
         <translation>Odstup</translation>
     </message>
     <message>
-        <location filename="../../common/tvrender/tsimplecolorstyles.cpp" line="1028"/>
+        <location filename="../../common/tvrender/tsimplecolorstyles.cpp" line="1068"/>
         <source>Rotation</source>
         <translation>Otočení</translation>
     </message>
@@ -83,12 +82,12 @@
 <context>
     <name>TVectorImagePatternStrokeStyle</name>
     <message>
-        <location filename="../../common/tvrender/tsimplecolorstyles.cpp" line="1470"/>
+        <location filename="../../common/tvrender/tsimplecolorstyles.cpp" line="1507"/>
         <source>Distance</source>
         <translation>Odstup</translation>
     </message>
     <message>
-        <location filename="../../common/tvrender/tsimplecolorstyles.cpp" line="1472"/>
+        <location filename="../../common/tvrender/tsimplecolorstyles.cpp" line="1509"/>
         <source>Rotation</source>
         <translation>Otočení</translation>
     </message>

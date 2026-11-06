@@ -147,11 +147,7 @@ TRaster32P loadFrame(int frame, const TAffine &affine) {
 // TrackerPopup
 //-----------------------------------------------------------------------------
 
-#if QT_VERSION >= 0x050500
 TrackerPopup::TrackerPopup(QWidget *parent, Qt::WindowFlags flags)
-#else
-TrackerPopup::TrackerPopup(QWidget *parent, Qt::WFlags flags)
-#endif
     : Dialog(TApp::instance()->getMainWindow(), true, true, "Tracker") {
   // Su MAC i dialog modali non hanno bottoni di chiusura nella titleBar
   setModal(false);
@@ -423,7 +419,7 @@ bool Tracker::setup() {
     return false;
   }
 
-  //# start frame
+  // # start frame
   std::unique_ptr<int[]> m_numstart(new int[m_trackerCount]);
   if (!m_numstart) {
     m_lastErrorCode = 1;
@@ -594,10 +590,10 @@ bool Tracker::setup() {
   bool image_background = false;
   bool occl             = m_manageOcclusion;
 
-  // costruct trackers
+  // construct trackers
 
   for (i = 0; i < m_trackerCount; i++) {
-    // costruct
+    // construct
     m_pObjectTracker[i] =
         new CObjectTracker(size.lx, size.ly, image_c, image_background, occl);
 

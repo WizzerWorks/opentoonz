@@ -44,7 +44,7 @@ CleanupCameraSettingsWidget::CleanupCameraSettingsWidget() {
 
   //--- layout
   QVBoxLayout *mainLay = new QVBoxLayout();
-  mainLay->setMargin(5);
+  mainLay->setContentsMargins(5, 5, 5, 5);
   mainLay->setSpacing(5);
   {
     mainLay->addWidget(m_cameraWidget);
@@ -52,12 +52,12 @@ CleanupCameraSettingsWidget::CleanupCameraSettingsWidget() {
     QGridLayout *offsetLay = new QGridLayout();
     offsetLay->setHorizontalSpacing(3);
     offsetLay->setVerticalSpacing(3);
-    offsetLay->setMargin(3);
+    offsetLay->setContentsMargins(3, 3, 3, 3);
     {
-      offsetLay->addWidget(new QLabel(tr("N/S")), 0, 0);
+      offsetLay->addWidget(new QLabel(tr("Y")), 0, 0);
       offsetLay->addWidget(m_offsY, 0, 1);
       offsetLay->addWidget(m_offsy_lock, 0, 2);
-      offsetLay->addWidget(new QLabel(tr("E/W")), 1, 0);
+      offsetLay->addWidget(new QLabel(tr("X")), 1, 0);
       offsetLay->addWidget(m_offsX, 1, 1);
       offsetLay->addWidget(m_offsx_lock, 1, 2);
     }

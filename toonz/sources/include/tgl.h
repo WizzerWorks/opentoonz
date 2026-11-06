@@ -3,7 +3,7 @@
 #ifndef TGL_INCLUDED
 #define TGL_INCLUDED
 
-//#include "tgeometry.h"
+// #include "tgeometry.h"
 #include "tmachine.h"
 
 #ifdef _WIN32
@@ -21,15 +21,15 @@
 #define GLUT_NO_WARNING_DISABLE
 #endif
 
-#ifdef LINUX
+#if defined(LINUX) || defined(FREEBSD) || defined(HAIKU)
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/glut.h>
 #endif
 
-//#include "tcurves.h"
+// #include "tcurves.h"
 #include "traster.h"
-//#include "tfilepath.h"
+// #include "tfilepath.h"
 
 class TFilePath;
 class TCubic;
@@ -69,6 +69,13 @@ class TCubic;
 #endif
 
 //=============================================================================
+// settings for 30bit display
+
+#define TGL_TexFmt10 GL_RGB10_A2
+#define TGL_TYPE16 GL_UNSIGNED_SHORT
+#define TGL_TYPE32F GL_FLOAT
+
+//=============================================================================
 
 #ifdef _DEBUG
 #define CHECK_ERRORS_BY_GL                                                     \
@@ -104,6 +111,9 @@ inline void tglColor(const TPixelD &p) { glColor4d(p.r, p.g, p.b, p.m); }
 
 //! retrieve the square of pixel size from current GL_MODELVIEW matrix
 DVAPI double tglGetPixelSize2();
+
+//! retrieve the current viewport bounds in world coordinates
+DVAPI TRectD tglGetBounds();
 
 //! Draw text in string s at position p.
 
@@ -173,6 +183,8 @@ inline void tglMultMatrix(const TAffine &aff) {
                   0,       0,       1, 0, aff.a13, aff.a23, 0, 1};
   glMultMatrixd(m);
 }
+
+inline void tglMultMatrix(const TAffine4 &aff) { glMultMatrixd(aff.a); }
 
 //=============================================================================
 

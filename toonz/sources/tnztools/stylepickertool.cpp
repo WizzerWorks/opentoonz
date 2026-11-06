@@ -9,6 +9,8 @@
 // TnzQt includes
 #include "toonzqt/tselectionhandle.h"
 #include "toonzqt/styleselection.h"
+#include "toonzqt/gutil.h"
+#include "toonzqt/icongenerator.h"
 
 // TnzLib includes
 #include "toonz/txshsimplelevel.h"
@@ -43,9 +45,9 @@ StylePickerTool::StylePickerTool()
     : TTool("T_StylePicker")
     , m_currentStyleId(0)
     , m_colorType("Mode:")
+    , m_replaceStyle("Replace Style", false)
     , m_passivePick("Passive Pick", false)
-    , m_organizePalette("Organize Palette", false)
-    , m_paletteToBeOrganized(NULL) {
+    , m_organizePalette("Organize Palette", false) {
   m_prop.bind(m_colorType);
   m_colorType.addValue(AREAS);
   m_colorType.addValue(LINES);
@@ -56,21 +58,38 @@ StylePickerTool::StylePickerTool()
   m_prop.bind(m_passivePick);
   m_passivePick.setId("PassivePick");
 
+  m_prop.bind(m_replaceStyle);
+  m_replaceStyle.setId("ReplaceStyle");
+
   m_prop.bind(m_organizePalette);
   m_organizePalette.setId("OrganizePalette");
 }
 
-void StylePickerTool::leftButtonDown(const TPointD &pos, const TMouseEvent &e) {
+void StylePickerTool::onActivate() {
+  TPaletteHandle* ph = getApplication()->getCurrentPalette();
+  if (ph) {
+    bool ret = connect(ph, &TPaletteHandle::paletteSwitched, this,
+                       &StylePickerTool::onPaletteSwitched);
+    assert(ret);
+  }
+}
+
+void StylePickerTool::onDeactivate() {
+  QObject::disconnect(nullptr, &TPaletteHandle::paletteSwitched, this,
+                      &StylePickerTool::onPaletteSwitched);
+}
+
+void StylePickerTool::leftButtonDown(const TPointD& pos, const TMouseEvent& e) {
   m_oldStyleId = m_currentStyleId =
       getApplication()->getCurrentLevelStyleIndex();
   pick(pos, e, false);
 }
 
-void StylePickerTool::leftButtonDrag(const TPointD &pos, const TMouseEvent &e) {
+void StylePickerTool::leftButtonDrag(const TPointD& pos, const TMouseEvent& e) {
   pick(pos, e);
 }
 
-void StylePickerTool::pick(const TPointD &pos, const TMouseEvent &e,
+void StylePickerTool::pick(const TPointD& pos, const TMouseEvent& e,
                            bool isDragging) {
   // Area = 0, Line = 1, All = 2
   int modeValue = m_colorType.getIndex();
@@ -86,13 +105,13 @@ void StylePickerTool::pick(const TPointD &pos, const TMouseEvent &e,
   ---*/
   if (Preferences::instance()->isMultiLayerStylePickerEnabled() &&
       getApplication()->getCurrentFrame()->isEditingScene()) {
-    int superPickedColumnId = getViewer()->posToColumnIndex(
-        e.m_pos, getPixelSize() * getPixelSize(), false);
+    double pickRange = 10.0;
+    int superPickedColumnId =
+        getViewer()->posToColumnIndex(e.m_pos, pickRange, false);
 
     if (superPickedColumnId >= 0 /*-- 何かColumnに当たった場合 --*/
-        &&
-        getApplication()->getCurrentColumn()->getColumnIndex() !=
-            superPickedColumnId) /*-- かつ、Current Columnでない場合 --*/
+        && getApplication()->getCurrentColumn()->getColumnIndex() !=
+               superPickedColumnId) /*-- かつ、Current Columnでない場合 --*/
     {
       /*-- そのColumnからPickを試みる --*/
       int currentFrame = getApplication()->getCurrentFrame()->getFrame();
@@ -102,7 +121,7 @@ void StylePickerTool::pick(const TPointD &pos, const TMouseEvent &e,
       TImageP pickedImage           = pickedCell.getImage(false).getPointer();
       TToonzImageP picked_ti        = pickedImage;
       TVectorImageP picked_vi       = pickedImage;
-      TXshSimpleLevel *picked_level = pickedCell.getSimpleLevel();
+      TXshSimpleLevel* picked_level = pickedCell.getSimpleLevel();
       if ((picked_ti || picked_vi) && picked_level) {
         TPointD tmpMousePosition = getColumnMatrix(superPickedColumnId).inv() *
                                    getViewer()->winToWorld(e.m_pos);
@@ -112,13 +131,16 @@ void StylePickerTool::pick(const TPointD &pos, const TMouseEvent &e,
         tmpMousePosition.x /= tmpDpiScale.x;
         tmpMousePosition.y /= tmpDpiScale.y;
 
-        StylePicker superPicker(pickedImage);
+        TAffine aff =
+            getViewer()->getViewMatrix() * getColumnMatrix(superPickedColumnId);
+        double scale2 = aff.det();
+        StylePicker superPicker(getViewer()->viewerWidget(), pickedImage);
         int picked_subsampling =
             picked_level->getImageSubsampling(pickedCell.getFrameId());
         int superPicked_StyleId = superPicker.pickStyleId(
             TScale(1.0 / picked_subsampling) * tmpMousePosition +
                 TPointD(-0.5, -0.5),
-            getPixelSize() * getPixelSize(), modeValue);
+            pickRange, scale2, modeValue);
         /*-- 何かStyleが拾えて、Transparentでない場合 --*/
         if (superPicked_StyleId > 0) {
           /*-- Levelの移動 --*/
@@ -145,41 +167,41 @@ void StylePickerTool::pick(const TPointD &pos, const TMouseEvent &e,
   TImageP image    = getImage(false);
   TToonzImageP ti  = image;
   TVectorImageP vi = image;
-  TXshSimpleLevel *level =
+  TXshSimpleLevel* level =
       getApplication()->getCurrentLevel()->getSimpleLevel();
   if ((!ti && !vi) || !level) return;
 
   /*-- 画面外をpickしても拾えないようにする --*/
   if (!m_viewer->getGeometry().contains(pos)) return;
 
+  TAffine aff     = getViewer()->getViewMatrix() * getCurrentColumnMatrix();
+  double scale2   = aff.det();
   int subsampling = level->getImageSubsampling(getCurrentFid());
-  StylePicker picker(image);
+  StylePicker picker(getViewer()->viewerWidget(), image);
   int styleId =
       picker.pickStyleId(TScale(1.0 / subsampling) * pos + TPointD(-0.5, -0.5),
-                         getPixelSize() * getPixelSize(), modeValue);
+                         10.0, scale2, modeValue);
 
   if (styleId < 0) return;
 
   if (modeValue == 1)  // LINES
   {
     /*-- pickLineモードのとき、取得Styleが0の場合はカレントStyleを変えない。
-      * --*/
+     * --*/
     if (styleId == 0) return;
     /*--
-      * pickLineモードのとき、PurePaintの部分をクリックしてもカレントStyleを変えない
-      * --*/
-    if (ti &&
-        picker.pickTone(TScale(1.0 / subsampling) * pos +
-                        TPointD(-0.5, -0.5)) == 255)
+     * pickLineモードのとき、PurePaintの部分をクリックしてもカレントStyleを変えない
+     * --*/
+    if (ti && picker.pickTone(TScale(1.0 / subsampling) * pos +
+                              TPointD(-0.5, -0.5)) == 255)
       return;
   }
 
   /*--- Styleを選択している場合は選択を解除する ---*/
-  TSelection *selection =
+  TSelection* selection =
       TTool::getApplication()->getCurrentSelection()->getSelection();
   if (selection) {
-    TStyleSelection *styleSelection =
-        dynamic_cast<TStyleSelection *>(selection);
+    TStyleSelection* styleSelection = dynamic_cast<TStyleSelection*>(selection);
     if (styleSelection) styleSelection->selectNone();
   }
 
@@ -191,30 +213,30 @@ void StylePickerTool::pick(const TPointD &pos, const TMouseEvent &e,
   getApplication()->setCurrentLevelStyleIndex(styleId, !isDragging);
 }
 
-void StylePickerTool::mouseMove(const TPointD &pos, const TMouseEvent &e) {
+void StylePickerTool::mouseMove(const TPointD& pos, const TMouseEvent& e) {
   if (!m_passivePick.getValue()) return;
   /*--- PassiveにStyleを拾う機能 ---*/
-  PaletteController *controller =
+  PaletteController* controller =
       TTool::getApplication()->getPaletteController();
 
   TImageP image    = getImage(false);
   TToonzImageP ti  = image;
   TVectorImageP vi = image;
-  TXshSimpleLevel *level =
+  TXshSimpleLevel* level =
       getApplication()->getCurrentLevel()->getSimpleLevel();
   if ((!ti && !vi) || !level || !m_viewer->getGeometry().contains(pos)) {
     controller->notifyStylePassivePicked(-1, -1, -1);
     return;
   }
 
+  TAffine aff     = getViewer()->getViewMatrix() * getCurrentColumnMatrix();
+  double scale2   = aff.det();
   int subsampling = level->getImageSubsampling(getCurrentFid());
-  StylePicker picker(image);
+  StylePicker picker(getViewer()->viewerWidget(), image);
   TPointD pickPos(TScale(1.0 / subsampling) * pos + TPointD(-0.5, -0.5));
-  int inkStyleId =
-      picker.pickStyleId(pickPos, getPixelSize() * getPixelSize(), 1);
-  int paintStyleId =
-      picker.pickStyleId(pickPos, getPixelSize() * getPixelSize(), 0);
-  int tone = picker.pickTone(pickPos);
+  int inkStyleId   = picker.pickStyleId(pickPos, 10.0, scale2, 1);
+  int paintStyleId = picker.pickStyleId(pickPos, 10.0, scale2, 0);
+  int tone         = picker.pickTone(pickPos);
   controller->notifyStylePassivePicked(inkStyleId, paintStyleId, tone);
 }
 
@@ -244,6 +266,31 @@ int StylePickerTool::getCursorId() const {
   return ret;
 }
 
+TPalette* StylePickerTool::getPal() {
+  TXshLevel* level = getApplication()->getCurrentLevel()->getLevel();
+  if (!level) {
+    DVGui::error(tr("No current level."));
+    return nullptr;
+  }
+  if (level->getType() != PLI_XSHLEVEL && level->getType() != TZP_XSHLEVEL &&
+      (m_organizePalette.getValue() ? level->getType() != PLT_XSHLEVEL
+                                    : true)) {
+    DVGui::error(tr("Current level has no available palette."));
+    return nullptr;
+  }
+  TPalette* pal = nullptr;
+  if (level->getType() == PLT_XSHLEVEL)
+    pal = level->getPaletteLevel()->getPalette();
+  else
+    pal = level->getSimpleLevel()->getPalette();
+
+  if (!pal) {
+    DVGui::error(tr("No available palette."));
+    return nullptr;
+  }
+  return pal;
+}
+
 bool StylePickerTool::onPropertyChanged(std::string propertyName) {
   if (propertyName == m_organizePalette.getName()) {
     if (m_organizePalette.getValue()) {
@@ -251,40 +298,40 @@ bool StylePickerTool::onPropertyChanged(std::string propertyName) {
         m_organizePalette.setValue(false);
         getApplication()->getCurrentTool()->notifyToolChanged();
         return false;
-      }
+      } else
+        m_replaceStyle.setValue(false);
     } else {
       std::cout << "End Organize Palette" << std::endl;
-      m_paletteToBeOrganized = NULL;
     }
+  } else if (propertyName == m_replaceStyle.getName()) {
+    if (m_replaceStyle.getValue()) {
+      if (!getPal()) {
+        m_replaceStyle.setValue(false);
+        return false;
+      } else
+        m_organizePalette.setValue(false);
+    } else {
+      TXshLevel* xl = TTool::getApplication()->getCurrentLevel()->getLevel();
+      if (xl) {
+        std::vector<TFrameId> fids;
+        xl->getFids(fids);
+        for (TFrameId fid : fids)
+          IconGenerator::instance()->invalidate(xl, fid);
+      }
+    }
+    return true;
   }
-  return true;
 }
 
+/* Check if the organizing operation is available */
 bool StylePickerTool::startOrganizePalette() {
-  /* Check if the organizing operation is available */
-  TXshLevel *level = getApplication()->getCurrentLevel()->getLevel();
-  if (!level) {
-    DVGui::error(tr("No current level."));
-    return false;
-  }
-  if (level->getType() != PLI_XSHLEVEL && level->getType() != TZP_XSHLEVEL &&
-      level->getType() != PLT_XSHLEVEL) {
-    DVGui::error(tr("Current level has no available palette."));
-    return false;
-  }
   /* palette should have more than one page to organize */
-  TPalette *pal = NULL;
-  if (level->getType() == PLT_XSHLEVEL)
-    pal = level->getPaletteLevel()->getPalette();
-  else
-    pal = level->getSimpleLevel()->getPalette();
-  if (!pal || pal->getPageCount() < 2) {
-    DVGui::error(
-        tr("Palette must have more than one palette to be organized."));
+  TPalette* pal = getPal();
+  if (!pal) return false;
+  if (pal->getPageCount() < 2) {
+    DVGui::error(tr("Palette to be organized must have more than one page."));
     return false;
   }
-
-  m_paletteToBeOrganized = pal;
 
   std::cout << "Start Organize Palette" << std::endl;
 
@@ -293,31 +340,14 @@ bool StylePickerTool::startOrganizePalette() {
 
 /*
   If the working palette is changed, then deactivate the "organize palette"
-  toggle.
+  and "replace style" toggle.
 */
-void StylePickerTool::onImageChanged() {
-  std::cout << "StylePickerTool::onImageChanged" << std::endl;
-  if (!m_organizePalette.getValue() || !m_paletteToBeOrganized) return;
-
-  TXshLevel *level = getApplication()->getCurrentLevel()->getLevel();
-  if (!level) {
-    m_organizePalette.setValue(false);
-    getApplication()->getCurrentTool()->notifyToolChanged();
-    return;
-  }
-  TPalette *pal = NULL;
-  if (level->getType() == PLT_XSHLEVEL)
-    pal = level->getPaletteLevel()->getPalette();
-  else if (level->getSimpleLevel()) {
-    pal = level->getSimpleLevel()->getPalette();
-  }
-  if (!pal || pal != m_paletteToBeOrganized) {
-    m_organizePalette.setValue(false);
-    getApplication()->getCurrentTool()->notifyToolChanged();
-    return;
-  }
+void StylePickerTool::onPaletteSwitched() {
+  m_organizePalette.setValue(false);
+  m_replaceStyle.setValue(false);
+  getApplication()->getCurrentTool()->notifyToolChanged();
+  return;
 }
-
 //-------------------------------------------------------------------------------------------------------
 
 void StylePickerTool::updateTranslation() {

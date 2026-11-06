@@ -9,7 +9,11 @@ extern "C" {
 #include "ttwain_state.h"
 #include "ttwainP.h"
 //#define DEBUG
+#ifndef _WIN32
+#define PRINTF(args...)
+#else
 #define PRINTF
+#endif
 #if 1
 
 extern int TTWAIN_MessageHook(void *lpmsg);
@@ -102,7 +106,7 @@ void setupUI(void) {
   SetFrontProcess(&psn);
 #ifndef HAVE_DOCK_TILE
 /* We end up with the ugly console dock icon; let's override it */
-/*char *iconfile = "/tmp/image.png";
+/* char *iconfile = "/tmp/image.png";
   CFURLRef url = CFURLCreateFromFileSystemRepresentation (kCFAllocatorDefault,
                                                           (UInt8 *)iconfile,
                                                           strlen (iconfile),
@@ -111,8 +115,8 @@ void setupUI(void) {
   CGDataProviderRef png = CGDataProviderCreateWithURL (url);
   CGImageRef icon = CGImageCreateWithPNGDataProvider (png, NULL, TRUE,
                                              kCGRenderingIntentDefault);
-
-  /* Voodoo magic fix inspired by java_swt launcher */
+*/
+/* Voodoo magic fix inspired by java_swt launcher */
 /* Without this the icon setting doesn't work about half the time. */
 // CGrafPtr p = BeginQDContextForApplicationDockTile();
 // EndQDContextForApplicationDockTile(p);
@@ -146,8 +150,6 @@ void setupUI(void) {
 }
 
 /*---------------------------------------------------------------------------*/
-
-#define PRINTF
 
 void registerTwainCallback(void) {
   if (TTWAIN_GetState() < TWAIN_SOURCE_OPEN) {

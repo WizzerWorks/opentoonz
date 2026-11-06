@@ -87,11 +87,11 @@ CameraSettingsPopup::CameraSettingsPopup()
 
   //---- layout
   QVBoxLayout *mainLay = new QVBoxLayout();
-  mainLay->setMargin(5);
+  mainLay->setContentsMargins(5, 5, 5, 5);
   mainLay->setSpacing(8);
   {
     QHBoxLayout *nameLay = new QHBoxLayout();
-    nameLay->setMargin(0);
+    nameLay->setContentsMargins(0, 0, 0, 0);
     nameLay->setSpacing(3);
     {
       nameLay->addWidget(new QLabel(tr("Name:")), 0);
@@ -165,15 +165,15 @@ void CameraSettingsPopup::hideEvent(QHideEvent *e) {
   bool ret = true;
   ret      = ret && disconnect(sceneHandle, SIGNAL(sceneChanged()), this,
                           SLOT(updateFields()));
-  ret = ret && disconnect(sceneHandle, SIGNAL(sceneSwitched()), this,
+  ret      = ret && disconnect(sceneHandle, SIGNAL(sceneSwitched()), this,
                           SLOT(updateFields()));
-  ret = ret && disconnect(objectHandle, SIGNAL(objectChanged(bool)), this,
+  ret      = ret && disconnect(objectHandle, SIGNAL(objectChanged(bool)), this,
                           SLOT(updateFields(bool)));
-  ret = ret && disconnect(objectHandle, SIGNAL(objectSwitched()), this,
+  ret      = ret && disconnect(objectHandle, SIGNAL(objectSwitched()), this,
                           SLOT(updateFields()));
-  ret = ret && disconnect(xsheetHandle, SIGNAL(xsheetSwitched()), this,
+  ret      = ret && disconnect(xsheetHandle, SIGNAL(xsheetSwitched()), this,
                           SLOT(updateFields()));
-  ret = ret && disconnect(xsheetHandle, SIGNAL(xsheetChanged()), this,
+  ret      = ret && disconnect(xsheetHandle, SIGNAL(xsheetChanged()), this,
                           SLOT(updateFields()));
   ret = ret && disconnect(levelHandle, SIGNAL(xshLevelSwitched(TXshLevel *)),
                           this, SLOT(onLevelSwitched(TXshLevel *)));
@@ -219,11 +219,12 @@ void CameraSettingsPopup::updateWindowTitle() {
 void CameraSettingsPopup::onChanged() {
   TCamera *camera = getCamera();
   if (!camera) return;
-  m_cameraSettingsWidget->getFields(camera);
-  TApp::instance()->getCurrentScene()->notifySceneChanged();
-  TApp::instance()->getCurrentXsheet()->notifyXsheetChanged();
+  if (m_cameraSettingsWidget->getFields(camera)) {
+    TApp::instance()->getCurrentScene()->notifySceneChanged();
+    TApp::instance()->getCurrentXsheet()->notifyXsheetChanged();
 
-  emit changed();
+    emit changed();
+  }
 }
 
 void CameraSettingsPopup::onNameChanged() {

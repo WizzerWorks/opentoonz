@@ -149,7 +149,7 @@ signals:
   void start(const QString &filepath);
 };
 
-class RasterFxPluginHost final : public TZeraryFx, public TPluginInterface {
+class RasterFxPluginHost final : public TRasterFx, public TPluginInterface {
   PluginInformation *pi_;
 
   std::vector<std::shared_ptr<TFxPort>> inputs_;
@@ -198,7 +198,9 @@ public:
   ParamView *createParamView();
 
   bool isPlugin() const override { return true; }
-  bool isPluginZerary() const override { return pi_->desc_->is_geometric(); }
+  bool isPluginZerary() const override {
+    return pi_ ? pi_->desc_->is_geometric() : false;
+  }
 
   bool isZerary() const override { return isPluginZerary(); };
   void callStartRenderHandler() override;

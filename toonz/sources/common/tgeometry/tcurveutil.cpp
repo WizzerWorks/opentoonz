@@ -472,13 +472,13 @@ double tdistance(const TSegment &segment, const TPointD &point) {
 
 //-----------------------------------------------------------------------------
 /*
-This formule is derived from Graphic Gems pag. 600
+This formula is derived from Graphic Gems pag. 600
 
   e = h^2 |a|/8
 
     e = pixel size
     h = step
-    a = acceleration of curve (for a quadratic is a costant value)
+    a = acceleration of curve (for a quadratic is a constant value)
 */
 
 double computeStep(const TQuadratic &quad, double pixelSize) {

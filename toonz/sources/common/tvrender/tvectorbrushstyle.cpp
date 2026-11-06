@@ -39,7 +39,6 @@ public:
   TStrokeProp *clone(const TStroke *stroke) const override;
 
   void draw(const TVectorRenderData &rd) override;
-  void draw(TFlash &flash) override {}
 
   const TColorStyle *getColorStyle() const override;
 
@@ -230,9 +229,25 @@ TColorStyle *TVectorBrushStyle::clone() const {
 
 //-----------------------------------------------------------------
 
+TColorStyle *TVectorBrushStyle::clone(std::string brushIdName) const {
+  std::string patternName     = getBrushIdNameParam(brushIdName);
+  TVectorBrushStyle *theClone = new TVectorBrushStyle(patternName);
+  theClone->assignNames(this);
+  theClone->setFlags(getFlags());
+  return theClone;
+}
+
+//-----------------------------------------------------------------
+
 QString TVectorBrushStyle::getDescription() const { return "VectorBrushStyle"; }
 
 //-----------------------------------------------------------------
+
+std::string TVectorBrushStyle::getBrushIdName() const {
+  return "VectorBrushStyle:" + m_brushName;
+}
+
+//-----------------------------------------------------------------------------
 
 TStrokeProp *TVectorBrushStyle::makeStrokeProp(const TStroke *stroke) {
   return new VectorBrushProp(stroke, this);
@@ -347,7 +362,7 @@ TPixel32 TVectorBrushStyle::getColorParamValue(int index) const {
   TPalette *pal = m_brush->getPalette();
   assert(pal);
 
-  int styleId              = getColorStyleId(index);
+  int styleId = getColorStyleId(index);
   if (styleId < 0) styleId = 1;
 
   return pal->getStyle(styleId)->getMainColor();
@@ -359,7 +374,7 @@ void TVectorBrushStyle::setColorParamValue(int index, const TPixel32 &color) {
   TPalette *pal = m_brush->getPalette();
   assert(pal);
 
-  int styleId              = getColorStyleId(index);
+  int styleId = getColorStyleId(index);
   if (styleId < 0) styleId = 1;
 
   return pal->getStyle(styleId)->setMainColor(color);

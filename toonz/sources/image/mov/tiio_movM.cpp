@@ -13,9 +13,14 @@
 #include "tmachine.h"
 #include "tsystem.h"
 
-#include "movsettings.h"
+// movesettings deps, must be included before QuickTime includes
+#include "texception.h"
+#include "tpropertytype.h"
+#include "tproperty.h"
 
+// following includes may include QuickTime
 #include "tiio_movM.h"
+#include "movsettings.h"
 
 /* QuickDraw は 10.7 以降なくなった */
 //#define HAS_QUICKDRAW
@@ -63,7 +68,7 @@ public:
                            ANCHE su altri thread) e la chiamata a
                                       TerminateQTML() causerebbe un crash
                                       */
-    // std::cout << "destroing variable... Thread = " << GetCurrentThreadId() <<
+    // std::cout << "destroying variable... Thread = " << GetCurrentThreadId() <<
     // std::endl;
 
     //              std::cout <<"~QTCleanup"<< std::endl;
@@ -597,11 +602,7 @@ void TLevelWriterMov::save(const TImageP &img, int frameIndex) {
     frame.right  = lx;
     frame.bottom = ly;
 
-#if QT_VERSION >= 0x050000
     if ((err = QTNewGWorld(&(m_gworld), pixSize * 8, &frame, 0, 0, 0)) != noErr)
-#else
-    if ((err = NewGWorld(&(m_gworld), pixSize * 8, &frame, 0, 0, 0)) != noErr)
-#endif
       throw TImageException(getFilePath(), "can't create movie buffer");
 
     //#ifdef WIN32
@@ -996,7 +997,7 @@ TLevelWriterMov::~TLevelWriterMov() {
     QTMetaDataRef metaDataRef;
     if ((mderr = QTCopyMovieMetaData(m_movie, &metaDataRef)) != noErr)
       throw TImageException(getFilePath(),
-                            "can't access metadata informations");
+                            "can't access metadata information");
 
     if ((mderr = QTMetaDataAddItem(
              metaDataRef, kQTMetaDataStorageFormatUserData,
@@ -1004,7 +1005,7 @@ TLevelWriterMov::~TLevelWriterMov() {
              firstFrameKeySize, (const UInt8 *)(&m_firstFrame), sizeof(int),
              kQTMetaDataTypeUnsignedIntegerBE, 0)) != noErr)
       throw TImageException(getFilePath(),
-                            "can't insert metadata informations");
+                            "can't insert metadata information");
 
     QTMetaDataRelease(metaDataRef);
   }
@@ -1229,7 +1230,7 @@ TLevelP TLevelReaderMov::loadToonzOutputFormatInfo() {
   // atom.
   QTMetaDataRef metaDataRef;
   if ((mderr = QTCopyMovieMetaData(m_movie, &metaDataRef)) != noErr)
-    throw TImageException(m_path, "can't access metadata informations");
+    throw TImageException(m_path, "can't access metadata information");
 
   QTMetaDataItem firstFrameItem;
 
@@ -1247,7 +1248,7 @@ TLevelP TLevelReaderMov::loadToonzOutputFormatInfo() {
     if ((mderr = QTMetaDataGetItemValue(metaDataRef, firstFrameItem,
                                         (UInt8 *)(&firstFrame), sizeof(int),
                                         0) != noErr))
-      throw TImageException(m_path, "can't read metadata informations");
+      throw TImageException(m_path, "can't read metadata information");
   }
 
   mderr = 0;

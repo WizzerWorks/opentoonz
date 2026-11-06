@@ -46,7 +46,7 @@ SVNUpdateAndLockDialog::SVNUpdateAndLockDialog(QWidget *parent,
 
   QVBoxLayout *mainLayout = new QVBoxLayout;
   mainLayout->setAlignment(Qt::AlignHCenter);
-  mainLayout->setMargin(0);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
 
   QHBoxLayout *hLayout = new QHBoxLayout;
 
@@ -130,7 +130,7 @@ SVNUpdateAndLockDialog::SVNUpdateAndLockDialog(QWidget *parent,
 
   addButtonBarWidget(m_updateAndLockButton, m_lockButton, m_cancelButton);
 
-  // 0. Connect for svn errors (that may occurs)
+  // 0. Connect for svn errors (that may occur)
   connect(&m_thread, SIGNAL(error(const QString &)), this,
           SLOT(onError(const QString &)));
 

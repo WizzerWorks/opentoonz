@@ -19,6 +19,7 @@
 #include "toonz/imagepainter.h"
 #include "tstopwatch.h"
 #include <QThread>
+#include <QElapsedTimer>
 
 #undef DVAPI
 #undef DVVAR
@@ -50,8 +51,9 @@ class TFrameHandle;
 class PlaybackExecutor final : public QThread {
   Q_OBJECT
 
-  int m_fps;
-  bool m_abort;
+  int m_fps    = 25;
+  bool m_abort = false;
+  QElapsedTimer m_timer;
 
 public:
   PlaybackExecutor();
@@ -60,12 +62,14 @@ public:
 
   void run() override;
   void abort() { m_abort = true; }
-
-  void emitNextFrame(int fps) { emit nextFrame(fps); }
+  bool isAborted() { return m_abort; }
+  void emitNextFrame(int fps) { emit nextFrame(fps, nullptr, 0); }
 
 signals:
-  void nextFrame(int fps);  // Must be connect with Qt::BlockingQueuedConnection
-                            // connection type.
+  void nextFrame(
+      int fps, QElapsedTimer *timer,
+      qint64 targetInstant);  // Must be connect with
+                              // Qt::BlockingQueuedConnection connection type.
 };
 
 //-----------------------------------------------------------------------------
@@ -99,8 +103,14 @@ class FlipSlider final : public QAbstractSlider {
   Q_PROPERTY(QColor startedColor READ getStartedColor WRITE setStartedColor)
   Q_PROPERTY(QColor finishedColor READ getFinishedColor WRITE setFinishedColor)
 
-  bool m_enabled;
-  const std::vector<UCHAR> *m_progressBarStatus;
+  bool m_enabled                                = false;
+  const std::vector<UCHAR> *m_progressBarStatus = nullptr;
+
+  // Disable copy (as the pointer is unowned)
+  FlipSlider(const FlipSlider &)            = delete;
+  FlipSlider &operator=(const FlipSlider &) = delete;
+  FlipSlider(FlipSlider &&)                 = delete;
+  FlipSlider &operator=(FlipSlider &&)      = delete;
 
 public:
   enum { PBFrameNotStarted, PBFrameStarted, PBFrameFinished };
@@ -182,6 +192,9 @@ signals:
 class DVAPI FlipConsole final : public QWidget {
   Q_OBJECT
 
+  QColor m_fpsFieldColor;
+  Q_PROPERTY(QColor FpsFieldColor READ getFpsFieldColor WRITE setFpsFieldColor)
+
 public:
   enum EGadget {
     eBegin,
@@ -216,7 +229,13 @@ public:
     eZoomOut,
     eFlipHorizontal,
     eFlipVertical,
+    eRotateLeft,
+    eRotateRight,
     eResetView,
+    eBlankFrames,
+    eDecreaseGain,
+    eResetGain,
+    eIncreaseGain,
     // following values are hard-coded in ImagePainter
     eBlackBg = 0x40000,
     eWhiteBg = 0x80000,
@@ -236,7 +255,7 @@ public:
               const QString &customizeId,
               FlipConsoleOwner *consoleOwner,  // call
                                                // consoleOwner->onDrawFrame()
-                                               // intead of emitting drawFrame
+                                               // instead of emitting drawFrame
                                                // signal
               bool enableBlanks = false);
   void enableBlanks(bool state);
@@ -264,6 +283,8 @@ public:
     doButtonPressed(button);
     setChecked(button, !isChecked(button));
   }
+  void setStopAt(int frame);
+  void setStartAt(int frame);
 
   // the main (currently the only) use for current flipconsole and setActive is
   // to
@@ -283,6 +304,8 @@ public:
   void pressButton(EGadget buttonId);
 
   void showHideAllParts(bool);
+  void showHidePlaybar(bool);
+  void showHideFrameSlider(bool);
 
   void enableProgressBar(bool enable);
   void setProgressBarStatus(const std::vector<UCHAR> *status);
@@ -293,7 +316,7 @@ public:
   }
 
   bool isLinkable() const { return m_isLinkable; }
-  void playNextFrame();
+  void playNextFrame(QElapsedTimer *timer = nullptr, qint64 targetInstant = 0);
   void updateCurrentFPS(int val);
 
   bool hasButton(std::vector<int> buttonMask, FlipConsole::EGadget buttonId) {
@@ -302,6 +325,10 @@ public:
            buttonMask.end();
   }
 
+  void setFpsFieldColor(const QColor &color) { m_fpsFieldColor = color; }
+  QColor getFpsFieldColor() const { return m_fpsFieldColor; }
+
+  void resetGain(bool forceInit = false);
 signals:
 
   void buttonPressed(FlipConsole::EGadget button);
@@ -317,7 +344,7 @@ private:
 
   QAction *m_customSep, *m_rateSep, *m_histoSep, *m_bgSep, *m_vcrSep,
       *m_compareSep, *m_saveSep, *m_colorFilterSep, *m_soundSep, *m_subcamSep,
-      *m_filledRasterSep, *m_viewerSep;
+      *m_filledRasterSep, *m_viewerSep, *m_gainSep;
 
   QToolBar *m_playToolBar;
   QActionGroup *m_colorFilterGroup;
@@ -333,9 +360,13 @@ private:
   QFrame *createFpsSlider();
   QAction *m_doubleRedAction, *m_doubleGreenAction, *m_doubleBlueAction;
   DoubleButton *m_doubleRed, *m_doubleGreen, *m_doubleBlue;
+
   std::vector<int> m_gadgetsMask;
   int m_from, m_to, m_step;
   int m_currentFrame, m_framesCount;
+  int m_stopAt = -1;
+  int m_startAt =
+      -1;  // used in the "play selection" mode of the viewer preview
   ImagePainter::VisualSettings m_settings;
 
   bool m_isPlay;
@@ -347,6 +378,9 @@ private:
   TPixel m_blankColor;
   int m_blanksToDraw;
   bool m_isLinkable;
+
+  QToolButton *m_resetGainBtn;
+  int m_prevGainStep;
 
   QMap<EGadget, QAbstractButton *> m_buttons;
   QMap<EGadget, QAction *> m_actions;
@@ -380,6 +414,8 @@ private:
   FlipConsoleOwner *m_consoleOwner;
   TFrameHandle *m_frameHandle;
 
+  void adjustGain(bool increase);
+
 protected slots:
 
   void OnSetCurrentFrame();
@@ -393,9 +429,9 @@ protected slots:
   }
   void onButtonPressed(int button);
   void incrementCurrentFrame(int delta);
-  void onNextFrame(int fps);
+  void onNextFrame(int fps, QElapsedTimer *timer, qint64 target);
   void onCustomizeButtonPressed(QAction *);
-  bool drawBlanks(int from, int to);
+  bool drawBlanks(int from, int to, QElapsedTimer *timer, qint64 target);
   void onSliderRelease();
 
   void onFPSEdited();

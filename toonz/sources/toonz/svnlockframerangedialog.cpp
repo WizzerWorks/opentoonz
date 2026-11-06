@@ -38,7 +38,7 @@ SVNLockFrameRangeDialog::SVNLockFrameRangeDialog(QWidget *parent,
 
   QVBoxLayout *mainLayout = new QVBoxLayout;
   mainLayout->setAlignment(Qt::AlignHCenter);
-  mainLayout->setMargin(0);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
 
   QHBoxLayout *hLayout = new QHBoxLayout;
 
@@ -124,7 +124,7 @@ SVNLockFrameRangeDialog::SVNLockFrameRangeDialog(QWidget *parent,
 
   addButtonBarWidget(m_lockButton, m_cancelButton);
 
-  // 0. Connect for svn errors (that may occurs)
+  // 0. Connect for svn errors (that may occur)
   connect(&m_thread, SIGNAL(error(const QString &)), this,
           SLOT(onError(const QString &)));
 
@@ -260,44 +260,31 @@ void SVNLockFrameRangeDialog::onCancelButtonClicked() {
 //-----------------------------------------------------------------------------
 
 void SVNLockFrameRangeDialog::onFromLineEditTextChanged() {
-  int value = m_fromLineEdit->getValue();
-
-  // Check if from is inside one range
-  int count = m_lockInfos.size();
-
-  m_fromIsValid = true;
-  for (int i = 0; i < count; i++) {
-    SVNPartialLockInfo lockInfo = m_lockInfos.at(i);
-    if (value >= lockInfo.m_from && value <= lockInfo.m_to) {
-      m_fromIsValid = false;
-      break;
+    unsigned int value = static_cast<unsigned int>(m_fromLineEdit->getValue());
+    m_fromIsValid = true;
+    for (const SVNPartialLockInfo& lockInfo : m_lockInfos) {
+        if (value >= lockInfo.m_from && value <= lockInfo.m_to) {
+            m_fromIsValid = false;
+            break;
+        }
     }
-  }
-
-  m_fromLineEdit->setStyleSheet(
-      m_fromIsValid ? "" : "color: red; background-color: red;");
-  m_lockButton->setEnabled(m_fromIsValid && m_toIsValid);
+    m_fromLineEdit->setStyleSheet(m_fromIsValid ? "" : "color: red; background-color: red;");
+    m_lockButton->setEnabled(m_fromIsValid && m_toIsValid);
 }
 
 //-----------------------------------------------------------------------------
 
 void SVNLockFrameRangeDialog::onToLineEditTextChanged() {
-  int value = m_toLineEdit->getValue();
-
-  // Check if from is inside one range
-  int count   = m_lockInfos.size();
-  m_toIsValid = true;
-  for (int i = 0; i < count; i++) {
-    SVNPartialLockInfo lockInfo = m_lockInfos.at(i);
-    if (value >= lockInfo.m_from && value <= lockInfo.m_to) {
-      m_toIsValid = false;
-      break;
+    unsigned int value = static_cast<unsigned int>(m_toLineEdit->getValue());
+    m_toIsValid = true;
+    for (const SVNPartialLockInfo& lockInfo : m_lockInfos) {
+        if (value >= lockInfo.m_from && value <= lockInfo.m_to) {
+            m_toIsValid = false;
+            break;
+        }
     }
-  }
-
-  m_toLineEdit->setStyleSheet(
-      m_toIsValid ? "" : "color: red; background-color: red;");
-  m_lockButton->setEnabled(m_fromIsValid && m_toIsValid);
+    m_toLineEdit->setStyleSheet(m_toIsValid ? "" : "color: red; background-color: red;");
+    m_lockButton->setEnabled(m_fromIsValid && m_toIsValid);
 }
 
 //-----------------------------------------------------------------------------
@@ -368,7 +355,7 @@ SVNLockMultiFrameRangeDialog::SVNLockMultiFrameRangeDialog(
 
   QVBoxLayout *mainLayout = new QVBoxLayout;
   mainLayout->setAlignment(Qt::AlignHCenter);
-  mainLayout->setMargin(0);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
 
   QHBoxLayout *hLayout = new QHBoxLayout;
 
@@ -458,7 +445,7 @@ SVNLockMultiFrameRangeDialog::SVNLockMultiFrameRangeDialog(
 
   addButtonBarWidget(m_lockButton, m_cancelButton);
 
-  // 0. Connect for svn errors (that may occurs)
+  // 0. Connect for svn errors (that may occur)
   connect(&m_thread, SIGNAL(error(const QString &)), this,
           SLOT(onError(const QString &)));
 
@@ -560,44 +547,31 @@ void SVNLockMultiFrameRangeDialog::onStatusRetrieved(
 //-----------------------------------------------------------------------------
 
 void SVNLockMultiFrameRangeDialog::onFromLineEditTextChanged() {
-  int value = m_fromLineEdit->getValue();
-
-  // Check if from is inside one range
-  int count = m_lockInfos.size();
-
-  m_fromIsValid = true;
-  for (int i = 0; i < count; i++) {
-    SVNPartialLockInfo lockInfo = m_lockInfos.at(i);
-    if (value >= lockInfo.m_from && value <= lockInfo.m_to) {
-      m_fromIsValid = false;
-      break;
+    unsigned int value = static_cast<unsigned int>(m_fromLineEdit->getValue());
+    m_fromIsValid = true;
+    for (const SVNPartialLockInfo& lockInfo : m_lockInfos) {
+        if (value >= lockInfo.m_from && value <= lockInfo.m_to) {
+            m_fromIsValid = false;
+            break;
+        }
     }
-  }
-
-  m_fromLineEdit->setStyleSheet(
-      m_fromIsValid ? "" : "color: red; background-color: red;");
-  m_lockButton->setEnabled(m_fromIsValid && m_toIsValid);
+    m_fromLineEdit->setStyleSheet(m_fromIsValid ? "" : "color: red; background-color: red;");
+    m_lockButton->setEnabled(m_fromIsValid && m_toIsValid);
 }
 
 //-----------------------------------------------------------------------------
 
 void SVNLockMultiFrameRangeDialog::onToLineEditTextChanged() {
-  int value = m_toLineEdit->getValue();
-
-  // Check if from is inside one range
-  int count   = m_lockInfos.size();
-  m_toIsValid = true;
-  for (int i = 0; i < count; i++) {
-    SVNPartialLockInfo lockInfo = m_lockInfos.at(i);
-    if (value >= lockInfo.m_from && value <= lockInfo.m_to) {
-      m_toIsValid = false;
-      break;
+    unsigned int value = static_cast<unsigned int>(m_toLineEdit->getValue());
+    m_toIsValid = true;
+    for (const SVNPartialLockInfo& lockInfo : m_lockInfos) {
+        if (value >= lockInfo.m_from && value <= lockInfo.m_to) {
+            m_toIsValid = false;
+            break;
+        }
     }
-  }
-
-  m_toLineEdit->setStyleSheet(
-      m_toIsValid ? "" : "color: red; background-color: red;");
-  m_lockButton->setEnabled(m_fromIsValid && m_toIsValid);
+    m_toLineEdit->setStyleSheet(m_toIsValid ? "" : "color: red; background-color: red;");
+    m_lockButton->setEnabled(m_fromIsValid && m_toIsValid);
 }
 
 //-----------------------------------------------------------------------------
@@ -666,7 +640,7 @@ SVNUnlockFrameRangeDialog::SVNUnlockFrameRangeDialog(QWidget *parent,
 
   QVBoxLayout *mainLayout = new QVBoxLayout;
   mainLayout->setAlignment(Qt::AlignHCenter);
-  mainLayout->setMargin(0);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
 
   QHBoxLayout *hLayout = new QHBoxLayout;
 
@@ -706,7 +680,7 @@ SVNUnlockFrameRangeDialog::SVNUnlockFrameRangeDialog(QWidget *parent,
 
   addButtonBarWidget(m_unlockButton, m_cancelButton);
 
-  // 0. Connect for svn errors (that may occurs)
+  // 0. Connect for svn errors (that may occur)
   connect(&m_thread, SIGNAL(error(const QString &)), this,
           SLOT(onError(const QString &)));
 }
@@ -901,7 +875,7 @@ SVNUnlockMultiFrameRangeDialog::SVNUnlockMultiFrameRangeDialog(
 
   QVBoxLayout *mainLayout = new QVBoxLayout;
   mainLayout->setAlignment(Qt::AlignHCenter);
-  mainLayout->setMargin(0);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
 
   QHBoxLayout *hLayout = new QHBoxLayout;
 
@@ -942,7 +916,7 @@ SVNUnlockMultiFrameRangeDialog::SVNUnlockMultiFrameRangeDialog(
 
   addButtonBarWidget(m_unlockButton, m_cancelButton);
 
-  // 0. Connect for svn errors (that may occurs)
+  // 0. Connect for svn errors (that may occur)
   connect(&m_thread, SIGNAL(error(const QString &)), this,
           SLOT(onError(const QString &)));
 
@@ -1076,7 +1050,7 @@ SVNFrameRangeLockInfoDialog::SVNFrameRangeLockInfoDialog(
 
   addButtonBarWidget(closeButton);
 
-  // 0. Connect for svn errors (that may occurs)
+  // 0. Connect for svn errors (that may occur)
   connect(&m_thread, SIGNAL(error(const QString &)), this,
           SLOT(onError(const QString &)));
 
@@ -1174,7 +1148,7 @@ SVNMultiFrameRangeLockInfoDialog::SVNMultiFrameRangeLockInfoDialog(
 
   addButtonBarWidget(closeButton);
 
-  // 0. Connect for svn errors (that may occurs)
+  // 0. Connect for svn errors (that may occur)
   connect(&m_thread, SIGNAL(error(const QString &)), this,
           SLOT(onError(const QString &)));
 

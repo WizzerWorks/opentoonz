@@ -26,10 +26,11 @@
 #include <QCoreApplication>
 
 #include <QDebug>
+#include <QGuiApplication>
 
 using namespace TFxUtil;
 
-//#define USE_SQLITE_HDPOOL
+// #define USE_SQLITE_HDPOOL
 
 //*************************************************************************************
 //    Swatch cache delegate
@@ -162,9 +163,9 @@ TRaster32P createCrossIcon() {
 //! Disegna una freccia lunga \b len pixel.
 /*!La punta della freccia si trova a coordinate (0,ly/2), la coda a
  * (len-1,ly/2).
-*/
+ */
 TRaster32P createArrowShape(int len) {
-  int d            = 5;
+  int d = 5;
   if (len < d) len = d;
   TPixel32 c0(210, 210, 210);
   TPixel32 c1(10, 10, 10);
@@ -197,10 +198,10 @@ double ZoomFactors[ZOOMLEVELS] = {
     1,     2,     3,      4,      5,     6,     7,    8,     12,   16};
 
 double getQuantizedZoomFactor(double zf, bool forward) {
-  if (forward && zf > ZoomFactors[ZOOMLEVELS - 1] ||
+  if ((forward && zf > ZoomFactors[ZOOMLEVELS - 1]) ||
       areAlmostEqual(zf, ZoomFactors[ZOOMLEVELS - 1], 1e-5))
     return zf;
-  else if (!forward && zf < ZoomFactors[0] ||
+  else if ((!forward && zf < ZoomFactors[0]) ||
            areAlmostEqual(zf, ZoomFactors[0], 1e-5))
     return zf;
 
@@ -241,11 +242,7 @@ int submittedTasks      = 0;
 // SwatchViewer
 //-----------------------------------------------------------------------------
 
-#if QT_VERSION >= 0x050500
 SwatchViewer::SwatchViewer(QWidget *parent, Qt::WindowFlags flags)
-#else
-SwatchViewer::SwatchViewer(QWidget *parent, Qt::WFlags flags)
-#endif
     : QWidget(parent, flags)
     , m_fx(0)
     , m_actualFxClone(0)
@@ -393,7 +390,7 @@ void SwatchViewer::updateSize(const QSize &size) {
   double ratio = m_cameraRect.getLy() > 0
                      ? m_cameraRect.getLx() / (double)m_cameraRect.getLy()
                      : 1.0;
-  int w = std::min((int)(h * ratio), parentWidget()->width());
+  int w        = std::min((int)(h * ratio), parentWidget()->width());
   setFixedWidth(w);
   if (w > 2 && h > 2)
     m_raster = TRaster32P(TDimension(w, h));
@@ -557,11 +554,11 @@ void SwatchViewer::updateRaster() {
     assert(i0 != i1);
     assert(0 <= i0 && i0 < (int)m_points.size());
     assert(0 <= i1 && i1 < (int)m_points.size());
-    TPoint p0        = world2win(m_points[i0].m_param->getValue(m_frame));
-    TPoint p1        = world2win(m_points[i1].m_param->getValue(m_frame));
-    TPoint delta     = p1 - p0;
-    int len          = tround(sqrt((double)(delta * delta)));
-    double phi       = 0;
+    TPoint p0    = world2win(m_points[i0].m_param->getValue(m_frame));
+    TPoint p1    = world2win(m_points[i1].m_param->getValue(m_frame));
+    TPoint delta = p1 - p0;
+    int len      = tround(sqrt((double)(delta * delta)));
+    double phi   = 0;
     if (len > 0) phi = atan2((double)delta.y, (double)delta.x) * M_180_PI;
 
     if (len > 500) {
@@ -685,7 +682,7 @@ void SwatchViewer::mousePressEvent(QMouseEvent *event) {
       }
     }
     update();
-  } else if (m_mouseButton == Qt::MidButton) {
+  } else if (m_mouseButton == Qt::MiddleButton) {
     m_pos        = pos;
     m_firstPos   = pos;
     m_oldContent = getContent();
@@ -723,7 +720,7 @@ void SwatchViewer::mouseMoveEvent(QMouseEvent *event) {
     // to avoid unnecessary recursions.
 
     QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-  } else if (m_mouseButton == Qt::MidButton) {
+  } else if (m_mouseButton == Qt::MiddleButton) {
     pan(pos - m_pos);
     m_pos = pos;
   }
@@ -735,7 +732,7 @@ void SwatchViewer::mouseReleaseEvent(QMouseEvent *event) {
   m_mouseButton   = Qt::NoButton;
   m_selectedPoint = -1;
   TPoint pos      = TPoint(event->pos().x(), event->pos().y());
-  if (event->button() == Qt::MidButton) {
+  if (event->button() == Qt::MiddleButton) {
     if (!m_oldContent || !m_curContent) return;
     TPointD p = convert(pos - m_pos);
     setAff(TTranslation(p.x, -p.y) * m_aff);
@@ -774,12 +771,12 @@ void SwatchViewer::wheelEvent(QWheelEvent *event) {
 
   default:  // Qt::MouseEventSynthesizedByQt,
             // Qt::MouseEventSynthesizedByApplication
-    {
-      std::cout << "not supported event: Qt::MouseEventSynthesizedByQt, "
-                   "Qt::MouseEventSynthesizedByApplication"
-                << std::endl;
-      break;
-    }
+  {
+    std::cout << "not supported event: Qt::MouseEventSynthesizedByQt, "
+                 "Qt::MouseEventSynthesizedByApplication"
+              << std::endl;
+    break;
+  }
 
   }  // end switch
 
@@ -787,9 +784,9 @@ void SwatchViewer::wheelEvent(QWheelEvent *event) {
     if ((m_gestureActive == true &&
          m_touchDevice == QTouchDevice::TouchScreen) ||
         m_gestureActive == false) {
-      TPoint center(event->pos().x() - width() / 2,
-                    -event->pos().y() + height() / 2);
-      zoom(center, exp(0.001 * event->delta()));
+      TPoint center(event->position().x() - width() / 2,
+                    -event->position().y() + height() / 2);
+      zoom(center, exp(0.001 * event->angleDelta().y()));
     }
   }
   event->accept();
@@ -1012,10 +1009,9 @@ bool SwatchViewer::event(QEvent *e) {
   }
   */
 
-  if (e->type() == QEvent::Gesture &&
-      CommandManager::instance()
-          ->getAction(MI_TouchGestureControl)
-          ->isChecked()) {
+  if (e->type() == QEvent::Gesture && CommandManager::instance()
+                                          ->getAction(MI_TouchGestureControl)
+                                          ->isChecked()) {
     gestureEvent(static_cast<QGestureEvent *>(e));
     return true;
   }
@@ -1056,6 +1052,21 @@ SwatchViewer::ContentRender::ContentRender(TRasterFx *fx, int frame,
           SLOT(onCanceled(TThread::RunnableP)),
           Qt::QueuedConnection);  // Starts will need to come *strictly before*
                                   // cancels
+
+  m_info.m_isSwatch  = true;
+  m_info.m_affine    = m_aff;
+  m_info.m_cameraBox = TRectD(-0.5 * TPointD(m_size.lx, m_size.ly),
+                              TDimensionD(m_size.lx, m_size.ly));
+
+  if ((m_fx->getAlias(m_frame, m_info).find("plasticDeformerFx") !=
+           std::string::npos ||
+       m_fx->getAlias(m_frame, m_info).find("iwa_FlowPaintBrushFx") !=
+           std::string::npos) &&
+      QThread::currentThread() == qGuiApp->thread()) {
+    m_info.m_offScreenSurface.reset(new QOffscreenSurface());
+    m_info.m_offScreenSurface->setFormat(QSurfaceFormat::defaultFormat());
+    m_info.m_offScreenSurface->create();
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -1075,13 +1086,9 @@ void SwatchViewer::ContentRender::run() {
   m_viewer->m_renderer.declareRenderStart(renderId);
   m_viewer->m_renderer.declareFrameStart(m_frame);
 
-  TRenderSettings info;
-  info.m_isSwatch = true;
-  info.m_affine   = m_aff;
-
   TTile tile;
   m_fx->allocateAndCompute(tile, -0.5 * TPointD(m_size.lx, m_size.ly), m_size,
-                           0, (double)m_frame, info);
+                           0, (double)m_frame, m_info);
   m_raster = tile.getRaster();
 
   m_viewer->m_renderer.declareFrameEnd(m_frame);
@@ -1155,7 +1162,7 @@ void SwatchCacheManager::setFx(const TFxP &fx) {
 
         // In the zerary case, extract the actual fx
         TZeraryColumnFx *zcfx = dynamic_cast<TZeraryColumnFx *>(child);
-        if (zcfx) child       = zcfx->getZeraryFx();
+        if (zcfx) child = zcfx->getZeraryFx();
 
         assert(child && child->getIdentifier() != 0);
         m_childrenFxIds.insert(child->getIdentifier());

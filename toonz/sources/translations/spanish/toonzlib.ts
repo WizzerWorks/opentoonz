@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="es" sourcelanguage="en">
+<TS version="2.1" language="es_ES" sourcelanguage="en_US">
 <context>
     <name>Preferences</name>
     <message>
@@ -58,7 +58,7 @@
     </message>
     <message>
         <source>%1 is not a valid color (valid color names are &apos;red&apos;, &apos;transparent&apos;, &apos;#FF8800&apos;, ecc.)</source>
-        <translation>%1 no es un color válido (nombres válidos de color son &apos;red&apos;,  &apos;transparent&apos;, &apos;#FF8800&apos;, etc.)</translation>
+        <translation type="vanished">%1 no es un color válido (nombres válidos de color son &apos;red&apos;,  &apos;transparent&apos;, &apos;#FF8800&apos;, etc.)</translation>
     </message>
     <message>
         <source>Vectorization failed</source>
@@ -262,11 +262,11 @@
     </message>
     <message>
         <source>Set Keyframe</source>
-        <translation>Marcar fotograma clave</translation>
+        <translation>Marcar clave</translation>
     </message>
     <message>
         <source>Remove Keyframe</source>
-        <translation>Eliminar fotograma clave</translation>
+        <translation>Eliminar clave</translation>
     </message>
     <message>
         <source>Cycle</source>
@@ -281,11 +281,11 @@
         <translation>Editar rotación</translation>
     </message>
     <message>
-        <source>Move E/W</source>
+        <source>Move X</source>
         <translation>Mover en X</translation>
     </message>
     <message>
-        <source>Move N/S</source>
+        <source>Move Y</source>
         <translation>Mover en Y</translation>
     </message>
     <message>
@@ -314,11 +314,11 @@
     </message>
     <message>
         <source>Edit Shear X</source>
-        <translation>Editar inclinación X</translation>
+        <translation>Editar sesgo X</translation>
     </message>
     <message>
         <source>Edit Shear Y</source>
-        <translation>Editar inclinación Y</translation>
+        <translation>Editar sesgo Y</translation>
     </message>
     <message>
         <source>%1  %2  Frame : %3</source>
@@ -326,11 +326,11 @@
     </message>
     <message>
         <source>Set Keyframe   %1 at frame %2</source>
-        <translation>Marcar fotograma clave   %1 en fotograma %2</translation>
+        <translation>Marcar clave   %1 en fotograma %2</translation>
     </message>
     <message>
         <source>Remove Keyframe   %1 at frame %2</source>
-        <translation>Eliminar fotograma clave   %1 en fotograma %2</translation>
+        <translation>Eliminar clave   %1 en fotograma %2</translation>
     </message>
     <message>
         <source>Move Center   %1  Frame %2</source>
@@ -442,6 +442,63 @@
         <translation>Falla al guardar los siguientes recursos:
 </translation>
     </message>
+    <message>
+        <source>Failed to save palette.</source>
+        <translation>Falla al guardar paleta.</translation>
+    </message>
+    <message>
+        <source>and %1 more item(s).</source>
+        <translation>y %1 elemento(s) más.</translation>
+    </message>
+    <message>
+        <source>Orange</source>
+        <translation>Naranja</translation>
+    </message>
+    <message>
+        <source>Yellow</source>
+        <translation>Amarillo</translation>
+    </message>
+    <message>
+        <source>Light Green</source>
+        <translation>Verde claro</translation>
+    </message>
+    <message>
+        <source>Light Blue</source>
+        <translation>Azul claro</translation>
+    </message>
+    <message>
+        <source>Dark Blue</source>
+        <translation>Azul oscuro</translation>
+    </message>
+    <message>
+        <source>Purple</source>
+        <translation>Morado</translation>
+    </message>
+    <message>
+        <source>Pink</source>
+        <translation>Rosa</translation>
+    </message>
+    <message>
+        <source>Dark Pink</source>
+        <translation>Rosa oscuro</translation>
+    </message>
+    <message>
+        <source>White</source>
+        <translation>Blanco</translation>
+    </message>
+    <message>
+        <source>Custom Texture</source>
+        <comment>TextureStyleChooserPage</comment>
+        <translation>Textura personalizada</translation>
+    </message>
+    <message>
+        <source>Set Current Style from #%1 to %2</source>
+        <translation>Establecer estilo actual de #%1 a %2</translation>
+    </message>
+    <message>
+        <source>%1 is not a valid color (valid color names are &apos;red&apos;, &apos;transparent&apos;, &apos;#FF8800&apos;, etc.)</source>
+        <translation>%1 no es un color válido (nombres válidos de color serían &apos;red&apos;, &apos;transparent&apos;, &apos;#FF8800&apos;, etc.)</translation>
+    </message>
 </context>
 <context>
     <name>TScriptBinding::CenterlineVectorizer</name>
@@ -474,11 +531,11 @@
     </message>
     <message>
         <source>%1 is not a directory</source>
-        <translation>%1 no es un directorio</translation>
+        <translation>%1 no es una carpeta</translation>
     </message>
     <message>
         <source>can&apos;t read directory %1</source>
-        <translation>no es posible leer el directorio %1</translation>
+        <translation>no es posible leer la carpeta %1</translation>
     </message>
 </context>
 <context>
@@ -559,11 +616,11 @@
     </message>
     <message>
         <source>Unrecognized file type :</source>
-        <translation>Tipo de archivo no reconocido:</translation>
+        <translation type="vanished">Tipo de archivo no reconocido:</translation>
     </message>
     <message>
         <source>Can&apos;t save a %1 level to this file type : %2</source>
-        <translation>No es posible guardar un nivel %1 en este tipo de archivo: %2</translation>
+        <translation type="vanished">No es posible guardar un nivel %1 en este tipo de archivo: %2</translation>
     </message>
     <message>
         <source>Exception writing %1</source>
@@ -571,11 +628,11 @@
     </message>
     <message>
         <source>frame index (%1) must be a number</source>
-        <translation>el índice de fotogramas (%1) debe ser numérico</translation>
+        <translation>el identificador de fotogramas (%1) debe ser numérico</translation>
     </message>
     <message>
         <source>frame index (%1) is out of range (0-%2)</source>
-        <translation>el índice de fotogramas (%1) se encuentra fuera de rango (0-%2)</translation>
+        <translation>el identificador de fotogramas (%1) se encuentra fuera de rango (0-%2)</translation>
     </message>
     <message>
         <source>second argument (%1) is not an image</source>
@@ -583,10 +640,30 @@
     </message>
     <message>
         <source>can not insert a %1 image into a level</source>
-        <translation>no es posible insertar una imagen %1 en un nivel</translation>
+        <translation type="vanished">no es posible insertar una imagen %1 en un nivel</translation>
     </message>
     <message>
         <source>can not insert a %1 image to a %2 level</source>
+        <translation type="vanished">no es posible insertar una imagen %1 en un nivel %2</translation>
+    </message>
+    <message>
+        <source>Cannot set path on empty level</source>
+        <translation>No es posible establecer una ruta para un nivel vacío</translation>
+    </message>
+    <message>
+        <source>Unrecognized file type: %1</source>
+        <translation>Tipo de archivo no reconocido: %1</translation>
+    </message>
+    <message>
+        <source>Can&apos;t save a %1 level to this file type: %2</source>
+        <translation>No es posible guardar un nivel %1 a este tipo de archivo: %2</translation>
+    </message>
+    <message>
+        <source>cannot insert a %1 image into a level</source>
+        <translation>no es posible insertar una imagen %1 en un nivel</translation>
+    </message>
+    <message>
+        <source>cannot insert a %1 image to a %2 level</source>
         <translation>no es posible insertar una imagen %1 en un nivel %2</translation>
     </message>
 </context>
@@ -610,7 +687,11 @@
     </message>
     <message>
         <source>Invalid color : </source>
-        <translation>Color inválido: </translation>
+        <translation type="vanished">Color inválido: </translation>
+    </message>
+    <message>
+        <source>Invalid color: %1</source>
+        <translation>Color inválido: %1</translation>
     </message>
 </context>
 <context>

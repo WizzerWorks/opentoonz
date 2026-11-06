@@ -36,6 +36,9 @@
 #include "toonz/autoclose.h"
 #include "toonz/txshleveltypes.h"
 #include "imagebuilders.h"
+#include "toonz/toonzscene.h"
+#include "toonz/sceneproperties.h"
+#include "toonz/tcamera.h"
 
 // Qt includes
 #include <QImage>
@@ -46,7 +49,7 @@
 
 #include "toonz/stage.h"
 
-//#define  NUOVO_ONION
+// #define  NUOVO_ONION
 
 //=============================================================================
 /*! \namespace Stage
@@ -193,6 +196,8 @@ public:
   double m_fade;
 
   ShiftTraceGhostId m_shiftTraceGhostId;
+  bool m_editingShift;
+  bool m_showShiftOrigin;
 
   bool m_camera3d;
   OnionSkinMask m_onionSkinMask;
@@ -211,6 +216,13 @@ public:
   std::vector<TXshColumn *> m_ancestors;
 
   const ImagePainter::VisualSettings *m_vs;
+
+#if defined(x64)
+  TRasterImageP m_liveViewImage;
+  TRasterImageP m_lineupImage;
+  Stage::Player m_liveViewPlayer;
+  Stage::Player m_lineupPlayer;
+#endif
 
 public:
   StageBuilder();
@@ -277,6 +289,8 @@ StageBuilder::StageBuilder()
     , m_ancestorColumnIndex(-1)
     , m_fade(0)
     , m_shiftTraceGhostId(NO_GHOST)
+    , m_editingShift(false)
+    , m_showShiftOrigin(false)
     , m_currentXsheetLevel(0)
     , m_xsheetLevel(0) {
   m_placementStack.push_back(ZPlacement());
@@ -361,7 +375,27 @@ void StageBuilder::addCell(PlayerSet &players, ToonzScene *scene, TXsheet *xsh,
 
   TXshCell cell = xsh->getCell(row, col);
   TXshLevel *xl = cell.m_level.getPointer();
+
+#if defined(x64)
+  // check the previous row for a stop motion layer
+  if (!xl) {
+    if (!m_liveViewImage) return;
+    cell = xsh->getCell(row - 1, col);
+    xl   = cell.m_level.getPointer();
+    if (!xl) {
+      return;
+    } else {
+      xl                  = cell.m_level.getPointer();
+      TXshSimpleLevel *sl = xl->getSimpleLevel();
+      if (sl && sl == m_liveViewPlayer.m_sl) {
+        row -= 1;
+      } else
+        return;
+    }
+  }
+#else
   if (!xl) return;
+#endif
 
   ZPlacement cameraPlacement;
   if (m_subXSheetStack.empty())
@@ -395,17 +429,29 @@ void StageBuilder::addCell(PlayerSet &players, ToonzScene *scene, TXsheet *xsh,
     player.m_isGuidedDrawingEnabled = m_isGuidedDrawingEnabled;
     player.m_guidedFrontStroke      = m_guidedFrontStroke;
     player.m_guidedBackStroke       = m_guidedBackStroke;
+    if (xsh) {
+      TPointD cameraDpi =//use cameraDpi for rasterized vector image
+          xsh->getStageObjectTree()->getCurrentCamera()->getDpi();
+        player.m_dpiAff =
+          sl ? ((sl->getType() == PLI_XSHLEVEL && sl->m_rasterizePli)
+                    ? TScale(Stage::inch / cameraDpi.x,
+                             Stage::inch / cameraDpi.y)
+                    : getDpiAffine(sl, cell.m_frameId))
+             : TAffine();
+    } else  
     player.m_dpiAff = sl ? getDpiAffine(sl, cell.m_frameId) : TAffine();
+
     player.m_onionSkinDistance = m_onionSkinDistance;
     // when visiting the subxsheet, valuate the subxsheet column index
-    bool isCurrent = (subSheetColIndex >= 0)
-                         ? (subSheetColIndex == m_currentColumnIndex)
-                         : (col == m_currentColumnIndex);
+    bool isCurrent               = (subSheetColIndex >= 0)
+                                       ? (subSheetColIndex == m_currentColumnIndex)
+                                       : (col == m_currentColumnIndex);
     player.m_isCurrentColumn     = isCurrent;
     player.m_ancestorColumnIndex = m_ancestorColumnIndex;
     player.m_masks               = m_masks;
     player.m_opacity             = column->getOpacity();
-    player.m_filterColor         = column->getFilterColor();
+    player.m_filterColor =
+        scene->getProperties()->getColorFilterColor(column->getColorFilterId());
 
     if (m_subXSheetStack.empty()) {
       player.m_z         = columnZ;
@@ -444,15 +490,19 @@ void StageBuilder::addCell(PlayerSet &players, ToonzScene *scene, TXsheet *xsh,
         if (m_onionSkinMask.getShiftTraceStatus() !=
             OnionSkinMask::ENABLED_WITHOUT_GHOST_MOVEMENTS) {
           if (m_shiftTraceGhostId == FIRST_GHOST) {
-            player.m_opacity = 30;
-            players.push_back(player);
+            if (m_editingShift || m_showShiftOrigin) {
+              player.m_opacity = 30;
+              players.push_back(player);
+            }
             player.m_opacity           = opacity;
             player.m_onionSkinDistance = -1;
             player.m_placement =
                 m_onionSkinMask.getShiftTraceGhostAff(0) * player.m_placement;
           } else if (m_shiftTraceGhostId == SECOND_GHOST) {
-            player.m_opacity = 30;
-            players.push_back(player);
+            if (m_editingShift || m_showShiftOrigin) {
+              player.m_opacity = 30;
+              players.push_back(player);
+            }
             player.m_opacity           = opacity;
             player.m_onionSkinDistance = 1;
             player.m_placement =
@@ -556,6 +606,9 @@ void StageBuilder::addCellWithOnionSkin(PlayerSet &players, ToonzScene *scene,
   };  // locals
 
   if (m_onionSkinMask.isShiftTraceEnabled()) {
+    m_editingShift    = m_onionSkinMask.isEditingShift();
+    m_showShiftOrigin = m_onionSkinMask.isShowShiftOrigin();
+
     // when visiting the subxsheet, valuate the subxsheet column index
     bool isCurrent = (subSheetColIndex >= 0)
                          ? (subSheetColIndex == m_currentColumnIndex)
@@ -658,7 +711,7 @@ void StageBuilder::addFrame(PlayerSet &players, ToonzScene *scene, TXsheet *xsh,
     }
     TXshColumn *column = xsh->getColumn(c);
     bool isMask        = false;
-    if (column && !column->isEmpty()) {
+    if (column && !column->isEmpty() && !column->getSoundColumn()) {
       if (!column->isPreviewVisible() && checkPreviewVisibility) continue;
       if (column->isCamstandVisible() ||
           includeUnvisible)  // se l'"occhietto" non e' chiuso
@@ -813,8 +866,9 @@ void StageBuilder::addSimpleLevelFrame(PlayerSet &players,
 
 void StageBuilder::visit(PlayerSet &players, Visitor &visitor, bool isPlaying) {
   std::vector<int> masks;
-  int m = players.size();
-  int h = 0;
+  int m                = players.size();
+  int h                = 0;
+  bool stopMotionShown = false;
   for (; h < m; h++) {
     Player &player = players[h];
     unsigned int i = 0;
@@ -838,7 +892,35 @@ void StageBuilder::visit(PlayerSet &players, Visitor &visitor, bool isPlaying) {
       }
     }
     player.m_isPlaying = isPlaying;
+
+#if defined(x64)
+    if (m_liveViewImage && player.m_sl == m_liveViewPlayer.m_sl) {
+      if (m_lineupImage) {
+        m_lineupPlayer.m_sl = NULL;
+        visitor.onRasterImage(m_lineupImage.getPointer(), m_lineupPlayer);
+        stopMotionShown = true;
+      }
+      if (m_liveViewImage) {
+        m_liveViewPlayer.m_sl = NULL;
+        visitor.onRasterImage(m_liveViewImage.getPointer(), m_liveViewPlayer);
+        stopMotionShown = true;
+      }
+    } else {
+      visitor.onImage(player);
+    }
+  }
+  if (!stopMotionShown && (m_liveViewImage || m_lineupImage)) {
+    if (m_lineupImage) {
+      m_lineupPlayer.m_sl = NULL;
+      visitor.onRasterImage(m_lineupImage.getPointer(), m_lineupPlayer);
+    }
+    if (m_liveViewImage) {
+      m_liveViewPlayer.m_sl = NULL;
+      visitor.onRasterImage(m_liveViewImage.getPointer(), m_liveViewPlayer);
+    }
+#else
     visitor.onImage(player);
+#endif
   }
   // vale solo per TAB pro
   for (h = 0; h < (int)masks.size(); h++) visitor.disableMask();
@@ -877,6 +959,16 @@ void Stage::visit(Visitor &visitor, const VisitArgs &args) {
   sb.m_isGuidedDrawingEnabled = args.m_isGuidedDrawingEnabled;
   sb.m_guidedFrontStroke      = args.m_guidedFrontStroke;
   sb.m_guidedBackStroke       = args.m_guidedBackStroke;
+#if defined(x64)
+  if (args.m_liveViewImage) {
+    sb.m_liveViewImage  = args.m_liveViewImage;
+    sb.m_liveViewPlayer = args.m_liveViewPlayer;
+  }
+  if (args.m_lineupImage) {
+    sb.m_lineupImage  = args.m_lineupImage;
+    sb.m_lineupPlayer = args.m_lineupPlayer;
+  }
+#endif
   Player::m_onionSkinFrontSize     = 0;
   Player::m_onionSkinBackSize      = 0;
   Player::m_firstFrontOnionSkin    = 0;
@@ -885,7 +977,7 @@ void Stage::visit(Visitor &visitor, const VisitArgs &args) {
   Player::m_isShiftAndTraceEnabled = osm->isShiftTraceEnabled();
   sb.addFrame(sb.m_players, scene, xsh, row, 0, args.m_onlyVisible,
               args.m_checkPreviewVisibility);
-
+  
   updateOnionSkinSize(sb.m_players);
 
   sb.visit(sb.m_players, visitor, isPlaying);

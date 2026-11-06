@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="zh_CN">
+<TS version="2.1" language="zh_CN" sourcelanguage="en">
 <context>
     <name>ArtisticSolidColor</name>
     <message>
@@ -18,6 +18,29 @@
     <message>
         <source>Noise</source>
         <translation>杂色</translation>
+    </message>
+</context>
+<context>
+    <name>FlowLineStrokeStyle</name>
+    <message>
+        <source>Density</source>
+        <translation>密度</translation>
+    </message>
+    <message>
+        <source>Extension</source>
+        <translation>扩展</translation>
+    </message>
+    <message>
+        <source>Width Scale</source>
+        <translation>宽度比</translation>
+    </message>
+    <message>
+        <source>Straighten Ends</source>
+        <translation>拉直末端</translation>
+    </message>
+    <message>
+        <source>Flow Line</source>
+        <translation>跟随线</translation>
     </message>
 </context>
 <context>

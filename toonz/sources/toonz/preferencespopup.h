@@ -17,6 +17,10 @@
 // Qt includes
 #include <QComboBox>
 #include <QFontComboBox>
+#include <QTextEdit>
+#include <QOpenGLWidget>
+#include <QSurfaceFormat>
+#include <QOpenGLFunctions>
 
 //==============================================================
 
@@ -63,10 +67,13 @@ public:
 
 private:
   class FormatProperties;
+  class AdditionalStyleEdit;
+  class Display30bitChecker;
 
 private:
   Preferences* m_pref;
   FormatProperties* m_formatProperties;
+  AdditionalStyleEdit* m_additionalStyleEdit;
 
   DVGui::CheckBox *m_projectRootDocuments, *m_projectRootDesktop,
       *m_projectRootCustom;
@@ -76,6 +83,8 @@ private:
 private:
   void rebuildFormatsList();
   QList<ComboBoxItem> buildFontStyleList() const;
+  QList<ComboBoxItem> buildSvnUserList() const;
+  QList<ComboBoxItem> buildSvnRepList() const;
 
   QWidget* createUI(
       PreferencesItemId id,
@@ -98,7 +107,8 @@ private:
   QWidget* createVisualizationPage();
   QWidget* createLoadingPage();
   QWidget* createSavingPage();
-  QWidget* createImportExportPage();
+  QWidget* createCodecPage();
+  QWidget* createAutoLipSyncPage();
   QWidget* createDrawingPage();
   QWidget* createToolsPage();
   QWidget* createXsheetPage();
@@ -108,7 +118,9 @@ private:
   QWidget* createColorsPage();
   QWidget* createVersionControlPage();
   QWidget* createTouchTabletPage();
-
+#ifdef _WIN32
+  QWidget* createAddonsPage();
+#endif
   //--- callbacks ---
   // General
   void onAutoSaveChanged();
@@ -118,8 +130,10 @@ private:
   // Interface
   void onStyleSheetTypeChanged();
   void onPixelsOnlyChanged();
+  void beforeUnitChanged();
   void onUnitChanged();
   void beforeRoomChoiceChanged();
+  void onColorCalibrationChanged();
   // Drawing
   void onDefLevelTypeChanged();
   void onUseNumpadForSwitchingStylesClicked();
@@ -128,6 +142,10 @@ private:
   // Xsheet
   void onShowKeyframesOnCellAreaChanged();
   void onShowXSheetToolbarClicked();
+  void onUnifyColumnVisibilityTogglesChanged();
+  void onShowXsheetBreadcrumbsClicked();
+  // Animation
+  void onModifyExpressionOnMovingReferencesChanged();
   // Preview
   void onBlankCountChanged();
   void onBlankColorChanged();
@@ -136,6 +154,7 @@ private:
   void onOnionColorChanged();
   // Colors
   void onTranspCheckDataChanged();
+  void onChessboardChanged();
   // Version Control
   void onSVNEnabledChanged();
   // Commonly used
@@ -145,22 +164,26 @@ private slots:
   void onChange();
   void onColorFieldChanged(const TPixel32&, bool);
 
+  void onAnimateToolChanged();
+
   void onAutoSaveExternallyChanged();
   void onAutoSavePeriodExternallyChanged();
   void onProjectRootChanged();
+
+  void onEditAdditionalStyleSheet();
+  void onAdditionalStyleSheetEdited();
   void onPixelUnitExternallySelected(bool on);
   void onInterfaceFontChanged(const QString& text);
   void onLutPathChanged();
+  void onCheck30bitDisplay();
 
   void onAddLevelFormat();
   void onRemoveLevelFormat();
   void onEditLevelFormat();
   void onLevelFormatEdited();
   void onImportPolicyExternallyChanged(int policy);
-
-#ifdef LINETEST
-  void onLineTestFpsCapture(int);
-#endif
+  void onRenamePolicyExternallyChanged(int policy);
+  void onConvertPolicyExternallyChanged(int policy);
 };
 
 //**********************************************************************************
@@ -181,7 +204,7 @@ private:
 
   DVGui::LineEdit *m_name, *m_regExp;
 
-  DVGui::DoubleLineEdit* m_dpi;
+  DVGui::DoubleLineEdit *m_dpi, *m_colorSpaceGamma;
 
   DVGui::IntLineEdit *m_priority, *m_subsampling, *m_antialias;
 
@@ -190,6 +213,61 @@ private:
 private slots:
 
   void updateEnabledStatus();
+};
+
+//**********************************************************************************
+//   PreferencesPopup::AdditionalStyleEdit  definition
+//**********************************************************************************
+
+class PreferencesPopup::AdditionalStyleEdit final : public DVGui::Dialog {
+  Q_OBJECT
+
+public:
+  AdditionalStyleEdit(PreferencesPopup* parent);
+
+private:
+  QTextEdit* m_edit;
+
+protected:
+  void showEvent(QShowEvent* e) override;
+
+private slots:
+  void onOK();
+  void onApply();
+signals:
+  void additionalSheetEdited();
+};
+
+//**********************************************************************************
+//   PreferencesPopup::Display30bitCheckerView  definition
+//**********************************************************************************
+
+class PreferencesPopup::Display30bitChecker final : public QDialog {
+  Q_OBJECT
+
+  QSurfaceFormat m_currentDefaultFormat;
+
+private:
+  class GLView;
+
+public:
+  Display30bitChecker(PreferencesPopup* parent);
+  ~Display30bitChecker();
+};
+
+class PreferencesPopup::Display30bitChecker::GLView final
+    : public QOpenGLWidget,
+      protected QOpenGLFunctions {
+  Q_OBJECT
+  bool m_is30bit;
+
+public:
+  GLView(QWidget* parent, bool is30bit);
+
+protected:
+  void initializeGL() override;
+  void resizeGL(int width, int height) override;
+  void paintGL() override;
 };
 
 #endif  // PREFERENCESPOPUP_H

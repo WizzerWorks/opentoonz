@@ -7,7 +7,6 @@
 #include "tconvert.h"
 #include "tstopwatch.h"
 #include "tlevel_io.h"
-#include "tflash.h"
 #include "trasterimage.h"
 #include "ttoonzimage.h"
 #include "tvectorimage.h"
@@ -88,8 +87,8 @@ namespace {
 
 void setMaxMatte(TRasterP r) {
   TRaster32P r32 = (TRaster32P)r;
-
   TRaster64P r64 = (TRaster64P)r;
+  TRasterFP rF   = (TRasterFP)r;
 
   if (r32)
     for (int i = 0; i < r32->getLy(); i++) {
@@ -100,6 +99,12 @@ void setMaxMatte(TRasterP r) {
     for (int i = 0; i < r64->getLy(); i++) {
       TPixel64 *pix = r64->pixels(i);
       for (int j = 0; j < r64->getLx(); j++, pix++) pix->m = 65535;
+    }
+  else if (rF)
+    for (int i = 0; i < rF->getLy(); i++) {
+      TPixelF *pix = rF->pixels(i);
+      for (int j = 0; j < rF->getLx(); j++, pix++)
+        pix->m = TPixelF::maxChannelValue;
     }
 }
 
@@ -290,7 +295,8 @@ static int getEnlargement(const std::vector<TRasterFxRenderDataP> &fxs,
 //-------------------------------------------------------------------
 
 static void applyPaletteFilter(TPalette *&plt, bool keep,
-                               const set<int> &colors, const TPalette *srcPlt) {
+                               const std::set<int> &colors,
+                               const TPalette *srcPlt) {
   if (colors.empty()) return;
 
   if (!plt) plt = srcPlt->clone();
@@ -332,12 +338,12 @@ inline bool fxLess(TRasterFxRenderDataP a, TRasterFxRenderDataP b) {
       dynamic_cast<SandorFxRenderData *>(b.getPointer());
   if (!sandorDataB) return true;
 
-  int aIndex = sandorDataA->m_type == OutBorder
-                   ? 2
-                   : sandorDataA->m_type == BlendTz ? 1 : 0;
-  int bIndex = sandorDataB->m_type == OutBorder
-                   ? 2
-                   : sandorDataB->m_type == BlendTz ? 1 : 0;
+  int aIndex = sandorDataA->m_type == OutBorder ? 2
+               : sandorDataA->m_type == BlendTz ? 1
+                                                : 0;
+  int bIndex = sandorDataB->m_type == OutBorder ? 2
+               : sandorDataB->m_type == BlendTz ? 1
+                                                : 0;
 
   return aIndex < bIndex;
 }
@@ -415,7 +421,7 @@ static TImageP applyCmappedFx(TToonzImageP &ti,
                PaletteFilterData->m_type == eApplyToInksAndPaints) {
       bool keep = PaletteFilterData->m_keep;
 
-      set<int> colors;
+      std::set<int> colors;
       colors.insert(PaletteFilterData->m_colors.begin(),
                     PaletteFilterData->m_colors.end());
 
@@ -451,7 +457,7 @@ static TImageP applyCmappedFx(TToonzImageP &ti,
       std::vector<int> indexes;
       indexes.resize(PaletteFilterData->m_colors.size());
 
-      set<int>::const_iterator jt = PaletteFilterData->m_colors.begin();
+      std::set<int>::const_iterator jt = PaletteFilterData->m_colors.begin();
       for (int j = 0; j < (int)indexes.size(); ++j, ++jt) indexes[j] = *jt;
 
       if (copyRas == TRasterCM32P())
@@ -469,9 +475,10 @@ static TImageP applyCmappedFx(TToonzImageP &ti,
                                          // sicuramente devo cancellare dei
                                          // paint
         TRop::eraseColors(
-            copyRas, PaletteFilterData->m_type == eApplyToInksDeletingAllPaints
-                         ? 0
-                         : &indexes,
+            copyRas,
+            PaletteFilterData->m_type == eApplyToInksDeletingAllPaints
+                ? 0
+                : &indexes,
             false);
 
       /*-- Inkの消去 --*/
@@ -481,10 +488,11 @@ static TImageP applyCmappedFx(TToonzImageP &ti,
                                          // sicuramente devo cancellare degli
                                          // ink
         TRop::eraseColors(
-            copyRas, PaletteFilterData->m_type == eApplyToPaintsDeletingAllInks
-                         ? 0
-                         : &indexes,
-            true);
+            copyRas,
+            PaletteFilterData->m_type == eApplyToPaintsDeletingAllInks
+                ? 0
+                : &indexes,
+            true, PaletteFilterData->m_type == eApplyToInksAndPaints_NoGap);
     }
   }
 
@@ -679,7 +687,7 @@ static void applyCmappedFx(TVectorImageP &vi,
   TRasterP ras;
   bool keep = false;
   TPaletteP modPalette;
-  set<int> colors;
+  std::set<int> colors;
   std::vector<TRasterFxRenderDataP>::const_iterator it = fxs.begin();
 
   // prima tutti gli effetti che agiscono sulla paletta....
@@ -723,7 +731,9 @@ class LevelFxBuilder final : public ResourceBuilder {
   TXshSimpleLevel *m_sl;
   TFrameId m_fid;
   TRectD m_tileGeom;
-  bool m_64bit;
+  int m_bpp;
+  // bool m_linear;
+  // bool m_64bit;
 
   TRect m_rasBounds;
 
@@ -735,23 +745,29 @@ public:
       , m_palette()
       , m_sl(sl)
       , m_fid(fid)
-      , m_64bit(rs.m_bpp == 64) {}
+      , m_bpp(rs.m_bpp) {}
+  //, m_linear(rs.m_linearColorSpace){}
 
   void setRasBounds(const TRect &rasBounds) { m_rasBounds = rasBounds; }
 
   void compute(const TRectD &tileRect) override {
+    UCHAR flag = ImageManager::dontPutInCache;
+    if (m_bpp == 64 || m_bpp == 128) flag = flag | ImageManager::is64bitEnabled;
+    if (m_bpp == 128) flag = flag | ImageManager::isFloatEnabled;
+    // if (m_linear)
+    //   flag = flag | ImageManager::isLinearEnabled;
+
     // Load the image
-    TImageP img(m_sl->getFullsampledFrame(
-        m_fid, (m_64bit ? ImageManager::is64bitEnabled : 0) |
-                   ImageManager::dontPutInCache));
+    TImageP img(m_sl->getFullsampledFrame(m_fid, flag));
 
     if (!img) return;
 
     TRasterImageP rimg(img);
     TToonzImageP timg(img);
 
-    m_loadedRas = rimg ? (TRasterP)rimg->getRaster()
-                       : timg ? (TRasterP)timg->getRaster() : TRasterP();
+    m_loadedRas = rimg   ? (TRasterP)rimg->getRaster()
+                  : timg ? (TRasterP)timg->getRaster()
+                         : TRasterP();
     assert(m_loadedRas);
 
     if (timg) m_palette = timg->getPalette();
@@ -802,6 +818,7 @@ public:
 TLevelColumnFx::TLevelColumnFx()
     : m_levelColumn(0), m_isCachable(true), m_mutex(), m_offlineContext(0) {
   setName(L"LevelColumn");
+  enableComputeInFloat(true);
 }
 
 //--------------------------------------------------
@@ -976,6 +993,7 @@ void TLevelColumnFx::doCompute(TTile &tile, double frame,
 
   TXshSimpleLevel *sl = cell.m_level->getSimpleLevel();
   if (!sl) return;
+  if (sl->getType() == META_XSHLEVEL) return;
 
   TFrameId fid = cell.m_frameId;
 
@@ -1040,6 +1058,10 @@ void TLevelColumnFx::doCompute(TTile &tile, double frame,
       TVectorRenderData rd(TVectorRenderData::ProductionSettings(), aff,
                            TRect(size), vpalette);
 
+      // obtain jaggy image when the Closest Pixel is set
+      if (info.m_quality == TRenderSettings::ClosestPixel_FilterResampleQuality)
+        rd.m_antiAliasing = false;
+
       if (!m_offlineContext || m_offlineContext->getLx() < size.lx ||
           m_offlineContext->getLy() < size.ly) {
         if (m_offlineContext) delete m_offlineContext;
@@ -1081,13 +1103,15 @@ void TLevelColumnFx::doCompute(TTile &tile, double frame,
       ri  = 0;
       TRaster32P ras32(ras);
       TRaster64P ras64(ras);
+      TRasterFP rasF(ras);
 
       // Ensure that ras is either a 32 or 64 fullcolor.
       // Otherwise, we have to convert it.
-      if (!ras32 && !ras64) {
+      if (!ras32 && !ras64 && !rasF) {
         TRasterP tileRas(tile.getRaster());
         TRaster32P tileRas32(tileRas);
         TRaster64P tileRas64(tileRas);
+        TRasterFP tileRasF(tileRas);
 
         if (tileRas32) {
           ras32 = TRaster32P(ras->getLx(), ras->getLy());
@@ -1097,6 +1121,10 @@ void TLevelColumnFx::doCompute(TTile &tile, double frame,
           ras64 = TRaster64P(ras->getLx(), ras->getLy());
           TRop::convert(ras64, ras);
           ras = ras64;
+        } else if (tileRasF) {
+          rasF = TRasterFP(ras->getLx(), ras->getLy());
+          TRop::convert(rasF, ras);
+          ras = rasF;
         } else
           assert(0);
       }
@@ -1121,7 +1149,8 @@ void TLevelColumnFx::doCompute(TTile &tile, double frame,
         TRop::whiteTransp(appRas);
         ras = appRas;
       }
-      if (levelProp->antialiasSoftness() > 0) {
+      if (levelProp->antialiasSoftness() > 0 &&
+          !rasF) {  // temporarily disabled with float raster
         TRasterP appRas = ras->create(ras->getLx(), ras->getLy());
         TRop::antialias(ras, appRas, 10, levelProp->antialiasSoftness());
         ras = appRas;
@@ -1406,16 +1435,19 @@ bool TLevelColumnFx::doGetBBox(double frame, TRectD &bBox,
     TImageInfo imageInfo;
     getImageInfo(imageInfo, sl, cell.m_frameId);
 
-    TRect imageSavebox(imageInfo.m_x0, imageInfo.m_y0, imageInfo.m_x1,
-                       imageInfo.m_y1);
     double cx = 0.5 * imageInfo.m_lx;
     double cy = 0.5 * imageInfo.m_ly;
-    double x0 = (imageSavebox.x0 - cx);
-    double y0 = (imageSavebox.y0 - cy);
-    double x1 = x0 + imageSavebox.getLx();
-    double y1 = y0 + imageSavebox.getLy();
-    bBox      = TRectD(x0, y0, x1, y1);
-
+    if (info.m_getFullSizeBBox) {
+      bBox = TRectD(-cx, -cy, cx, cy);
+    } else {
+      TRect imageSavebox(imageInfo.m_x0, imageInfo.m_y0, imageInfo.m_x1,
+                         imageInfo.m_y1);
+      double x0 = (imageSavebox.x0 - cx);
+      double y0 = (imageSavebox.y0 - cy);
+      double x1 = x0 + imageSavebox.getLx();
+      double y1 = y0 + imageSavebox.getLy();
+      bBox      = TRectD(x0, y0, x1, y1);
+    }
     dpi = imageInfo.m_dpix / Stage::inch;
   } else {
     TImageP img = m_levelColumn->getCell(row).getImage(false);
@@ -1541,17 +1573,6 @@ int TLevelColumnFx::getColumnIndex() const {
 //-------------------------------------------------------------------
 
 TXshColumn *TLevelColumnFx::getXshColumn() const { return m_levelColumn; }
-
-//-------------------------------------------------------------------
-
-void TLevelColumnFx::compute(TFlash &flash, int frame) {
-  if (!m_levelColumn) return;
-
-  TImageP img = m_levelColumn->getCell(frame).getImage(false);
-  if (!img) return;
-
-  flash.draw(img, 0);
-}
 
 //-------------------------------------------------------------------
 
@@ -1694,10 +1715,6 @@ std::string TPaletteColumnFx::getAlias(double frame,
   TFilePath palettePath = getPalettePath(frame);
   return "TPaletteColumnFx[" + ::to_string(palettePath.getWideString()) + "]";
 }
-
-//-------------------------------------------------------------------
-
-void TPaletteColumnFx::compute(TFlash &flash, int frame) {}
 
 //-------------------------------------------------------------------
 

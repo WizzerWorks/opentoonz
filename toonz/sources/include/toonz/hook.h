@@ -97,7 +97,7 @@ private:
   TPointD m_delta;
   int m_id;
 
-  // Proprietà relative alla trackerRegion
+  // Properties related to trackerRegion
   //! If Hook is also a Trackeregion then m_trackerObjectId>=0, else is -1
   int m_trackerObjectId;
   double m_width;   // trackerRegion width
@@ -141,7 +141,7 @@ A Hook can be added replacing a null pointer in the Hook container with a new
 Hook,
 getting an empty hook or adding a new Hook at the end of the container.
 
-It is possible to istantiate at max HookSet::maxHooksCount hooks - beyond
+It is possible to instantiate at max HookSet::maxHooksCount hooks - beyond
 which this function will return 0.
 */
   Hook *addHook();

@@ -6,6 +6,10 @@
 #include "tfilepath.h"
 
 #include "toonz/imagemanager.h"
+#include "toonz/tcamera.h"
+
+// ToonzLib includes
+#include "toonz/stage.h"
 
 //======================================================
 
@@ -39,11 +43,17 @@ public:
     //!< 'the currently stored one' if an image is already cached, or
     //!< m_sl's subsampling property otherwise)
     bool m_icon;  //!< Whether the icon (if any) should be loaded instead
+    
+    TPointD m_cameraDPI;  // for Rasterizer
 
   public:
     BuildExtData(const TXshSimpleLevel *sl, const TFrameId &fid, int subs = 0,
                  bool icon = false)
-        : m_sl(sl), m_fid(fid), m_subs(subs), m_icon(icon) {}
+        : m_sl(sl)
+        , m_fid(fid)
+        , m_subs(subs)
+        , m_icon(icon)
+        , m_cameraDPI(Stage::inch, Stage::inch) {}
   };
 
 public:
@@ -52,7 +62,8 @@ public:
   bool isImageCompatible(int imFlags, void *extData) override;
 
   /*--
-   * ImageBuilder仮想関数の実装。アイコン、画像をLoad時に全てキャッシュに格納する
+   * Implement ImageBuilder virtual functions. All icons and images are stored
+   * in the cache on loading
    * --*/
   void buildAllIconsAndPutInCache(TXshSimpleLevel *level,
                                   std::vector<TFrameId> fids,
@@ -60,8 +71,8 @@ public:
                                   bool cacheImagesAsWell) override;
 
   /* Exposed to allow Fid to be updated due to a renumber operation
-  */
-  void setFid(const TFrameId &fid);
+   */
+  void setFid(const TFrameId &fid) override;
 
 protected:
   bool getInfo(TImageInfo &info, int imFlags, void *extData) override;
@@ -76,8 +87,11 @@ private:
   TFrameId m_fid;    //!< Frame of the level to load
 
   bool m_64bitCompatible;  //!< Whether current image is 64-bit compatible
+  bool m_floatCompatible;  //!< Whether current image is float compatible
   int m_subsampling;       //!< Current image subsampling
   //!< NOTE: Should this be replaced by requests to the TImageCache?
+
+  double m_colorSpaceGamma;  // current gamma. only used in EXR levels
 };
 
 //-----------------------------------------------------------------------------
@@ -87,7 +101,11 @@ public:
   ImageRasterizer() {}
   ~ImageRasterizer() {}
 
-  bool isImageCompatible(int imFlags, void *extData) override { return true; }
+  TPointD m_cameraDPI;
+  bool m_antiAliasing;
+
+  //Imagemaneget::getImage
+  bool isImageCompatible(int imFlags, void *extData) override;
 
 protected:
   bool getInfo(TImageInfo &info, int imFlags, void *extData) override;

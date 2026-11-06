@@ -6,6 +6,7 @@
 #include "toonzqt/selection.h"
 #include "tgeometry.h"
 #include <set>
+#include <QList>
 
 class TimeStretchPopup;
 class ReframePopup;
@@ -33,6 +34,8 @@ public:
 
 private:
   Range m_range;
+  int m_resizePivotRow;  // pivot frame when resizing the selection with
+                         // ctrl+arrow keys
 
 public:
   TCellSelection();
@@ -40,21 +43,25 @@ public:
   ~TCellSelection();
 
   void enableCommands() override;
+  void setAlternativeCommandNames();
 
   bool isEmpty() const override;
 
   void copyCells();
   void pasteCells();
+  void doPaste();  // choose pasting behavior by preference option
+  void pasteDuplicateCells();
   void deleteCells();
+  void deleteCells(bool withShift);
   void cutCells();
   void cutCells(bool withoutCopy);
 
-  /*- セルの上書きペースト -*/
+  /*- Overwrite paste cells -*/
   void overWritePasteCells();
   // paste cell numbers only
   void overwritePasteNumbers();
 
-  //! \note: puo' anche essere r0>r1 o c0>c1
+  //! \note: r0, c0, r1, c1 can be in any order (r0>r1 or c0>c1)
   void selectCells(int r0, int c0, int r1, int c1);
   void selectCell(int row, int col);
   void selectNone() override;
@@ -109,7 +116,6 @@ public:
   void reframe2Cells() { reframeCells(2); }
   void reframe3Cells() { reframeCells(3); }
   void reframe4Cells() { reframeCells(4); }
-  void convertToToonzRaster();
   void convertVectortoVector();
 
   void reframeWithEmptyInbetweens();
@@ -122,9 +128,10 @@ public:
 
   static bool isEnabledCommand(std::string commandId);
 
-  void createBlankDrawing(int row, int col, bool inRange);
+  void createBlankDrawing(int row, int col, bool multiple);
   void createBlankDrawings();
   void fillEmptyCell();
+  int getResizePivotRow() const { return m_resizePivotRow; }
 };
 
 #endif  // TCELLSELECTION_H

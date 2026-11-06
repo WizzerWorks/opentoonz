@@ -397,7 +397,7 @@ void ImageManager::loadAllTlvIconsAndPutInCache(
     assert(builder);
     assert(builder->getRefCount() > 0);
 
-    // this function in reimpremented only in ImageLoader
+    // this function in reimplemented only in ImageLoader
     builder->buildAllIconsAndPutInCache(level, fids, iconIds,
                                         cacheImagesAsWell);
     builder->getInfo(info, ImageManager::none, 0);
@@ -414,7 +414,7 @@ void ImageManager::loadAllTlvIconsAndPutInCache(
           m_imp->m_builders.find(level->getImageId(fids[f]));
       if (it != m_imp->m_builders.end()) {
         const ImageBuilderP &builder = it->second;
-        builder->setImageCachedAndModified();
+        builder->setImageCached();
         builder->m_info = info;
       }
     }

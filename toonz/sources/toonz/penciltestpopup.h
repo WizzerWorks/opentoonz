@@ -6,24 +6,29 @@
 #include "toonzqt/dvdialog.h"
 #include "toonzqt/lineedit.h"
 #include "toonz/namebuilder.h"
+#include "opencv2/opencv.hpp"
+#include "tfilepath.h"
+#include "toonz/tproject.h"
+#include "filebrowserpopup.h"
 
 #include <QAbstractVideoSurface>
 #include <QRunnable>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QRegularExpressionValidator>
 
 // forward decl.
 class QCamera;
 class QCameraImageCapture;
-
 class QComboBox;
-class QLineEdit;
 class QSlider;
 class QCheckBox;
-class QPushButton;
 class QVideoFrame;
 class QTimer;
 class QIntValidator;
-class QRegExpValidator;
-class QPushButton;
+class QLabel;
+class QGroupBox;
+class QRadioButton;
 #ifdef MACOSX
 class QCameraViewfinder;
 #endif
@@ -35,70 +40,6 @@ class IntLineEdit;
 }  // namespace DVGui
 
 class CameraCaptureLevelControl;
-
-class ApplyLutTask : public QRunnable {
-protected:
-  int m_fromY, m_toY;
-  QImage& m_img;
-  std::vector<int>& m_lut;
-
-public:
-  ApplyLutTask(int from, int to, QImage& img, std::vector<int>& lut)
-      : m_fromY(from), m_toY(to), m_img(img), m_lut(lut) {}
-
-private:
-  virtual void run() override;
-};
-
-class ApplyGrayLutTask : public ApplyLutTask {
-public:
-  ApplyGrayLutTask(int from, int to, QImage& img, std::vector<int>& lut)
-      : ApplyLutTask(from, to, img, lut) {}
-
-private:
-  void run() override;
-};
-
-//=============================================================================
-// MyVideoSurface
-//-----------------------------------------------------------------------------
-
-class QVideoSurfaceFormat;
-class MyVideoSurface : public QAbstractVideoSurface {
-  Q_OBJECT
-public:
-  MyVideoSurface(QWidget* widget, QObject* parent = 0);
-
-  QList<QVideoFrame::PixelFormat> supportedPixelFormats(
-      QAbstractVideoBuffer::HandleType handleType =
-          QAbstractVideoBuffer::NoHandle) const;
-  bool isFormatSupported(const QVideoSurfaceFormat& format,
-                         QVideoSurfaceFormat* similar) const;
-
-  bool start(const QVideoSurfaceFormat& format);
-  void stop();
-
-  bool present(const QVideoFrame& frame);
-
-  QRect videoRect() const { return m_targetRect; }
-  QRect sourceRect() const { return m_sourceRect; }
-  void updateVideoRect();
-
-  QTransform transform() { return m_S2V_Transform; }
-
-private:
-  QWidget* m_widget;
-  QImage::Format m_imageFormat;
-  QRect m_targetRect;
-  QSize m_imageSize;
-  QRect m_sourceRect;
-  QVideoFrame m_currentFrame;
-
-  QTransform m_S2V_Transform;  // surface to video transform
-
-signals:
-  void frameCaptured(QImage& image);
-};
 
 //=============================================================================
 // MyVideoWidget
@@ -118,6 +59,8 @@ class MyVideoWidget : public QWidget {
   QRect m_preSubCameraRect;
   QPoint m_dragStartPos;
 
+  QRect m_targetRect;
+  QTransform m_S2V_Transform;  // surface to video transform
   enum SUBHANDLE {
     HandleNone,
     HandleFrame,
@@ -133,16 +76,12 @@ class MyVideoWidget : public QWidget {
   void drawSubCamera(QPainter&);
 
 public:
-  MyVideoWidget(QWidget* parent = 0);
-  ~MyVideoWidget();
+  MyVideoWidget(QWidget* parent = nullptr);
 
   void setImage(const QImage& image) {
     m_image = image;
     update();
   }
-  QAbstractVideoSurface* videoSurface() const { return m_surface; }
-
-  QSize sizeHint() const;
 
   void setShowOnionSkin(bool on) { m_showOnionSkin = on; }
   void setOnionOpacity(int value) { m_onionOpacity = value; }
@@ -153,8 +92,10 @@ public:
     repaint();
   }
 
-  void setSubCameraSize(QSize size);
+  void setSubCameraRect(QRect rect);
   QRect subCameraRect() { return m_subCameraRect; }
+
+  void computeTransform(QSize imgSize);
 
 protected:
   void paintEvent(QPaintEvent* event) override;
@@ -164,46 +105,48 @@ protected:
   void mousePressEvent(QMouseEvent* event) override;
   void mouseReleaseEvent(QMouseEvent* event) override;
 
-private:
-  MyVideoSurface* m_surface;
-
-protected slots:
+public slots:
   void onUpsideDownChecked(bool on) { m_upsideDown = on; }
 
 signals:
   void startCamera();
   void stopCamera();
-  void subCameraResized(bool isDragging);
+  void subCameraChanged(bool isDragging);
 };
 
 //=============================================================================
 // FrameNumberLineEdit
-// a special Line Edit which accepts imputting alphabets if the preference
-// option
-// "Show ABC Appendix to the Frame Number in Xsheet Cell" is active.
+// Special Line Edit which accepts alphabets input if the preference option
+// "Show ABC Appendix to the Frame Number in Xsheet Cell" is active
 //-----------------------------------------------------------------------------
 
-class FrameNumberLineEdit : public DVGui::LineEdit {
+class FrameNumberLineEdit : public DVGui::LineEdit,
+                            public TProjectManager::Listener {
   Q_OBJECT
-  /* having two validators and switch them according to the preferences*/
-  QIntValidator* m_intValidator;
-  QRegExpValidator* m_regexpValidator;
+
+  QRegularExpressionValidator *m_regexpValidator, *m_regexpValidator_alt;
 
   void updateValidator();
+  void updateSize();
   QString m_textOnFocusIn;
 
 public:
-  FrameNumberLineEdit(QWidget* parent = 0, int value = 1);
+  FrameNumberLineEdit(QWidget* parent = nullptr, TFrameId fId = TFrameId(1),
+                      bool acceptLetter = true);
   ~FrameNumberLineEdit() {}
 
   /*! Set text in field to \b value. */
-  void setValue(int value);
+  void setValue(TFrameId fId);
   /*! Return an integer with text field value. */
-  int getValue();
+  TFrameId getValue();
+
+  // TProjectManager::Listener
+  void onProjectSwitched() override;
+  void onProjectChanged() override;
 
 protected:
   /*! If focus is lost and current text value is out of range emit signal
-  \b editingFinished.*/
+   * \b editingFinished.*/
   void focusInEvent(QFocusEvent*) override;
   void focusOutEvent(QFocusEvent*) override;
   void showEvent(QShowEvent* event) override { updateValidator(); }
@@ -216,7 +159,7 @@ class LevelNameLineEdit : public QLineEdit {
   QString m_textOnFocusIn;
 
 public:
-  LevelNameLineEdit(QWidget* parent = 0);
+  LevelNameLineEdit(QWidget* parent = nullptr);
 
 protected:
   void focusInEvent(QFocusEvent* e);
@@ -257,7 +200,7 @@ class PencilTestSaveInFolderPopup : public DVGui::Dialog {
   void createSceneInFolder();
 
 public:
-  PencilTestSaveInFolderPopup(QWidget* parent = 0);
+  PencilTestSaveInFolderPopup(QWidget* parent = nullptr);
   QString getPath();
   QString getParentPath();
   void updateParentFolder();
@@ -275,11 +218,48 @@ protected slots:
 };
 
 //=============================================================================
+// SubCameraButton
+// button with context menu to open preset
+//-----------------------------------------------------------------------------
+
+class SubCameraButton : public QPushButton {
+  Q_OBJECT
+  std::unique_ptr<QSettings> m_settings;
+
+  QSize m_curResolution;
+  QRect m_curSubCamera;
+  double m_currentDpi;
+
+public:
+  SubCameraButton(const QString& text, QWidget* parent = nullptr);
+  void setCurResolution(const QSize& size) { m_curResolution = size; }
+  void setCurSubCamera(const QRect& rect) { m_curSubCamera = rect; }
+  void setCurDpi(const double& dpi) { m_currentDpi = dpi; }
+
+protected:
+  void contextMenuEvent(QContextMenuEvent* event) override;
+
+protected slots:
+  void onSubCameraAct();
+  void onSaveSubCamera();
+  void onDeletePreset();
+
+signals:
+  void subCameraPresetSelected(const QRect&, double dpi);
+};
+
+//=============================================================================
 // PencilTestPopup
 //-----------------------------------------------------------------------------
 
 class PencilTestPopup : public DVGui::Dialog {
   Q_OBJECT
+
+  QTimer* m_timer;
+  cv::VideoCapture m_cvWebcam;
+  QSize m_resolution;
+
+  //--------
 
   QCamera* m_currentCamera;
   QString m_deviceName;
@@ -288,16 +268,17 @@ class PencilTestPopup : public DVGui::Dialog {
   QComboBox *m_cameraListCombo, *m_resolutionCombo, *m_fileTypeCombo,
       *m_colorTypeCombo;
   LevelNameLineEdit* m_levelNameEdit;
-  QCheckBox *m_upsideDownCB, *m_onionSkinCB, *m_saveOnCaptureCB, *m_timerCB;
+  QCheckBox *m_upsideDownCB, *m_saveOnCaptureCB;
+  QGroupBox *m_onionSkinGBox, *m_timerGBox;
   QPushButton *m_fileFormatOptionButton, *m_captureWhiteBGButton,
-      *m_captureButton, *m_loadImageButton;
+      *m_captureButton, *m_loadImageButton, *m_saveImgAdjustDefaultButton;
   DVGui::FileField* m_saveInFileFld;
   FrameNumberLineEdit* m_frameNumberEdit;
   DVGui::IntField *m_bgReductionFld, *m_onionOpacityFld, *m_timerIntervalFld;
 
   QTimer *m_captureTimer, *m_countdownTimer;
 
-  QImage m_whiteBGImg;
+  cv::Mat m_whiteBGImg;
 
   // used only for Windows
   QPushButton* m_captureFilterSettingsBtn;
@@ -310,45 +291,81 @@ class PencilTestPopup : public DVGui::Dialog {
 
   QToolButton* m_previousLevelButton;
 
-  QPushButton* m_subcameraButton;
+  SubCameraButton* m_subcameraButton;
   DVGui::IntLineEdit *m_subWidthFld, *m_subHeightFld;
+  DVGui::IntLineEdit *m_subXPosFld, *m_subYPosFld;
   QSize m_allowedCameraSize;
-
-#ifdef MACOSX
-  QCameraViewfinder* m_dummyViewFinder;
-#endif
 
   bool m_captureWhiteBGCue;
   bool m_captureCue;
   bool m_alwaysOverwrite = false;
+  bool m_useMjpg;
+#ifdef _WIN32
+  bool m_useDirectShow;
+#endif
 
-  void processImage(QImage& procImage);
+  // calibration feature
+  struct Calibration {
+    // Parameters
+    bool captureCue    = false;
+    cv::Size boardSize = {10, 7};
+    int refCaptured    = 0;
+    std::vector<std::vector<cv::Point3f>> obj_points;
+    std::vector<std::vector<cv::Point2f>> image_points;
+    cv::Mat mapX, mapY;
+    bool isValid = false;
+    // UIs
+    QPushButton *capBtn, *newBtn, *loadBtn, *cancelBtn, *exportBtn;
+    QLabel* label;
+    QGroupBox* groupBox;
+  } m_calibration;
+
+  // dpi settings
+  bool m_doAutoDpi;
+  double m_customDpi;
+  QWidget* m_dpiMenuWidget;
+  QPushButton* m_dpiBtn;
+  QRadioButton *m_autoDpiRadioBtn, *m_customDpiRadioBtn;
+  QLineEdit* m_customDpiField;
+
+  void captureCalibrationRefImage(cv::Mat& procImage);
+  void processImage(cv::Mat& procImage);
   bool importImage(QImage image);
-
   void setToNextNewLevel();
   void updateLevelNameAndFrame(std::wstring levelName);
+  void getWebcamImage();
+  QMenu* createOptionsMenu();
+  int translateIndex(int camIndex);
+  void loadImageAdjustDefault();
+
+  QString getCurrentCalibFilePath();
+  QString getImageAdjustSettingsPath();
+  QString getImageAdjustBgImgPath();
+  QString getCameraConfigurationPath(const QString& folderName,
+                                     const QString& ext);
+
+  QWidget* createDpiMenuWidget();
 
 public:
   PencilTestPopup();
   ~PencilTestPopup();
 
 protected:
-  void showEvent(QShowEvent* event);
-  void hideEvent(QHideEvent* event);
-  void keyPressEvent(QKeyEvent* event);
-
+  void showEvent(QShowEvent* event) override;
+  void hideEvent(QHideEvent* event) override;
+  void keyPressEvent(QKeyEvent* event) override;
   bool event(QEvent* e) override;
 
 protected slots:
   void refreshCameraList();
   void onCameraListComboActivated(int index);
-  void onResolutionComboActivated(const QString&);
+  void onResolutionComboActivated();
   void onFileFormatOptionButtonPressed();
   void onLevelNameEdited();
   void onNextName();
   void onPreviousName();
   void onColorTypeComboChanged(int index);
-  void onFrameCaptured(QImage& image);
+  void onFrameCaptured(cv::Mat& image);
   void onCaptureWhiteBGButtonPressed();
   void onOnionCBToggled(bool);
   void onLoadImageButtonPressed();
@@ -356,21 +373,50 @@ protected slots:
   void onTimerCBToggled(bool);
   void onCaptureTimerTimeout();
   void onCountDown();
-
   void onCaptureButtonClicked(bool);
   void onCaptureFilterSettingsBtnPressed();
-
   void refreshFrameInfo();
-
   void onSaveInPathEdited();
+  void onFileTypeChanged();
   void onSceneSwitched();
-
   void onSubCameraToggled(bool);
-  void onSubCameraResized(bool isDragging);
-  void onSubCameraSizeEdited();
+  void onSubCameraChanged(bool isDragging);
+  void onSubCameraRectEdited();
+  void onSubCameraPresetSelected(const QRect&, double);
+  void onTimeout();
+  void onCalibCapBtnClicked();
+  void onCalibNewBtnClicked();
+  void resetCalibSettingsFromFile();
+  void onCalibLoadBtnClicked();
+  void onCalibExportBtnClicked();
+  void onCalibReadme();
+  void onPreferenceChanged(const QString&);
+  void saveImageAdjustDefault();
 
 public slots:
   void openSaveInFolderPopup();
 };
 
-#endif
+//=============================================================================
+
+class ExportCalibrationFilePopup final : public GenericSaveFilePopup {
+  Q_OBJECT
+public:
+  ExportCalibrationFilePopup(QWidget* parent);
+
+protected:
+  void showEvent(QShowEvent*) override;
+};
+
+//=============================================================================
+
+class LoadCalibrationFilePopup final : public GenericLoadFilePopup {
+  Q_OBJECT
+public:
+  LoadCalibrationFilePopup(QWidget* parent);
+
+protected:
+  void showEvent(QShowEvent*) override;
+};
+
+#endif  // PENCILTESTPOPUP_H

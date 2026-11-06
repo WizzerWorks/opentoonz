@@ -129,9 +129,14 @@ class DVAPI CleanupParameters {
   CleanupTypes::FDG_INFO m_fdgInfo;
   bool m_dirtyFlag;
 
+  // Both not stored in the scene
 public:
-  static CleanupParameters GlobalParameters;
+  // To store the scene's default CleanUpSettings(read when scene switched) and loaded .cln Settings
+  static CleanupParameters GlobalParameters;  
+  // To compare with CurrentParameters
   static CleanupParameters LastSavedParameters;
+
+  // TIP: The CleanupSettings also exist in Project
 
 public:
   CleanupTypes::AUTOCENTER_TYPE m_autocenterType;
@@ -157,8 +162,14 @@ public:
   TPaletteP m_cleanupPalette;
   TFilePath m_path;
 
-  /*--- オフセットを軸ごとにロックする ---*/
+  /*--- Lock offsets by axis ---*/
   bool m_offx_lock, m_offy_lock;
+
+  // hold brightness and contrast values for each line processing modes (grey
+  // and color).
+  double m_altBrightness, m_altContrast;
+  // exporting file format when Line Processing = None
+  std::string m_lpNoneFormat;
 
 public:
   CleanupParameters();

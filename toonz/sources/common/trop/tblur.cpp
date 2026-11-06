@@ -3,9 +3,14 @@
 #include "traster.h"
 #include "trop.h"
 #include "tpixelgr.h"
-#ifdef _WIN32
+
+#if defined(_WIN32) && defined(x64)
+#define USE_SSE2
+#endif
+
+#ifdef USE_SSE2
 #include <emmintrin.h>
-#include <malloc.h>
+#include <stdlib.h>
 #endif
 
 namespace {
@@ -166,10 +171,10 @@ inline void blur_code(PIXEL_SRC *row1, PIXEL_DST *row2, int length, float coeff,
     sigma2.b += pix2->b;
     sigma2.m += pix2->m;
 
-    sigma3.r += i * (pix1->r + pix2->r);
-    sigma3.g += i * (pix1->g + pix2->g);
-    sigma3.b += i * (pix1->b + pix2->b);
-    sigma3.m += i * (pix1->m + pix2->m);
+    sigma3.r += (T)i * (pix1->r + pix2->r);
+    sigma3.g += (T)i * (pix1->g + pix2->g);
+    sigma3.b += (T)i * (pix1->b + pix2->b);
+    sigma3.m += (T)i * (pix1->m + pix2->m);
 
     pix1++;
     pix2--;
@@ -223,7 +228,7 @@ inline void blur_code(PIXEL_SRC *row1, PIXEL_DST *row2, int length, float coeff,
 
 //-------------------------------------------------------------------
 
-#ifdef _WIN32
+#ifdef USE_SSE2
 
 //-------------------------------------------------------------------
 template <class T, class P>
@@ -516,6 +521,31 @@ void store_colRgb(T *buffer, int wrap, int r_ly, T *col, int ly, int x, int dy,
     assert(false);
 }
 
+template <>
+void store_colRgb<TPixelF>(TPixelF *buffer, int wrap, int r_ly, TPixelF *col,
+                           int ly, int x, int dy, int backlit, double blur) {
+  int i;
+  buffer += x;
+  if (backlit) {
+    double ampl    = 1.0 + blur / 15.0;
+    float crop_val = 204.f / 255.f;
+    for (i = ((dy >= 0) ? 0 : -dy); i < std::min(ly, r_ly - dy); i++) {
+      float val = col[i].r * ampl;
+      buffer->r = (val > crop_val) ? crop_val : val;
+      val       = col[i].g * ampl;
+      buffer->g = (val > crop_val) ? crop_val : val;
+      val       = col[i].b * ampl;
+      buffer->b = (val > crop_val) ? crop_val : val;
+      val       = col[i].m * ampl;
+      buffer->m = (val > crop_val) ? crop_val : val;
+      buffer += wrap;
+    }
+  } else
+    for (i = ((dy >= 0) ? 0 : -dy); i < std::min(ly, r_ly - dy); i++) {
+      *buffer = col[i];
+      buffer += wrap;
+    }
+}
 //-------------------------------------------------------------------
 template <class T>
 void store_colGray(T *buffer, int wrap, int r_ly, T *col, int ly, int x, int dy,
@@ -556,7 +586,7 @@ void load_channel_col32(float *buffer, float *col, int lx, int ly, int x,
 template <class T, class Q, class P>
 void do_filtering_chan(BlurPixel<P> *row1, T *row2, int length, float coeff,
                        float coeffq, int brad, float diff, bool useSSE) {
-#ifdef _WIN32
+#ifdef USE_SSE2
   if (useSSE && T::maxChannelValue == 255)
     blur_code_SSE2<T, P>(row1, row2, length, coeff, coeffq, brad, diff, 0.5);
   else
@@ -570,7 +600,19 @@ void do_filtering_chan(BlurPixel<P> *row1, T *row2, int length, float coeff,
     BLUR_CODE((P)0.5, Q)
   }
 }
+template <>
+void do_filtering_chan<TPixelF, float, double>(BlurPixel<double> *row1,
+                                               TPixelF *row2, int length,
+                                               float coeff, float coeffq,
+                                               int brad, float diff,
+                                               bool useSSE) {
+  int i;
+  double rsum, gsum, bsum, msum;
+  BlurPixel<double> sigma1, sigma2, sigma3, desigma;
+  BlurPixel<double> *pix1, *pix2, *pix3, *pix4;
 
+  BLUR_CODE(0.0, float)
+}
 //-------------------------------------------------------------------
 
 template <class T>
@@ -735,16 +777,16 @@ void load_rowGray(TRasterPT<T> &rin, T *row, int lx, int y, int brad, int bx1,
 template <class T, class P>
 void do_filtering_floatRgb(T *row1, BlurPixel<P> *row2, int length, float coeff,
                            float coeffq, int brad, float diff, bool useSSE) {
-/*
-  int i;
-  float rsum, gsum, bsum,  msum;
-  CASM_FPIXEL sigma1, sigma2, sigma3, desigma;
-  TPixel32 *pix1, *pix2, *pix3, *pix4;
+  /*
+    int i;
+    float rsum, gsum, bsum,  msum;
+    CASM_FPIXEL sigma1, sigma2, sigma3, desigma;
+    TPixel32 *pix1, *pix2, *pix3, *pix4;
 
-  BLUR_CODE(0, unsigned char)
-*/
+    BLUR_CODE(0, unsigned char)
+  */
 
-#ifdef _WIN32
+#ifdef USE_SSE2
   if (useSSE)
     blur_code_SSE2<T, P>(row1, row2, length, coeff, coeffq, brad, diff, 0);
   else
@@ -765,7 +807,7 @@ void doBlurRgb(TRasterPT<T> &dstRas, TRasterPT<T> &srcRas, double blur, int dx,
 
   // int border = brad*2; // per sicurezza
 
-  coeff = (float)(blur /
+  coeff  = (float)(blur /
                   (brad - brad * brad +
                    blur * (2 * brad -
                            1))); /*sum of the weights of triangolar filter. */
@@ -799,7 +841,7 @@ void doBlurRgb(TRasterPT<T> &dstRas, TRasterPT<T> &srcRas, double blur, int dx,
     r1->lock();
     fbuffer = (BlurPixel<P> *)r1->getRawData();  // new CASM_FPIXEL [llx *ly];
     row1    = new T[llx + 2 * brad];
-    col1    = new BlurPixel<P>[ lly + 2 * brad ];
+    col1    = new BlurPixel<P>[lly + 2 * brad];
     col2    = new T[lly];
   }
 
@@ -873,8 +915,8 @@ void doBlurGray(TRasterPT<T> &dstRas, TRasterPT<T> &srcRas, double blur, int dx,
   float coeff, coeffq, diff;
   int bx1 = 0, by1 = 0, bx2 = 0, by2 = 0;
 
-  brad  = (int)ceil(blur); /* number of pixels involved in the filtering */
-  coeff = (float)(blur /
+  brad   = (int)ceil(blur); /* number of pixels involved in the filtering */
+  coeff  = (float)(blur /
                   (brad - brad * brad +
                    blur * (2 * brad -
                            1))); /*sum of the weights of triangolar filter. */
@@ -952,30 +994,39 @@ void TRop::blur(const TRasterP &dstRas, const TRasterP &srcRas, double blur,
                 int dx, int dy, bool useSSE) {
   TRaster32P dstRas32 = dstRas;
   TRaster32P srcRas32 = srcRas;
-
-  if (dstRas32 && srcRas32)
+  if (dstRas32 && srcRas32) {
     doBlurRgb<TPixel32, UCHAR, float>(dstRas32, srcRas32, blur, dx, dy, useSSE);
-  else {
-    TRaster64P dstRas64 = dstRas;
-    TRaster64P srcRas64 = srcRas;
-    if (dstRas64 && srcRas64)
-      doBlurRgb<TPixel64, USHORT, double>(dstRas64, srcRas64, blur, dx, dy,
-                                          useSSE);
-    else {
-      TRasterGR8P dstRasGR8 = dstRas;
-      TRasterGR8P srcRasGR8 = srcRas;
-
-      if (dstRasGR8 && srcRasGR8)
-        doBlurGray<TPixelGR8>(dstRasGR8, srcRasGR8, blur, dx, dy);
-      else {
-        TRasterGR16P dstRasGR16 = dstRas;
-        TRasterGR16P srcRasGR16 = srcRas;
-
-        if (dstRasGR16 && srcRasGR16)
-          doBlurGray<TPixelGR16>(dstRasGR16, srcRasGR16, blur, dx, dy);
-        else
-          throw TException("TRop::blur unsupported pixel type");
-      }
-    }
+    return;
   }
+
+  TRaster64P dstRas64 = dstRas;
+  TRaster64P srcRas64 = srcRas;
+  if (dstRas64 && srcRas64) {
+    doBlurRgb<TPixel64, USHORT, double>(dstRas64, srcRas64, blur, dx, dy,
+                                        useSSE);
+    return;
+  }
+
+  TRasterFP dstRasF = dstRas;
+  TRasterFP srcRasF = srcRas;
+  if (dstRasF && srcRasF) {
+    doBlurRgb<TPixelF, float, double>(dstRasF, srcRasF, blur, dx, dy, useSSE);
+    return;
+  }
+
+  TRasterGR8P dstRasGR8 = dstRas;
+  TRasterGR8P srcRasGR8 = srcRas;
+  if (dstRasGR8 && srcRasGR8) {
+    doBlurGray<TPixelGR8>(dstRasGR8, srcRasGR8, blur, dx, dy);
+    return;
+  }
+
+  TRasterGR16P dstRasGR16 = dstRas;
+  TRasterGR16P srcRasGR16 = srcRas;
+  if (dstRasGR16 && srcRasGR16) {
+    doBlurGray<TPixelGR16>(dstRasGR16, srcRasGR16, blur, dx, dy);
+    return;
+  }
+
+  throw TException("TRop::blur unsupported pixel type");
 }

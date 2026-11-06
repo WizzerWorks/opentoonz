@@ -18,11 +18,7 @@ class ValueAdjuster final : public QWidget {
   DVGui::DoubleLineEdit *m_valueLineEdit;
 
 public:
-#if QT_VERSION >= 0x050500
-  ValueAdjuster(QWidget *parent = 0, Qt::WindowFlags flags = 0);
-#else
-  ValueAdjuster(QWidget *parent = 0, Qt::WFlags flags = 0);
-#endif
+  ValueAdjuster(QWidget *parent = 0, Qt::WindowFlags flags = Qt::WindowFlags());
   ~ValueAdjuster();
 
 protected slots:
@@ -43,11 +39,8 @@ class ValueShifter final : public QWidget {
   DVGui::DoubleLineEdit *m_valueLineEdit;
 
 public:
-#if QT_VERSION >= 0x050500
-  ValueShifter(bool isHue, QWidget *parent = 0, Qt::WindowFlags flags = 0);
-#else
-  ValueShifter(bool isHue, QWidget *parent = 0, Qt::WFlags flags = 0);
-#endif
+  ValueShifter(bool isHue, QWidget *parent = 0,
+               Qt::WindowFlags flags = Qt::WindowFlags());
   ~ValueShifter();
 
 protected slots:
@@ -70,11 +63,8 @@ class ColorFader final : public QWidget {
   DVGui::DoubleLineEdit *m_valueLineEdit;
 
 public:
-#if QT_VERSION >= 0x050500
-  ColorFader(QString name = "", QWidget *parent = 0, Qt::WindowFlags flags = 0);
-#else
-  ColorFader(QString name = "", QWidget *parent = 0, Qt::WFlags flags = 0);
-#endif
+  ColorFader(QString name = "", QWidget *parent = 0,
+             Qt::WindowFlags flags = Qt::WindowFlags());
   ~ColorFader();
 
 protected slots:
@@ -92,11 +82,24 @@ class PltGizmoPopup final : public DVGui::Dialog {
   Q_OBJECT
 
   DVGui::ColorField *m_colorFld;
+  
+  // Room binding members
+  bool m_isRoomBound;
+  QString m_boundRoomName;
 
 public:
   PltGizmoPopup();
 
   ~PltGizmoPopup();
+  
+  // Room binding methods
+  bool isRoomBound() const { return m_isRoomBound; }
+  void setRoomBound(bool bound) { m_isRoomBound = bound; }
+  QString getBoundRoomName() const { return m_boundRoomName; }
+  void setBoundRoomName(const QString &roomName) { m_boundRoomName = roomName; }
+
+protected:
+  void contextMenuEvent(QContextMenuEvent *event) override;
 
 public slots:
 

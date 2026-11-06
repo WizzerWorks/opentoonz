@@ -112,6 +112,10 @@ public:
     toBeSaved = 0x8,  // User will save the image, reverts toBeModified
 
     is64bitEnabled = 0x10,  // Whether 64-bit rasters are allowed to return
+    isFloatEnabled = 0x20,  // Whether 128-bit float rasters are allowed to
+                            // return (for EXR format)
+    // isLinearEnabled = 0x40,  // Whether linear color space rasters are
+    // allowed to return (for EXR format)
 
     controlFlags = 0xF,  // Flags dealing with management control
     imageFlags =
@@ -282,7 +286,7 @@ protected:
   //! external data.
   virtual bool getInfo(TImageInfo &info, int imFlags, void *extData) = 0;
 
-  // load icon (and image) data of all frames into cache. impremented in
+  // load icon (and image) data of all frames into cache. implemented in
   // ImageLoader
   virtual void buildAllIconsAndPutInCache(TXshSimpleLevel *,
                                           std::vector<TFrameId>,
@@ -310,10 +314,7 @@ private:
   ImageBuilder(const ImageBuilder &);
   const ImageBuilder &operator=(const ImageBuilder &);
 
-  void setImageCachedAndModified() {
-    m_cached   = true;
-    m_modified = true;
-  }
+  void setImageCached() { m_cached = true; }
 };
 
 //-----------------------------------------------------------------------------

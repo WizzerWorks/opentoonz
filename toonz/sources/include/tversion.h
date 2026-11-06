@@ -11,6 +11,7 @@ public:
   float getAppVersion(void);
   float getAppRevision(void);
   std::string getAppNote(void);
+  std::string getSystemVarPrefix(void);
   bool hasAppNote(void);
   std::string getAppVersionString(void);
   std::string getAppRevisionString(void);
@@ -18,9 +19,10 @@ public:
 
 private:
   const char *applicationName     = "OpenToonz";
-  const float applicationVersion  = 1.4;
+  const float applicationVersion  = 1.8f;
   const float applicationRevision = 0;
   const char *applicationNote     = "";
+  const char *systemVarPrefix     = "TOONZ";
 };
 
 std::string ToonzVersion::getAppName(void) {
@@ -39,18 +41,20 @@ std::string ToonzVersion::getAppNote(void) {
   std::string appnote = applicationNote;
   return appnote;
 }
-bool ToonzVersion::hasAppNote(void) {
-  return *applicationNote != 0;
+std::string ToonzVersion::getSystemVarPrefix(void) {
+  std::string prefix = systemVarPrefix;
+  return prefix;
 }
+bool ToonzVersion::hasAppNote(void) { return *applicationNote != 0; }
 std::string ToonzVersion::getAppVersionString(void) {
   char buffer[50];
-  sprintf(buffer, "%.1f", applicationVersion);
+  snprintf(buffer, sizeof(buffer), "%.1f", applicationVersion);
   std::string appver = std::string(buffer);
   return appver;
 }
 std::string ToonzVersion::getAppRevisionString(void) {
   char buffer[50];
-  sprintf(buffer, "%g", applicationRevision);
+  snprintf(buffer, sizeof(buffer), "%g", applicationRevision);
   std::string apprev = std::string(buffer);
   return apprev;
 }
@@ -59,8 +63,7 @@ std::string ToonzVersion::getAppVersionInfo(std::string msg) {
   appinfo += " " + msg + " v";
   appinfo += getAppVersionString();
   appinfo += "." + getAppRevisionString();
-  if (hasAppNote())
-    appinfo += " " + std::string(applicationNote);
+  if (hasAppNote()) appinfo += " " + std::string(applicationNote);
   return appinfo;
 }
 

@@ -72,10 +72,10 @@ public:
   QString getDescription() const override {
     return QCoreApplication::translate("MovingSolidColor", "Offset");
   }
+  std::string getBrushIdName() const override { return "MovingSolidColor"; }
 
   void drawRegion(const TColorFunction *cf, const bool antiAliasing,
                   TRegionOutline &boundary) const override;
-  void drawRegion(TFlash &flash, const TRegion *r) const override;
 
 protected:
   void loadData(TInputStreamInterface &is) override;
@@ -120,14 +120,10 @@ public:
   QString getDescription() const override {
     return QCoreApplication::translate("ShadowStyle", "Hatched Shading");
   }
+  std::string getBrushIdName() const override { return "ShadowStyle"; }
 
   void drawRegion(const TColorFunction *cf, const bool antiAliasing,
                   TRegionOutline &boundary) const override;
-
-  // it is too slow and if the region is too complex, some flash readers
-  // (IExplorer) crash.
-  // So it's better drawing it as a normal solid color
-  // void drawRegion( TFlash& flash, const TRegion* r) const;
 
 protected:
   void loadData(TInputStreamInterface &is) override;
@@ -174,10 +170,10 @@ public:
   QString getDescription() const override {
     return QCoreApplication::translate("ShadowStyle2", "Plain Shadow");
   }
+  std::string getBrushIdName() const override { return "ShadowStyle2"; }
 
   void drawRegion(const TColorFunction *cf, const bool antiAliasing,
                   TRegionOutline &boundary) const override;
-  void drawRegion(TFlash &flash, const TRegion *r) const override;
 
 protected:
   void loadData(TInputStreamInterface &is) override;
@@ -187,8 +183,6 @@ private:
   void drawPolyline(const TColorFunction *cf,
                     const std::vector<T3DPointD> &polyline,
                     TPointD shadowDirection) const;
-  int drawPolyline(TFlash &flash, std::vector<T3DPointD> &polyline,
-                   TPointD shadowDirection, const bool isDraw = true) const;
 };
 
 //============================================================
@@ -238,10 +232,10 @@ public:
   QString getDescription() const override {
     return QCoreApplication::translate("TRubberFillStyle", "Blob");
   }
+  std::string getBrushIdName() const override { return "RubberFillStyle"; }
 
   void drawRegion(const TColorFunction *cf, const bool antiAliasing,
                   TRegionOutline &boundary) const override;
-  void drawRegion(TFlash &flash, const TRegion *r) const override;
 
 protected:
   void loadData(TInputStreamInterface &is) override;
@@ -293,10 +287,10 @@ void setMainColor(const TPixel32 &color){ m_shadowColor=color; }
     return QCoreApplication::translate("TPointShadowFillStyle",
                                        "Sponge Shading");
   }
+  std::string getBrushIdName() const override { return "PointShadowFillStyle"; }
 
   void drawRegion(const TColorFunction *cf, const bool antiAliasing,
                   TRegionOutline &boundary) const override;
-  void drawRegion(TFlash &flash, const TRegion *r) const override;
 
 protected:
   void loadData(TInputStreamInterface &is) override;
@@ -307,9 +301,6 @@ private:
                       const TPointD &c) const;
   void shadowOnEdge_parallel(const TPointD &p0, const TPointD &p1,
                              const TPointD &p2, TRandom &rnd) const;
-  int shadowOnEdge_parallel(TFlash &flash, const TPointD &p0, const TPointD &p1,
-                            const TPointD &p2, TRandom &rnd,
-                            const double radius, const bool isDraw) const;
 
   void deleteSameVerts(TRegionOutline::Boundary::iterator &rit,
                        std::vector<T3DPointD> &pv) const;
@@ -354,12 +345,12 @@ void setMainColor(const TPixel32 &color){ m_pointColor=color; }
 
   void drawRegion(const TColorFunction *cf, const bool antiAliasing,
                   TRegionOutline &boundary) const override;
-  void drawRegion(TFlash &flash, const TRegion *r) const override;
 
   int getTagId() const override { return 1130; };
   QString getDescription() const override {
     return QCoreApplication::translate("TDottedFillStyle", "Polka Dots");
   }
+  std::string getBrushIdName() const override { return "DottedFillStyle"; }
 
 protected:
   void loadData(TInputStreamInterface &is) override;
@@ -408,12 +399,12 @@ void setMainColor(const TPixel32 &color){ m_pointColor=color; }
 
   void drawRegion(const TColorFunction *cf, const bool antiAliasing,
                   TRegionOutline &boundary) const override;
-  void drawRegion(TFlash &flash, const TRegion *r) const override;
 
   int getTagId() const override { return 1131; };
   QString getDescription() const override {
     return QCoreApplication::translate("TCheckedFillStyle", "Square");
   }
+  std::string getBrushIdName() const override { return "CheckedFillStyle"; }
 
 private:
   void getHThickline(const TPointD &lc, const double lx, TPointD &p0,
@@ -475,10 +466,10 @@ public:
   QString getDescription() const override {
     return QCoreApplication::translate("ArtisticSolidColor", "Irregular");
   }
+  std::string getBrushIdName() const override { return "ArtisticSolidColor"; }
 
   void drawRegion(const TColorFunction *cf, const bool antiAliasing,
                   TRegionOutline &boundary) const override;
-  void drawRegion(TFlash &flash, const TRegion *r) const override;
 
 protected:
   void loadData(TInputStreamInterface &is) override;
@@ -520,11 +511,12 @@ void setMainColor(const TPixel32 &color){ m_color0=color; }
 
   void drawRegion(const TColorFunction *cf, const bool antiAliasing,
                   TRegionOutline &boundary) const override;
-  void drawRegion(TFlash &flash, const TRegion *r) const override;
 
   QString getDescription() const override {
     return QCoreApplication::translate("TChalkFillStyle", "Chalk");
   }
+  std::string getBrushIdName() const override { return "ChalkFillStyle"; }
+
   void loadData(int oldId, TInputStreamInterface &) override;
   void getObsoleteTagIds(std::vector<int> &ids) const override {
     ids.push_back(1133);
@@ -571,12 +563,12 @@ void setMainColor(const TPixel32 &color){ m_pointColor=color; }
 
   void drawRegion(const TColorFunction *cf, const bool antiAliasing,
                   TRegionOutline &boundary) const override;
-  void drawRegion(TFlash &flash, const TRegion *r) const override;
 
   int getTagId() const override { return 1136; };
   QString getDescription() const override {
     return QCoreApplication::translate("TChessFillStyle", "Chessboard");
   }
+  std::string getBrushIdName() const override { return "ChessFillStyle"; }
 
 protected:
   void loadData(TInputStreamInterface &is) override;
@@ -623,12 +615,12 @@ void setMainColor(const TPixel32 &color){ m_pointColor=color; }
 
   void drawRegion(const TColorFunction *cf, const bool antiAliasing,
                   TRegionOutline &boundary) const override;
-  void drawRegion(TFlash &flash, const TRegion *r) const override;
 
   int getTagId() const override { return 1137; };
   QString getDescription() const override {
     return QCoreApplication::translate("TStripeFillStyle", "Banded");
   }
+  std::string getBrushIdName() const override { return "StripeFillStyle"; }
 
 protected:
   void loadData(TInputStreamInterface &is) override;
@@ -679,12 +671,12 @@ void setMainColor(const TPixel32 &color){ m_pointColor=color; }
 
   void drawRegion(const TColorFunction *cf, const bool antiAliasing,
                   TRegionOutline &boundary) const override;
-  void drawRegion(TFlash &flash, const TRegion *r) const override;
 
   int getTagId() const override { return 1138; };
   QString getDescription() const override {
     return QCoreApplication::translate("TLinGradFillStyle", "Linear Gradient");
   }
+  std::string getBrushIdName() const override { return "LinGradFillStyle"; }
 
 protected:
   void loadData(TInputStreamInterface &is) override;
@@ -733,12 +725,12 @@ public:
 
   void drawRegion(const TColorFunction *cf, const bool antiAliasing,
                   TRegionOutline &boundary) const override;
-  void drawRegion(TFlash &flash, const TRegion *r) const override;
 
   int getTagId() const override { return 1139; };
   QString getDescription() const override {
     return QCoreApplication::translate("TRadGradFillStyle", "Radial Gradient");
   }
+  std::string getBrushIdName() const override { return "RadGradFillStyle"; }
 
 protected:
   void loadData(TInputStreamInterface &is) override;
@@ -782,11 +774,13 @@ void setMainColor(const TPixel32 &color){ m_pointColor=color; }
 
   void drawRegion(const TColorFunction *cf, const bool antiAliasing,
                   TRegionOutline &boundary) const override;
-  void drawRegion(TFlash &flash, const TRegion *r) const override;
 
   int getTagId() const override { return 1140; };
   QString getDescription() const override {
     return QCoreApplication::translate("TCircleStripeFillStyle", "Concentric");
+  }
+  std::string getBrushIdName() const override {
+    return "CircleStripeFillStyle";
   }
 
 protected:
@@ -839,12 +833,12 @@ void setMainColor(const TPixel32 &color){ m_pointColor[0]=color; }
 
   void drawRegion(const TColorFunction *cf, const bool antiAliasing,
                   TRegionOutline &boundary) const override;
-  void drawRegion(TFlash &flash, const TRegion *r) const override;
 
   int getTagId() const override { return 1141; };
   QString getDescription() const override {
     return QCoreApplication::translate("TMosaicFillStyle", "Stained Glass");
   }
+  std::string getBrushIdName() const override { return "MosaicFillStyle"; }
 
 protected:
   void loadData(TInputStreamInterface &is) override;
@@ -890,12 +884,12 @@ public:
 
   void drawRegion(const TColorFunction *cf, const bool antiAliasing,
                   TRegionOutline &boundary) const override;
-  void drawRegion(TFlash &flash, const TRegion *r) const override;
 
   int getTagId() const override { return 1142; };
   QString getDescription() const override {
     return QCoreApplication::translate("TPatchFillStyle", "Beehive");
   }
+  std::string getBrushIdName() const override { return "PatchFillStyle"; }
 
 private:
   void preaprePos(const TRectD &box, std::vector<TPointD> &v, int &lX, int &lY,
@@ -904,9 +898,6 @@ private:
                    TPointD *quad) const;
   void drawGLQuad(const TPointD *quad) const;
   int nbClip(const int lX, const int lY, const std::vector<TPointD> &v) const;
-  void drawFlashQuad(TFlash &flash, const TPointD *quad) const;
-  void drawFlashTriangle(TFlash &flash, const TPointD &p1, const TPointD &p2,
-                         const TPointD &p3) const;
 
 protected:
   void loadData(TInputStreamInterface &is) override;

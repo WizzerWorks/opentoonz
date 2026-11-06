@@ -1,6 +1,7 @@
 
 
 #include "toonzqt/gutil.h"
+#include "toonz/preferences.h"
 
 // TnzQt includes
 #include "toonzqt/dvdialog.h"
@@ -16,11 +17,14 @@
 #include "tmsgcore.h"
 
 // Qt includes
+#include <QDirIterator>
 #include <QPixmap>
+#include <QPixmapCache>
 #include <QImage>
 #include <QPainter>
 #include <QPainterPath>
 #include <QIcon>
+#include <QIconEngine>
 #include <QString>
 #include <QApplication>
 #include <QMouseEvent>
@@ -30,9 +34,40 @@
 #include <QFileInfo>
 #include <QDesktopWidget>
 #include <QSvgRenderer>
+#include <QRegularExpression>
+#include <QScreen>
+#include <QWindow>
+#include <QDebug>
 
 using namespace DVGui;
 
+namespace {
+inline bool hasScreensWithDifferentDevPixRatio() {
+  static bool ret     = false;
+  static bool checked = false;
+  if (!checked) {  // check once
+    int dpr = QApplication::desktop()->devicePixelRatio();
+    for (auto screen : QGuiApplication::screens()) {
+      if ((int)screen->devicePixelRatio() != dpr) {
+        ret = true;
+        break;
+      }
+    }
+    checked = true;
+  }
+  return ret;
+}
+
+int getHighestDevicePixelRatio() {
+  static int highestDevPixRatio = 0;
+  if (highestDevPixRatio == 0) {
+    for (auto screen : QGuiApplication::screens())
+      highestDevPixRatio =
+          std::max(highestDevPixRatio, (int)screen->devicePixelRatio());
+  }
+  return highestDevPixRatio;
+}
+}  // namespace
 //-----------------------------------------------------------------------------
 
 QString fileSizeString(qint64 size, int precision) {
@@ -77,7 +112,7 @@ QPixmap rasterToQPixmap(const TRaster32P &ras, bool premultiplied,
                         bool setDevPixRatio) {
   QPixmap pixmap = QPixmap::fromImage(rasterToQImage(ras, premultiplied));
   if (setDevPixRatio) {
-    pixmap.setDevicePixelRatio(getDevPixRatio());
+    pixmap.setDevicePixelRatio(getDevicePixelRatio());
   }
   return pixmap;
 }
@@ -155,40 +190,76 @@ QPixmap scalePixmapKeepingAspectRatio(QPixmap pixmap, QSize size,
 
 //-----------------------------------------------------------------------------
 
-QPixmap svgToPixmap(const QString &svgFilePath, const QSize &size,
-                    Qt::AspectRatioMode aspectRatioMode, QColor bgColor) {
-  static int devPixRatio = getDevPixRatio();
-  QSvgRenderer svgRenderer(svgFilePath);
-  QSize pixmapSize;
-  QRectF renderRect;
-  if (size.isEmpty()) {
-    pixmapSize = svgRenderer.defaultSize() * devPixRatio;
-    renderRect = QRectF(QPointF(), QSizeF(pixmapSize));
+int getDevicePixelRatio(const QWidget *widget) {
+  if (hasScreensWithDifferentDevPixRatio() && widget) {
+    return widget->screen()->devicePixelRatio();
+  }
+  static int devPixRatio = QApplication::desktop()->devicePixelRatio();
+  return devPixRatio;
+}
+
+//-----------------------------------------------------------------------------
+
+SvgRenderParams calculateSvgRenderParams(const QSize &desiredSize,
+                                         QSize &imageSize,
+                                         Qt::AspectRatioMode aspectRatioMode) {
+  SvgRenderParams params;
+  if (desiredSize.isEmpty()) {
+    params.size = imageSize;
+    params.rect = QRectF(QPointF(), QSizeF(params.size));
   } else {
-    pixmapSize = size * devPixRatio;
+    params.size = desiredSize;
     if (aspectRatioMode == Qt::KeepAspectRatio ||
         aspectRatioMode == Qt::KeepAspectRatioByExpanding) {
-      QSize imgSize = svgRenderer.defaultSize();
-      QPointF scaleFactor((float)pixmapSize.width() / (float)imgSize.width(),
-                          (float)pixmapSize.height() / (float)imgSize.height());
+      QPointF scaleFactor(
+          (float)params.size.width() / (float)imageSize.width(),
+          (float)params.size.height() / (float)imageSize.height());
       float factor = (aspectRatioMode == Qt::KeepAspectRatio)
                          ? std::min(scaleFactor.x(), scaleFactor.y())
                          : std::max(scaleFactor.x(), scaleFactor.y());
-      QSizeF renderSize(factor * (float)imgSize.width(),
-                        factor * (float)imgSize.height());
+      QSizeF renderSize(factor * (float)imageSize.width(),
+                        factor * (float)imageSize.height());
       QPointF topLeft(
-          ((float)pixmapSize.width() - renderSize.width()) * 0.5f,
-          ((float)pixmapSize.height() - renderSize.height()) * 0.5f);
-      renderRect = QRectF(topLeft, renderSize);
+          ((float)params.size.width() - renderSize.width()) * 0.5f,
+          ((float)params.size.height() - renderSize.height()) * 0.5f);
+      params.rect = QRectF(topLeft, renderSize);
     } else {  // Qt::IgnoreAspectRatio:
-      renderRect = QRectF(QPointF(), QSizeF(pixmapSize));
+      params.rect = QRectF(QPointF(), QSizeF(params.size));
     }
   }
-  QPixmap pixmap(pixmapSize);
+  return params;
+}
+
+//-----------------------------------------------------------------------------
+
+QPixmap svgToPixmap(const QString &svgFilePath, QSize size,
+                    Qt::AspectRatioMode aspectRatioMode, QColor bgColor) {
+  if (svgFilePath.isEmpty()) return QPixmap();
+
+  QSvgRenderer svgRenderer(svgFilePath);
+
+  // Check if SVG file was loaded correctly
+  if (!svgRenderer.isValid()) {
+    qDebug() << "Invalid SVG file:" << svgFilePath;
+    return QPixmap();
+  }
+
+  static int devPixRatio = getHighestDevicePixelRatio();
+  if (!size.isEmpty()) size *= devPixRatio;
+
+  QSize imageSize = svgRenderer.defaultSize() * devPixRatio;
+  SvgRenderParams params =
+      calculateSvgRenderParams(size, imageSize, aspectRatioMode);
+  QPixmap pixmap(params.size);
   QPainter painter;
   pixmap.fill(bgColor);
-  painter.begin(&pixmap);
-  svgRenderer.render(&painter, renderRect);
+
+  if (!painter.begin(&pixmap)) {
+    qDebug() << "Failed to begin QPainter on pixmap";
+    return QPixmap();
+  }
+
+  svgRenderer.render(&painter, params.rect);
   painter.end();
   pixmap.setDevicePixelRatio(devPixRatio);
   return pixmap;
@@ -196,30 +267,99 @@ QPixmap svgToPixmap(const QString &svgFilePath, const QSize &size,
 
 //-----------------------------------------------------------------------------
 
-int getDevPixRatio() {
-  static int devPixRatio = QApplication::desktop()->devicePixelRatio();
-  return devPixRatio;
+QImage svgToImage(const QString &svgFilePath, QSize size,
+                  Qt::AspectRatioMode aspectRatioMode, QColor bgColor) {
+  if (svgFilePath.isEmpty()) return QImage();
+
+  QSvgRenderer svgRenderer(svgFilePath);
+
+  // Check if SVG file was loaded correctly
+  if (!svgRenderer.isValid()) {
+    qDebug() << "Invalid SVG file:" << svgFilePath;
+    return QImage();
+  }
+
+  QSize imageSize = !size.isEmpty() ? size : svgRenderer.defaultSize();
+  SvgRenderParams params =
+      calculateSvgRenderParams(size, imageSize, aspectRatioMode);
+  QImage image(params.size, QImage::Format_ARGB32_Premultiplied);
+  QPainter painter;
+  image.fill(bgColor);
+
+  if (!painter.begin(&image)) {
+    qDebug() << "Failed to begin QPainter on image:" << svgFilePath;
+    return QImage();
+  }
+
+  svgRenderer.render(&painter, params.rect);
+  painter.end();
+  return image;
 }
 
 //-----------------------------------------------------------------------------
 
-QIcon createQIcon(const char *iconSVGName) {
-  QString normal = QString(":Resources/") + iconSVGName + ".svg";
-  QString click  = QString(":Resources/") + iconSVGName + "_click.svg";
-  QString over   = QString(":Resources/") + iconSVGName + "_over.svg";
+QImage colorizeBlackPixels(const QImage &input, const QColor color) {
+  if (input.isNull()) return QImage();
+  if (!color.isValid()) return input;
 
-  QIcon icon;
-  icon.addFile(normal, QSize(), QIcon::Normal, QIcon::Off);
-  if (QFile::exists(click))
-    icon.addFile(click, QSize(), QIcon::Normal, QIcon::On);
-  else
-    icon.addFile(normal, QSize(), QIcon::Normal, QIcon::On);
-  if (QFile::exists(over))
-    icon.addFile(over, QSize(), QIcon::Active);
-  else
-    icon.addFile(normal, QSize(), QIcon::Active);
+  QImage image     = input.convertToFormat(QImage::Format_ARGB32);
+  QRgb targetColor = color.rgb();
+  int height       = image.height();
+  int width        = image.width();
+  for (int y = 0; y < height; ++y) {
+    QRgb *pixel = reinterpret_cast<QRgb *>(image.scanLine(y));
+    QRgb *end   = pixel + width;
+    for (; pixel != end; ++pixel) {
+      if (qGray(*pixel) == 0) {
+        *pixel = (targetColor & 0x00FFFFFF) | (qAlpha(*pixel) << 24);
+      }
+    }
+  }
 
-  return icon;
+  return image;
+}
+
+//-----------------------------------------------------------------------------
+
+// Expand area around pixmap and center it
+QPixmap expandPixmap(const QPixmap &pixmap, const QSize &expandSize,
+                     QColor bgColor) {
+  if (pixmap.isNull()) return QPixmap();
+  if (pixmap.size() == expandSize) return pixmap;
+
+  // Get DPR from pixmap
+  qreal dpr = pixmap.devicePixelRatioF();
+
+  // Create a new pixmap with the specified size in pixels
+  QPixmap expandedPixmap(expandSize);
+  expandedPixmap.setDevicePixelRatio(dpr);
+
+  // Fill with background color
+  expandedPixmap.fill(bgColor);
+
+  // Create a painter
+  QPainter painter(&expandedPixmap);
+
+  // Calculate the centered position in pixel coordinates
+  int xPos = (expandSize.width() - pixmap.width()) / (2 * dpr);
+  int yPos = (expandSize.height() - pixmap.height()) / (2 * dpr);
+
+  // Draw the original pixmap
+  painter.drawPixmap(xPos, yPos, pixmap);
+
+  return expandedPixmap;
+}
+
+//-----------------------------------------------------------------------------
+
+QIcon createQIcon(const QString &iconName, bool isForMenuItem, qreal dpr,
+                  QSize newSize) {
+  if (iconName.isEmpty() || !ThemeManager::getInstance().hasIcon(iconName)) {
+    // qWarning() << "No icon with name " << iconName << " exists.";
+    return QIcon();
+  }
+
+  return QIcon(new SvgIconEngine(iconName, isForMenuItem, dpr, newSize));
 }
 
 //-----------------------------------------------------------------------------
@@ -239,23 +379,6 @@ QIcon createQIconPNG(const char *iconPNGName) {
 
 //-----------------------------------------------------------------------------
 
-QIcon createQIconOnOff(const char *iconSVGName, bool withOver) {
-  QString on   = QString(":Resources/") + iconSVGName + "_on.svg";
-  QString off  = QString(":Resources/") + iconSVGName + "_off.svg";
-  QString over = QString(":Resources/") + iconSVGName + "_over.svg";
-
-  QIcon icon;
-  icon.addFile(off, QSize(), QIcon::Normal, QIcon::Off);
-  icon.addFile(on, QSize(), QIcon::Normal, QIcon::On);
-  if (withOver)
-    icon.addFile(over, QSize(), QIcon::Active);
-  else
-    icon.addFile(on, QSize(), QIcon::Active);
-  return icon;
-}
-
-//-----------------------------------------------------------------------------
-
 QIcon createQIconOnOffPNG(const char *iconPNGName, bool withOver) {
   QString on   = QString(":Resources/") + iconPNGName + "_on.png";
   QString off  = QString(":Resources/") + iconPNGName + "_off.png";
@@ -270,6 +393,81 @@ QIcon createQIconOnOffPNG(const char *iconPNGName, bool withOver) {
     icon.addFile(on, QSize(), QIcon::Active);
 
   return icon;
+}
+
+//-----------------------------------------------------------------------------
+
+QIcon createTemporaryIconFromName(const char *commandName) {
+  const int visibleIconSize = 20;
+  QString name(commandName);
+  QList<QChar> iconChar;
+
+  // Extract up to 2 characters from the command name
+  for (int i = 0; i < name.length(); i++) {
+    QChar c = name.at(i);
+    if (c.isUpper() && iconChar.size() < 2)
+      iconChar.append(c);
+    else if (c.isDigit()) {
+      if (iconChar.isEmpty())
+        iconChar.append(c);
+      else if (iconChar.size() <= 2) {
+        if (iconChar.size() == 2) iconChar.removeLast();
+        iconChar.append(c);
+        break;
+      }
+    }
+  }
+
+  if (iconChar.isEmpty()) iconChar.append(name.at(0));
+
+  QString iconStr;
+  for (auto c : iconChar) iconStr.append(c);
+
+  QColor textColor = Qt::black;
+
+  // Create the image with the characters
+  int devPixelRatio = 2;  // Using highest DPR for best quality
+  int pxSize        = visibleIconSize * devPixelRatio;
+  QImage charImg(pxSize, pxSize, QImage::Format_ARGB32_Premultiplied);
+  charImg.fill(Qt::transparent);
+
+  QPainter painter(&charImg);
+  painter.setPen(textColor);
+
+  QRect rect(0, -2, pxSize, pxSize);
+  if (iconStr.size() == 2) {
+    painter.scale(0.6, 1.0);
+    rect.setRight(pxSize / 0.6);
+  }
+
+  QFont font = painter.font();
+  font.setPixelSize(pxSize);
+  painter.setFont(font);
+  painter.drawText(rect, Qt::AlignCenter, iconStr);
+  painter.end();
+
+  return QIcon(new SvgIconEngine(iconStr, charImg));
+}
+
+//-----------------------------------------------------------------------------
+
+QImage adjustImageOpacity(const QImage &input, qreal opacity) {
+  if (input.isNull()) return QImage();
+  if (opacity == 1.0) return input;
+
+  QImage result(input.size(), QImage::Format_ARGB32_Premultiplied);
+  QPainter painter(&result);
+  if (!painter.isActive()) return QImage();
+
+  painter.setCompositionMode(QPainter::CompositionMode_Source);
+  painter.fillRect(result.rect(), Qt::transparent);
+  painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+  painter.drawImage(0, 0, input);
+  painter.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+  painter.fillRect(result.rect(),
+                   QColor(0, 0, 0, qBound(0, qRound(opacity * 255), 255)));
+
+  return result;
 }
 
 //-----------------------------------------------------------------------------
@@ -343,21 +541,21 @@ bool isReservedFileName_message(const QString &fileName) {
 
 QString elideText(const QString &srcText, const QFont &font, int width) {
   QFontMetrics metrix(font);
-  int srcWidth = metrix.width(srcText);
+  int srcWidth = metrix.horizontalAdvance(srcText);
   if (srcWidth < width) return srcText;
-  int tilde = metrix.width("~");
+  int tilde = metrix.horizontalAdvance("~");
   int block = (width - tilde) / 2;
   QString text("");
   int i;
   for (i = 0; i < srcText.size(); i++) {
     text += srcText.at(i);
-    if (metrix.width(text) > block) break;
+    if (metrix.horizontalAdvance(text) > block) break;
   }
   text[i] = '~';
   QString endText("");
   for (i = srcText.size() - 1; i >= 0; i--) {
     endText.push_front(srcText.at(i));
-    if (metrix.width(endText) > block) break;
+    if (metrix.horizontalAdvance(endText) > block) break;
   }
   endText.remove(0, 1);
   text += endText;
@@ -370,7 +568,7 @@ QString elideText(const QString &srcText, const QFontMetrics &fm, int width,
                   const QString &elideSymbol) {
   QString text(srcText);
 
-  for (int i = text.size(); i > 1 && fm.width(text) > width;)
+  for (int i = text.size(); i > 1 && fm.horizontalAdvance(text) > width;)
     text = srcText.left(--i).append(elideSymbol);
 
   return text;
@@ -464,8 +662,6 @@ TabBarContainter::TabBarContainter(QWidget *parent) : QFrame(parent) {
 
 void TabBarContainter::paintEvent(QPaintEvent *event) {
   QPainter p(this);
-  p.setPen(getBottomAboveLineColor());
-  p.drawLine(0, height() - 2, width(), height() - 2);
   p.setPen(getBottomBelowLineColor());
   p.drawLine(0, height() - 1, width(), height() - 1);
 }
@@ -476,20 +672,615 @@ void TabBarContainter::paintEvent(QPaintEvent *event) {
 
 ToolBarContainer::ToolBarContainer(QWidget *parent) : QFrame(parent) {
   setObjectName("ToolBarContainer");
-  setFrameStyle(QFrame::StyledPanel);
   setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
 }
 
 //-----------------------------------------------------------------------------
 
-void ToolBarContainer::paintEvent(QPaintEvent *event) {
-  QPainter p(this);
-  p.setPen(QColor(120, 120, 120));
-  p.drawLine(0, 0, width(), 0);
-}
+void ToolBarContainer::paintEvent(QPaintEvent *event) { QPainter p(this); }
 
 //=============================================================================
 
 QString operator+(const QString &a, const TFilePath &fp) {
   return a + QString::fromStdWString(fp.getWideString());
+}
+
+//=============================================================================
+// QPixmapCache
+
+//-----------------------------------------------------------------------------
+
+static QMutex s_cacheMutex;
+
+QString generateCacheKey(const QString &keyName, const QSize &size,
+                         QIcon::Mode mode, QIcon::State state) {
+  static QString modeNames[]  = {"Normal", "Disabled", "Active", "Selected"};
+  static QString stateNames[] = {"Off", "On"};
+
+  return QString("%1_%2x%3_%4_%5")
+      .arg(keyName)
+      .arg(size.width())
+      .arg(size.height())
+      .arg(modeNames[mode])
+      .arg(stateNames[state]);
+}
+
+//-----------------------------------------------------------------------------
+
+void addToPixmapCache(const QString &key, const QPixmap &pixmap) {
+  if (!pixmap.isNull()) {
+    QMutexLocker locker(&s_cacheMutex);
+    QPixmapCache::insert(key, pixmap);
+  } else {
+    qWarning() << "Cannot add empty pixmap to QPixmapCache";
+  }
+}
+
+//-----------------------------------------------------------------------------
+
+QPixmap getFromPixmapCache(const QString &key) {
+  QMutexLocker locker(&s_cacheMutex);
+  QPixmap pm;
+  if (QPixmapCache::find(key, &pm)) {
+    return pm;
+  } else {
+    return QPixmap();
+  }
+}
+
+//-----------------------------------------------------------------------------
+
+void clearQPixmapCache() {
+  QPixmapCache::clear();
+  qDebug() << "Global QPixmapCache cleared";
+}
+
+//=============================================================================
+// ThemeManager
+
+QString getIconPath(const QString &iconSVGName) {
+  ThemeManager &themeManager = ThemeManager::getInstance();
+  return themeManager.getIconPath(iconSVGName);
+}
+
+//-----------------------------------------------------------------------------
+
+ThemeManager::ThemeManager() {}
+
+//-----------------------------------------------------------------------------
+
+ThemeManager &ThemeManager::getInstance() {
+  static ThemeManager instance;
+  return instance;
+}
+
+//-----------------------------------------------------------------------------
+
+void ThemeManager::initialize() { preloadIconMetadata(":/icons"); }
+
+//-----------------------------------------------------------------------------
+
+void ThemeManager::updateThemeProperties() {
+  // Icon opacities
+  setIconBaseOpacity(getCustomPropertyDouble("icon-base-opacity", 0.8));
+  setIconDisabledOpacity(getCustomPropertyDouble("icon-disabled-opacity", 0.2));
+
+  // Base icon colors
+  setIconBaseColor(getCustomPropertyColor("icon-base-color"));
+  setIconActiveColor(getCustomPropertyColor("icon-active-color"));
+  setIconOnColor(getCustomPropertyColor("icon-on-color"));
+  setIconSelectedColor(getCustomPropertyColor("icon-selected-color"));
+
+  // Individual icon colors
+  setIconCloseColor(getCustomPropertyColor("icon-close-color"));
+  setIconPreviewColor(getCustomPropertyColor("icon-preview-color"));
+  setIconLockColor(getCustomPropertyColor("icon-lock-color"));
+
+  // Keyframe icon colors
+  setIconKeyframeColor(getCustomPropertyColor("icon-keyframe-color"));
+  setIconKeyframeModifiedColor(
+      getCustomPropertyColor("icon-keyframe-modified-color"));
+
+  // Viewer check icon colors
+  setIconVCheckColor(getCustomPropertyColor("icon-vcheck-color"));
+
+  // Invalidate cache to force re-rendering of icons
+  clearQPixmapCache();
+}
+
+//-----------------------------------------------------------------------------
+
+// Fetch icon SVG metadata
+void ThemeManager::preloadIconMetadata(const QString &path) {
+  qDebug() << "[ThemeManager:::preloadIconMetadata] STARTED with path:" << path;
+
+  QDir dir(path);
+  if (!dir.exists()) {
+    qWarning() << "[ThemeManager] Resource path does not exist:" << path;
+    return;
+  }
+
+  QDirIterator it(path, {"*.svg", "*.png"}, QDir::Files,
+                  QDirIterator::Subdirectories);
+
+  static const QStringList states = {"on", "over"};
+  static const QRegularExpression stateRegex(R"((.+)_(on|over)$)");
+
+  while (it.hasNext()) {
+    it.next();
+    const QFileInfo fileInfo = it.fileInfo();
+    const QString iconPath   = fileInfo.filePath();
+    const QString fileName   = fileInfo.baseName();  // "name", "name_on", etc.
+
+    QString iconName = fileName;
+    QString state;
+
+    // Check if the file matches a known state pattern
+    QRegularExpressionMatch match = stateRegex.match(fileName);
+    if (match.hasMatch()) {
+      iconName = match.captured(1);  // Extract base icon name
+      state    = match.captured(2);  // Extract state
+    }
+
+    // Store the icon path in m_iconPaths
+    if (!m_iconPaths.contains(fileName)) {
+      m_iconPaths.insert(fileName, iconPath);
+
+      // Extract and store the icon size from dir path
+      QSize iconSize = parseIconSize(iconPath);
+      m_iconSizes.insert(iconName, iconSize);
+
+      // Check if this is a menu icon (16x16)
+      if (iconSize.width() == 16 && iconSize.height() == 16) {
+        m_menuIcons.insert(iconName, true);
+      }
+
+      // Check if this is a colored icon
+      if (parseIsColored(iconPath)) {
+        m_coloredIcons.insert(iconName, true);
+      }
+    }
+  }
+}
+
+//-----------------------------------------------------------------------------
+
+QString ThemeManager::getIconPath(const QString &iconBaseName, QIcon::Mode mode,
+                                  QIcon::State state) const {
+  if (!hasIcon(iconBaseName)) return QString();
+
+  QString suffix;
+  if (state == QIcon::On)
+    suffix = "_on";
+  else if (mode == QIcon::Active)
+    suffix = "_over";
+
+  QString fullName = iconBaseName + suffix;
+  if (m_iconPaths.contains(fullName)) return m_iconPaths[fullName];
+  if (m_iconPaths.contains(iconBaseName)) return m_iconPaths[iconBaseName];
+
+  qWarning() << "Icon not found:" << iconBaseName;
+  return QString();
+}
+
+//-----------------------------------------------------------------------------
+
+QSize ThemeManager::parseIconSize(const QString &iconPath) const {
+  // Match pattern like "16x16" in dir path
+  static const QRegularExpression sizeRegex(R"(/(\d+)x(\d+)/)");
+
+  QRegularExpressionMatch match = sizeRegex.match(iconPath);
+  if (match.hasMatch()) {
+    return QSize(match.captured(1).toInt(), match.captured(2).toInt());
+  }
+
+  qWarning() << "Could not parse size from path:" << iconPath;
+  return QSize(16, 16);  // Fallback
+}
+
+//-----------------------------------------------------------------------------
+
+bool ThemeManager::parseIsColored(const QString &iconPath) const {
+  // Check if the path contains "colored"
+  static const QRegularExpression coloredRegex(R"(/colored/)");
+
+  return coloredRegex.match(iconPath).hasMatch();
+}
+
+//-----------------------------------------------------------------------------
+
+bool ThemeManager::isColoredIcon(const QString &iconName) const {
+  QString baseName = iconName;
+  if (baseName.endsWith("_on") || baseName.endsWith("_over")) {
+    baseName = baseName.left(baseName.lastIndexOf('_'));
+  }
+  return m_coloredIcons.contains(baseName);
+}
+
+//-----------------------------------------------------------------------------
+
+// Parse custom properties from stylesheet to this format:
+// :TOONZCOLORS { -custom-property: black; }
+// Then get with: getCustomProperty(QColor("custom-property"));
+void ThemeManager::parseCustomPropertiesFromStylesheet(
+    const QString &styleSheet) {
+  QRegularExpression rootRegex(R"(:TOONZCOLORS\s*\{([^}]*)\})");
+  QRegularExpressionMatchIterator rootMatches =
+      rootRegex.globalMatch(styleSheet);
+
+  while (rootMatches.hasNext()) {
+    QRegularExpressionMatch rootMatch = rootMatches.next();
+    QString rootContent = rootMatch.captured(1);  // Extract block content
+
+    QRegularExpression propertyRegex(R"(-([a-zA-Z0-9-]+):\s*([^;]+);)");
+    QRegularExpressionMatchIterator propertyMatches =
+        propertyRegex.globalMatch(rootContent);
+
+    while (propertyMatches.hasNext()) {
+      QRegularExpressionMatch propMatch = propertyMatches.next();
+      QString propertyName              = propMatch.captured(1);
+      QString propertyValue             = propMatch.captured(2).trimmed();
+
+      // Set or override the property
+      setCustomProperty(propertyName, propertyValue);
+    }
+  }
+
+  updateThemeProperties();
+}
+
+//-----------------------------------------------------------------------------
+
+void ThemeManager::setCustomProperty(const QString &name,
+                                     const QString &value) {
+  m_customProperties[name] = value;
+}
+
+//-----------------------------------------------------------------------------
+
+QString ThemeManager::getCustomProperty(const QString &name,
+                                        const QString &defaultValue) const {
+  return m_customProperties.value(name, QString());
+}
+
+//-----------------------------------------------------------------------------
+
+double ThemeManager::getCustomPropertyDouble(const QString &name,
+                                             double defaultValue) const {
+  QString value = getCustomProperty(name);
+  bool ok       = false;
+  double result = value.toDouble(&ok);
+  return ok ? result : defaultValue;
+}
+
+//-----------------------------------------------------------------------------
+
+QColor ThemeManager::getCustomPropertyColor(const QString &name,
+                                            const QColor &defaultValue) const {
+  QString value = getCustomProperty(name);
+  if (value.isEmpty()) return defaultValue;
+
+  // Try to parse the color from the string
+  QColor color(value);
+  return color.isValid() ? color : defaultValue;
+}
+
+//-----------------------------------------------------------------------------
+
+QSize ThemeManager::getIconSize(const QString &iconName) const {
+  QString baseName = iconName;
+  if (baseName.endsWith("_on") || baseName.endsWith("_over")) {
+    baseName = baseName.left(baseName.lastIndexOf('_'));
+  }
+  return m_iconSizes.value(baseName, QSize());
+}
+
+//-----------------------------------------------------------------------------
+
+bool ThemeManager::hasIcon(const QString &iconName) const {
+  return m_iconPaths.contains(iconName);
+}
+
+//-----------------------------------------------------------------------------
+
+bool ThemeManager::isMenuIcon(const QString &iconName) const {
+  QString baseName = iconName;
+  if (baseName.endsWith("_on") || baseName.endsWith("_over")) {
+    baseName = baseName.left(baseName.lastIndexOf('_'));
+  }
+  return m_menuIcons.contains(baseName);
+}
+
+//=============================================================================
+// SvgIconEngine
+
+//-----------------------------------------------------------------------------
+
+// Regular icon
+SvgIconEngine::SvgIconEngine(const QString &iconName, bool isForMenuItem,
+                             qreal dpr, QSize newSize)
+    : m_iconName(iconName)
+    , m_isForMenuItem(isForMenuItem)
+    , m_isTemporaryCommandIcon(false)
+    , m_dpr(dpr > 0.0 ? dpr : getHighestDevicePixelRatio())
+    , m_iconSize(newSize) {
+  ThemeManager &tm = ThemeManager::getInstance();
+
+  m_isMenuIcon = tm.isMenuIcon(iconName);
+  m_isColored  = tm.isColoredIcon(iconName);
+}
+
+//-----------------------------------------------------------------------------
+
+// For temporary icon with command name only
+SvgIconEngine::SvgIconEngine(const QString &commandName, const QImage image)
+    : SvgIconEngine("") {
+  m_iconName               = commandName;
+  m_isTemporaryCommandIcon = true;
+  m_image                  = image;
+}
+
+//-----------------------------------------------------------------------------
+
+QIconEngine *SvgIconEngine::clone() const {
+  if (!m_iconName.isEmpty()) {  // Regular icon
+    return new SvgIconEngine(m_iconName, m_isForMenuItem, m_dpr, m_iconSize);
+  } else {  // For temporary command icon images
+    return new SvgIconEngine(m_iconName, m_image);
+  }
+}
+
+//-----------------------------------------------------------------------------
+
+// Determine icon theme color (or individual color) for mode/state
+QColor SvgIconEngine::getThemeColor(const QString &iconName, QIcon::Mode mode,
+                                    QIcon::State state) {
+  ThemeManager &tm = ThemeManager::getInstance();
+
+  // Check for unique first
+  QColor color = getUniqueIconColor(iconName, mode, state);
+  if (color.isValid()) return color;
+
+  // Regular
+  if (state == QIcon::On) return tm.getIconOnColor();
+  if (mode == QIcon::Active) return tm.getIconActiveColor();
+  if (mode == QIcon::Selected) return tm.getIconSelectedColor();
+
+  return tm.getIconBaseColor();
+}
+
+//-----------------------------------------------------------------------------
+
+// Set colors to specific icons
+QColor SvgIconEngine::getUniqueIconColor(const QString &iconName,
+                                         QIcon::Mode mode, QIcon::State state) {
+  ThemeManager &tm = ThemeManager::getInstance();
+
+  // Rollover mode
+  if (mode == QIcon::Active) {
+    if (iconName.contains("closewindow")) return tm.getIconCloseColor();
+  }
+
+  // On state
+  if (state == QIcon::On) {
+    if (iconName == "preview") return tm.getIconPreviewColor();
+    if (iconName == "subpreview") return tm.getIconPreviewColor();
+
+    if (iconName.contains("freeze")) return tm.getIconLockColor();
+    if (iconName.contains("lock")) return tm.getIconLockColor();
+
+    if (iconName.contains("keyframe_partial")) return tm.getIconKeyframeColor();
+    if (iconName.contains("keyframe_modified"))
+      return tm.getIconKeyframeModifiedColor();
+    if (iconName.contains("keyframe")) return tm.getIconKeyframeColor();
+
+    if (iconName.contains("transparency_check")) return tm.getIconVCheckColor();
+    if (iconName.contains("paint_check")) return tm.getIconVCheckColor();
+    if (iconName.contains("opacity_check")) return tm.getIconVCheckColor();
+    if (iconName.contains("ink_check")) return tm.getIconVCheckColor();
+    if (iconName.contains("ink_no1_check")) return tm.getIconVCheckColor();
+    if (iconName.contains("gap_check")) return tm.getIconVCheckColor();
+    if (iconName.contains("fill_check")) return tm.getIconVCheckColor();
+    if (iconName.contains("blackbg_check")) return tm.getIconVCheckColor();
+    if (iconName.contains("inks_only")) return tm.getIconVCheckColor();
+  }
+
+  return QColor();
+}
+
+//-----------------------------------------------------------------------------
+
+void SvgIconEngine::paint(QPainter *painter, const QRect &rect,
+                          QIcon::Mode mode, QIcon::State state) {
+  if (!painter || rect.isEmpty()) return;
+
+  ThemeManager &tm = ThemeManager::getInstance();
+
+  qreal dpr = painter->device()->devicePixelRatio();
+
+  QPixmap pm = pixmap(rect.size() * dpr, mode, state);
+  if (!pm.isNull()) {
+    //! Don't set SmoothPixmapTransform otherwise at 1x pixmaps will look blurry
+
+    pm.setDevicePixelRatio(dpr);
+
+    // Calculate the target rect to maintain aspect ratio
+    QSize pmSize     = pm.size() / dpr;  // Logical size of the pixmap
+    QSize scaledSize = pmSize.scaled(rect.size(), Qt::KeepAspectRatio);
+
+    // Center scaled pixmap within rect
+    int x = rect.x() + (rect.width() - scaledSize.width()) / 2;
+    int y = rect.y() + (rect.height() - scaledSize.height()) / 2;
+    QRect targetRect(QPoint(x, y), scaledSize);
+
+    painter->drawPixmap(targetRect, pm);
+  }
+}
+
+//-----------------------------------------------------------------------------
+
+qreal SvgIconEngine::getOpacityForModeState(QIcon::Mode mode,
+                                            QIcon::State state) {
+  auto &tm = ThemeManager::getInstance();
+
+  const double baseOpacity     = tm.getIconBaseOpacity();
+  const double disabledOpacity = tm.getIconDisabledOpacity();
+  const double activeOpacity   = 1.0;
+
+  qreal opacity;
+  if (m_isColored) {
+    opacity = (mode == QIcon::Disabled) ? disabledOpacity : activeOpacity;
+  } else {
+    opacity = (mode == QIcon::Disabled)                        ? disabledOpacity
+              : (mode == QIcon::Normal && state == QIcon::Off) ? baseOpacity
+                                                               : activeOpacity;
+  }
+
+  return opacity;
+}
+
+//-----------------------------------------------------------------------------
+
+// Load SVG themed for mode/state
+QPixmap SvgIconEngine::loadPixmap(const QString &iconName, QIcon::Mode mode,
+                                  QIcon::State state, QSize physicalSize,
+                                  QColor color) {
+  ThemeManager &tm = ThemeManager::getInstance();
+  QString path     = tm.getIconPath(iconName, mode, state);
+
+  if (physicalSize.isEmpty()) physicalSize = tm.getIconSize(iconName);
+  qreal opacity = getOpacityForModeState(mode, state);
+
+  QImage img(svgToImage(path, physicalSize));
+  img = adjustImageOpacity(colorizeBlackPixels(img, color), opacity);
+  return QPixmap::fromImage(img);
+}
+
+//-----------------------------------------------------------------------------
+
+QPixmap SvgIconEngine::pixmap(const QSize &size, QIcon::Mode mode,
+                              QIcon::State state) {
+  qreal dpr         = m_dpr;
+  QSize requestSize = !m_iconSize.isEmpty() ? (m_iconSize * m_dpr) : size;
+
+  // Early out for hidden menu icons
+  bool hideIcon = shouldHideIcon(m_isForMenuItem);
+  if (hideIcon && size == QSize(16 * dpr, 16 * dpr)) {
+    static QPixmap emptyPm(size);
+    emptyPm.fill(Qt::transparent);
+    return emptyPm;
+  }
+
+  // Generate cache key
+  QString cacheKey = generateCacheKey(m_iconName, requestSize, mode, state);
+  if (m_isTemporaryCommandIcon) cacheKey += "_cmdNameIcon";
+  // Check cache for pixmap
+  QPixmap cachedPm = getFromPixmapCache(cacheKey);
+  if (!cachedPm.isNull()) return cachedPm;
+
+  // --------------------------------------------------------------------------
+  // NOT FOUND: RENDER NEW PIXMAPS
+  // --------------------------------------------------------------------------
+
+  ThemeManager &tm = ThemeManager::getInstance();
+
+  // Determine icon theme color
+  QColor color =
+      m_isColored ? QColor() : getThemeColor(m_iconName, mode, state);
+
+  // Get base icon size
+  QSize baseIconLogicalSize  = tm.getIconSize(m_iconName);
+  QSize baseIconPhysicalSize = baseIconLogicalSize * dpr;
+  // Menu and Toolbar size
+  QSize menuIconPhysicalSize(16 * dpr, 16 * dpr);
+  QSize toolbarIconPhysicalSize = getBestToolbarSizeByDpr(size);
+
+  QPixmap renderedPm;
+
+  //---------- Temporary command icons by name abbreviation
+  if (m_isTemporaryCommandIcon && size != menuIconPhysicalSize) {
+    QImage adjusted = adjustImageOpacity(colorizeBlackPixels(m_image, color),
+                                         getOpacityForModeState(mode, state));
+    // Scale to physical size
+    renderedPm = QPixmap::fromImage(adjusted).scaled(
+        requestSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+  }
+
+  //---------- Menu command icons (toolbar-sized request but is a menu icon)
+  else if (requestSize == toolbarIconPhysicalSize && m_isMenuIcon) {
+    QPixmap loadedPm =
+        loadPixmap(m_iconName, mode, state, baseIconPhysicalSize, color)
+            .scaled(toolbarIconPhysicalSize * 0.8, Qt::KeepAspectRatio,
+                    Qt::SmoothTransformation);
+    loadedPm.setDevicePixelRatio(dpr);
+    renderedPm = expandPixmap(loadedPm, requestSize);
+  }
+
+  //---------- Regular icons
+  else {
+    // Maintain aspect ratio
+    QSize adjustedSize =
+        baseIconPhysicalSize.scaled(requestSize, Qt::KeepAspectRatio);
+
+    QPixmap loadedPm = loadPixmap(m_iconName, mode, state, adjustedSize, color);
+    loadedPm.setDevicePixelRatio(dpr);
+    renderedPm = expandPixmap(loadedPm.scaled(requestSize, Qt::KeepAspectRatio,
+                                              Qt::SmoothTransformation),
+                              requestSize);
+  }
+
+  renderedPm.setDevicePixelRatio(dpr);
+  addToPixmapCache(cacheKey, renderedPm);
+
+  return getFromPixmapCache(cacheKey);
+}
+
+//-----------------------------------------------------------------------------
+
+// Determine if icon should be hidden in menus
+bool SvgIconEngine::shouldHideIcon(bool isForMenuItem) {
+  //! This is a workaround for a Qt bug, this can be removed and setVisible used
+  //! instead when Qt is updated
+#ifdef _WIN32
+  if (isForMenuItem) {
+    return !Preferences::instance()->getBoolValue(showIconsInMenu);
+  }
+  return false;
+#else
+  return false;
+#endif
+}
+
+//-----------------------------------------------------------------------------
+
+// Compares requestedSize to toolbar icon size checking for the best match
+// scaling by each unique DPR on the system.
+QSize SvgIconEngine::getBestToolbarSizeByDpr(const QSize &requestedSize) {
+  //! This function should be removed when SvgIconEngine gets widget DPR
+
+  const auto screens = QGuiApplication::screens();
+  if (screens.isEmpty()) return QSize(20, 20);
+
+  // Lambda to compute the difference between two sizes
+  auto diff = [&requestedSize](const QSize &size) {
+    return std::abs(size.width() - requestedSize.width()) +
+           std::abs(size.height() - requestedSize.height());
+  };
+
+  // Initialize with the first screen's scaled size
+  QSize bestSize =
+      (QSizeF(20, 20) * screens.first()->devicePixelRatio()).toSize();
+  int bestDiff = diff(bestSize);
+
+  // Iterate through all screens to find the size with the smallest difference
+  for (const QScreen *screen : screens) {
+    QSize size      = (QSizeF(20, 20) * screen->devicePixelRatio()).toSize();
+    int currentDiff = diff(size);
+    if (currentDiff < bestDiff) {
+      bestSize = size;
+      bestDiff = currentDiff;
+    }
+  }
+
+  return bestSize;
 }

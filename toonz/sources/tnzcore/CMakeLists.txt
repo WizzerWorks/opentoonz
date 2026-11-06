@@ -34,7 +34,6 @@ set(HEADERS ${MOC_HEADERS}
     ../include/tdebugmessage.h
     ../include/texception.h
     ../include/texpression.h
-    ../include/tidentifiable.h
     ../include/tmathutil.h
     ../include/tnztypes.h
     ../include/tproperty.h
@@ -85,7 +84,6 @@ set(HEADERS ${MOC_HEADERS}
     ../include/tcodec.h
     ../include/trasterimage.h
     ../include/tcolorstyles.h
-    ../include/tflash.h
     ../include/tfont.h
     ../include/tinbetween.h
     ../include/tofflinegl.h
@@ -122,6 +120,9 @@ set(HEADERS ${MOC_HEADERS}
     ../include/tmeshimage.h
     ../include/tgldisplaylistsmanager.h
     ../include/tversion.h
+    ../include/tstringid.h
+    ../include/tvariant.h
+    ../include/tmetaimage.h
 )
 
 set(SOURCES
@@ -129,7 +130,6 @@ set(SOURCES
     ../common/tcore/tdebugmessage.cpp
     ../common/tcore/texception.cpp
     ../common/tcore/threadmessage.cpp
-    ../common/tcore/tidentifiable.cpp
     ../common/tcore/tmathutil.cpp
     ../common/tproperty.cpp
     ../common/tcore/trandom.cpp
@@ -181,7 +181,6 @@ set(SOURCES
     ../common/trasterimage/trasterimage.cpp
     ../common/tvrender/tcolorstyles.cpp
     ../common/tvrender/tellipticbrush.cpp
-    ../common/tvrender/tflash.cpp
     ../common/tvrender/qtofflinegl.cpp
     ../common/tvrender/tglcurves.cpp
     ../common/tvrender/tglregions.cpp
@@ -246,6 +245,9 @@ set(SOURCES
     ../common/tmeshimage/tmeshimage.cpp
     ../common/tmsgcore.cpp
     ../common/tvrender/tfont_qt.cpp
+    ../common/tmetaimage/tmetaimage.cpp
+    ../common/tstringid.cpp
+    ../common/tvariant.cpp
 )
 
 if(BUILD_TARGET_WIN)
@@ -262,14 +264,17 @@ elseif(BUILD_TARGET_UNIX)
     )
 endif()
 
-add_translation(tnzcore ${HEADERS} ${SOURCES})
-
 qt5_wrap_cpp(SOURCES ${MOC_HEADERS})
 
 add_library(tnzcore SHARED ${HEADERS} ${SOURCES})
 
+if(WITH_TRANSLATION)
+    add_translation(tnzcore ${HEADERS} ${SOURCES})
+    add_compile_translations_command(tnzcore tnzcore)
+endif()
+
 if(BUILD_ENV_APPLE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-install_name,@rpath/libtnzcore.dylib")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-install_name,@executable_path/libtnzcore.dylib")
 endif()
 
 add_definitions(
@@ -284,10 +289,13 @@ add_definitions(
     -DTSOUND_EXPORTS
     -DTIMAGE_IO_EXPORTS
     -DTRASTERIMAGE_EXPORTS
+    -DTMETAIMAGE_EXPORTS
     -DTVRENDER_EXPORTS
     -DTFLASH_EXPORTS
     -DTROP_EXPORTS
     -DTSTREAM_EXPORTS
+    -DTSTRINGID_EXPORTS
+    -DTVARIANT_EXPORTS
 )
 
 if(BUILD_TARGET_WIN)
@@ -323,6 +331,7 @@ if(BUILD_ENV_MSVC)
         winmm.lib
         opengl32.lib
         glu32.lib
+        dbghelp.lib
     )
 elseif(BUILD_ENV_APPLE)
     find_library(AUDIOUNIT_LIB AudioUnit)
@@ -351,12 +360,13 @@ elseif(BUILD_ENV_UNIXLIKE)
             -lmpr
             -lwinmm
             -lpsapi
+            -ldbghelp
         )
     endif()
 endif()
 
 target_link_libraries(tnzcore
-    Qt5::OpenGL Qt5::Network Qt5::Multimedia
+    Qt5::Core Qt5::OpenGL Qt5::Network Qt5::Multimedia
     ${GL_LIB} ${GLUT_LIB} ${QT_LIB} ${Z_LIB} ${JPEG_LIB} ${LZ4_LIB}
     ${EXTRA_LIBS}
 )

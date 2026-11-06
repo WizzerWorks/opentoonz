@@ -39,7 +39,6 @@
 #include "tcg/boost/range_utility.h"
 
 // boost includes
-#include <boost/bind.hpp>
 #include <boost/range/counting_range.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/adaptor/filtered.hpp>
@@ -48,7 +47,7 @@
 
 //===================================================================
 
-void findPaletteLevels(set<TXshSimpleLevel *> &levels, int &rowIndex,
+void findPaletteLevels(std::set<TXshSimpleLevel *> &levels, int &rowIndex,
                        int &columnIndex, TPalette *palette, TXsheet *xsheet) {
   rowIndex = columnIndex = -1;
   int columnCount        = xsheet->getColumnCount();
@@ -136,7 +135,7 @@ bool isStyleUsed(const TImageP image, int styleId) {
 //===================================================================
 
 /*! Return true if one style is used. */
-bool areStylesUsed(const set<TXshSimpleLevel *> levels,
+bool areStylesUsed(const std::set<TXshSimpleLevel *> levels,
                    const std::vector<int> styleIds) {
   for (auto const level : levels) {
     std::vector<TFrameId> fids;
@@ -497,7 +496,7 @@ void PaletteCmd::addStyles(TPaletteHandle *paletteHandle, int pageIndex,
 
 namespace {
 
-void eraseStylesInLevels(const set<TXshSimpleLevel *> &levels,
+void eraseStylesInLevels(const std::set<TXshSimpleLevel *> &levels,
                          const std::vector<int> styleIds) {
   for (auto const level : levels) {
     std::vector<TFrameId> fids;
@@ -512,6 +511,7 @@ void eraseStylesInLevels(const set<TXshSimpleLevel *> &levels,
       else if (ti)
         TRop::eraseStyleIds(ti.getPointer(), styleIds);
     }
+    level->setDirtyFlag(true);
   }
 }
 
@@ -583,8 +583,9 @@ void PaletteCmd::eraseStyles(const std::set<TXshSimpleLevel *> &levels,
       tcg::substitute(
           levelImages.second,
           boost::counting_range(0, levelImages.first->getFrameCount()) |
-              boost::adaptors::transformed(boost::bind(
-                  cloneImage, boost::cref(*levelImages.first), _1)));
+              boost::adaptors::transformed([&levelImages](int f) {
+                return cloneImage(*levelImages.first, f);
+              }));
     }
 
     static void restoreImage(const TXshSimpleLevelP &level, int f,
@@ -1242,24 +1243,58 @@ public:
   }
   int getHistoryType() override { return HistoryType::Palette; }
 };
+class setCurrentStyleUndo final : public TUndo {
+  TPaletteHandle *m_paletteHandle;  // Used in undo and redo to notify change
+  TPalette *m_palette;
+  int m_styleId, m_oldStyleId;
+
+public:
+  setCurrentStyleUndo(TPaletteHandle *paletteHandle, int styleId,
+                      int oldStyleId)
+      : m_paletteHandle(paletteHandle)
+      , m_palette(paletteHandle->getPalette())
+      , m_styleId(styleId)
+      , m_oldStyleId(oldStyleId) {};
+  void undo() const override {
+    if (m_paletteHandle && m_palette) m_paletteHandle->setPalette(m_palette);
+    if (m_paletteHandle) m_paletteHandle->setStyleIndex(m_oldStyleId);
+  }
+  void redo() const override {
+    if (m_paletteHandle && m_palette) m_paletteHandle->setPalette(m_palette);
+    if (m_paletteHandle) m_paletteHandle->setStyleIndex(m_styleId);
+  }
+  int getSize() const override { return sizeof *this; }
+
+  QString getHistoryString() override {
+    return QObject::tr("Set Current Style from #%1 to %2")
+        .arg(QString::number(m_oldStyleId))
+        .arg(QString::number(m_styleId));
+  }
+  int getHistoryType() override { return HistoryType::Palette; }
+};
 }  // namespace
 
-void PaletteCmd::organizePaletteStyle(
-    TPaletteHandle *paletteHandle, int styleId,
-    const TColorStyle::PickedPosition &point) {
+void PaletteCmd::organizePaletteStyle(TPaletteHandle *paletteHandle,
+                                      int styleId,
+                                      const TColorStyle::PickedPosition &point,
+                                      int oldStyleId) {
   if (!paletteHandle) return;
   TPalette *palette = paletteHandle->getPalette();
-  if (!palette) return;
-  // if the style is already in the first page, then do nothing
-  TPalette::Page *page = palette->getStylePage(styleId);
-  if (!page || page->getIndex() == 0) return;
+  if (!palette || styleId == 0 || styleId == 1) return;
+  auto style = palette->getStyle(styleId);
+  if (style->getFlags() != 0) return;
+
+  // if the style in the same page of old style, then do nothing
+  TPalette::Page *page    = palette->getStylePage(styleId);
+  TPalette::Page *oldPage = palette->getStylePage(oldStyleId);
+
+  if (!page || !oldPage || page->getIndex() == oldPage->getIndex()) return;
 
   int indexInPage = page->search(styleId);
-
   TUndoManager::manager()->beginBlock();
 
-  // call arrangeStyles() to move style to the first page
-  arrangeStyles(paletteHandle, 0, palette->getPage(0)->getStyleCount(),
+  // call arrangeStyles() to move style to the oldStyle page
+  arrangeStyles(paletteHandle, oldPage->getIndex(), oldPage->getStyleCount(),
                 page->getIndex(), {indexInPage});
   // then set the picked position
   setStylePickedPositionUndo *undo =
@@ -1267,7 +1302,14 @@ void PaletteCmd::organizePaletteStyle(
   undo->redo();
   TUndoManager::manager()->add(undo);
 
+  setCurrentStyleUndo *undo2 =
+      new setCurrentStyleUndo(paletteHandle, styleId, oldStyleId);
+  undo2->redo();
+  TUndoManager::manager()->add(undo2);
+
   TUndoManager::manager()->endBlock();
+
+  return;
 }
 
 //=============================================================================

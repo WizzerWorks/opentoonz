@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="es" sourcelanguage="en">
+<TS version="2.1" language="es_ES" sourcelanguage="en_US">
 <context>
     <name>AddFxContextMenu</name>
     <message>
@@ -113,17 +113,17 @@
     </message>
     <message>
         <source>Bad camera preset</source>
-        <translation>Ajuste de cámara defectuoso</translation>
+        <translation>Preajuste de cámara defectuoso</translation>
     </message>
     <message>
         <source>&apos;%1&apos; doesn&apos;t seem a well formed camera preset. 
 Possibly the preset file has been corrupted</source>
-        <translation>&apos;%1&apos; no parece ser un ajuste de cámara con un formato correcto. 
-Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
+        <translation>&apos;%1&apos; no parece ser un preajuste de cámara con un formato correcto. 
+Es posible que el archivo de dicho preajuste se encuentre corrupto.</translation>
     </message>
     <message>
         <source>Preset name</source>
-        <translation>Nombre del ajuste</translation>
+        <translation>Nombre del preajuste</translation>
     </message>
     <message>
         <source>Enter the name for %1</source>
@@ -147,11 +147,11 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     </message>
     <message>
         <source>Error : Preset Name is Invalid</source>
-        <translation>Error: El nombre del ajuste no es válido</translation>
+        <translation>Error: El nombre del preajuste no es válido</translation>
     </message>
     <message>
         <source>The preset name must not use &apos;,&apos;(comma).</source>
-        <translation>El nombre del ajuste no puede utilizar &apos;,&apos;(coma).</translation>
+        <translation>El nombre del preajuste no puede utilizar &apos;,&apos;(coma).</translation>
     </message>
     <message>
         <source>DPI</source>
@@ -163,7 +163,7 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     </message>
     <message>
         <source>x</source>
-        <translation>x</translation>
+        <translation>×</translation>
     </message>
     <message>
         <source>A/R</source>
@@ -172,6 +172,40 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     <message>
         <source>&lt;custom&gt;</source>
         <translation>&lt;personalizada&gt;</translation>
+    </message>
+    <message>
+        <source>cm</source>
+        <translation>cm</translation>
+    </message>
+    <message>
+        <source>mm</source>
+        <translation>mm</translation>
+    </message>
+    <message>
+        <source>inch</source>
+        <translation>pulgadas</translation>
+    </message>
+    <message>
+        <source>field</source>
+        <translation>campos</translation>
+    </message>
+    <message>
+        <source>pixel</source>
+        <translation>píxeles</translation>
+    </message>
+    <message>
+        <source>Deleting &quot;%1&quot;.
+Are you sure?</source>
+        <translation>Borrando &quot;%1&quot;.
+¿Confirmar?</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>Borrar</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
     </message>
 </context>
 <context>
@@ -194,7 +228,11 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     </message>
     <message>
         <source>RGBA</source>
-        <translation>RVAα</translation>
+        <translation type="vanished">RVAα</translation>
+    </message>
+    <message>
+        <source>RGB</source>
+        <translation>RVA</translation>
     </message>
 </context>
 <context>
@@ -204,11 +242,11 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
         <translation type="vanished">Más cercano:</translation>
     </message>
     <message>
-        <source>E/W:</source>
+        <source>X:</source>
         <translation type="vanished">X:</translation>
     </message>
     <message>
-        <source>N/S:</source>
+        <source>Y:</source>
         <translation type="vanished">Y:</translation>
     </message>
     <message>
@@ -240,11 +278,11 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
         <translation type="vanished">Información del nivel</translation>
     </message>
     <message>
-        <source>N/S</source>
+        <source>Y</source>
         <translation>Y</translation>
     </message>
     <message>
-        <source>E/W</source>
+        <source>X</source>
         <translation>X</translation>
     </message>
 </context>
@@ -265,6 +303,14 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
         <source>R:%1 G:%2 B:%3</source>
         <translation>R:%1 V:%2 A:%3</translation>
     </message>
+    <message>
+        <source> A:%1</source>
+        <translation> α:%1</translation>
+    </message>
+    <message>
+        <source>A:%1</source>
+        <translation>α:%1</translation>
+    </message>
 </context>
 <context>
     <name>ComboHistogram</name>
@@ -283,6 +329,18 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     <message>
         <source>Y:</source>
         <translation>Y:</translation>
+    </message>
+    <message>
+        <source>8bit (0-255)</source>
+        <translation>8 bits (0-255)</translation>
+    </message>
+    <message>
+        <source>16bit (0-65535)</source>
+        <translation>16 bits (0-65535)</translation>
+    </message>
+    <message>
+        <source>0.0-1.0</source>
+        <translation>0.0-1.0</translation>
     </message>
 </context>
 <context>
@@ -349,6 +407,18 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
         <source>A:</source>
         <translation>α:</translation>
     </message>
+    <message>
+        <source>Paste Color</source>
+        <translation>Pegar color</translation>
+    </message>
+    <message>
+        <source>Paste Color of %1</source>
+        <translation>Pegar color de %1</translation>
+    </message>
+    <message>
+        <source>Copy Color</source>
+        <translation>Copiar color</translation>
+    </message>
 </context>
 <context>
     <name>DVGui::DvTextEdit</name>
@@ -385,9 +455,132 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     </message>
 </context>
 <context>
+    <name>DVGui::HexColorNamesEditor</name>
+    <message>
+        <source>Hex Color Names Editor</source>
+        <translation>Editor de nombres de colores hexadecimales</translation>
+    </message>
+    <message>
+        <source>OK</source>
+        <translation>Aceptar</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Aplicar</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Cerrar</translation>
+    </message>
+    <message>
+        <source>Unselect</source>
+        <translation>Deseleccionar</translation>
+    </message>
+    <message>
+        <source>Add Color</source>
+        <translation>Agregar color</translation>
+    </message>
+    <message>
+        <source>Delete Color</source>
+        <translation>Borrar color</translation>
+    </message>
+    <message>
+        <source>User Defined Colors</source>
+        <translation>Colores personalizados</translation>
+    </message>
+    <message>
+        <source>Default Main Colors</source>
+        <translation>Colores predefinidos</translation>
+    </message>
+    <message>
+        <source>Enable Auto-Complete</source>
+        <translation>Autocompletar</translation>
+    </message>
+    <message>
+        <source>Import</source>
+        <translation>Importar</translation>
+    </message>
+    <message>
+        <source>Export</source>
+        <translation>Exportar</translation>
+    </message>
+    <message>
+        <source>Open Color Names</source>
+        <translation>Abrir nombres de colores</translation>
+    </message>
+    <message>
+        <source>Text or XML (*.txt *.xml);;Text files (*.txt);;XML files (*.xml)</source>
+        <translation>Texto o XML (*.txt *.xml);;Archivos de texto (*.txt);;Archivos XML (*.xml)</translation>
+    </message>
+    <message>
+        <source>Hex Color Names Import</source>
+        <translation>Importar nombres de colores hexadecimales</translation>
+    </message>
+    <message>
+        <source>Do you want to merge with existing entries?</source>
+        <translation>¿Fusionar con entradas existentes?</translation>
+    </message>
+    <message>
+        <source>Error importing color names XML</source>
+        <translation type="vanished">Error importando XML de nombres de colores</translation>
+    </message>
+    <message>
+        <source>Save Color Names</source>
+        <translation>Guardar nombres de colores</translation>
+    </message>
+    <message>
+        <source>XML files (*.xml);;Text files (*.txt)</source>
+        <translation>Archivos XML (*.xml);;Archivos de texto (*.txt)</translation>
+    </message>
+    <message>
+        <source>Error exporting color names XML</source>
+        <translation>Error exportando XML de nombres de colores</translation>
+    </message>
+    <message>
+        <source>Color name is not valid.
+The following characters cannot be used: \ # &lt; &gt; &quot; &apos;</source>
+        <translation>El nombre del color no es válido.
+Los siguientes caracteres no pueden ser usados: \ # &lt; &gt; &quot; &apos;</translation>
+    </message>
+    <message>
+        <source>Color name already exists.
+Please use another name.</source>
+        <translation>El nombre del color ya existe.
+Usar un nombre diferente.</translation>
+    </message>
+    <message>
+        <source>Invalid hex color format.</source>
+        <translation>Formato de color hexadecimal inválido.</translation>
+    </message>
+    <message>
+        <source>Error importing color names XML:
+File not found or invalid format</source>
+        <translation>Error al importar XML con nombres de colores:
+Archivo no encontrado o formato inválido</translation>
+    </message>
+    <message>
+        <source>Error importing color names XML:
+The file may be corrupt or have invalid format.</source>
+        <translation>Error al importar XML con nombres de colores:
+El archivo puede estar corrupto o contener un formato inváido.</translation>
+    </message>
+    <message>
+        <source>An unexpected error occurred while importing colors.</source>
+        <translation>Ocurrió un error inesperado al importar colores.</translation>
+    </message>
+    <message>
+        <source>Failed to save user color names file.</source>
+        <translation>Error al guardar el archivo con los nombres de colores del usuario.</translation>
+    </message>
+</context>
+<context>
     <name>DVGui::LineEdit</name>
     <message>
         <source>A file name cannot contains any of the following chracters: /\:*?&quot;&lt;&gt;|.</source>
+        <translation type="vanished">El nombre de un archivo no puede contener ninguno de los siguientes caracteres: /\:*?&quot;&lt;&gt;|.</translation>
+    </message>
+    <message>
+        <source>A file name cannot contains any of the following characters: /\:*?&quot;&lt;&gt;|.</source>
         <translation>El nombre de un archivo no puede contener ninguno de los siguientes caracteres: /\:*?&quot;&lt;&gt;|.</translation>
     </message>
 </context>
@@ -425,6 +618,18 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     <message>
         <source>Channel:</source>
         <translation>Canal:</translation>
+    </message>
+    <message>
+        <source>Range:</source>
+        <translation>Rango:</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation>Salida:</translation>
+    </message>
+    <message>
+        <source>Input:</source>
+        <translation>Entrada:</translation>
     </message>
 </context>
 <context>
@@ -549,7 +754,7 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     </message>
     <message>
         <source>Set Key</source>
-        <translation>Marcar fotograma clave</translation>
+        <translation>Marcar clave</translation>
     </message>
     <message>
         <source>Histogram</source>
@@ -609,7 +814,7 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     </message>
     <message>
         <source>&amp;Next frame</source>
-        <translation>Fotograma &amp;siguiente</translation>
+        <translation type="vanished">Fotograma &amp;siguiente</translation>
     </message>
     <message>
         <source>&amp;Last Frame</source>
@@ -719,6 +924,48 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
         <source>&amp;Reset View</source>
         <translation>&amp;Restablecer vista</translation>
     </message>
+    <message>
+        <source>Sound</source>
+        <translation>Sonido</translation>
+    </message>
+    <message>
+        <source>Locator</source>
+        <translation>Localizador</translation>
+    </message>
+    <message>
+        <source>&amp;Next Frame</source>
+        <translation>Fotograma &amp;siguiente</translation>
+    </message>
+    <message>
+        <source>Gain Controls</source>
+        <translation>Controles de ganancia</translation>
+    </message>
+    <message>
+        <source>&amp;Reduce gain 1/2 stop (divide by sqrt(2))</source>
+        <translation>&amp;Reducir ganancia en 1/2 parada (divide por raíz cuadrada de 2)</translation>
+    </message>
+    <message>
+        <source>Toggle gain between 1 and the previous setting.
+Gain is shown as an f-stop and the &quot;neutral&quot; or 1.0 gain f-stop is f/8.</source>
+        <translation>Alterna la ganancia entre 1 y el valor anterior.
+La ganancia se mostrará en forma de f-stops donde el valor &quot;neutral&quot;, con una ganancia de 1.0, será f/8.</translation>
+    </message>
+    <message>
+        <source>&amp;Increase gain 1/2 stop (multiply by sqrt(2))</source>
+        <translation>&amp;Aumentar ganancia en 1/2 parada (multiplica por raíz cuadrada de 2)</translation>
+    </message>
+    <message>
+        <source> (gain %1)</source>
+        <translation> (ganancia %1)</translation>
+    </message>
+    <message>
+        <source>&amp;Rotate Left</source>
+        <translation>&amp;Rotar antihorario</translation>
+    </message>
+    <message>
+        <source>&amp;Rotate Right</source>
+        <translation>&amp;Rotar horario</translation>
+    </message>
 </context>
 <context>
     <name>FontParamField</name>
@@ -777,7 +1024,7 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     </message>
     <message>
         <source>Set Key</source>
-        <translation>Marcar fotograma clave</translation>
+        <translation>Marcar clave</translation>
     </message>
     <message>
         <source>Activate Cycle</source>
@@ -793,7 +1040,7 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     </message>
     <message>
         <source>Speed In / Speed Out Interpolation</source>
-        <translation>Interpolación Bézier</translation>
+        <translation>Interpolación Bezier</translation>
     </message>
     <message>
         <source>Ease In / Ease Out Interpolation</source>
@@ -833,19 +1080,19 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     </message>
     <message>
         <source>Step 1</source>
-        <translation>Exposición x1</translation>
+        <translation>Exposición de interpolación x1</translation>
     </message>
     <message>
         <source>Step 2</source>
-        <translation>Exposición x2</translation>
+        <translation>Exposición de interpolación x2</translation>
     </message>
     <message>
         <source>Step 3</source>
-        <translation>Exposición x3</translation>
+        <translation>Exposición de interpolación x3</translation>
     </message>
     <message>
         <source>Step 4</source>
-        <translation>Exposición x4</translation>
+        <translation>Exposición de interpolación x4</translation>
     </message>
     <message>
         <source>Function Curves</source>
@@ -872,7 +1119,7 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     </message>
     <message>
         <source>Speed In / Speed Out</source>
-        <translation>Bézier</translation>
+        <translation>Bezier</translation>
     </message>
     <message>
         <source>Ease In / Ease Out</source>
@@ -928,7 +1175,7 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     </message>
     <message>
         <source>Speed</source>
-        <translation>Bézier</translation>
+        <translation>Bezier</translation>
     </message>
     <message>
         <source>Ease</source>
@@ -970,6 +1217,10 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
         <source>Step</source>
         <translation>Exposición</translation>
     </message>
+    <message>
+        <source>Link/Unlink Handles</source>
+        <translation>Vincular/Desvincular tangentes</translation>
+    </message>
 </context>
 <context>
     <name>FunctionSelection</name>
@@ -986,14 +1237,21 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     </message>
 </context>
 <context>
+    <name>FunctionSheetButtonArea</name>
+    <message>
+        <source>Toggle synchronizing zoom with xsheet</source>
+        <translation>Sincronizar zoom con la planilla</translation>
+    </message>
+</context>
+<context>
     <name>FunctionSheetCellViewer</name>
     <message>
         <source>Delete Key</source>
-        <translation>Borrar fotograma clave</translation>
+        <translation>Borrar clave</translation>
     </message>
     <message>
         <source>Set Key</source>
-        <translation>Marcar fotograma clave</translation>
+        <translation>Marcar clave</translation>
     </message>
     <message>
         <source>Linear Interpolation</source>
@@ -1001,7 +1259,7 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     </message>
     <message>
         <source>Speed In / Speed Out Interpolation</source>
-        <translation>Interpolación Bézier</translation>
+        <translation>Interpolación Bezier</translation>
     </message>
     <message>
         <source>Ease In / Ease Out Interpolation</source>
@@ -1065,11 +1323,20 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     </message>
     <message>
         <source>Change Step</source>
-        <translation>Cambiar exposición</translation>
+        <translation>Exposición de interpolación</translation>
     </message>
     <message>
         <source>Similar Shape Interpolation</source>
         <translation>Interpolación mediante forma similar</translation>
+    </message>
+</context>
+<context>
+    <name>FunctionSheetColumnHeadViewer</name>
+    <message>
+        <source>Some key(s) in this parameter loses original reference in expression.
+Manually changing any keyframe will clear the warning.</source>
+        <translation>Algunos claves en este parámetro perderán su referencia original en la expresión.
+Cambiar el clave de forma manual eliminará la advertencia.</translation>
     </message>
 </context>
 <context>
@@ -1100,6 +1367,12 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     <message>
         <source>Plastic Skeleton</source>
         <translation>Esqueleto de Plástico</translation>
+    </message>
+    <message>
+        <source>Some key(s) in this parameter loses original reference in expression.
+Manually changing any keyframe will clear the warning.</source>
+        <translation>Algunos claves en este parámetro perderán su referencia original en la expresión.
+Cambiar el clave de forma manual eliminará la advertencia.</translation>
     </message>
 </context>
 <context>
@@ -1231,7 +1504,7 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     </message>
     <message>
         <source>&amp;Save As Preset...</source>
-        <translation>Guardar como aju&amp;ste...</translation>
+        <translation>Guardar como preaju&amp;ste...</translation>
     </message>
     <message>
         <source>&amp;Preview</source>
@@ -1262,6 +1535,17 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     </message>
 </context>
 <context>
+    <name>FxPassThroughPainter</name>
+    <message>
+        <source>&amp;Paste Add</source>
+        <translation>&amp;Pegar (agregar)</translation>
+    </message>
+    <message>
+        <source>&amp;Preview</source>
+        <translation>&amp;Previsualizar</translation>
+    </message>
+</context>
+<context>
     <name>FxSchematicLink</name>
     <message>
         <source>&amp;Delete</source>
@@ -1277,6 +1561,13 @@ Es posible que el archivo de dicho ajuste se encuentre corrupto.</translation>
     <message>
         <source>Output</source>
         <translation>Salida</translation>
+    </message>
+</context>
+<context>
+    <name>FxSchematicPassThroughNode</name>
+    <message>
+        <source> (Pass Through)</source>
+        <translation> (Redirección)</translation>
     </message>
 </context>
 <context>
@@ -1421,7 +1712,7 @@ Seleccionar los nodos de efecto y sus vínculos relacionados antes de copiar o c
     </message>
     <message>
         <source>Set Key</source>
-        <translation>Marcar fotograma clave</translation>
+        <translation>Marcar clave</translation>
     </message>
     <message>
         <source>Next Key</source>
@@ -1598,6 +1889,50 @@ Seleccionar los nodos de efecto y sus vínculos relacionados antes de copiar o c
         <source>)</source>
         <translation>)</translation>
     </message>
+    <message>
+        <source>Hide New Style Button</source>
+        <translation>Ocultar botón de nuevo estilo</translation>
+    </message>
+    <message>
+        <source>Show New Style Button</source>
+        <translation>Mostrar botón de nuevo estilo</translation>
+    </message>
+    <message>
+        <source>Failed to save palette.</source>
+        <translation>Falla al guardar paleta.</translation>
+    </message>
+    <message>
+        <source>Set Toolbar Below Styles</source>
+        <translation>Botones abajo</translation>
+    </message>
+    <message>
+        <source>Set Toolbar Above Styles</source>
+        <translation>Botones arriba</translation>
+    </message>
+    <message>
+        <source>Auto Adjust Panel Width</source>
+        <translation>Auto ajustar ancho del panel</translation>
+    </message>
+    <message>
+        <source>Visible Toolbar Buttons</source>
+        <translation>Botones barra de herramientas</translation>
+    </message>
+    <message>
+        <source>KeyFrame</source>
+        <translation>Marcar clave</translation>
+    </message>
+    <message>
+        <source>New Style/Page</source>
+        <translation>Nuevo estilo y página</translation>
+    </message>
+    <message>
+        <source>Palette Gizmo</source>
+        <translation>Asistente de paleta</translation>
+    </message>
+    <message>
+        <source>Name Editor</source>
+        <translation>Editor de nombres</translation>
+    </message>
 </context>
 <context>
     <name>PaletteViewerGUI::PageViewer</name>
@@ -1621,6 +1956,10 @@ Seleccionar los nodos de efecto y sus vínculos relacionados antes de copiar o c
         <source>Name Editor</source>
         <translation>Editor de nombres</translation>
     </message>
+    <message>
+        <source> + </source>
+        <translation> + </translation>
+    </message>
 </context>
 <context>
     <name>PalettesScanPopup</name>
@@ -1640,6 +1979,10 @@ Seleccionar los nodos de efecto y sus vínculos relacionados antes de copiar o c
         <source>&lt;files&gt;</source>
         <translation>&lt;archivos&gt;</translation>
     </message>
+    <message>
+        <source>Failed to import palette.</source>
+        <translation>Falla al importar paleta.</translation>
+    </message>
 </context>
 <context>
     <name>ParamViewer</name>
@@ -1652,7 +1995,19 @@ Seleccionar los nodos de efecto y sus vínculos relacionados antes de copiar o c
     <name>ParamsPageSet</name>
     <message>
         <source>Fx Help</source>
-        <translation>Ayuda del efecto</translation>
+        <translation type="vanished">Ayuda del efecto</translation>
+    </message>
+    <message>
+        <source>View help page</source>
+        <translation>Ver ayuda</translation>
+    </message>
+    <message>
+        <source>This Fx does not support rendering in floating point channel width (32bit).
+The output pixel values from this fx will be clamped to 0.0 - 1.0
+and tone may be slightly discretized.</source>
+        <translation>Este efecto no soporta procesamiento en canales decimales de 32 bits.
+Los valores de los píxeles de dalida de este efecto se encontrarán en el rango 0.0 - 1.0
+y su tono puede notarse ligeramente discretizado.</translation>
     </message>
 </context>
 <context>
@@ -1748,7 +2103,7 @@ Seleccionar los nodos de efecto y sus vínculos relacionados antes de copiar o c
     </message>
     <message>
         <source>Palette</source>
-        <translation>Paleta</translation>
+        <translation type="vanished">Paleta</translation>
     </message>
     <message>
         <source>Save</source>
@@ -1927,12 +2282,12 @@ Seleccionar los nodos de efecto y sus vínculos relacionados antes de copiar o c
         <translation>Ruta de salida: </translation>
     </message>
     <message>
-        <source>Endianess:      </source>
+        <source>Endianness:      </source>
         <translation>Orden:      </translation>
     </message>
     <message>
         <source>It is not possible to delete the style #</source>
-        <translation>No es posible borrar el estilo № </translation>
+        <translation type="vanished">No es posible borrar el estilo № </translation>
     </message>
     <message>
         <source>It is not possible to delete styles #0 and #1.</source>
@@ -2011,7 +2366,7 @@ Are you sure?</source>
     <message>
         <source>Deleting &quot;%1&quot;.
 Are you sure?</source>
-        <translation>Borrando &quot;%1&quot;.
+        <translation type="vanished">Borrando &quot;%1&quot;.
 ¿Confirma?</translation>
     </message>
     <message>
@@ -2020,19 +2375,19 @@ Are you sure?</source>
     </message>
     <message>
         <source>Paste Style  in Palette : %1</source>
-        <translation>Pegar estilo en paleta: %1</translation>
+        <translation type="vanished">Pegar estilo en paleta: %1</translation>
     </message>
     <message>
         <source>Delete Style  from Palette : %1</source>
-        <translation>Borrar estilo de paleta: %1</translation>
+        <translation type="vanished">Borrar estilo de paleta: %1</translation>
     </message>
     <message>
         <source>Cut Style  from Palette : %1</source>
-        <translation>Cortar estilo de paleta: %1</translation>
+        <translation type="vanished">Cortar estilo de paleta: %1</translation>
     </message>
     <message>
         <source>  to Palette : %1</source>
-        <translation>  a paleta: %1</translation>
+        <translation type="vanished">  a paleta: %1</translation>
     </message>
     <message>
         <source>Paste Color &amp;&amp; Name%1</source>
@@ -2052,11 +2407,11 @@ Are you sure?</source>
     </message>
     <message>
         <source>Blend Colors  in Palette : %1</source>
-        <translation>Fundir colores en paleta: %1</translation>
+        <translation type="vanished">Fundir colores en paleta: %1</translation>
     </message>
     <message>
         <source>Toggle Link  in Palette : %1</source>
-        <translation>Alternar vínculo en paleta: %1</translation>
+        <translation type="vanished">Alternar vínculo en paleta: %1</translation>
     </message>
     <message>
         <source>Remove Link  in Palette : %1</source>
@@ -2072,19 +2427,19 @@ Are you sure?</source>
     </message>
     <message>
         <source>Copy Keyframe</source>
-        <translation>Copiar fotograma clave</translation>
+        <translation>Copiar clave</translation>
     </message>
     <message>
         <source>Paste Keyframe  at Frame : %1</source>
-        <translation>Pegar fotograma clave en fotograma: %1</translation>
+        <translation>Pegar clave en fotograma: %1</translation>
     </message>
     <message>
         <source>Delete Keyframe</source>
-        <translation>Borrar fotograma clave</translation>
+        <translation>Borrar clave</translation>
     </message>
     <message>
         <source>Move Keyframe</source>
-        <translation>Mover fotograma clave</translation>
+        <translation>Mover clave</translation>
     </message>
     <message>
         <source>Change Style   Palette : %1  Style#%2  [R%3 G%4 B%5] -&gt; [R%6 G%7 B%8]</source>
@@ -2160,7 +2515,7 @@ Are you sure?</source>
     </message>
     <message>
         <source>Remove Reference  in Palette : %1</source>
-        <translation>Eliminar referencia en paleta : %1</translation>
+        <translation type="vanished">Eliminar referencia en paleta : %1</translation>
     </message>
     <message>
         <source>It is not possible to assign a shortcut with modifiers to the visualization commands.</source>
@@ -2228,7 +2583,7 @@ La segunda línea debería tener la forma &quot;Mesh [profundidad de bits de ent
     <message>
         <source>Custom Texture</source>
         <comment>TextureStyleChooserPage</comment>
-        <translation>Textura personalizada</translation>
+        <translation type="vanished">Textura personalizada</translation>
     </message>
     <message>
         <source>Current Frame: </source>
@@ -2265,6 +2620,79 @@ La segunda línea debería tener la forma &quot;Mesh [profundidad de bits de ent
         <source>That is a reserved file name and cannot be used.</source>
         <translation>Ése es un nombre de archivo reservado y no es posible su uso.</translation>
     </message>
+    <message>
+        <source>There are no unused styles.</source>
+        <translation>No hay estilos no utilizados.</translation>
+    </message>
+    <message>
+        <source>and %1 more styles.</source>
+        <translation>y %1 estilo(s) más.</translation>
+    </message>
+    <message>
+        <source>Erasing unused styles with following indices. Are you sure?
+
+%1</source>
+        <translation>Borrar estilos no utilizados con los siguientes identificadores. ¿Seguro?
+
+%1</translation>
+    </message>
+    <message>
+        <source>Erase</source>
+        <translation>Borrar</translation>
+    </message>
+    <message>
+        <source>Click &amp; Drag Palette into Studio Palette</source>
+        <translation>Arrastrar la paleta a la Paleta de estudio</translation>
+    </message>
+    <message>
+        <source>Plain color</source>
+        <comment>TextureStyleChooserPage</comment>
+        <translation>Color pleno</translation>
+    </message>
+    <message>
+        <source>Sample Type: </source>
+        <translation>Tipo de muestra: </translation>
+    </message>
+    <message>
+        <source>It is not possible to delete style #</source>
+        <translation>No es posible borrar el estilo №</translation>
+    </message>
+    <message>
+        <source>Paste Style to Palette: %1</source>
+        <translation>Pegar estilo en paleta: %1</translation>
+    </message>
+    <message>
+        <source>Delete Style from Palette: %1</source>
+        <translation>Borrar estilo de paleta: %1</translation>
+    </message>
+    <message>
+        <source>Cut Style from Palette: %1</source>
+        <translation>Cortar estilo de paleta: %1</translation>
+    </message>
+    <message>
+        <source> to Palette: %1</source>
+        <translation> a paleta: %1</translation>
+    </message>
+    <message>
+        <source>Blend Colors in Palette: %1</source>
+        <translation>Mezclar colores en paleta: %1</translation>
+    </message>
+    <message>
+        <source>Toggle Link in Palette: %1</source>
+        <translation>Alternar vínculo en paleta: %1</translation>
+    </message>
+    <message>
+        <source>Remove Reference in Palette: %1</source>
+        <translation>Eliminar referencia en paleta: %1</translation>
+    </message>
+    <message>
+        <source>Set As...</source>
+        <translation>Establecer como...</translation>
+    </message>
+    <message>
+        <source>Delete Lines and Areas</source>
+        <translation>Borrar líneas y áreas</translation>
+    </message>
 </context>
 <context>
     <name>QPushButton</name>
@@ -2289,6 +2717,29 @@ La segunda línea debería tener la forma &quot;Mesh [profundidad de bits de ent
     <message>
         <source>Swap %1 and %2</source>
         <translation>Intercambiar %1 y %2</translation>
+    </message>
+</context>
+<context>
+    <name>SchematicName</name>
+    <message>
+        <source>Cu&amp;t</source>
+        <translation>Cor&amp;tar</translation>
+    </message>
+    <message>
+        <source>&amp;Copy</source>
+        <translation>&amp;Copiar</translation>
+    </message>
+    <message>
+        <source>&amp;Paste</source>
+        <translation>&amp;Pegar</translation>
+    </message>
+    <message>
+        <source>&amp;Delete</source>
+        <translation>&amp;Borrar</translation>
+    </message>
+    <message>
+        <source>Select &amp;All</source>
+        <translation>Seleccionar &amp;Todo</translation>
     </message>
 </context>
 <context>
@@ -2335,7 +2786,7 @@ La segunda línea debería tener la forma &quot;Mesh [profundidad de bits de ent
     </message>
     <message>
         <source>&amp;Swtich output port display mode</source>
-        <translation>&amp;Cambiar visualización de conectores</translation>
+        <translation type="vanished">&amp;Cambiar visualización de conectores</translation>
     </message>
     <message>
         <source>&amp;Toggle node icons</source>
@@ -2353,12 +2804,43 @@ La segunda línea debería tener la forma &quot;Mesh [profundidad de bits de ent
         <source>&amp;Hand Mode</source>
         <translation>Modo de &amp;desplazamiento</translation>
     </message>
+    <message>
+        <source>&amp;Switch output port display mode</source>
+        <translation>&amp;Cambiar visualización de conectores</translation>
+    </message>
 </context>
 <context>
     <name>SchematicWindowEditor</name>
     <message>
         <source>&amp;Close Editor</source>
         <translation>&amp;Cerrar editor</translation>
+    </message>
+</context>
+<context>
+    <name>SeeThroughWindowPopup</name>
+    <message>
+        <source>See Through Mode (Main Window)</source>
+        <translation>Modo semi transparente (ventana principal)</translation>
+    </message>
+    <message>
+        <source>Opacity</source>
+        <translation>Opacidad</translation>
+    </message>
+    <message>
+        <source>Quickly toggle main window semi-transparency and full opacity.</source>
+        <translation>Alterna el modo de la ventana principal entre semi transparente y opaco.</translation>
+    </message>
+    <message>
+        <source>Hold ALT while clicking to use full transparency instead.</source>
+        <translation>Mantener ALT mientras se hace clic para lograr una transparencia completa.</translation>
+    </message>
+    <message>
+        <source>When slider is at 100% it acts as ALT is held.</source>
+        <translation>Cuando el deslizador se encuentre en 100% actuará como cuando la tecla ALT se encuentra presionada</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Cerrar</translation>
     </message>
 </context>
 <context>
@@ -2577,6 +3059,18 @@ Are you sure ?</source>
         <source>Convert</source>
         <translation>Convertir</translation>
     </message>
+    <message>
+        <source>Failed to save palette.</source>
+        <translation>Falla al guardar paleta.</translation>
+    </message>
+    <message>
+        <source>Set As...</source>
+        <translation>Establecer como...</translation>
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation>Refrescar</translation>
+    </message>
 </context>
 <context>
     <name>StudioPaletteViewer</name>
@@ -2663,15 +3157,15 @@ Autom</translation>
     </message>
     <message>
         <source>[CLEANUP]  </source>
-        <translation>[LIMPIEZA]  </translation>
+        <translation type="vanished">[LIMPIEZA]  </translation>
     </message>
     <message>
         <source>[STUDIO]  </source>
-        <translation>[ESTUDIO]  </translation>
+        <translation type="vanished">[ESTUDIO]  </translation>
     </message>
     <message>
         <source>[LEVEL]  </source>
-        <translation>[NIVEL]  </translation>
+        <translation type="vanished">[NIVEL]  </translation>
     </message>
     <message>
         <source>- Style is Not Valid -</source>
@@ -2703,7 +3197,7 @@ Autom</translation>
     </message>
     <message>
         <source>Toggle orientation of the Color Page.</source>
-        <translation>Alterna la orientación de los controles en la solapa Color.</translation>
+        <translation type="vanished">Alterna la orientación de los controles en la solapa Color.</translation>
     </message>
     <message>
         <source>No Style Selected</source>
@@ -2732,6 +3226,50 @@ Autom</translation>
     <message>
         <source>Palette</source>
         <translation>Paleta</translation>
+    </message>
+    <message>
+        <source>Cleanup </source>
+        <translation>Limpieza </translation>
+    </message>
+    <message>
+        <source>Studio </source>
+        <translation>Estudio </translation>
+    </message>
+    <message>
+        <source>Level </source>
+        <translation>Nivel </translation>
+    </message>
+    <message>
+        <source>Hex</source>
+        <translation>Hex</translation>
+    </message>
+    <message>
+        <source>Relative colored + Triangle handle</source>
+        <translation>Color relativo + marcadores triangulares</translation>
+    </message>
+    <message>
+        <source>Absolute colored + Line handle</source>
+        <translation>Color absoluto + marcadores lineales</translation>
+    </message>
+    <message>
+        <source>Slider Appearance</source>
+        <translation>Apariencia deslizadores</translation>
+    </message>
+    <message>
+        <source>Toggle Orientation</source>
+        <translation>Cambiar orientación</translation>
+    </message>
+    <message>
+        <source>Hex Color Names...</source>
+        <translation>Nombres de colores hex...</translation>
+    </message>
+    <message>
+        <source>Search</source>
+        <translation>Búsqueda</translation>
+    </message>
+    <message>
+        <source>Clear Search</source>
+        <translation>Limpiar búsqueda</translation>
     </message>
 </context>
 <context>
@@ -2797,6 +3335,21 @@ Autom</translation>
     <message>
         <source>Reset to default</source>
         <translation>Restablecer a predefinido</translation>
+    </message>
+</context>
+<context>
+    <name>StyleEditorGUI::StyleChooserPage</name>
+    <message>
+        <source>Pin To Top</source>
+        <translation>Fijar al inicio</translation>
+    </message>
+    <message>
+        <source>Set Pins To Top</source>
+        <translation>Fija al inicio de la lista</translation>
+    </message>
+    <message>
+        <source>Clear Pins To Top</source>
+        <translation>Elimina la fijación al inicio de la lista</translation>
     </message>
 </context>
 <context>

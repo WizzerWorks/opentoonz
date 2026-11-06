@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="zh_CN">
+<TS version="2.1" language="zh_CN" sourcelanguage="en_US">
 <context>
     <name>CenterlineVectorizer</name>
     <message>
@@ -179,11 +179,11 @@
     </message>
     <message>
         <source>Adobe Photoshop</source>
-        <translation></translation>
+        <translation>Adobe Photoshop</translation>
     </message>
     <message>
         <source>PNG</source>
-        <translation></translation>
+        <translation>PNG</translation>
     </message>
 </context>
 <context>
@@ -211,8 +211,8 @@
     <message>
         <source>It is not possible to communicate with the codec.
  Probably the codec cannot work correctly.</source>
-        <translation>无法调用编码器。
-可能该编码器不能正常工作。</translation>
+        <translation>无法调用此编码器。
+ 可能是此编码器不能正确运行。</translation>
     </message>
     <message>
         <source>%1-%2</source>
@@ -228,7 +228,7 @@
     </message>
     <message>
         <source>%1 is not a valid color (valid color names are &apos;red&apos;, &apos;transparent&apos;, &apos;#FF8800&apos;, ecc.)</source>
-        <translation>%1 不是有效的颜色(有效的颜色名是类似“red”、“transparent”和“#FF8800”等等)</translation>
+        <translation type="vanished">%1 不是有效的颜色(有效的颜色名是类似“red”、“transparent”和“#FF8800”等等)</translation>
     </message>
     <message>
         <source>Vectorization failed</source>
@@ -451,11 +451,11 @@
         <translation>编辑旋转</translation>
     </message>
     <message>
-        <source>Move E/W</source>
+        <source>Move X</source>
         <translation>左右移动</translation>
     </message>
     <message>
-        <source>Move N/S</source>
+        <source>Move Y</source>
         <translation>上下移动</translation>
     </message>
     <message>
@@ -576,7 +576,7 @@
     </message>
     <message>
         <source>Toggle Autopaint Option  Palette : %1  Style#%2</source>
-        <translation>开关自动填充选项  调色板: %1  样式#%2</translation>
+        <translation>启用/停止自动填充选项  调色板: %1  样式#%2</translation>
     </message>
     <message>
         <source>Can&apos;t undo rename palette</source>
@@ -611,6 +611,63 @@
 </source>
         <translation>保存下面的资源失败:
 </translation>
+    </message>
+    <message>
+        <source>Failed to save palette.</source>
+        <translation>保存调色板失败。</translation>
+    </message>
+    <message>
+        <source>and %1 more item(s).</source>
+        <translation>和 %1 更多项目。</translation>
+    </message>
+    <message>
+        <source>Orange</source>
+        <translation>橙色</translation>
+    </message>
+    <message>
+        <source>Yellow</source>
+        <translation>黄色</translation>
+    </message>
+    <message>
+        <source>Light Green</source>
+        <translation>浅绿色</translation>
+    </message>
+    <message>
+        <source>Light Blue</source>
+        <translation>浅蓝色</translation>
+    </message>
+    <message>
+        <source>Dark Blue</source>
+        <translation>深蓝色</translation>
+    </message>
+    <message>
+        <source>Purple</source>
+        <translation>紫色</translation>
+    </message>
+    <message>
+        <source>Pink</source>
+        <translation>粉色</translation>
+    </message>
+    <message>
+        <source>Dark Pink</source>
+        <translation>深粉色</translation>
+    </message>
+    <message>
+        <source>White</source>
+        <translation>白色</translation>
+    </message>
+    <message>
+        <source>Custom Texture</source>
+        <comment>TextureStyleChooserPage</comment>
+        <translation>定制纹理</translation>
+    </message>
+    <message>
+        <source>Set Current Style from #%1 to %2</source>
+        <translation type="unfinished">将当前样式从 %1 设置为 %2</translation>
+    </message>
+    <message>
+        <source>%1 is not a valid color (valid color names are &apos;red&apos;, &apos;transparent&apos;, &apos;#FF8800&apos;, etc.)</source>
+        <translation type="unfinished">%1 不是一个有效的颜色 (有效颜色为 &apos;red&apos;, &apos;transparent&apos;, &apos;#FF8800&apos;等)</translation>
     </message>
 </context>
 <context>
@@ -729,7 +786,7 @@
     </message>
     <message>
         <source>Unrecognized file type :</source>
-        <translation>无法识别的文件类型: </translation>
+        <translation>无法识别的文件类型:</translation>
     </message>
     <message>
         <source>Can&apos;t save a %1 image to this file type : %2</source>
@@ -767,7 +824,7 @@
     </message>
     <message>
         <source>Bad argument (%1). It should be FilePath or string</source>
-        <translation>不正确的参数(%1): 应当是文件路径或者字符串</translation>
+        <translation>不正确的参数(%1)。应该是文件路径或者字符串</translation>
     </message>
     <message>
         <source>Exception loading level (%1)</source>
@@ -791,11 +848,11 @@
     </message>
     <message>
         <source>Unrecognized file type :</source>
-        <translation>无法识别的文件类型:</translation>
+        <translation type="vanished">无法识别的文件类型:</translation>
     </message>
     <message>
         <source>Can&apos;t save a %1 level to this file type : %2</source>
-        <translation>不能保存层级 %1 为此文件类型：%2</translation>
+        <translation type="vanished">不能保存层级 %1 为此文件类型: %2</translation>
     </message>
     <message>
         <source>Exception writing %1</source>
@@ -815,11 +872,31 @@
     </message>
     <message>
         <source>can not insert a %1 image into a level</source>
-        <translation>无法插入图像 %1 到层级中</translation>
+        <translation type="vanished">无法插入图像 %1 到层级中</translation>
     </message>
     <message>
         <source>can not insert a %1 image to a %2 level</source>
-        <translation>无法插入图像 %1 到层级 %2 中</translation>
+        <translation type="vanished">无法插入图像 %1 到层级 %2 中</translation>
+    </message>
+    <message>
+        <source>Cannot set path on empty level</source>
+        <translation type="unfinished">无法为空层级设置路径</translation>
+    </message>
+    <message>
+        <source>Unrecognized file type: %1</source>
+        <translation type="unfinished">无法识别的文件类型：%1</translation>
+    </message>
+    <message>
+        <source>Can&apos;t save a %1 level to this file type: %2</source>
+        <translation type="unfinished">无法保存层级%1 为%2文件类型</translation>
+    </message>
+    <message>
+        <source>cannot insert a %1 image into a level</source>
+        <translation type="unfinished">无法插入一个%1图像至层级</translation>
+    </message>
+    <message>
+        <source>cannot insert a %1 image to a %2 level</source>
+        <translation type="unfinished">无法插入一个%1图像至%2层级</translation>
     </message>
 </context>
 <context>
@@ -842,7 +919,11 @@
     </message>
     <message>
         <source>Invalid color : </source>
-        <translation>无效的颜色: </translation>
+        <translation type="vanished">无效的颜色: </translation>
+    </message>
+    <message>
+        <source>Invalid color: %1</source>
+        <translation type="unfinished">无效颜色：%1</translation>
     </message>
 </context>
 <context>

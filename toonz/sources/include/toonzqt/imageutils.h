@@ -98,10 +98,13 @@ void DVAPI convert(
     const TPixel &bgColor =
         TPixel::Transparent,  //!< Destination Background color.
     bool removeDotBeforeFrameNumber =
-        false /*-- ConvertPopup
-                 での指定に合わせて、[レベル名].[フレーム番号].[拡張子]のうち、
-                                                                                          [レベル名]と[フレーム番号]の間のドットを消す。 --*/
-);            //!< Converts a saved level to fullcolor, and saves the result.
+        false,                            /*-- ConvertPopup
+                                            での指定に合わせて、[レベル名].[フレーム番号].[拡張子]のうち、
+                                                                                                                     [レベル名]と[フレーム番号]の間のドットを消す。 --*/
+    const TFrameId &tmplFId = TFrameId()  //!< frame format template
+);  //!< Converts a saved level to fullcolor, and saves the result.
+
+bool DVAPI isAAImage(TFilePath path);
 
 void DVAPI convertNaa2Tlv(
     const TFilePath &source,  //!< Level path to convert from.
@@ -170,8 +173,10 @@ public:
   QWidget *widget() const { return m_widget; }
 
 public slots:
-
   bool toggleFullScreen(bool quit = false);
+
+private slots:
+  void opacityChanged(int value, bool &hideMain);
 };
 
 //*********************************************************************************************
@@ -211,6 +216,8 @@ public:
   ShortcutZoomer(
       QWidget *viewerWidget);  //!< Constructs on the specified viewer widget.
 
+  virtual ~ShortcutZoomer() {}
+
   QWidget *getWidget() {
     return m_widget;
   }  //!< Returns the processed viewer widget.
@@ -235,6 +242,9 @@ protected:
   virtual bool setFlipY() {
     return false;
   }  //!< Handler for 'flip viewer horizontally' commands.
+  // Handler for 'rotate viewer left/right' commands.
+  virtual bool rotateLeft() { return false; }
+  virtual bool rotateRight() { return false; }
   virtual bool resetZoom() {
     return false;
   }  //!< Handler for 'reset zoom' commands.

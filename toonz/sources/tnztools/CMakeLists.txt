@@ -9,6 +9,10 @@ set(MOC_HEADERS
     tooloptionscontrols.h
     toonzrasterbrushtool.h
     viewtools.h
+    selectiontool.h
+    edittool.h
+    controlpointeditortool.h
+    geometrictool.h
     ../include/tools/imagegrouping.h
     ../include/tools/screenpicker.h
     ../include/tools/toolhandle.h
@@ -24,12 +28,14 @@ set(HEADERS
     rasterselectiontool.h
     rgbpickertool.h
     rulertool.h
-    selectiontool.h
     setsaveboxtool.h
     shifttracetool.h
     stylepickertool.h
     toonzvectorbrushtool.h
     vectorselectiontool.h
+    assistants/assistantellipse.h
+    assistants/assistantline.h
+    assistants/assistantvanishingpoint.h
     ../include/tools/RGBpicker.h
     ../include/tools/cursormanager.h
     ../include/tools/cursors.h
@@ -40,6 +46,24 @@ set(HEADERS
     ../include/tools/tool.h
     ../include/tools/toolcommandids.h
     ../include/tools/toolutils.h
+    ../include/tools/tooltimer.h
+    ../include/tools/keyhistory.h
+    ../include/tools/inputstate.h
+    ../include/tools/track.h
+    ../include/tools/inputmanager.h
+    ../include/tools/assistant.h
+    ../include/tools/replicator.h
+    ../include/tools/modifiers/modifierassistants.h
+    ../include/tools/modifiers/modifierclone.h
+    ../include/tools/modifiers/modifierjitter.h
+    ../include/tools/modifiers/modifierline.h
+    ../include/tools/modifiers/modifiersegmentation.h
+    ../include/tools/modifiers/modifiersimplify.h
+    ../include/tools/modifiers/modifiersmooth.h
+    ../include/tools/modifiers/modifiertangents.h
+    ../include/tools/modifiers/modifiertest.h
+    ../include/tools/assistants/guidelineline.h
+    ../include/tools/assistants/guidelineellipse.h
 )
 
 set(SOURCES
@@ -102,24 +126,56 @@ set(SOURCES
     mypainttoonzbrush.cpp
     shifttracetool.cpp
     toonzrasterbrushtool.cpp
-	toonzvectorbrushtool.cpp
+    toonzvectorbrushtool.cpp
+    tooltimer.cpp
+    inputstate.cpp
+    track.cpp
+    inputmanager.cpp
+    assistant.cpp
+    replicator.cpp
+    modifiers/modifierassistants.cpp
+    modifiers/modifierclone.cpp
+    modifiers/modifierjitter.cpp
+    modifiers/modifierline.cpp
+    modifiers/modifiersegmentation.cpp
+    modifiers/modifiersimplify.cpp
+    modifiers/modifiersmooth.cpp
+    modifiers/modifiertangents.cpp
+    modifiers/modifiertest.cpp
+    assistants/guidelineline.cpp
+    assistants/guidelineellipse.cpp
+    assistants/assistantellipse.cpp
+    assistants/assistantfisheye.cpp
+    assistants/assistantline.cpp
+    assistants/assistantperspective.cpp
+    assistants/assistantvanishingpoint.cpp
+    assistants/replicatoraffine.cpp
+    assistants/replicatorgrid.cpp
+    assistants/replicatorjitter.cpp
+    assistants/replicatormirror.cpp
+    assistants/replicatorstar.cpp
+    editassistantstool.cpp
 )
 
 set(RESOURCES tnztools.qrc)
 
 qt5_add_resources(SOURCES ${RESOURCES})
 
-add_translation(tnztools ${HEADERS} ${SOURCES})
-
 qt5_wrap_cpp(SOURCES ${MOC_HEADERS})
 
 add_library(tnztools SHARED ${HEADERS} ${SOURCES} ${RESOURCES})
+
+if(WITH_TRANSLATION)
+    add_translation(tnztools ${HEADERS} ${SOURCES})
+    add_compile_translations_command(tnztools tnztools)
+endif()
+
 add_definitions(
     -DTNZTOOLS_EXPORTS
 )
 
 if(BUILD_ENV_APPLE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-install_name,@rpath/libtnztools.dylib")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-install_name,@executable_path/libtnztools.dylib")
     add_dependencies(tnztools tnzcore tnzbase tnzext toonzlib toonzqt)
 endif()
 

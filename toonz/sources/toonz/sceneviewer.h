@@ -13,7 +13,6 @@
 // TnzQt includes
 #include "toonzqt/menubarcommand.h"
 #include "toonzqt/flipconsole.h"
-#include "toonzqt/glwidget_for_highdpi.h"
 
 // TnzTools includes
 #include "tools/tool.h"
@@ -39,6 +38,7 @@ class QTouchEvent;
 class QOpenGLFramebufferObject;
 class LutCalibrator;
 class StopMotion;
+class QElapsedTimer;
 
 namespace ImageUtils {
 class FullScreenWidget;
@@ -62,14 +62,15 @@ public:
 // SceneViewer
 //-----------------------------------------------------------------------------
 
-class SceneViewer final : public GLWidgetForHighDpi,
-                          public TTool::Viewer,
-                          public Previewer::Listener {
+class SceneViewer final : public TToolViewer, public Previewer::Listener {
   Q_OBJECT
 
   double m_pressure;
   QPointF m_lastMousePos;
   QPointF m_pos;
+  TPointD m_toolPos;
+  bool m_toolHasAssistants = false;
+  std::vector<TPointD> m_toolReplicatedPoints;
   Qt::MouseButton m_mouseButton;
   bool m_foregroundDrawing;
   bool m_tabletEvent, m_tabletMove;
@@ -91,6 +92,12 @@ class SceneViewer final : public GLWidgetForHighDpi,
   bool m_rotating                        = false;
   bool m_zooming                         = false;
   bool m_panning                         = false;
+
+  TPointD m_oldPos;
+  bool m_dragging;
+  int m_mouseScrubbing = 0;
+  QAction *m_keyAction = nullptr;
+
   QPointF m_firstPanPoint;
   QPointF m_undoPoint;
   double m_scaleFactor;    // used for zoom gesture
@@ -141,15 +148,17 @@ class SceneViewer final : public GLWidgetForHighDpi,
   TRectD m_clipRect;
 
   bool m_isPicking;
+  bool m_showViewerIndicators = true;
 
   TRaster32P m_3DSideL;
   TRaster32P m_3DSideR;
   TRaster32P m_3DTop;
+#if defined(x64)
   TRasterImageP m_stopMotionImage, m_stopMotionLineUpImage;
   StopMotion *m_stopMotion        = NULL;
   bool m_hasStopMotionImage       = false;
   bool m_hasStopMotionLineUpImage = false;
-
+#endif
   TPointD m_sideRasterPos;
   TPointD m_topRasterPos;
   QString m_toolDisableReason;
@@ -167,7 +176,6 @@ class SceneViewer final : public GLWidgetForHighDpi,
     TOP_3D,
   } m_current3DDevice;
 
-  LocatorPopup *m_locator;
   bool m_isLocator;
   bool m_isStyleShortcutSwitchable;
 
@@ -230,6 +238,8 @@ public:
   //! The view matrix is a matrix contained in \b m_viewAff
   TAffine getSceneMatrix() const;
 
+  TAffine4 get3dViewMatrix() const override;
+
   void setViewMatrix(const TAffine &aff, int viewMode);
 
   int getFPS() { return m_FPS; }
@@ -259,8 +269,8 @@ public:
   bool canSwapCompared() const;
 
   bool isEditPreviewSubcamera() const { return m_editPreviewSubCamera; }
-  bool getIsFlippedX() const { return m_isFlippedX; }
-  bool getIsFlippedY() const { return m_isFlippedY; }
+  bool getIsFlippedX() const override { return m_isFlippedX; }
+  bool getIsFlippedY() const override { return m_isFlippedY; }
   void setEditPreviewSubcamera(bool enabled) {
     m_editPreviewSubCamera = enabled;
   }
@@ -276,15 +286,16 @@ public:
   // the viewer
   // when using the stylepicker and the finger tools
   TRectD getGeometry() const override;
+  TRectD getCameraRect() const override;
 
   void setFocus(Qt::FocusReason reason) { QWidget::setFocus(reason); };
 
   void setIsLocator() { m_isLocator = true; }
   void setIsStyleShortcutSwitchable() { m_isStyleShortcutSwitchable = true; }
-  int getVGuideCount();
-  int getHGuideCount();
-  double getVGuide(int index);
-  double getHGuide(int index);
+  int getVGuideCount() override;
+  int getHGuideCount() override;
+  double getVGuide(int index) override;
+  double getHGuide(int index) override;
 
   void bindFBO() override;
   void releaseFBO() override;
@@ -314,6 +325,7 @@ protected:
   void drawCameraStand();
   void drawPreview();
   void drawOverlay();
+  void drawViewerIndicators();
 
   void drawScene();
   void drawToolGadgets();
@@ -360,10 +372,12 @@ protected:
   // center: window coordinate, pixels, topleft origin
   void zoomQt(const QPoint &center, double scaleFactor);
 
-  // overriden from TTool::Viewer
+  void mouseScrub(const TMouseEvent &e);
+
+  // overridden from TToolViewer
   void pan(const TPointD &delta) override { panQt(QPointF(delta.x, delta.y)); }
 
-  // overriden from TTool::Viewer
+  // overridden from TToolViewer
   void zoom(const TPointD &center, double factor) override;
   void rotate(const TPointD &center, double angle) override;
   void rotate3D(double dPhi, double dTheta) override;
@@ -410,6 +424,8 @@ public slots:
   void setActualPixelSize();
   void flipX();
   void flipY();
+  void rotateLeft();
+  void rotateRight();
   void zoomIn();
   void zoomOut();
   void onXsheetChanged();
@@ -431,6 +447,7 @@ public slots:
 
   void onButtonPressed(FlipConsole::EGadget button);
   void fitToCamera();
+  void fitToCameraOutline();
   void swapCompared();
   void regeneratePreviewFrame();
   void regeneratePreview();
@@ -443,8 +460,11 @@ public slots:
   void releaseBusyOnTabletMove() { m_isBusyOnTabletMove = false; }
 
   void onContextAboutToBeDestroyed();
+#if defined(x64)
   void onNewStopMotionImageReady();
   void onStopMotionLiveViewStopped();
+#endif
+  void onPreferenceChanged(const QString &prefName);
 
 signals:
 
@@ -458,6 +478,8 @@ signals:
   void refreshNavi();
   // for updating the titlebar
   void previewToggled();
+  // to notify FilmStripFrames and safely disconnect with this
+  void aboutToBeDestroyed();
 };
 
 // Functions

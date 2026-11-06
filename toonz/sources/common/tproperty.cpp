@@ -3,7 +3,7 @@
 #include "tproperty.h"
 #include "tstream.h"
 #include "texception.h"
-//#include "tconvert.h"
+// #include "tconvert.h"
 
 void TProperty::addListener(Listener *listener) {
   if (std::find(m_listeners.begin(), m_listeners.end(), listener) ==
@@ -51,20 +51,20 @@ TPropertyGroup *TPropertyGroup::clone() const {
 }
 
 void TPropertyGroup::add(TProperty *p) {
-  std::string name = p->getName();
+  const TStringId &name = p->getNameId();
   assert(m_table.find(name) == m_table.end());
   m_properties.push_back(std::make_pair(p, true));
   m_table[name] = p;
 }
 
 void TPropertyGroup::bind(TProperty &p) {
-  std::string name = p.getName();
+  const TStringId &name = p.getNameId();
   assert(m_table.find(name) == m_table.end());
   m_properties.push_back(std::make_pair(&p, false));
   m_table[name] = &p;
 }
 
-TProperty *TPropertyGroup::getProperty(std::string name) {
+TProperty *TPropertyGroup::getProperty(const TStringId &name) {
   PropertyTable::iterator i = m_table.find(name);
   if (i == m_table.end())
     return 0;
@@ -230,8 +230,7 @@ void TPropertyGroup::loadData(TIStream &is) {
         double min = std::stod(is.getTagAttribute("min"));
         double max = std::stod(is.getTagAttribute("max"));
         add(new TDoubleProperty(name, min, max, std::stod(svalue)));
-      }
-      if (type == "pair") {
+      } else if (type == "pair") {
         double min = std::stod(is.getTagAttribute("min"));
         double max = std::stod(is.getTagAttribute("max"));
         TDoublePairProperty::Value v(0, 0);
@@ -302,7 +301,7 @@ void TEnumProperty::assignUIName(TProperty *refP) {
   if (!enumRefP) return;
   Items refItems = enumRefP->getItems();
   for (int i = 0; i < m_range.size(); i++) {
-    int refIndex                         = enumRefP->indexOf(m_range[i]);
+    int refIndex = enumRefP->indexOf(m_range[i]);
     if (0 <= refIndex) m_items[i].UIName = refItems[refIndex].UIName;
   }
 }

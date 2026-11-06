@@ -32,7 +32,7 @@ public:
 
   void redo() const override { toggleAutopaint(); }
 
-  void onAdd() { redo(); }
+  void onAdd() override { redo(); }
 
   int getSize() const override { return sizeof(*this); }
 
@@ -52,7 +52,7 @@ public:
 //-----------------------------------------------------------------------------
 
 TPaletteHandle::TPaletteHandle()
-    : m_palette(0), m_styleIndex(-1), m_styleParamIndex(-1) {
+    : m_palette(nullptr), m_styleIndex(-1), m_styleParamIndex(-1) {
   connectBroadcasts(this);
 }
 
@@ -149,6 +149,8 @@ void TPaletteHandle::setPalette(TPalette *palette, int styleIndex) {
     m_styleParamIndex = 0;
 
     emit paletteSwitched();
+    // to let ToonzCheck to update the current index
+    emit broadcastColorStyleSwitched();
   }
 }
 

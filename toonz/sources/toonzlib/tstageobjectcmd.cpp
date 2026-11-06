@@ -406,7 +406,7 @@ public:
     TXsheet *xsh      = xshHandle->getXsheet();
     TStageObject *obj = xsh->getStageObject(id);
     assert(obj);
-    m_params                    = obj->getParams();
+    m_params = obj->getParams();
     if (id.isColumn()) m_column = xsh->getColumn(id.getIndex());
   }
 
@@ -432,6 +432,7 @@ public:
       linkedObj->setParent(m_objId);
     }
     m_xshHandle->notifyXsheetChanged();
+    xsh->notifyStageObjectAdded(m_objId);
   }
 
   void redo() const override {
@@ -518,6 +519,7 @@ public:
       terminalFxs->removeFx(m_notTerminalColumns[i]);
 
     m_xshHandle->notifyXsheetChanged();
+    xsh->notifyFxAdded(m_deletedFx);
   }
 
   void redo() const override {
@@ -825,11 +827,11 @@ void removeStageObjectNode(const TStageObjectId &id, TXsheetHandle *xshHandle,
 
 //===================================================================
 //
-// removeColums
+// removeColumns
 //
 //-------------------------------------------------------------------
 
-void removeColums(const QVector<int> &columnIndexes, TXsheetHandle *xshHandle,
+void removeColumns(const QVector<int> &columnIndexes, TXsheetHandle *xshHandle,
                   TObjectHandle *objHandle, TFxHandle *fxHandle,
                   bool doUndo = true) {
   TXsheet *xsh = xshHandle->getXsheet();
@@ -1192,9 +1194,8 @@ public:
     m_xshHandle->notifyXsheetChanged();
   }
   int getSize() const override {
-    return sizeof(*this) +
-           sizeof(TDoubleKeyframe) *
-               (m_xKeyframes.size() + m_yKeyframes.size());
+    return sizeof(*this) + sizeof(TDoubleKeyframe) *
+                               (m_xKeyframes.size() + m_yKeyframes.size());
   }
 };
 
@@ -1455,7 +1456,7 @@ void TStageObjectCmd::addNewSpline(TXsheetHandle *xshHandle,
 
   TStageObjectId objId = objHandle->getObjectId();
   if (objId == TStageObjectId::NoneId) {
-    int col             = colHandle->getColumnIndex();
+    int col = colHandle->getColumnIndex();
     if (col >= 0) objId = TStageObjectId::ColumnId(col);
   }
   if (objId != TStageObjectId::NoneId) {
@@ -1501,7 +1502,7 @@ void TStageObjectCmd::deleteSelection(
   }
 
   // remove all selected objects
-  removeColums(columnIndexes, xshHandle, objHandle, fxHandle, doUndo);
+  removeColumns(columnIndexes, xshHandle, objHandle, fxHandle, doUndo);
   int i;
   for (i = pegbarIndexes.size() - 1; i >= 0; i--)
     removeStageObjectNode(TStageObjectId::PegbarId(pegbarIndexes[i]), xshHandle,
@@ -1600,7 +1601,7 @@ void TStageObjectCmd::renameGroup(const QList<TStageObject *> objs,
   int i;
   for (i = 0; i < objs.size(); i++) {
     if (i == 0) oldName = objs[i]->getGroupName(fromEditor);
-    int position        = objs[i]->removeGroupName(fromEditor);
+    int position = objs[i]->removeGroupName(fromEditor);
     objs[i]->setGroupName(name, position);
     positions.push_back(position);
   }

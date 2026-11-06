@@ -10,6 +10,7 @@
 #define MI_Paste "MI_Paste"
 #define MI_PasteAbove "MI_PasteAbove"
 #define MI_PasteInto "MI_PasteInto"
+#define MI_PasteDuplicate "MI_PasteDuplicate"
 #define MI_PasteValues "MI_PasteValues"
 #define MI_PasteColors "MI_PasteColors"
 #define MI_PasteNames "MI_PasteNames"
@@ -32,6 +33,7 @@
 #define MI_EnterGroup "MI_EnterGroup"
 #define MI_ExitGroup "MI_ExitGroup"
 #define MI_RemoveEndpoints "MI_RemoveEndpoints"
+#define MI_SortWithPaletteOrder "MI_SortWithPaletteOrder"
 
 #define MI_OpenChild "MI_OpenChild"
 #define MI_CloseChild "MI_CloseChild"
@@ -39,5 +41,6 @@
 #define MI_ExplodeChild "MI_ExplodeChild"
 #define MI_ToggleEditInPlace "MI_ToggleEditInPlace"
 #define MI_PasteNumbers "MI_PasteNumbers"
+#define MI_PasteCellContent "MI_PasteCellContent"
 
 #endif

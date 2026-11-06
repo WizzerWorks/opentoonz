@@ -58,6 +58,10 @@
 
 #include "previewer.h"
 
+// C++ includes
+#include <memory>
+#include <utility>
+
 //------------------------------------------------
 
 /*! \class Previewer
@@ -76,13 +80,13 @@ The most important method of the class is \b getRaster(), which attempts
 retrieval of a certain
 frame and, if the frame was not calculated yet, makes the Previewer build it.
 \n
-The update() slot is provided to refresh the cached informations about the
+The update() slot is provided to refresh the cached information about the
 entire collection
 of currently stored frames. Updated frames are recalculated only upon a new
 getRaster(), in case the previously
-stored informations no more match the current frame description.
+stored information no more match the current frame description.
 \n
-The clear() methods make the Previewer erase all stored informations about one
+The clear() methods make the Previewer erase all stored information about one
 or all frames,
 so that the following getRaster() will forcibly recalculate the requested frame.
 */
@@ -97,8 +101,8 @@ so that the following getRaster() will forcibly recalculate the requested frame.
 
 namespace {
 bool suspendedRendering        = false;
-Previewer *previewerInstance   = 0;
-Previewer *previewerInstanceSC = 0;
+Previewer *previewerInstance   = nullptr;
+Previewer *previewerInstanceSC = nullptr;
 
 QTimer levelChangedTimer, fxChangedTimer, xsheetChangedTimer,
     objectChangedTimer;
@@ -112,7 +116,13 @@ void buildNodeTreeDescription(std::string &desc, const TFxP &root);
 
 // Qt's contains actually returns QRegion::intersected... I wonder why...
 inline bool contains(const QRegion &region, const TRect &rect) {
-  return QRegion(toQRect(rect)).subtracted(region).isEmpty();
+  const QRect qrect = toQRect(rect);
+
+  // Fast path: check if region's bounding rect contains the rect
+  if (!region.boundingRect().contains(qrect)) return false;
+
+  // Only do expensive operation if needed
+  return QRegion(qrect).subtracted(region).isEmpty();
 }
 }  // namespace
 
@@ -179,22 +189,21 @@ public:
   // on their own. The refreshFrame() method must be manually invoked if
   // necessary.
   void updateRenderSettings();
-
   void updateAliases();
   void updateAliasKeyword(const std::string &keyword);
-
   // There are dependencies among the following updaters. Invoke them in the
   // specified order.
   void updateFrameRange();
   void updateProgressBarStatus();
-
   void updateCamera();
   void updatePreviewRect();  // This is automatically invoked by refreshFrame()
 
   // Use this method to re-render the passed frame. Infos specified with the
-  // update* methods
-  // are assumed correct.
+  // update* methods are assumed correct.
   void refreshFrame(int frame);
+
+  void addRenderData(std::vector<TRenderer::RenderData> &datas, int frame);
+  void addFramesToRenderQueue(const std::vector<int> &frames);
 
   // TRenderPort methods
   void onRenderRasterStarted(const RenderData &renderData) override;
@@ -212,7 +221,10 @@ public:
 
 public:
   void saveFrame();
-  bool doSaveRenderedFrames(const TFilePath fp);
+  bool doSaveRenderedFrames(const TFilePath &fp);
+
+private:
+  Q_DISABLE_COPY_MOVE(Imp);
 };
 
 //======================================================================================
@@ -259,10 +271,9 @@ Previewer::Imp::Imp(Previewer *owner)
 Previewer::Imp::~Imp() {
   m_renderer.removePort(this);
 
-  // for(std::map<int, FrameInfo*>::iterator it=m_frames.begin();
-  // it!=m_frames.end(); ++it)
-  //  delete it->second; //crash on exit! not a serious leak, Previewer is a
-  //  singleton
+  // for(auto &frame : m_frames)
+  //   delete frame.second; //crash on exit! not a serious leak, Previewer is a
+  //   singleton
 }
 
 //-----------------------------------------------------------------------------
@@ -331,10 +342,8 @@ void Previewer::Imp::updateCamera() {
     m_cameraPos  = cameraPos;
 
     // All previously rendered frames must be erased
-    std::map<int, FrameInfo>::iterator it;
-    for (it = m_frames.begin(); it != m_frames.end(); ++it)
-      TImageCache::instance()->remove(m_cachePrefix +
-                                      std::to_string(it->first));
+    for (auto &[frame, info] : m_frames)
+      TImageCache::instance()->remove(m_cachePrefix + std::to_string(frame));
 
     m_frames.clear();
   }
@@ -352,14 +361,12 @@ void Previewer::Imp::updateRenderSettings() {
   else
     renderSettings.m_shrinkY = renderSettings.m_shrinkX = 1;
 
-  // In case the settings changee, erase all previously cached images
+  // In case the settings changed, erase all previously cached images
   if (renderSettings != m_renderSettings) {
     m_renderSettings = renderSettings;
 
-    std::map<int, FrameInfo>::iterator it;
-    for (it = m_frames.begin(); it != m_frames.end(); ++it)
-      TImageCache::instance()->remove(m_cachePrefix +
-                                      std::to_string(it->first));
+    for (auto &[frame, info] : m_frames)
+      TImageCache::instance()->remove(m_cachePrefix + std::to_string(frame));
 
     m_frames.clear();
   }
@@ -372,34 +379,29 @@ void Previewer::Imp::updateFrameRange() {
   int newFrameCount =
       TApp::instance()->getCurrentScene()->getScene()->getFrameCount();
 
-  std::map<int, FrameInfo>::iterator it,
-      jt = m_frames.lower_bound(newFrameCount);
-  for (it = jt; it != m_frames.end(); ++it)
-    // Release all associated cached images
-    TImageCache::instance()->remove(m_cachePrefix + std::to_string(it->first));
+  auto it = m_frames.lower_bound(newFrameCount);
+  for (auto jt = it; jt != m_frames.end(); ++jt)
+    TImageCache::instance()->remove(m_cachePrefix + std::to_string(jt->first));
 
-  m_frames.erase(jt, m_frames.end());
+  m_frames.erase(it, m_frames.end());
 
   // Resize the progress bar status
-  int i, oldSize = m_pbStatus.size();
+  int oldSize = int(m_pbStatus.size());
   m_pbStatus.resize(newFrameCount);
-  for (i = oldSize; i < newFrameCount; ++i)
+  for (int i = oldSize; i < newFrameCount; ++i)
     m_pbStatus[i] = FlipSlider::PBFrameNotStarted;
 }
 
 //-----------------------------------------------------------------------------
 
 void Previewer::Imp::updateProgressBarStatus() {
-  unsigned int i, pbSize = m_pbStatus.size();
-  std::map<int, FrameInfo>::iterator it;
-  for (i = 0; i < pbSize; ++i) {
-    it = m_frames.find(i);
-    m_pbStatus[i] =
-        (it == m_frames.end())
-            ? FlipSlider::PBFrameNotStarted
-            : ::contains(it->second.m_renderedRegion, m_previewRect)
-                  ? FlipSlider::PBFrameFinished
-                  : it->second.m_rectUnderRender.contains(m_previewRect)
+  int pbSize = int(m_pbStatus.size());
+  for (int i = 0; i < pbSize; ++i) {
+    auto it       = m_frames.find(i);
+    m_pbStatus[i] = (it == m_frames.end()) ? FlipSlider::PBFrameNotStarted
+                    : ::contains(it->second.m_renderedRegion, m_previewRect)
+                        ? FlipSlider::PBFrameFinished
+                    : it->second.m_rectUnderRender.contains(m_previewRect)
                         ? FlipSlider::PBFrameStarted
                         : FlipSlider::PBFrameNotStarted;
   }
@@ -411,46 +413,56 @@ void Previewer::Imp::updatePreviewRect() {
   TRectD previewRectD;
 
   /*--
-   * SubCameraPreviewではない場合、Viewerの表示エリアに関係なく全画面で計算を行う
+   * If it is not a SubCameraPreview, calculations are performed
+   * in full screen regardless of the Viewer display area.
    * --*/
-  if (!m_subcamera)
+  if (!m_subcamera) {
     previewRectD = m_renderArea;
-  else {
-    // Retrieve the view rects from each listener. Their union will form the
-    // rect to be rendered.
-    std::set<Previewer::Listener *>::iterator it;
-    for (it = m_listeners.begin(); it != m_listeners.end(); ++it) {
-      // Retrieve the listener's viewRect and add it to the preview rect
-      previewRectD += (*it)->getPreviewRect();
+  } else {
+    // Use range‑based for loop for clarity
+    for (auto *listener : m_listeners) {
+      previewRectD += listener->getPreviewRect();
     }
   }
 
+  // Intersection with render area
   previewRectD *= m_renderArea;
 
-  int shrinkX = m_renderSettings.m_shrinkX;
-  int shrinkY = m_renderSettings.m_shrinkY;
+  // Cache local variables to avoid multiple pointer accesses
+  const int shrinkX    = m_renderSettings.m_shrinkX;
+  const int shrinkY    = m_renderSettings.m_shrinkY;
+  const TPointD camPos = m_cameraPos;
 
-  // Ensure that rect has the same pixel geometry as the preview camera
-  previewRectD -= m_cameraPos;
-  previewRectD.x0 = previewRectD.x0 / shrinkX;
-  previewRectD.y0 = previewRectD.y0 / shrinkY;
-  previewRectD.x1 = previewRectD.x1 / shrinkX;
-  previewRectD.y1 = previewRectD.y1 / shrinkY;
+  // Compute offset once
+  previewRectD -= camPos;
 
-  // Now, pass to m_cameraRes-relative coordinates
-  TPointD shrinkedRelPos((m_renderArea.x0 - m_cameraPos.x) / shrinkX,
-                         (m_renderArea.y0 - m_cameraPos.y) / shrinkY);
+  // Scale transformation (Shrink)
+  if (shrinkX > 1) {
+    previewRectD.x0 /= shrinkX;
+    previewRectD.x1 /= shrinkX;
+  }
+  if (shrinkY > 1) {
+    previewRectD.y0 /= shrinkY;
+    previewRectD.y1 /= shrinkY;
+  }
+
+  // Coordinates relative to camera resolution
+  TPointD shrinkedRelPos((m_renderArea.x0 - camPos.x) / shrinkX,
+                         (m_renderArea.y0 - camPos.y) / shrinkY);
+
   previewRectD -= shrinkedRelPos;
 
-  previewRectD.x0 = tfloor(previewRectD.x0);
-  previewRectD.y0 = tfloor(previewRectD.y0);
-  previewRectD.x1 = tceil(previewRectD.x1);
-  previewRectD.y1 = tceil(previewRectD.y1);
+  // Direct rounding to int to avoid extra function calls
+  int x0 = tfloor(previewRectD.x0);
+  int y0 = tfloor(previewRectD.y0);
+  int x1 = tceil(previewRectD.x1);
+  int y1 = tceil(previewRectD.y1);
 
-  m_previewRect = TRect(previewRectD.x0, previewRectD.y0, previewRectD.x1 - 1,
-                        previewRectD.y1 - 1);
+  // m_previewRect is the final pixel rectangle
+  m_previewRect = TRect(x0, y0, x1 - 1, y1 - 1);
 
-  previewRectD += m_cameraPos + shrinkedRelPos;
+  // Restore global coordinates for the renderer
+  previewRectD = TRectD(x0, y0, x1, y1) + (camPos + shrinkedRelPos);
 
   setRenderArea(previewRectD);
 }
@@ -458,20 +470,19 @@ void Previewer::Imp::updatePreviewRect() {
 //-----------------------------------------------------------------------------
 
 void Previewer::Imp::updateAliases() {
-  std::map<int, FrameInfo>::iterator it;
-  for (it = m_frames.begin(); it != m_frames.end(); ++it) {
-    TFxPair fxPair = buildSceneFx(it->first);
+  for (auto &[frame, info] : m_frames) {
+    TFxPair fxPair = buildSceneFx(frame);
 
     std::string newAlias =
-        fxPair.m_frameA ? fxPair.m_frameA->getAlias(it->first, m_renderSettings)
+        fxPair.m_frameA ? fxPair.m_frameA->getAlias(frame, m_renderSettings)
                         : "";
-    newAlias = newAlias + (fxPair.m_frameB ? fxPair.m_frameB->getAlias(
-                                                 it->first, m_renderSettings)
-                                           : "");
+    newAlias +=
+        (fxPair.m_frameB ? fxPair.m_frameB->getAlias(frame, m_renderSettings)
+                         : "");
 
-    if (newAlias != it->second.m_alias) {
+    if (newAlias != info.m_alias) {
       // Clear the remaining frame infos
-      it->second.m_renderedRegion = QRegion();
+      info.m_renderedRegion = QRegion();
     }
   }
 }
@@ -479,24 +490,22 @@ void Previewer::Imp::updateAliases() {
 //-----------------------------------------------------------------------------
 
 void Previewer::Imp::updateAliasKeyword(const std::string &keyword) {
-  std::map<int, FrameInfo>::iterator it;
-  for (it = m_frames.begin(); it != m_frames.end(); ++it) {
-    if (it->second.m_alias.find(keyword) != std::string::npos) {
-      TFxPair fxPair     = buildSceneFx(it->first);
-      it->second.m_alias = fxPair.m_frameA ? fxPair.m_frameA->getAlias(
-                                                 it->first, m_renderSettings)
-                                           : "";
-      it->second.m_alias = it->second.m_alias +
-                           (fxPair.m_frameB ? fxPair.m_frameB->getAlias(
-                                                  it->first, m_renderSettings)
-                                            : "");
+  for (auto &[frame, info] : m_frames) {
+    if (info.m_alias.find(keyword) != std::string::npos) {
+      TFxPair fxPair = buildSceneFx(frame);
+      info.m_alias   = fxPair.m_frameA
+                           ? fxPair.m_frameA->getAlias(frame, m_renderSettings)
+                           : "";
+      info.m_alias +=
+          (fxPair.m_frameB ? fxPair.m_frameB->getAlias(frame, m_renderSettings)
+                           : "");
 
       // Clear the remaining frame infos
-      it->second.m_renderedRegion = QRegion();
+      info.m_renderedRegion = QRegion();
 
-      // No need to release the cached image... eventually, clear it
+      // Release the cached image; eventually clear it
       TRasterImageP ri = TImageCache::instance()->get(
-          m_cachePrefix + std::to_string(it->first), true);
+          m_cachePrefix + std::to_string(frame), true);
       if (ri) ri->getRaster()->clear();
     }
   }
@@ -514,7 +523,7 @@ void Previewer::Imp::refreshFrame(int frame) {
   if (m_previewRect.getLx() <= 0 || m_previewRect.getLy() <= 0) return;
 
   // Retrieve the FrameInfo for passed frame
-  std::map<int, FrameInfo>::iterator it = m_frames.find(frame);
+  auto it = m_frames.find(frame);
   if (it != m_frames.end()) {
     // In case the rect we would render is contained in the frame's rendered
     // region, quit
@@ -527,12 +536,11 @@ void Previewer::Imp::refreshFrame(int frame) {
     // Stop any frame's previously running render process
     m_renderer.abortRendering(it->second.m_renderId);
   } else {
-    it = m_frames.insert(std::make_pair(frame, FrameInfo())).first;
+    it = m_frames.insert({frame, FrameInfo()}).first;
 
     // In case the frame is not in the frame range, we add a temporary
-    // supplement
-    // to the progress bar.
-    if (frame >= (int)m_pbStatus.size()) m_pbStatus.resize(frame + 1);
+    // supplement to the progress bar.
+    if (frame >= int(m_pbStatus.size())) m_pbStatus.resize(frame + 1);
   }
 
   // Build the TFxPair to be passed to TRenderer
@@ -542,8 +550,7 @@ void Previewer::Imp::refreshFrame(int frame) {
   it->second.m_rectUnderRender = m_previewRect;
   it->second.m_alias = fxPair.m_frameA->getAlias(frame, m_renderSettings);
   if (fxPair.m_frameB)
-    it->second.m_alias =
-        it->second.m_alias + fxPair.m_frameB->getAlias(frame, m_renderSettings);
+    it->second.m_alias += fxPair.m_frameB->getAlias(frame, m_renderSettings);
 
   // Retrieve the renderId of the rendering instance
   it->second.m_renderId = m_renderer.nextRenderId();
@@ -561,7 +568,7 @@ void Previewer::Imp::refreshFrame(int frame) {
 
 void Previewer::Imp::remove(int frame) {
   // Search the frame among rendered ones
-  std::map<int, FrameInfo>::iterator it = m_frames.find(frame);
+  auto it = m_frames.find(frame);
   if (it != m_frames.end()) {
     m_renderer.abortRendering(it->second.m_renderId);
     m_frames.erase(frame);
@@ -577,9 +584,8 @@ void Previewer::Imp::remove() {
   m_renderer.stopRendering(false);
 
   // Remove all cached images
-  std::map<int, FrameInfo>::iterator it;
-  for (it = m_frames.begin(); it != m_frames.end(); ++it)
-    TImageCache::instance()->remove(m_cachePrefix + std::to_string(it->first));
+  for (const auto &[frame, info] : m_frames)
+    TImageCache::instance()->remove(m_cachePrefix + std::to_string(frame));
 
   m_frames.clear();
 }
@@ -587,38 +593,30 @@ void Previewer::Imp::remove() {
 //-----------------------------------------------------------------------------
 
 inline void Previewer::Imp::notifyStarted(int frame) {
-  std::set<Previewer::Listener *>::iterator it;
-  for (it = m_listeners.begin(); it != m_listeners.end(); ++it)
-    (*it)->onRenderStarted(frame);
+  for (auto *listener : m_listeners) listener->onRenderStarted(frame);
 }
 
 //-----------------------------------------------------------------------------
 
 inline void Previewer::Imp::notifyCompleted(int frame) {
-  std::set<Previewer::Listener *>::iterator it;
-  for (it = m_listeners.begin(); it != m_listeners.end(); ++it)
-    (*it)->onRenderCompleted(frame);
+  for (auto *listener : m_listeners) listener->onRenderCompleted(frame);
 }
 
 //-----------------------------------------------------------------------------
 
 inline void Previewer::Imp::notifyFailed(int frame) {
-  std::set<Previewer::Listener *>::iterator it;
-  for (it = m_listeners.begin(); it != m_listeners.end(); ++it)
-    (*it)->onRenderFailed(frame);
+  for (auto *listener : m_listeners) listener->onRenderFailed(frame);
 }
 
 //-----------------------------------------------------------------------------
 
 inline void Previewer::Imp::notifyUpdate() {
-  std::set<Previewer::Listener *>::iterator it;
-  for (it = m_listeners.begin(); it != m_listeners.end(); ++it)
-    (*it)->onPreviewUpdate();
+  for (auto *listener : m_listeners) listener->onPreviewUpdate();
 }
 
 //-----------------------------------------------------------------------------
 
-//! Adds the renderized image to TImageCache; listeneres are advised too.
+//! Adds the renderized image to TImageCache; listeners are advised too.
 void Previewer::Imp::onRenderRasterStarted(const RenderData &renderData) {
   // Emit the started signal to execute code in the main thread
   m_owner->emitStartedFrame(renderData);
@@ -632,7 +630,8 @@ void Previewer::Imp::doOnRenderRasterStarted(const RenderData &renderData) {
   m_computingFrameCount++;
 
   // Update the progress bar status
-  if (frame < m_pbStatus.size()) m_pbStatus[frame] = FlipSlider::PBFrameStarted;
+  if (frame < int(m_pbStatus.size()))
+    m_pbStatus[frame] = FlipSlider::PBFrameStarted;
 
   // Notify listeners
   notifyStarted(frame);
@@ -640,7 +639,7 @@ void Previewer::Imp::doOnRenderRasterStarted(const RenderData &renderData) {
 
 //-----------------------------------------------------------------------------
 
-//! Adds the renderized image to TImageCache; listeneres are advised too.
+//! Adds the renderized image to TImageCache; listeners are advised too.
 void Previewer::Imp::onRenderRasterCompleted(const RenderData &renderData) {
   if (renderData.m_rasB) {
     RenderData _renderData = renderData;
@@ -675,10 +674,15 @@ void Previewer::Imp::doOnRenderRasterCompleted(const RenderData &renderData) {
 
   TRasterP ras(renderData.m_rasA);
 
+  // Linear Color Space -> sRGB
+  if (ras->isLinear()) {
+    TRop::tosRGB(ras, m_renderSettings.m_colorSpaceGamma);
+  }
+
   m_computingFrameCount--;
 
   // Find the render infos in the Previewer
-  std::map<int, FrameInfo>::iterator it = m_frames.find(frame);
+  auto it = m_frames.find(frame);
   if (it == m_frames.end()) return;
 
   // Ensure that the render process id is the same
@@ -706,21 +710,31 @@ void Previewer::Imp::doOnRenderRasterCompleted(const RenderData &renderData) {
       it->second
           .m_rectUnderRender);  // Extract may MODIFY IT! E.g. with shrinks..!
   cachedRas = cachedRas->extract(rectUnderRender);
+
   if (cachedRas) {
     cachedRas->copy(ras);
-    TImageCache::instance()->add(str, ri);
   }
 
-  // Update the FrameInfo
-  it->second.m_renderedRegion += toQRect(it->second.m_rectUnderRender);
-  it->second.m_rectUnderRender = TRect();
+  // Submit the image to the cache, for all cluster's frames
+  for (int f : renderData.m_frames) {
+    auto f_it = m_frames.find(f);
+    if (f_it == m_frames.end()) continue;
 
-  // Update the progress bar status
-  if (frame < m_pbStatus.size())
-    m_pbStatus[frame] = FlipSlider::PBFrameFinished;
+    if (cachedRas) {
+      std::string f_str = m_cachePrefix + std::to_string(f);
+      TImageCache::instance()->add(f_str, ri);
+    }
 
-  // Notify listeners
-  notifyCompleted(frame);
+    // Update the FrameInfo
+    f_it->second.m_renderedRegion += toQRect(f_it->second.m_rectUnderRender);
+    f_it->second.m_rectUnderRender = TRect();
+
+    // Update the progress bar status
+    if (f < int(m_pbStatus.size())) m_pbStatus[f] = FlipSlider::PBFrameFinished;
+
+    // Notify listeners
+    notifyCompleted(f);
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -734,13 +748,13 @@ void Previewer::Imp::onRenderFailure(const RenderData &renderData,
 
 //-----------------------------------------------------------------------------
 
-//! Adds the renderized image to TImageCache; listeneres are advised too.
+//! Adds the renderized image to TImageCache; listeners are advised too.
 void Previewer::Imp::doOnRenderRasterFailed(const RenderData &renderData) {
   m_computingFrameCount--;
 
-  int frame = (int)renderData.m_frames[0];
+  int frame = renderData.m_frames[0];
 
-  std::map<int, FrameInfo>::iterator it = m_frames.find(frame);
+  auto it = m_frames.find(frame);
   if (it == m_frames.end()) return;
 
   if (renderData.m_renderId != it->second.m_renderId) return;
@@ -749,7 +763,7 @@ void Previewer::Imp::doOnRenderRasterFailed(const RenderData &renderData) {
   it->second.m_rectUnderRender = TRect();
 
   // Update the progress bar status
-  if (frame < m_pbStatus.size())
+  if (frame < int(m_pbStatus.size()))
     m_pbStatus[frame] = FlipSlider::PBFrameNotStarted;
 
   notifyCompleted(frame);  // Completed!?
@@ -760,7 +774,7 @@ void Previewer::Imp::doOnRenderRasterFailed(const RenderData &renderData) {
 namespace {
 enum { eBegin, eIncrement, eEnd };
 
-static DVGui::ProgressDialog *Pd = 0;
+static DVGui::ProgressDialog *Pd = nullptr;
 
 //-----------------------------------------------------------------------------
 
@@ -769,8 +783,10 @@ public:
   int m_choice;
   int m_val;
   QString m_str;
-  ProgressBarMessager(int choice, int val, const QString &str = "")
+
+  ProgressBarMessager(int choice, int val, const QString &str = {})
       : m_choice(choice), m_val(val), m_str(str) {}
+
   void onDeliver() override {
     switch (m_choice) {
     case eBegin:
@@ -785,16 +801,15 @@ public:
     case eIncrement:
       if (Pd->wasCanceled()) {
         delete Pd;
-        Pd = 0;
+        Pd = nullptr;
       } else {
-        // if (m_val==Pd->maximum()) Pd->hide();
         Pd->setValue(m_val);
       }
       break;
     case eEnd: {
       DVGui::info(m_str);
       delete Pd;
-      Pd = 0;
+      Pd = nullptr;
     } break;
     default:
       assert(false);
@@ -802,8 +817,11 @@ public:
   }
 
   TThread::Message *clone() const override {
-    return new ProgressBarMessager(*this);
+    return new ProgressBarMessager(m_choice, m_val, m_str);
   }
+
+private:
+  Q_DISABLE_COPY_MOVE(ProgressBarMessager);
 };
 
 }  // namespace
@@ -811,7 +829,7 @@ public:
 //-----------------------------------------------------------------------------
 
 class SavePreviewedPopup final : public FileBrowserPopup {
-  Previewer *m_p;
+  Previewer *m_p = nullptr;
 
 public:
   SavePreviewedPopup()
@@ -823,9 +841,11 @@ public:
 
   bool execute() override {
     if (m_selectedPaths.empty()) return false;
-
     return m_p->doSaveRenderedFrames(*m_selectedPaths.begin());
   }
+
+private:
+  Q_DISABLE_COPY_MOVE(SavePreviewedPopup);
 };
 
 //=============================================================================
@@ -838,7 +858,7 @@ bool Previewer::doSaveRenderedFrames(TFilePath fp) {
 
 using namespace DVGui;
 
-bool Previewer::Imp::doSaveRenderedFrames(TFilePath fp) {
+bool Previewer::Imp::doSaveRenderedFrames(const TFilePath &fp) {
   ToonzScene *scene = TApp::instance()->getCurrentScene()->getScene();
   TOutputProperties *outputSettings =
       scene->getProperties()->getOutputProperties();
@@ -848,11 +868,12 @@ bool Previewer::Imp::doSaveRenderedFrames(TFilePath fp) {
   Tiio::Writer::getSupportedFormats(formats, true);
 
   std::string ext = fp.getType();
-  if (ext == "") {
+  if (ext.empty()) {
     ext = outputSettings->getPath().getType();
-    fp  = fp.withType(ext);
+    // fp = fp.withType(ext);  // not used? we'll reassign fp below
   }
-  if (fp.getName() == "") {
+  TFilePath localFp = fp;
+  if (localFp.getName().empty()) {
     DVGui::warning(QObject::tr(
         "The file name cannot be empty or contain any of the following "
         "characters:(new line)  \\ / : * ? \"  |"));
@@ -860,49 +881,48 @@ bool Previewer::Imp::doSaveRenderedFrames(TFilePath fp) {
   }
 
   if (!formats.contains(QString::fromStdString(ext))) {
-    DVGui::warning(QObject::tr("Unsopporter raster format, cannot save"));
+    DVGui::warning(QObject::tr("Unsupported raster format, cannot save"));
     return false;
   }
 
-  if (fp.getWideName() == L"") fp = fp.withName(scene->getSceneName());
-  if (TFileType::getInfo(fp) == TFileType::RASTER_IMAGE || ext == "pct" ||
-      fp.getType() == "pic" || ext == "pict")  // pct e' un formato"livello" (ha
-                                               // i settings di quicktime) ma
-                                               // fatto di diversi frames
-    fp = fp.withFrame(TFrameId::EMPTY_FRAME);
+  if (localFp.getWideName().empty())
+    localFp = localFp.withName(scene->getSceneName());
+  if (TFileType::getInfo(localFp) == TFileType::RASTER_IMAGE || ext == "pct" ||
+      localFp.getType() == "pic" || ext == "pict")
+    localFp = localFp.withFrame(TFrameId::EMPTY_FRAME);
 
-  fp          = scene->decodeFilePath(fp);
-  bool exists = TFileStatus(fp.getParentDir()).doesExist();
+  TFilePath decodedFp = scene->decodeFilePath(localFp);
+  bool exists         = TFileStatus(decodedFp.getParentDir()).doesExist();
   if (!exists) {
     try {
-      TFilePath parent = fp.getParentDir();
+      TFilePath parent = decodedFp.getParentDir();
       TSystem::mkDir(parent);
       DvDirModel::instance()->refreshFolder(parent.getParentDir());
     } catch (TException &e) {
       error(QObject::tr("Cannot create %1 : %2",
                         "Previewer warning %1:path %2:message")
-                .arg(toQString(fp.getParentDir()))
+                .arg(toQString(decodedFp.getParentDir()))
                 .arg(QString(::to_string(e.getMessage()).c_str())));
       return false;
     } catch (...) {
       error(QObject::tr("Cannot create %1", "Previewer warning %1:path")
-                .arg(toQString(fp.getParentDir())));
+                .arg(toQString(decodedFp.getParentDir())));
       return false;
     }
   }
 
-  if (TSystem::doesExistFileOrLevel(fp)) {
-    QString question(
+  if (TSystem::doesExistFileOrLevel(decodedFp)) {
+    QString question =
         QObject::tr("File %1 already exists.\nDo you want to overwrite it?")
-            .arg(toQString(fp)));
+            .arg(toQString(decodedFp));
     int ret = DVGui::MsgBox(question, QObject::tr("Overwrite"),
                             QObject::tr("Cancel"), 0);
     if (ret == 2) return false;
   }
 
   try {
-    m_lw = TLevelWriterP(fp,
-                         outputSettings->getFileFormatProperties(fp.getType()));
+    m_lw =
+        TLevelWriterP(decodedFp, outputSettings->getFileFormatProperties(ext));
   } catch (TImageException &e) {
     error(QString::fromStdString(::to_string(e.getMessage())));
     return false;
@@ -917,7 +937,7 @@ bool Previewer::Imp::doSaveRenderedFrames(TFilePath fp) {
       TApp::instance()->getCurrentXsheet()->getXsheet()->getFrameCount())
       .sendBlocking();
 
-  QTimer::singleShot(50, m_owner, SLOT(saveFrame()));
+  QTimer::singleShot(50, m_owner, &Previewer::saveFrame);
   return true;
 }
 
@@ -931,16 +951,16 @@ void Previewer::Imp::saveFrame() {
 
   assert(Pd);
 
-  for (; m_currentFrameToSave <= frameCount; m_currentFrameToSave++) {
+  for (; m_currentFrameToSave <= frameCount; ++m_currentFrameToSave) {
     ProgressBarMessager(eIncrement, m_currentFrameToSave).sendBlocking();
     if (!Pd) break;
 
     // Ensure that current frame actually have to be saved
-    int currFrameToSave                   = m_currentFrameToSave - 1;
-    std::map<int, FrameInfo>::iterator it = m_frames.find(currFrameToSave);
+    int currFrameToSave = m_currentFrameToSave - 1;
+    auto it             = m_frames.find(currFrameToSave);
     if (it == m_frames.end()) continue;
 
-    if (m_pbStatus.size() < currFrameToSave ||
+    if (m_pbStatus.size() <= currFrameToSave ||
         m_pbStatus[currFrameToSave] != FlipSlider::PBFrameFinished)
       continue;
 
@@ -950,13 +970,12 @@ void Previewer::Imp::saveFrame() {
 
     // Save the frame
     TImageWriterP writer = m_lw->getFrameWriter(TFrameId(m_currentFrameToSave));
-    bool failureOnSaving = false;
     if (!writer) continue;
 
     writer->save(img);
-    savedFrames++;
-    m_currentFrameToSave++;
-    QTimer::singleShot(50, m_owner, SLOT(saveFrame()));
+    ++savedFrames;
+    ++m_currentFrameToSave;
+    QTimer::singleShot(50, m_owner, &Previewer::saveFrame);
     return;
   }
 
@@ -964,9 +983,9 @@ void Previewer::Imp::saveFrame() {
   QString str =
       QObject::tr("Saved %1 frames out of %2 in %3",
                   "Previewer %1:savedframes %2:framecount %3:filepath")
-          .arg(QString(std::to_string(savedFrames).c_str()))
-          .arg(QString(std::to_string(frameCount).c_str()))
-          .arg(QString(::to_string(m_lw->getFilePath()).c_str()));
+          .arg(QString::number(savedFrames))
+          .arg(QString::number(frameCount))
+          .arg(toQString(m_lw->getFilePath()));
 
   if (!Pd) str = QObject::tr("Canceled! ", "Previewer") + str;
 
@@ -977,27 +996,87 @@ void Previewer::Imp::saveFrame() {
   savedFrames          = 0;
 }
 
+//-----------------------------------------------------------------------------
+
+void Previewer::Imp::addRenderData(std::vector<TRenderer::RenderData> &datas,
+                                   int frame) {
+  // Build the TFxPair to be passed to TRenderer
+  TFxPair fxPair = buildSceneFx(frame);
+
+  // Update the RenderInfos associated with frame
+  m_frames[frame].m_rectUnderRender = m_previewRect;
+  m_frames[frame].m_alias = fxPair.m_frameA->getAlias(frame, m_renderSettings);
+  if (fxPair.m_frameB)
+    m_frames[frame].m_alias +=
+        fxPair.m_frameB->getAlias(frame, m_renderSettings);
+
+  // Retrieve the renderId of the rendering instance
+  m_frames[frame].m_renderId = m_renderer.nextRenderId();
+  std::string contextName("P");
+  contextName += m_subcamera ? "SC" : "FU";
+  contextName += std::to_string(frame);
+  TPassiveCacheManager::instance()->setContextName(m_frames[frame].m_renderId,
+                                                   contextName);
+
+  datas.emplace_back(frame, m_renderSettings, fxPair);
+}
+
+//-----------------------------------------------------------------------------
+
+void Previewer::Imp::addFramesToRenderQueue(const std::vector<int> &frames) {
+  if (suspendedRendering) return;
+  // Build the region to render
+  updatePreviewRect();
+  if (m_previewRect.getLx() <= 0 || m_previewRect.getLy() <= 0) return;
+
+  // Use unique_ptr for automatic cleanup in case of early return
+  auto renderDatas = std::make_unique<std::vector<TRenderer::RenderData>>();
+
+  for (int f : frames) {
+    auto it = m_frames.find(f);
+    if (it == m_frames.end()) {
+      it = m_frames.insert({f, FrameInfo()}).first;
+      // In case the frame is not in the frame range, we add a temporary
+      // supplement to the progress bar.
+      if (f >= int(m_pbStatus.size())) m_pbStatus.resize(f + 1);
+      addRenderData(*renderDatas, f);
+    } else if (f < int(m_pbStatus.size()) &&
+               m_pbStatus[f] == FlipSlider::PBFrameNotStarted) {
+      // In case the rect we would render is contained in the frame's rendered
+      // region, skip this frame
+      if (::contains(it->second.m_renderedRegion, m_previewRect)) continue;
+      // Then, check the m_previewRect against the frame's m_rectUnderRendering.
+      // Ensure that we're not re-launching the very same render.
+      if (it->second.m_rectUnderRender == m_previewRect) continue;
+      // Stop any frame's previously running render process
+      m_renderer.abortRendering(it->second.m_renderId);
+      addRenderData(*renderDatas, f);
+    }
+  }
+
+  // Only start rendering if we have data to render
+  if (!renderDatas->empty()) {
+    // release() transfers ownership to m_renderer
+    m_renderer.startRendering(renderDatas.release());
+  }
+  // else: unique_ptr automatically deletes renderDatas on scope exit
+}
+
 //=============================================================================
 // Previewer
 //-----------------------------------------------------------------------------
 
-Previewer::Previewer(bool subcamera) : m_imp(new Imp(this)) {
+Previewer::Previewer(bool subcamera) : m_imp(std::make_unique<Imp>(this)) {
   m_imp->m_subcamera   = subcamera;
   m_imp->m_cachePrefix = CACHEID + std::string(subcamera ? "SC" : "");
 
   TApp *app = TApp::instance();
 
-  bool ret = true;
-
-  // ret = ret && connect(app->getPaletteController()->getCurrentPalette(),
-  // SIGNAL(colorStyleChangedOnMouseRelease()),SLOT(onLevelChanged()));
-  // ret = ret && connect(app->getPaletteController()->getCurrentPalette(),
-  // SIGNAL(paletteChanged()),   SLOT(onLevelChanged()));
-  ret = ret && connect(app->getPaletteController()->getCurrentLevelPalette(),
-                       SIGNAL(colorStyleChangedOnMouseRelease()),
-                       SLOT(onLevelChanged()));
-  ret = ret && connect(app->getPaletteController()->getCurrentLevelPalette(),
-                       SIGNAL(paletteChanged()), SLOT(onLevelChanged()));
+  connect(app->getPaletteController()->getCurrentLevelPalette(),
+          &TPaletteHandle::colorStyleChangedOnMouseRelease, this,
+          &Previewer::onLevelChanged);
+  connect(app->getPaletteController()->getCurrentLevelPalette(),
+          &TPaletteHandle::paletteChanged, this, &Previewer::onLevelChanged);
 
   levelChangedTimer.setInterval(notificationDelay);
   fxChangedTimer.setInterval(notificationDelay);
@@ -1008,34 +1087,28 @@ Previewer::Previewer(bool subcamera) : m_imp(new Imp(this)) {
   xsheetChangedTimer.setSingleShot(true);
   objectChangedTimer.setSingleShot(true);
 
-  ret = ret && connect(app->getCurrentLevel(), SIGNAL(xshLevelChanged()),
-                       &levelChangedTimer, SLOT(start()));
-  ret = ret && connect(app->getCurrentFx(), SIGNAL(fxChanged()),
-                       &fxChangedTimer, SLOT(start()));
-  ret = ret && connect(app->getCurrentXsheet(), SIGNAL(xsheetChanged()),
-                       &xsheetChangedTimer, SLOT(start()));
-  ret = ret && connect(app->getCurrentObject(), SIGNAL(objectChanged(bool)),
-                       &objectChangedTimer, SLOT(start()));
+  connect(app->getCurrentLevel(), &TXshLevelHandle::xshLevelChanged, this,
+          [this]() { levelChangedTimer.start(); });
+  connect(app->getCurrentFx(), &TFxHandle::fxChanged, this,
+          [this]() { fxChangedTimer.start(); });
+  connect(app->getCurrentXsheet(), &TXsheetHandle::xsheetChanged, this,
+          [this]() { xsheetChangedTimer.start(); });
+  connect(app->getCurrentObject(), &TObjectHandle::objectChanged, this,
+          [this](bool) { objectChangedTimer.start(); });
 
-  ret = ret && connect(&levelChangedTimer, SIGNAL(timeout()), this,
-                       SLOT(onLevelChanged()));
-  ret = ret &&
-        connect(&fxChangedTimer, SIGNAL(timeout()), this, SLOT(onFxChanged()));
-  ret = ret && connect(&xsheetChangedTimer, SIGNAL(timeout()), this,
-                       SLOT(onXsheetChanged()));
-  ret = ret && connect(&objectChangedTimer, SIGNAL(timeout()), this,
-                       SLOT(onObjectChanged()));
+  connect(&levelChangedTimer, &QTimer::timeout, this,
+          &Previewer::onLevelChanged);
+  connect(&fxChangedTimer, &QTimer::timeout, this, &Previewer::onFxChanged);
+  connect(&xsheetChangedTimer, &QTimer::timeout, this,
+          &Previewer::onXsheetChanged);
+  connect(&objectChangedTimer, &QTimer::timeout, this,
+          &Previewer::onObjectChanged);
 
   qRegisterMetaType<TRenderPort::RenderData>("TRenderPort::RenderData");
 
-  ret = ret && connect(this, SIGNAL(startedFrame(TRenderPort::RenderData)),
-                       this, SLOT(onStartedFrame(TRenderPort::RenderData)));
-
-  ret = ret && connect(this, SIGNAL(renderedFrame(TRenderPort::RenderData)),
-                       this, SLOT(onRenderedFrame(TRenderPort::RenderData)));
-
-  ret = ret && connect(this, SIGNAL(failedFrame(TRenderPort::RenderData)), this,
-                       SLOT(onFailedFrame(TRenderPort::RenderData)));
+  connect(this, &Previewer::startedFrame, this, &Previewer::onStartedFrame);
+  connect(this, &Previewer::renderedFrame, this, &Previewer::onRenderedFrame);
+  connect(this, &Previewer::failedFrame, this, &Previewer::onFailedFrame);
 
   // As a result of performing the connections above in the Previewer
   // constructor, no instance()
@@ -1046,17 +1119,15 @@ Previewer::Previewer(bool subcamera) : m_imp(new Imp(this)) {
     previewerInstanceSC = this;
   else
     previewerInstance = this;
-
-  assert(ret);
 }
 
 //-----------------------------------------------------------------------------
 
-Previewer::~Previewer() {}
+Previewer::~Previewer() = default;  // unique_ptr handles deletion
 
 //-----------------------------------------------------------------------------
 
-//! Ritorna l'istanza del \b Previewer
+//! Returns the \b Previewer instance
 Previewer *Previewer::instance(bool subcameraPreview) {
   static Previewer _instance(false);
   static Previewer _instanceSC(true);
@@ -1074,16 +1145,16 @@ std::vector<UCHAR> &Previewer::getProgressBarStatus() const {
 
 void Previewer::addListener(Listener *listener) {
   m_imp->m_listeners.insert(listener);
-  connect(&listener->m_refreshTimer, SIGNAL(timeout()), this,
-          SLOT(updateView()));
+  connect(&listener->m_refreshTimer, &QTimer::timeout, this,
+          &Previewer::updateView);
 }
 
 //-----------------------------------------------------------------------------
 
 void Previewer::removeListener(Listener *listener) {
   m_imp->m_listeners.erase(listener);
-  disconnect(&listener->m_refreshTimer, SIGNAL(timeout()), this,
-             SLOT(updateView()));
+  disconnect(&listener->m_refreshTimer, &QTimer::timeout, this,
+             &Previewer::updateView);
 
   if (m_imp->m_listeners.empty()) {
     m_imp->m_renderer.stopRendering(false);
@@ -1111,7 +1182,7 @@ void Previewer::saveRenderedFrames() {
     return;
   }
 
-  static SavePreviewedPopup *savePopup = 0;
+  static SavePreviewedPopup *savePopup = nullptr;
   if (!savePopup) savePopup = new SavePreviewedPopup;
 
   savePopup->setPreview(this);
@@ -1126,7 +1197,7 @@ void Previewer::saveRenderedFrames() {
   TFilePath name = outpath.withoutParentDir();
 
   savePopup->setFilename(
-      name.getName() == ""
+      name.getName().empty()
           ? name.withName(
                 TApp::instance()->getCurrentScene()->getScene()->getSceneName())
           : name);
@@ -1138,13 +1209,13 @@ void Previewer::saveRenderedFrames() {
 
 //-----------------------------------------------------------------------------
 
-/*! Restituisce un puntatore al raster randerizzato se il frame e' disponibile,
-    altrimenti comincia a calcolarlo*/
+/*! Returns a pointer to the rendered raster if the frame is available,
+    otherwise start calculating it */
 TRasterP Previewer::getRaster(int frame, bool renderIfNeeded) const {
   if (frame < 0) return TRasterP();
-  std::map<int, Imp::FrameInfo>::iterator it = m_imp->m_frames.find(frame);
+  auto it = m_imp->m_frames.find(frame);
   if (it != m_imp->m_frames.end()) {
-    if (frame < m_imp->m_pbStatus.size()) {
+    if (frame < int(m_imp->m_pbStatus.size())) {
       if (m_imp->m_pbStatus[frame] == FlipSlider::PBFrameFinished ||
           !renderIfNeeded) {
         std::string str = m_imp->m_cachePrefix + std::to_string(frame);
@@ -1152,7 +1223,7 @@ TRasterP Previewer::getRaster(int frame, bool renderIfNeeded) const {
             (TRasterImageP)TImageCache::instance()->get(str, false);
         if (rimg) {
           TRasterP ras = rimg->getRaster();
-          assert((TRaster32P)ras || (TRaster64P)ras);
+          assert((TRaster32P)ras || (TRaster64P)ras || (TRasterFP)ras);
           return ras;
         } else
           // Weird case - the frame was declared rendered, but no raster is
@@ -1171,7 +1242,7 @@ TRasterP Previewer::getRaster(int frame, bool renderIfNeeded) const {
         (TRasterImageP)TImageCache::instance()->get(str, false);
     if (rimg) {
       TRasterP ras = rimg->getRaster();
-      assert((TRaster32P)ras || (TRaster64P)ras);
+      assert((TRaster32P)ras || (TRaster64P)ras || (TRasterFP)ras);
       return ras;
     } else
       return TRasterP();
@@ -1184,11 +1255,28 @@ TRasterP Previewer::getRaster(int frame, bool renderIfNeeded) const {
 
 //-----------------------------------------------------------------------------
 
-//! Verifica se \b frame e' nella cache, cioe' se il frame e' disponibile
-bool Previewer::isFrameReady(int frame) const {
-  if (frame < 0 || frame >= (int)m_imp->m_pbStatus.size()) return false;
+void Previewer::addFramesToRenderQueue(const std::vector<int> &frames) const {
+  if (suspendedRendering) return;
+  m_imp->addFramesToRenderQueue(frames);
+}
 
+//-----------------------------------------------------------------------------
+
+//! Checks if \b frame is in cache, i.e., if the frame is available
+bool Previewer::isFrameReady(int frame) const {
+  if (frame < 0 || frame >= int(m_imp->m_pbStatus.size())) return false;
   return m_imp->m_pbStatus[frame] == FlipSlider::PBFrameFinished;
+}
+
+//-----------------------------------------------------------------------------
+
+void Previewer::clearAllUnfinishedFrames() {
+  for (int f = 0; f < int(m_imp->m_pbStatus.size()); ++f) {
+    if (m_imp->m_pbStatus[f] == FlipSlider::PBFrameStarted) {
+      m_imp->remove(f);
+    }
+  }
+  m_imp->updateProgressBarStatus();
 }
 
 //-----------------------------------------------------------------------------
@@ -1203,8 +1291,7 @@ bool Previewer::isBusy() const {
 
 //-----------------------------------------------------------------------------
 
-//! Richiama IMP::invalidateFrames(string aliasKeyframe) per aggiornare il frame
-//! \b fid.
+//! Calls IMP::invalidateFrames(string aliasKeyframe) to update frame \b fid.
 void Previewer::onImageChange(TXshLevel *xl, const TFrameId &fid) {
   TFilePath fp             = xl->getPath().withFrame(fid);
   std::string levelKeyword = ::to_string(fp);
@@ -1393,7 +1480,7 @@ void Previewer::onFailedFrame(TRenderPort::RenderData renderData) {
 //! no
 //! longer active.
 //! NOTE: This method is currently static declared, since the Previewer must be
-//! be instanced only after a consistent scene has been initialized. This method
+//! instanced only after a consistent scene has been initialized. This method
 //! is allowed to bypass such limitation.
 void Previewer::suspendRendering(bool suspend) {
   suspendedRendering = suspend;

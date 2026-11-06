@@ -30,5 +30,11 @@
 #define T_Hand "T_Hand"
 #define T_Ruler "T_Ruler"
 #define T_Finger "T_Finger"
+#define T_EditAssistants "T_EditAssistants"
+
+// Viewer Navigation tools (available only during the shortcut key is pressed)
+#define T_ZoomView "T_ZoomView"
+#define T_RotateView "T_RotateView"
+#define T_HandView "T_HandView"
 
 #endif  // TOOL_COMMAND_IDS_H

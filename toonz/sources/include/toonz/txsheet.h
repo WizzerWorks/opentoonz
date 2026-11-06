@@ -1,9 +1,9 @@
 #pragma once
-
 #ifndef XSHEET_INCLUDED
 #define XSHEET_INCLUDED
 
 #include <memory>
+#include <set>
 
 // TnzCore includes
 #include "traster.h"
@@ -13,11 +13,9 @@
 // TnzLib includes
 #include "toonz/txshcolumn.h"
 #include "toonz/txshlevel.h"
+#include "toonz/txsheetcolumnchange.h"
 
 #include "cellposition.h"
-
-// STD includes
-#include <set>
 
 #undef DVAPI
 #undef DVVAR
@@ -50,6 +48,10 @@ class TXshSoundColumn;
 class TXshNoteSet;
 class TFrameId;
 class Orientation;
+class TXsheetColumnChangeObserver;
+class ExpressionReferenceMonitor;
+class NavigationTags;
+class TSoundOutputDevice;
 
 //=============================================================================
 
@@ -57,7 +59,7 @@ class Orientation;
 //    TXsheet  declaration
 //****************************************************************************************
 
-//! This is the base class for an xsheet. An Xsheet is composed of colums of
+//! This is the base class for an xsheet. An Xsheet is composed of columns of
 //! frames.
 /*!
 Inherits \b TSmartObject and \b TPersist.
@@ -73,7 +75,7 @@ ToonzScene.
 
                 For purposes of this class, a Column is a graphics layer, and a
 row is a frame number.
-                (Whether horizontal or vertial is a matter of displaying).
+                (Whether horizontal or vertical is a matter of displaying).
 
                 A \b column \b set contains all xsheet columns. A collection of
 functions, concerning column
@@ -145,19 +147,19 @@ public:
   };
 
 private:
-  TSoundOutputDevice *m_player;
+  std::unique_ptr<TSoundOutputDevice>
+      m_player;  //!< Smart pointer – automatic cleanup
 
-  /*!	\struct TXsheet::TXsheetImp
-  The TXsheetImp struct provides all objects necessary to define the \b TXsheet
-  class.
-*/
   struct TXsheetImp;
   std::unique_ptr<TXsheetImp> m_imp;
-  TXshNoteSet *m_notes;
-  SoundProperties *m_soundProperties;
+  std::unique_ptr<TXshNoteSet> m_notes;
+  std::unique_ptr<SoundProperties> m_soundProperties;
+  std::unique_ptr<NavigationTags> m_navigationTags;
 
   int m_cameraColumnIndex;
-  TXshColumn *m_cameraColumn;
+  TXshColumnP m_cameraColumn;  //!< Smart pointer – ref‑counted
+
+  TXsheetColumnChangeObserver *m_observer;
 
   DECLARE_CLASS_CODE
 
@@ -188,7 +190,6 @@ public:
           \sa setCell(), getCells(), setCells()
   */
   const TXshCell &getCell(int row, int col) const;
-
   const TXshCell &getCell(const CellPosition &pos) const;
 
   bool setCell(int row, int col, const TXshCell &cell);
@@ -236,15 +237,15 @@ public:
   */
   void removeCells(int row, int col, int rowCount = 1);
 
-  /*! If column identified by index \b \e col is not empty, is a \b TXshCellColumn and is not
-    locked, clear \b \e rowCount cells starting from \b \e row and it recalls TXshCellColumn::clearCells().
-    Clears cells and it shifts remaining cells. Xsheet's frame count is updated.
-    \sa removeCells(), insertCells()
-*/ void
-  clearCells(int row, int col, int rowCount = 1);
+  /*! If column identified by index \b \e col is not empty, is a \b
+    TXshCellColumn and is not locked, clear \b \e rowCount cells starting from
+    \b \e row and it recalls TXshCellColumn::clearCells(). Clears cells and it
+    shifts remaining cells. Xsheet's frame count is updated. \sa removeCells(),
+    insertCells()
+*/ void clearCells(int row, int col, int rowCount = 1);
   /*! Clears xsheet. It sets to default values all xsheet elements contained in
    * struct \b TXsheetImp.
-  */
+   */
   void clearAll();
   /*! Returns cell range of column identified by index \b \e col and set \b \e
      r0 and \b \e r1 respectively to first and last not empty cell, it then
@@ -422,8 +423,8 @@ frame duplication.
 
   // force cells order in n-steps. returns the row amount after process
   // if withBlank is greater than -1, remove empty cell from its order and
-  // insert blank frames with type*withBlank length at each n-step.
-  int reframeCells(int r0, int r1, int col, int type, int withBlank = -1);
+  // insert blank frames with step*withBlank length at each n-step.
+  int reframeCells(int r0, int r1, int col, int step, int withBlank = -1);
 
   /*! Exposes level \b \e xl in xsheet starting from cell identified by \b \e
      row and \b \e col.
@@ -431,14 +432,15 @@ frame duplication.
   */
   int exposeLevel(int row, int col, TXshLevel *xl, bool overwrite = false);
 
-  // cutomized exposseLevel used from LoadLevel command
+  // customized exposeLevel used from LoadLevel command
   int exposeLevel(int row, int col, TXshLevel *xl, std::vector<TFrameId> &fIds_,
-                  int xFrom = -1, int xTo = -1, int step = -1, int inc = -1,
+                  const TFrameId &xFrom = TFrameId(),
+                  const TFrameId &xTo = TFrameId(), int step = -1, int inc = -1,
                   int frameCount = -1, bool doesFileActuallyExist = true);
 
   /*! Exposes level \b \e xl \b \e fids in xsheet starting from cell identified
    * by \b \e row and \b \e col.
-  */
+   */
   void exposeLevel(int row, int col, TXshLevel *xl, std::vector<TFrameId> fids,
                    bool overwrite);
   /*! Updates xsheet frame count, find max frame count between all
@@ -457,7 +459,7 @@ frame duplication.
   */
   void saveData(TOStream &os) override;
   /*! Inserts an empty column in \b \e index calling \b insertColumn().
-  */
+   */
   void insertColumn(int index,
                     TXshColumn::ColumnType type = TXshColumn::eLevelType);
   /*! Insert \b \e column in column \b \e index. Insert column in the column
@@ -487,7 +489,7 @@ in TXsheetImp.
 
   /*! Returns a pointer to the \b TXshColumn identified in xsheet by index \b \e
    * index.
-  */
+   */
   TXshColumn *getColumn(int index) const;
   /*! Returns xsheet column count, i.e the number of xsheet column used, it
      calls
@@ -496,7 +498,7 @@ in TXsheetImp.
   */
   int getColumnCount() const;
   /*! Returns first not empty column index in xsheet.
-  */
+   */
   int getFirstFreeColumnIndex() const;
 
   TSoundTrack *makeSound(SoundProperties *properties);
@@ -511,7 +513,7 @@ in TXsheetImp.
 #endif
   void scrub(int frame, bool isPreview = false);
   void stopScrub();
-  void play(TSoundTrackP soundtrack, int s0, int s1, bool loop);
+  void play(const TSoundTrackP &soundtrack, int s0, int s1, bool loop);
 
   /*! Returns a pointer to object \b FxDag contained in \b TXsheetImp, this
      object
@@ -536,7 +538,7 @@ in TXsheetImp.
   */
   void setScene(ToonzScene *scene);
 
-  TXshNoteSet *getNotes() const { return m_notes; }
+  TXshNoteSet *getNotes() const { return m_notes.get(); }
 
   //! Returns true if the \b cellCandidate creates a circular reference.
   //! A circular reference is obtained when \b cellCandidate is a subXsheet cell
@@ -566,15 +568,27 @@ in TXsheetImp.
   void setCameraColumnLocked(bool locked) { m_cameraColumn->lock(locked); }
   bool isCameraColumnLocked() { return m_cameraColumn->isLocked(); }
 
+  ExpressionReferenceMonitor *getExpRefMonitor() const;
+  void setObserver(TXsheetColumnChangeObserver *observer);
+
+  void notify(const TXsheetColumnChange &change);
+  void notifyFxAdded(const std::vector<TFx *> &fxs);
+  void notifyStageObjectAdded(const TStageObjectId &id);
+  bool isReferenceManagementIgnored(TDoubleParam *);
+
+  NavigationTags *getNavigationTags() const { return m_navigationTags.get(); }
+  bool isFrameTagged(int frame) const;
+  void toggleTaggedFrame(int frame);
+
 protected:
   bool checkCircularReferences(TXsheet *childCandidate);
 
 private:
-  // Not copiable
-  TXsheet(const TXsheet &);
-  TXsheet &operator=(const TXsheet &);
+  // Not copyable
+  TXsheet(const TXsheet &)            = delete;
+  TXsheet &operator=(const TXsheet &) = delete;
 
-  /*! Return column in index if exists, overwise create a new column;
+  /*! Return column in index if exists, otherwise create a new column;
 if column exist and is empty check \b isSoundColumn and return right type.
 */
   TXshColumn *touchColumn(int index,

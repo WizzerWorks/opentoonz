@@ -46,6 +46,8 @@ public:
     this->m_size->setValueRange(0.0, 1000.0);
     this->m_persistance->setValueRange(0.1 * ino::param_range(),
                                        2.0 * ino::param_range());
+
+    enableComputeInFloat(true);
   }
   bool doGetBBox(double frame, TRectD &bBox,
                  const TRenderSettings &info) override {
@@ -67,20 +69,20 @@ void fx_(TRasterP in_ras, const double zz, const int octaves,
          const double persistance, const bool alpha_rendering_sw,
          const double a11, const double a12, const double a13, const double a21,
          const double a22, const double a23) {
-  igs::perlin_noise::change(
-      in_ras->getRawData()  // BGRA
-      ,
-      in_ras->getLy(), in_ras->getLx()  // =in_ras->getWrap()???
-      ,
-      ino::channels(), ino::bits(in_ras), alpha_rendering_sw, a11, a12, a13,
-      a21, a22, a23, zz, 0, octaves, persistance);
+  igs::perlin_noise::change(in_ras->getRawData()  // BGRA
+                            ,
+                            in_ras->getLy(), in_ras->getLx(), in_ras->getWrap(),
+                            ino::channels(), ino::bits(in_ras),
+                            alpha_rendering_sw, a11, a12, a13, a21, a22, a23,
+                            zz, 0, octaves, persistance);
 }
-}
+}  // namespace
 //------------------------------------------------------------
 void ino_pn_clouds::doCompute(TTile &tile, double frame,
                               const TRenderSettings &rend_sets) {
   /* ------ サポートしていないPixelタイプはエラーを投げる --- */
-  if (!((TRaster32P)tile.getRaster()) && !((TRaster64P)tile.getRaster())) {
+  if (!((TRaster32P)tile.getRaster()) && !((TRaster64P)tile.getRaster()) &&
+      !((TRasterFP)tile.getRaster())) {
     throw TRopException("unsupported input pixel type");
   }
 

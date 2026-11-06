@@ -50,6 +50,7 @@
 #include "toutputproperties.h"
 #include "toonz/preferences.h"
 #include "toonz/columnfan.h"
+#include "toonz/navigationtags.h"
 
 // TnzBase includes
 #include "tfx.h"
@@ -128,6 +129,12 @@ public:
     int col          = pos.layer();
     m_firstCol       = col;
     m_firstRow       = row;
+    // First, check switching of the selection types. This may clear the
+    // previous selection.
+    if (m_modifier & Qt::ControlModifier)
+      getViewer()->getCellKeyframeSelection()->makeCurrent();
+    else
+      getViewer()->getCellSelection()->makeCurrent();
     if (m_modifier & Qt::ShiftModifier) {
       int r0, c0, r1, c1;
       getViewer()->getCellSelection()->getSelectedCells(r0, c0, r1, c1);
@@ -170,10 +177,6 @@ public:
       else
         getViewer()->getCellSelection()->selectCell(row, col);
     }
-    if (m_modifier & Qt::ControlModifier)
-      getViewer()->getCellKeyframeSelection()->makeCurrent();
-    else
-      getViewer()->getCellSelection()->makeCurrent();
     refreshCellsArea();
     refreshRowsArea();
   }
@@ -331,15 +334,19 @@ class LevelExtenderUndo final : public TUndo {
   bool m_insert;
   bool m_invert;  // upper-directional
 
+  bool m_refreshSound;
+
 public:
-  LevelExtenderUndo(bool insert = true, bool invert = false)
+  LevelExtenderUndo(bool insert = true, bool invert = false,
+                    bool refreshSound = false)
       : m_colCount(0)
       , m_rowCount(0)
       , m_col(0)
       , m_row(0)
       , m_deltaRow(0)
       , m_insert(insert)
-      , m_invert(invert) {}
+      , m_invert(invert)
+      , m_refreshSound(refreshSound) {}
 
   void setCells(TXsheet *xsh, int row, int col, int rowCount, int colCount) {
     assert(rowCount > 0 && colCount > 0);
@@ -365,9 +372,7 @@ public:
     int count    = abs(m_deltaRow);
     int r        = m_row + m_rowCount - count;
     for (int c = m_col; c < m_col + m_colCount; c++) {
-      // Se e' una colonna sound l'extender non deve fare nulla.
       TXshColumn *column = xsh->getColumn(c);
-      if (column && column->getSoundColumn()) continue;
       xsh->removeCells(r, c, count);
     }
   }
@@ -379,15 +384,17 @@ public:
     int r0       = m_row + m_rowCount - count;
     int r1       = m_row + m_rowCount - 1;
     for (int c = 0; c < m_colCount; c++) {
-      // Se e' una colonna sound l'extender non deve fare nulla.
       TXshColumn *column = xsh->getColumn(c);
-      if (column && column->getSoundColumn()) continue;
-      int col = m_col + c;
+      bool isSoundColumn = (column && column->getSoundColumn());
+      int col            = m_col + c;
       xsh->insertCells(r0, col, count);
       int r;
       for (r = r0; r <= r1; r++) {
         int k = (r - m_row) * m_colCount + c;
-        xsh->setCell(r, col, m_cells[k]);
+        if (isSoundColumn)
+          xsh->setCell(r, col, TXshCell());
+        else
+          xsh->setCell(r, col, m_cells[k]);
       }
     }
   }
@@ -400,7 +407,6 @@ public:
     int count    = abs(m_deltaRow);
     for (int c = m_col; c < m_col + m_colCount; c++) {
       TXshColumn *column = xsh->getColumn(c);
-      if (column && column->getSoundColumn()) continue;
       if (m_invert)
         xsh->clearCells(m_row, c, count);
       else
@@ -425,11 +431,14 @@ public:
     }
     for (int c = 0; c < m_colCount; c++) {
       TXshColumn *column = xsh->getColumn(c);
-      if (column && column->getSoundColumn()) continue;
-      int col = m_col + c;
+      bool isSoundColumn = (column && column->getSoundColumn());
+      int col            = m_col + c;
       for (int r = r0; r <= r1; r++) {
         int k = (r - m_row) * m_colCount + c;
-        xsh->setCell(r, col, m_cells[k]);
+        if (isSoundColumn)
+          xsh->setCell(r, col, TXshCell());
+        else
+          xsh->setCell(r, col, m_cells[k]);
       }
     }
   }
@@ -447,6 +456,8 @@ public:
         TApp::instance()->getCurrentSelection()->getSelection();
     if (selection) selection->selectNone();
     TApp::instance()->getCurrentXsheet()->notifyXsheetChanged();
+    if (m_refreshSound)
+      TApp::instance()->getCurrentXsheet()->notifyXsheetSoundChanged();
   }
 
   void redo() const override {
@@ -462,6 +473,8 @@ public:
         TApp::instance()->getCurrentSelection()->getSelection();
     if (selection) selection->selectNone();
     TApp::instance()->getCurrentXsheet()->notifyXsheetChanged();
+    if (m_refreshSound)
+      TApp::instance()->getCurrentXsheet()->notifyXsheetSoundChanged();
   }
 
   int getSize() const override {
@@ -549,7 +562,7 @@ public:
     int i;
     for (i = 1; i < count; i++)
       if (m_sourceCells[i].m_level != cell.m_level ||
-          m_sourceCells[i].m_frameId.getLetter() != 0)
+          !m_sourceCells[i].m_frameId.getLetter().isEmpty())
         return;
 
     // check if all the selected cells have the same frame number
@@ -574,14 +587,14 @@ public:
     // celle dopo un cambio di frame
     m_offset = 0;
     if (m_step > 1) {
-      //先頭と異なるセルを仮にループ終端とする
+      // 先頭と異なるセルを仮にループ終端とする
       TFrameId fid(m_sourceCells[m_step].m_frameId);
-      //次にループ終端と異なるセルがくるまでセルを送る
+      // 次にループ終端と異なるセルがくるまでセルを送る
       for (i++; i < count && m_sourceCells[i].m_frameId == fid; i++) {
       }
-      //次のループ終端候補が見つかった
+      // 次のループ終端候補が見つかった
       int step = i - m_step;
-      //ループ距離が縮んでいたら規則なし
+      // ループ距離が縮んでいたら規則なし
       if (step < m_step) return;
       m_offset = step - m_step;
       m_step   = step;
@@ -646,14 +659,17 @@ class LevelExtenderTool final : public XsheetGUI::DragTool {
   bool m_invert;  // upper directional smart tab
   bool m_insert;
 
+  bool m_refreshSound;
+
 public:
   LevelExtenderTool(XsheetViewer *viewer, bool insert = true,
-                    bool invert = false)
+                    bool invert = false, bool refreshSound = false)
       : XsheetGUI::DragTool(viewer)
       , m_colCount(0)
       , m_undo(0)
       , m_insert(insert)
-      , m_invert(invert) {}
+      , m_invert(invert)
+      , m_refreshSound(refreshSound) {}
 
   // called when the smart tab is clicked
   void onClick(const CellPosition &pos) override {
@@ -670,14 +686,13 @@ public:
     m_colCount = c1 - c0 + 1;
     m_rowCount = r1 - r0 + 1;
     if (m_colCount <= 0 || m_rowCount <= 0) return;
-
     // if m_insert is false but there are no empty rows under the tab,
     // then switch m_insert to true so that the operation works anyway
     if (!m_insert && !m_invert) {
       TXsheet *xsh = getViewer()->getXsheet();
       for (int c = c0; c <= c1; c++) {
         TXshColumn *column = xsh->getColumn(c);
-        if (!column || column->getSoundColumn()) continue;
+        if (!column) continue;
         if (!column->isCellEmpty(r1 + 1)) {
           m_insert = true;  // switch the behavior
           break;
@@ -687,17 +702,33 @@ public:
 
     m_columns.reserve(m_colCount);
     TXsheet *xsh = getViewer()->getXsheet();
-    for (int c = c0; c <= c1; c++)
+    for (int c = c0; c <= c1; c++) {
+      TXshColumn *column = xsh->getColumn(c);
+      if (column && column->getSoundColumn()) m_refreshSound = true;
       m_columns.push_back(CellBuilder(xsh, r0, c, m_rowCount, m_invert));
-    m_undo = new LevelExtenderUndo(m_insert, m_invert);
+    }
+    m_undo = new LevelExtenderUndo(m_insert, m_invert, m_refreshSound);
     m_undo->setCells(xsh, r0, c0, m_rowCount, m_colCount);
   }
 
   void onDrag(const CellPosition &pos) override {
     int row = pos.frame(), col = pos.layer();
-    if (!m_invert)
+    if (!m_invert) {
+      // Allow the negative drag
+      if (row == m_r0 && m_colCount == m_rowCount == 1) {
+        int r0, c0, r1, c1;
+        getViewer()->getCellSelection()->getSelectedCells(r0, c0, r1, c1);
+        TXsheet *xsh = getViewer()->getXsheet();
+        if (!xsh->getCell(m_r0, m_c0).isEmpty())
+          for (; xsh->getCell(m_r0 - 1, m_c0) == xsh->getCell(m_r0, m_c0);
+               ++m_rowCount, --m_r0, --r0);
+        getViewer()->setCurrentRow(m_r0);
+        m_columns.clear();
+        m_columns.push_back(CellBuilder(xsh, r0, c0, m_rowCount, m_invert));
+        m_undo->setCells(xsh, r0, c0, m_rowCount - 1, m_colCount);
+      }
       onCellChange(row, col);
-    else
+    } else
       onCellChangeInvert(row, col);
     refreshCellsArea();
   }
@@ -713,9 +744,7 @@ public:
     // shrink
     if (dr < 0) {
       for (int c = 0; c < m_colCount; c++) {
-        // Se e' una colonna sound l'extender non deve fare nulla.
         TXshColumn *column = xsh->getColumn(m_c0 + c);
-        if (column && column->getSoundColumn()) continue;
         if (m_insert)
           xsh->removeCells(row, m_c0 + c, -dr);
         else {
@@ -733,7 +762,7 @@ public:
         for (tmp_dr = 1; tmp_dr <= dr; tmp_dr++) {
           for (int c = 0; c < m_colCount; c++) {
             TXshColumn *column = xsh->getColumn(m_c0 + c);
-            if (!column || column->getSoundColumn()) continue;
+            if (!column) continue;
             if (!column->isCellEmpty(m_r1 + tmp_dr)) {
               found = true;
               break;
@@ -747,12 +776,14 @@ public:
       }
 
       for (int c = 0; c < m_colCount; c++) {
-        // Se e' una colonna sound l'extender non deve fare nulla.
         TXshColumn *column = xsh->getColumn(m_c0 + c);
-        if (column && column->getSoundColumn()) continue;
+        bool isSoundColumn = (column && column->getSoundColumn());
         if (m_insert) xsh->insertCells(m_r1 + 1, m_c0 + c, dr);
         for (int r = m_r1 + 1; r <= r1; r++)
-          xsh->setCell(r, m_c0 + c, m_columns[c].generate(r));
+          if (isSoundColumn)
+            xsh->setCell(r, m_c0 + c, TXshCell());
+          else
+            xsh->setCell(r, m_c0 + c, m_columns[c].generate(r));
       }
     }
     m_r1 = r1;
@@ -776,7 +807,7 @@ public:
       bool found = false;
       for (int c = 0; c < m_colCount; c++) {
         TXshColumn *column = xsh->getColumn(m_c0 + c);
-        if (!column || column->getSoundColumn()) continue;
+        if (!column) continue;
         if (!column->isCellEmpty(emptyRow)) {
           emptyRow += 1;
           found = true;
@@ -797,7 +828,7 @@ public:
       // clear cells
       for (int c = 0; c < m_colCount; c++) {
         TXshColumn *column = xsh->getColumn(m_c0 + c);
-        if (!column || column->getSoundColumn()) continue;
+        if (!column) continue;
         xsh->clearCells(m_r0, m_c0 + c, dr);
       }
     }
@@ -805,9 +836,12 @@ public:
     else {
       for (int c = 0; c < m_colCount; c++) {
         TXshColumn *column = xsh->getColumn(m_c0 + c);
-        if (!column || column->getSoundColumn()) continue;
+        bool isSoundColumn = (column && column->getSoundColumn());
         for (int r = r0; r <= m_r0 - 1; r++) {
-          xsh->setCell(r, m_c0 + c, m_columns[c].generate(r));
+          if (isSoundColumn)
+            xsh->setCell(r, m_c0 + c, TXshCell());
+          else
+            xsh->setCell(r, m_c0 + c, m_columns[c].generate(r));
         }
       }
     }
@@ -829,6 +863,8 @@ public:
       TUndoManager::manager()->add(m_undo);
       TApp::instance()->getCurrentScene()->setDirtyFlag(true);
       TApp::instance()->getCurrentXsheet()->notifyXsheetChanged();
+      if (m_refreshSound)
+        TApp::instance()->getCurrentXsheet()->notifyXsheetSoundChanged();
     }
     m_undo = 0;
   }
@@ -1056,8 +1092,10 @@ public:
   }
 
   void onDrag(const QMouseEvent *e) override {
+    // check if the cells are moved
+    TPoint lastPos = m_lastPos;
     LevelMoverTool::onDrag(e);
-    if (m_validPos) m_keyframeMoverTool->onDrag(e);
+    if (m_validPos && lastPos != m_lastPos) m_keyframeMoverTool->onDrag(e);
   }
   void onRelease(const CellPosition &pos) override {
     int row = pos.frame(), col = pos.layer();
@@ -1659,12 +1697,28 @@ public:
       , m_offset(0)
       , m_origOffset(0) {}
 
-  void onClick(const CellPosition &pos) override {
+  void onClick(const QMouseEvent *event) override {
+    QPoint xy                   = event->pos();
+    CellPosition pos            = getViewer()->xyToPosition(xy);
     int col                     = pos.layer();
     TColumnSelection *selection = getViewer()->getColumnSelection();
     if (!selection->isColumnSelected(col)) {
-      selection->selectNone();
-      selection->selectColumn(col);
+      if (event->modifiers() & Qt::ControlModifier) {
+        selection->selectColumn(col, true);
+      } else if (event->modifiers() & Qt::ShiftModifier) {
+        int ia = col, ib = col;
+        int columnCount = getViewer()->getXsheet()->getColumnCount();
+        while (ia > 0 && !selection->isColumnSelected(ia - 1)) --ia;
+        if (ia == 0) ia = col;
+        while (ib < columnCount - 1 && !selection->isColumnSelected(ib + 1))
+          ++ib;
+        if (ib == columnCount - 1) ib = col;
+        int i;
+        for (i = ia; i <= ib; i++) selection->selectColumn(i, true);
+      } else {
+        selection->selectNone();
+        selection->selectColumn(col);
+      }
       selection->makeCurrent();
     }
     std::set<int> indices = selection->getIndices();
@@ -2100,9 +2154,9 @@ public:
     if (e->keyboardModifiers() & Qt::ShiftModifier)
       m_type = INSERT_CELLS;
     else if (e->keyboardModifiers() & Qt::AltModifier)
-      m_type = OVERWRITE_CELLS;
-    else
       m_valid = canChange(row, col);
+    else
+      m_type = OVERWRITE_CELLS;
     m_curPos = pos;
     refreshCellsArea();
   }
@@ -2129,12 +2183,25 @@ public:
       IoCmd::loadResources(args);
     } else if (!m_data->m_levels.empty()) {
       int i;
-      for (i = 0; i < (int)m_data->m_levels.size(); i++) {
-        TXshSimpleLevel *sl        = m_data->m_levels[i].first.getPointer();
-        std::vector<TFrameId> fids = m_data->m_levels[i].second;
-        if (!sl || fids.empty()) continue;
+      // Change hold cells when there are only one frame
+      if (overWrite && m_data->m_levels.size() == 1 &&
+          m_data->m_levels[0].second.size() == 1) {
+        TXshSimpleLevel *sl        = m_data->m_levels[0].first.getPointer();
+        std::vector<TFrameId> fids = m_data->m_levels[0].second;
+        if (!sl || fids.empty()) return;
+        auto xsh = TTool::getApplication()->getCurrentXsheet()->getXsheet();
+        int r1   = row;
+        if (!xsh->getCell(r1, col).isEmpty())
+          for (; xsh->getCell(r1, col) == xsh->getCell(r1 + 1, col);
+               fids.push_back(fids.front()), r1++);
         IoCmd::exposeLevel(sl, row, col, fids, insert, overWrite);
-      }
+      } else
+        for (i = 0; i < (int)m_data->m_levels.size(); i++) {
+          TXshSimpleLevel *sl        = m_data->m_levels[i].first.getPointer();
+          std::vector<TFrameId> fids = m_data->m_levels[i].second;
+          if (!sl || fids.empty()) continue;
+          IoCmd::exposeLevel(sl, row, col, fids, insert, overWrite);
+        }
     }
     refreshCellsArea();
   }
@@ -2181,4 +2248,50 @@ public:
 XsheetGUI::DragTool *XsheetGUI::DragTool::makeDragAndDropDataTool(
     XsheetViewer *viewer) {
   return new DataDragTool(viewer);
+}
+
+//=============================================================================
+//  NavigationTagDragTool
+//-----------------------------------------------------------------------------
+
+namespace {
+
+class NavigationTagDragTool final : public XsheetGUI::DragTool {
+  int m_taggedRow;
+
+public:
+  NavigationTagDragTool(XsheetViewer *viewer) : DragTool(viewer) {}
+
+  void onClick(const CellPosition &pos) override {
+    int row     = pos.frame();
+    m_taggedRow = row;
+    refreshRowsArea();
+  }
+
+  void onDrag(const CellPosition &pos) override {
+    int row = pos.frame();
+    if (row < 0) row = 0;
+    onRowChange(row);
+    refreshRowsArea();
+  }
+
+  void onRowChange(int row) {
+    if (row < 0) return;
+
+    TXsheet *xsh            = TApp::instance()->getCurrentXsheet()->getXsheet();
+    NavigationTags *navTags = xsh->getNavigationTags();
+
+    if (m_taggedRow == row || navTags->isTagged(row)) return;
+
+    navTags->moveTag(m_taggedRow, row);
+    m_taggedRow = row;
+  }
+};
+//-----------------------------------------------------------------------------
+}  // namespace
+//-----------------------------------------------------------------------------
+
+XsheetGUI::DragTool *XsheetGUI::DragTool::makeNavigationTagDragTool(
+    XsheetViewer *viewer) {
+  return new NavigationTagDragTool(viewer);
 }

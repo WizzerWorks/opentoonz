@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g id="save_scene">
+        <rect id="bg" x="-0" y="0.02" width="16" height="16" style="fill:#878787;fill-opacity:0;"/>
+        <path id="sv" d="M16,9.01l0,7.01l-9,-0l0,-9l7,-0.01l2,2Zm-4.5,3.01c-0.828,-0 -1.5,0.672 -1.5,1.5c0,0.827 0.672,1.5 1.5,1.5c0.828,-0 1.5,-0.673 1.5,-1.5c0,-0.828 -0.672,-1.5 -1.5,-1.5Zm1.5,-4l-4,-0l0,2l4,-0l0,-2Z"/>
+        <path id="clapboard" d="M6,15.02l-5.001,-0l0,-7.993l-0.02,-0l0,-4l2.02,-0l2,2l-1.982,1.983l0.99,-0l1.982,-1.983l2.131,-0l-0.993,0.993l-1.127,-0l-0,1.99c-0,-0 -4.001,-0 -4.001,-0l0,6.01c0,-0 1.797,-0 4.001,-0l-0,0.99c-0,0.003 -0,0.006 -0,0.01Zm2.834,-9.01l0.983,-0.983l2.334,-0l-0.983,0.983l-2.334,-0Zm4.031,-0l0.983,-0.983l1.151,-0l0,1.568l-0.292,-0.293c-0.188,-0.187 -0.442,-0.292 -0.707,-0.292l-1.135,-0Zm-5.122,-2.399l-2.587,0.582l-1.674,-1.673l2.587,-0.583l1.674,1.674Zm-0.289,-1.985l2.696,-0.607l1.673,1.673l-2.695,0.607l-1.674,-1.673Zm4.081,-0.919l3.047,-0.686l0.439,1.951l-1.813,0.408l-1.673,-1.673Z"/>
+    </g>
+</svg>

@@ -1,19 +1,13 @@
-{   
-  // [VSCode] 2 Spaces for Tab
+{
   "editor.tabSize": 2,
-    
-  // [EasyLess Extension] Compile Config
-  "less.compile": {
-    "compress":  true,
-    "sourceMap": false,
-    "out":       false
-  },
+  "editor.rulers": [80],
+  "less.lint.emptyRules": "ignore",
+  "less.lint.unknownProperties": "ignore",
+  "less.lint.vendorPrefix": "ignore",
 
-  // [Less IntelliSense Extension] Exclude Config
-  "less.scannerExclude":[
-    "**/.git",
-    "**/.vscode",
-    "**/layouts",
-    "**/themes"
-  ]
+  "less.compile": {
+    "compress": false,
+    "sourceMap": false,
+    "out": false
+  }
 }

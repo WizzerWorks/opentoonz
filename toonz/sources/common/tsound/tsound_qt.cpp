@@ -157,9 +157,17 @@ public:
     format.setCodec("audio/pcm");
     format.setChannelCount(st->getChannelCount());
     format.setByteOrder(QAudioFormat::LittleEndian);
-    format.setSampleType( st->getFormat().m_signedSample
-                        ? QAudioFormat::SignedInt
-                        : QAudioFormat::UnSignedInt );
+    switch (st->getSampleType()) {
+    case TSound::INT:
+      format.setSampleType(QAudioFormat::SignedInt);
+      break;
+    case TSound::UINT:
+      format.setSampleType(QAudioFormat::UnSignedInt);
+      break;
+    case TSound::FLOAT:
+      format.setSampleType(QAudioFormat::Float);
+      break;
+    }
     format.setSampleRate(st->getSampleRate());
 
     QAudioDeviceInfo info(QAudioDeviceInfo::defaultOutputDevice());

@@ -2,6 +2,21 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="ko" sourcelanguage="en">
 <context>
+    <name>APngWriterProperties</name>
+    <message>
+        <source>Scale</source>
+        <translation>비율</translation>
+    </message>
+    <message>
+        <source>Looping</source>
+        <translation>반복</translation>
+    </message>
+    <message>
+        <source>Write as .png</source>
+        <translation>.PNG로 작성하기</translation>
+    </message>
+</context>
+<context>
     <name>AviWriterProperties</name>
     <message>
         <source>Codec</source>
@@ -10,6 +25,80 @@
     <message>
         <source>Uncompressed</source>
         <translation>압축해제</translation>
+    </message>
+</context>
+<context>
+    <name>ExrWriterProperties</name>
+    <message>
+        <source>Bits Per Pixel</source>
+        <translation>픽셀당 비트 수</translation>
+    </message>
+    <message>
+        <source>48(RGB Half Float)</source>
+        <translation>48(RGB 하프 플로트)</translation>
+    </message>
+    <message>
+        <source>64(RGBA Half Float)</source>
+        <translation>64(RGB 하프 플로트)</translation>
+    </message>
+    <message>
+        <source>Compression Type</source>
+        <translation>압축</translation>
+    </message>
+    <message>
+        <source>No compression</source>
+        <translation>압축 없음</translation>
+    </message>
+    <message>
+        <source>Run Length Encoding (RLE)</source>
+        <translation>실행길이 인코팅(RLE)</translation>
+    </message>
+    <message>
+        <source>ZIP compression per Scanline (ZIPS)</source>
+        <translation>스캔 단위로 ZIP 압축(ZIPS)</translation>
+    </message>
+    <message>
+        <source>ZIP compression per scanline band (ZIP)</source>
+        <translation>스캔라인 밴드당 ZIP 압축(ZIP)</translation>
+    </message>
+    <message>
+        <source>PIZ-based wavelet compression (PIZ)</source>
+        <translation>PIZ-기반 웨이블릿 압축(PIZ)</translation>
+    </message>
+    <message>
+        <source>Storage Type</source>
+        <translation>저장 유형</translation>
+    </message>
+    <message>
+        <source>Scan-line based</source>
+        <translation>스캔-라인 기반</translation>
+    </message>
+    <message>
+        <source>Tile based</source>
+        <translation>티일기반</translation>
+    </message>
+    <message>
+        <source>96(RGB Float)</source>
+        <translation>96(RGB Float)</translation>
+    </message>
+    <message>
+        <source>128(RGBA Float)</source>
+        <translation>128(RGBA Float)</translation>
+    </message>
+    <message>
+        <source>Color Space Gamma</source>
+        <translation>색상 공간 감마</translation>
+    </message>
+</context>
+<context>
+    <name>FFMovWriterProperties</name>
+    <message>
+        <source>Quality</source>
+        <translation>품질</translation>
+    </message>
+    <message>
+        <source>Scale</source>
+        <translation>비율</translation>
     </message>
 </context>
 <context>
@@ -24,7 +113,67 @@
     </message>
     <message>
         <source>Generate Palette</source>
-        <translation>팔레트 생성</translation>
+        <translation type="vanished">팔레트 생성</translation>
+    </message>
+    <message>
+        <source>Global Palette</source>
+        <translation>전체 팔레트</translation>
+    </message>
+    <message>
+        <source>Global Palette + Sierra Dither</source>
+        <translation>잔체 팔레트 + 시에라 디더</translation>
+    </message>
+    <message>
+        <source>Global Palette + Bayer2 Dither</source>
+        <translation>전체 팔레트 + 바이엘2 디더</translation>
+    </message>
+    <message>
+        <source>Global Palette + Bayer1 Dither</source>
+        <translation>전체 팔레트 + 바이엘1 디더</translation>
+    </message>
+    <message>
+        <source>Diff Palette</source>
+        <translation>디프 팔레트</translation>
+    </message>
+    <message>
+        <source>Diff Palette + Sierra Dither</source>
+        <translation>디프 팔레트 + 시에라 더디</translation>
+    </message>
+    <message>
+        <source>Diff Palette + Bayer2 Dither</source>
+        <translation>디프 팔레트 + 바이엘2 디더</translation>
+    </message>
+    <message>
+        <source>Diff Palette + Bayer1 Dither</source>
+        <translation>디프 팔레트 + 바이엘2 디더</translation>
+    </message>
+    <message>
+        <source>New Pal Per Frame</source>
+        <translation>프레임당 새친구</translation>
+    </message>
+    <message>
+        <source>New Pal Per Frame + Sierra Dither</source>
+        <translation>프레임당 새친구 + 시에라 디더</translation>
+    </message>
+    <message>
+        <source>New Pal Per Frame + Bayer2 Dither</source>
+        <translation>프레임당 새친구 + 바이엘2 디더</translation>
+    </message>
+    <message>
+        <source>New Pal Per Frame + Bayer1 Dither</source>
+        <translation>프레임당 새친구 + 바이엘1 디더</translation>
+    </message>
+    <message>
+        <source>Opaque, Dither, 256 Colors Only</source>
+        <translation>불투명, 디더, 266색만</translation>
+    </message>
+    <message>
+        <source>Mode</source>
+        <translation>모드</translation>
+    </message>
+    <message>
+        <source>Max Colors</source>
+        <translation>최대 색상</translation>
     </message>
 </context>
 <context>
@@ -56,6 +205,94 @@ Please try raising the FFmpeg timeout in Preferences.</source>
 파일에 오류가 있는지 확인하십시요.
 파일이 재생되지 않거나 불완전 한 경우, 기본 설정에서 FFmpeg 시간초과를 설정하세요.</translation>
     </message>
+    <message>
+        <source>FFmpeg returned error-code: %1</source>
+        <translation>FFmpeg 시간초과 오류 코드: %1</translation>
+    </message>
+    <message>
+        <source>Cannot create FFmpeg cache directory: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cannot save non-raster image to FFmpeg</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Invalid or empty raster for FFmpeg</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to clone raster for FFmpeg</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to allocate 32-bit raster for FFmpeg</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to convert raster to 32-bit ARGB (after clamp)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to create QImage for intermediate file</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to save intermediate image: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>FFmpeg process failed for: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cannot open audio file for writing: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to write audio data to file</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Size error: %1
+</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Frame rate error: %1
+</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Frame count error: %1
+</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to retrieve %1 from video via ffprobe.
+Error details:
+%2Using available data and fallback values where necessary.
+Note: Zero values in dimensions, frame count or frame rate indicate that the information could not be retrieved.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unable to determine frame count for: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>FFmpeg failed to extract frames from: %1
+Check file and codec support.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to delete file: %1
+%2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to extract frames from movie: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>SgiWriterProperties</name>
@@ -84,7 +321,7 @@ Please try raising the FFmpeg timeout in Preferences.</source>
         <translation>8비트</translation>
     </message>
     <message>
-        <source>Endianess</source>
+        <source>Endianness</source>
         <translation>엔디안</translation>
     </message>
     <message>
@@ -217,27 +454,19 @@ Please try raising the FFmpeg timeout in Preferences.</source>
     </message>
     <message>
         <source>24(RGB)</source>
-        <translation></translation>
+        <translation>24(RGBA)</translation>
     </message>
     <message>
         <source>48(RGB)</source>
-        <translation></translation>
+        <translation>48(RGBA)</translation>
     </message>
     <message>
         <source> 1(BW)</source>
-        <translation>1(흑백)</translation>
+        <translation>1(흑과 백)</translation>
     </message>
     <message>
         <source> 8(GREYTONES)</source>
-        <translation>8(그레이 스케일)</translation>
-    </message>
-    <message>
-        <source>32(RGBM)</source>
-        <translation></translation>
-    </message>
-    <message>
-        <source>64(RGBM)</source>
-        <translation></translation>
+        <translation>8(회색)</translation>
     </message>
     <message>
         <source>Orientation</source>
@@ -275,16 +504,96 @@ Please try raising the FFmpeg timeout in Preferences.</source>
         <source>Right Bottom</source>
         <translation>오른쪽 하단</translation>
     </message>
+    <message>
+        <source>32(RGBA)</source>
+        <translation>32(RGBA)</translation>
+    </message>
+    <message>
+        <source>64(RGBA)</source>
+        <translation>64(RGBA)</translation>
+    </message>
 </context>
 <context>
     <name>WebmWriterProperties</name>
     <message>
         <source>Quality</source>
-        <translation>품질</translation>
+        <translation type="vanished">품질</translation>
     </message>
     <message>
         <source>Scale</source>
         <translation>비율</translation>
+    </message>
+    <message>
+        <source>Placebo (Smallest File)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Very Slow</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Slower</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Slow</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Medium</source>
+        <translation type="unfinished">중간</translation>
+    </message>
+    <message>
+        <source>Fast</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Faster</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Very Fast</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Ultra Fast (Largest File)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Every Frame</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Every Second</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Every 2 Seconds</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Every 5 Seconds</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Every 10 Seconds</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Encoding Speed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keyframe Interval</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Preserve Alpha</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Lossless</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 </TS>

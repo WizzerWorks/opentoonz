@@ -20,6 +20,7 @@
 #include "tcurveutil.h"
 
 #include <algorithm>
+#include <unordered_map>
 
 #if !defined(TNZ_LITTLE_ENDIAN)
 TNZ_LITTLE_ENDIAN undefined !!
@@ -1402,10 +1403,10 @@ static bool addAutocloseIntersection(IntersectionData &intData,
     {
       const TThickQuadratic *q = s[i]->m_s->getChunk(0);
 
-      if (areAlmostEqual(q->getP0(), v[0], 1e-2) &&
-              areAlmostEqual(q->getP2(), v[1], 1e-2) ||
-          areAlmostEqual(q->getP0(), v[1], 1e-2) &&
-              areAlmostEqual(q->getP2(), v[0], 1e-2)) {
+      if ((areAlmostEqual(q->getP0(), v[0], 1e-2) &&
+              areAlmostEqual(q->getP2(), v[1], 1e-2)) ||
+          (areAlmostEqual(q->getP0(), v[1], 1e-2) &&
+              areAlmostEqual(q->getP2(), v[0], 1e-2))) {
         return true;
         addIntersection(intData, s, i, ii, DoublePair(0.0, w0), strokeSize,
                         isVectorized);
@@ -1438,7 +1439,7 @@ static bool isCloseEnoughP2P(double facMin, double facMax, TStroke *s1,
 
   dist2 = tdistance2(p0, p1);
 
-  /*!when closing beetween a normal stroke and a 0-thickness stroke (very
+  /*!when closing between a normal stroke and a 0-thickness stroke (very
    * typical) the thin  one is assumed to have same thickness of the other*/
   if (p0.thick == 0)
     p0.thick = p1.thick;
@@ -1618,7 +1619,7 @@ static bool isCloseEnoughP2L(double facMin, double facMax, TStroke *s1,
 
     TThickPoint p1 = s2->getChunk(index)->getThickPoint(t);
 
-    /*!when closing beetween a normal stroke and a 0-thickness stroke (very
+    /*!when closing between a normal stroke and a 0-thickness stroke (very
      * typical) the thin  one is assumed to have same thickness of the other*/
     if (p0.thick == 0)
       p0.thick = p1.thick;
@@ -1943,6 +1944,7 @@ void autoclose(double factor, vector<VIStroke *> &s, int ii, int jj,
 //-----------------------------------------------------------------------------
 
 TPointD inline getTangent(const IntersectedStroke &item) {
+  if (!item.m_edge.m_s) return TPointD();
   return (item.m_gettingOut ? 1 : -1) *
          item.m_edge.m_s->getSpeed(item.m_edge.m_w0, item.m_gettingOut);
 }
@@ -2484,6 +2486,7 @@ static TRegion *findRegion(VIList<Intersection> &intList, Intersection *p1,
       }
 
     } while (!p2->m_nextIntersection);
+    if (!p2->m_edge.m_s) continue;
 
     nextp1 = p2->m_nextIntersection;
     nextp2 = p2->m_nextStroke;
@@ -3070,6 +3073,41 @@ void TVectorImage::replaceStroke(int index, TStroke *newStroke) {
 }
 
 //-----------------------------------------------------------------------------
+void TVectorImage::reOrderStrokes(const std::vector<int> &oldIndexes,
+                                  const std::vector<int> &newIndexes) {
+  assert(oldIndexes.size() == newIndexes.size());
+
+  int n = oldIndexes.size();
+  if (n == 0) return;
+
+  std::unordered_map<int, int> indexMap;
+  for (int i = 0; i < n; i++) {
+    indexMap[oldIndexes[i]] = newIndexes[i];
+  }
+
+  std::vector<VIStroke *> reorderedStrokes = m_imp->m_strokes;
+  for (int i = 0; i < n; i++) {
+    reorderedStrokes[newIndexes[i]] = m_imp->m_strokes[oldIndexes[i]];
+  }
+
+  m_imp->m_strokes = std::move(reorderedStrokes);
+
+  for (Intersection *p1 = m_imp->m_intersectionData->m_intList.first(); p1;
+       p1               = p1->next()) {
+    for (IntersectedStroke *p2 = p1->m_strokeList.first(); p2;
+         p2                    = p2->next()) {
+      auto it = indexMap.find(p2->m_edge.m_index);
+      if (it != indexMap.end()) {
+        p2->m_edge.m_index = it->second;
+      }
+    }
+  }
+
+#ifdef _DEBUG
+  checkIntersections();
+#endif
+}
+
 
 //-----------------------------------------------------------------------------
 
@@ -3371,7 +3409,7 @@ void TVectorImage::Imp::checkIntersections() {
 #endif
 //-----------------------------------------------------------------------------
 
-TStroke *TVectorImage::Imp::removeEndpoints(int strokeIndex) {
+TStroke *TVectorImage::Imp::removeEndpoints(int strokeIndex, double *offset=NULL) {
 #ifdef _DEBUG
   checkIntersections();
 #endif
@@ -3398,6 +3436,10 @@ TStroke *TVectorImage::Imp::removeEndpoints(int strokeIndex) {
   TStroke *s = new TStroke(*(vs->m_s));
 
   double offs = s->getLength(minW);
+
+  if (offset) {
+    *offset = offs;
+  }
 
   TStroke s0, s1, final;
 
@@ -3446,7 +3488,7 @@ TStroke *TVectorImage::Imp::removeEndpoints(int strokeIndex) {
 
 //-----------------------------------------------------------------------------
 
-void TVectorImage::Imp::restoreEndpoints(int index, TStroke *oldStroke) {
+void TVectorImage::Imp::restoreEndpoints(int index, TStroke *oldStroke, double offs) {
 #ifdef _DEBUG
   checkIntersections();
 #endif
@@ -3454,9 +3496,6 @@ void TVectorImage::Imp::restoreEndpoints(int index, TStroke *oldStroke) {
   VIStroke *vs = m_strokes[index];
 
   TStroke *s = vs->m_s;
-  TPointD p  = s->getPoint(0.0);
-
-  double offs = oldStroke->getLength(oldStroke->getW(p));
 
   vs->m_s = oldStroke;
 

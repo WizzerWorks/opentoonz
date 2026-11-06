@@ -57,15 +57,13 @@ void TFilmstripSelection::enableCommands() {
 
   bool doEnable =
       (type == PLI_XSHLEVEL || type == TZP_XSHLEVEL || type == MESH_XSHLEVEL ||
-       (type == OVL_XSHLEVEL && path.getType() != "psd" &&
-        path.getType() != "gif" && path.getType() != "mp4" &&
-        path.getType() != "webm"));
+       type == META_XSHLEVEL || (type == OVL_XSHLEVEL && !path.isUneditable()));
 
   TRasterImageP ri = (TRasterImageP)sl->getSimpleLevel()->getFrame(
       sl->getSimpleLevel()->getFirstFid(), false);
 
   bool isNotEditableFullColorLevel =
-      (type == OVL_XSHLEVEL && path.getFrame() == TFrameId::NO_FRAME ||
+      ((type == OVL_XSHLEVEL && path.getFrame() == TFrameId::NO_FRAME) ||
        (ri && ri->isScanBW()));
 
   if (doEnable && !isNotEditableFullColorLevel) {
@@ -106,10 +104,11 @@ bool TFilmstripSelection::isEmpty() const { return m_selectedFrames.empty(); }
 //-----------------------------------------------------------------------------
 
 void TFilmstripSelection::updateInbetweenRange() {
-  // ibrange = (la prima) sequenza di almeno tre frame selezionati consecutivi
+  // inbetweenRange = (the first) sequence of at least three consecutively
+  // selected frames
   m_inbetweenRange = std::make_pair(TFrameId(1), TFrameId(0));
   if (m_selectedFrames.size() < 3)
-    return;  // ci vogliono almeno tre frames selezionati
+    return;  // at least three selected frames are needed
   TXshSimpleLevel *sl = TApp::instance()->getCurrentLevel()->getSimpleLevel();
   if (sl) {
     std::vector<TFrameId> fids;
@@ -238,27 +237,68 @@ void TFilmstripSelection::copyFrames() {
 void TFilmstripSelection::cutFrames() {
   TXshSimpleLevel *sl = TApp::instance()->getCurrentLevel()->getSimpleLevel();
   if (sl) {
+    int firstSelectedIndex = sl->fid2index(*m_selectedFrames.begin());
+    if (firstSelectedIndex < 0 || firstSelectedIndex > sl->getFrameCount()) {
+      selectNone();
+      return;
+    }
     FilmstripCmd::cut(sl, m_selectedFrames);
     selectNone();
-    TApp::instance()->getCurrentFrame()->setFid(sl->getFirstFid());
-    select(sl->getFirstFid());
+    TFrameId fId = (firstSelectedIndex == 0)
+                       ? sl->getFirstFid()
+                       : sl->getFrameId(firstSelectedIndex - 1);
+    TApp::instance()->getCurrentFrame()->setFid(fId);
+    select(fId);
   }
 }
 
 //-----------------------------------------------------------------------------
-
 void TFilmstripSelection::pasteFrames() {
   TXshSimpleLevel *sl = TApp::instance()->getCurrentLevel()->getSimpleLevel();
   if (!sl) return;
 
-  std::set<TFrameId> fids;
-  if (m_selectedFrames.empty()) {
+  std::set<TFrameId> fids = m_selectedFrames;
+  if (fids.empty()) {
     if (sl->isSubsequence()) return;
     fids.insert(TApp::instance()->getCurrentFrame()->getFid());
-  } else
-    fids = m_selectedFrames;
+  }
 
+  // Store the number of strokes that existed before the paste
+  std::map<TFrameId, int> beforeCount;
+  for (auto &fid : fids) {
+    TVectorImageP vi = sl->getFrame(fid, false);
+    beforeCount[fid] = vi ? vi->getStrokeCount() : 0;
+  }
+
+  // Execute the paste
   FilmstripCmd::paste(sl, fids);
+
+  // Select only the strokes of the current frame
+  TFrameId currentFid = TApp::instance()->getCurrentFrame()->getFid();
+
+  if (TTool *tool = TApp::instance()->getCurrentTool()->getTool()) {
+    if (tool->getName() == "T_Selection") {
+      if (auto ss = dynamic_cast<StrokeSelection *>(tool->getSelection())) {
+        ss->selectNone();
+
+        TVectorImageP vi = sl->getFrame(currentFid, false);
+        if (vi) {
+          int oldN = beforeCount[currentFid];
+          int newN = vi->getStrokeCount();
+          for (int i = oldN; i < newN; ++i) {
+            ss->select(i, true);
+          }
+        }
+
+        ss->notifyView();  // display bounding box
+      }
+    }
+  }
+
+  // Keep frame selection in the Filmstrip
+  m_selectedFrames = fids;
+  updateInbetweenRange();
+  notifyView();
 }
 
 //-----------------------------------------------------------------------------
@@ -279,7 +319,12 @@ void TFilmstripSelection::pasteInto() {
 
 void TFilmstripSelection::deleteFrames() {
   TXshSimpleLevel *sl = TApp::instance()->getCurrentLevel()->getSimpleLevel();
-  if (sl) FilmstripCmd::clear(sl, m_selectedFrames);
+  if (sl) {
+    if (Preferences::instance()->getDeleteCommandBehaviour() == 0)  // Clear
+      FilmstripCmd::clear(sl, m_selectedFrames);
+    else  // Remove and Shift
+      FilmstripCmd::remove(sl, m_selectedFrames);
+  }
   updateInbetweenRange();
 }
 

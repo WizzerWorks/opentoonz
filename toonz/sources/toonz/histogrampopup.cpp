@@ -6,6 +6,7 @@
 #include "menubarcommandids.h"
 #include "tapp.h"
 #include "previewer.h"
+#include "sceneviewer.h"
 
 // TnzQt includes
 #include "toonzqt/menubarcommand.h"
@@ -22,6 +23,9 @@
 // Qt includes
 #include <QTimer>
 #include <QMainWindow>
+#include <QDesktopWidget>
+#include <QFocusEvent>
+#include <QScreen>
 
 using namespace DVGui;
 
@@ -41,10 +45,11 @@ HistogramPopup::HistogramPopup(QString title)
   m_histogram = new ComboHistogram(this);
 
   QVBoxLayout *mainLay = new QVBoxLayout();
-  mainLay->setMargin(0);
+  mainLay->setContentsMargins(0, 0, 0, 0);
   mainLay->setSpacing(0);
   { mainLay->addWidget(m_histogram); }
   setLayout(mainLay);
+  mainLay->setSizeConstraint(QLayout::SetFixedSize);
   setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
 }
 
@@ -74,16 +79,70 @@ void HistogramPopup::setImage(TImageP image) {
 }
 //-----------------------------------------------------------------------------
 /*! show the picked color
-*/
+ */
 void HistogramPopup::updateInfo(const TPixel32 &pix, const TPointD &imagePos) {
   m_histogram->updateInfo(pix, imagePos);
 }
 
+void HistogramPopup::updateInfo(const TPixel64 &pix, const TPointD &imagePos) {
+  m_histogram->updateInfo(pix, imagePos);
+}
+
+void HistogramPopup::updateInfo(const TPixelF &pix, const TPointD &imagePos) {
+  m_histogram->updateInfo(pix, imagePos);
+}
 //-----------------------------------------------------------------------------
 /*! show the average-picked color
-*/
+ */
 void HistogramPopup::updateAverageColor(const TPixel32 &pix) {
   m_histogram->updateAverageColor(pix);
+}
+
+void HistogramPopup::updateAverageColor(const TPixel64 &pix) {
+  m_histogram->updateAverageColor(pix);
+}
+
+void HistogramPopup::updateAverageColor(const TPixelF &pix) {
+  m_histogram->updateAverageColor(pix);
+}
+//-----------------------------------------------------------------------------
+
+void HistogramPopup::setShowCompare(bool on) {
+  m_histogram->setShowCompare(on);
+}
+
+//-----------------------------------------------------------------------------
+
+void HistogramPopup::invalidateCompHisto() {
+  m_histogram->invalidateCompHisto();
+}
+
+//-----------------------------------------------------------------------------
+
+void HistogramPopup::moveNextToWidget(QWidget *widget) {
+  if (!widget) return;
+  const int margin = 5;
+
+  if (minimumSize().isEmpty()) grab();
+  QSize popupSize = frameSize();
+
+  QRect screenRect = widget->screen()->availableGeometry();
+  QRect viewerRect = widget->rect();
+  viewerRect.moveTo(widget->mapToGlobal(QPoint(0, 0)));
+  // decide which side to open the popup
+  QPoint popupPos = widget->mapToGlobal(QPoint(0, 0));
+  // open at the left
+  if (viewerRect.left() - screenRect.left() >
+      screenRect.right() - viewerRect.right())
+    popupPos.setX(std::max(viewerRect.left() - popupSize.width() - margin, 0));
+  // open at the right
+  else
+    popupPos.setX(std::min(viewerRect.right() + margin,
+                           screenRect.right() - popupSize.width()));
+  // adjust vertical position
+  popupPos.setY(std::min(std::max(popupPos.y(), screenRect.top()),
+                         screenRect.bottom() - popupSize.height() - margin));
+  move(popupPos);
 }
 
 //=============================================================================
@@ -107,6 +166,7 @@ void ViewerHistogramPopup::showEvent(QShowEvent *e) {
           SLOT(setCurrentRaster()));
 
   setCurrentRaster();
+  moveNextToWidget(TApp::instance()->getActiveViewer());
 }
 
 //-----------------------------------------------------------------------------
@@ -140,4 +200,5 @@ void ViewerHistogramPopup::setCurrentRaster() {
 
 //=============================================================================
 
-OpenPopupCommandHandler<ViewerHistogramPopup> openHistogramPopup(MI_Histogram);
+OpenPopupCommandHandler<ViewerHistogramPopup> openHistogramPopup(
+    MI_ViewerHistogram);

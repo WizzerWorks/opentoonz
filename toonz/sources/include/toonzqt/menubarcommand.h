@@ -55,16 +55,23 @@ enum CommandType {
   MenuRenderCommandType,
   MenuViewCommandType,
   MenuWindowsCommandType,
+  CustomPanelCommandType,
   MenuHelpCommandType,
   PlaybackCommandType,
   RGBACommandType,
   FillCommandType,
   ToolCommandType,
   ToolModifierCommandType,
+  BrushPresetCommandType,
+  BrushSizeCommandType,
   ZoomCommandType,
   MiscCommandType,
+  StopMotionCommandType,
+  CellMarkCommandType,
   MenuCommandType,
-  VisualizationButtonCommandType
+  VisualizationButtonCommandType,
+  SpecialModifierKeyType,
+  HiddenCommandType
 };
 
 //-----------------------------------------------------------------------------
@@ -108,13 +115,15 @@ class DVAPI CommandManager {  // singleton
     bool m_enabled;
     QString m_onText,
         m_offText;  // for toggle commands. e.g. show/hide something
+    const char *m_iconSVGName;
 
     Node(CommandId id)
         : m_id(id)
         , m_type(UndefinedCommandType)
         , m_qaction(0)
         , m_handler(0)
-        , m_enabled(true) {}
+        , m_enabled(true)
+        , m_iconSVGName("") {}
 
     ~Node() {
       if (m_handler) delete m_handler;
@@ -138,7 +147,7 @@ public:
   void setHandler(CommandId id, CommandHandlerInterface *handler);
 
   void define(CommandId id, CommandType type, std::string defaultShortcutString,
-              QAction *action);
+              QAction *action, const char *iconSVGName = "");
 
   QAction *createAction(const char *id, const char *name,
                         const char *defaultShortcut);
@@ -154,7 +163,7 @@ public:
 
   QAction *getAction(CommandId id, bool createIfNeeded = false);
 
-  // createAction creates a new indepenent QAction with text and shortcut
+  // createAction creates a new independent QAction with text and shortcut
   // if the action is a toggle action (e.g. show/hide something) the text is
   // controlled by state
   // you can use createAction() for context menu
@@ -177,6 +186,8 @@ public:
                       const QString &offText);
 
   std::string getIdFromAction(QAction *action);
+  const char *getIconSVGName(CommandId id);
+  void enlargeIcon(CommandId id, const QSize size);
 
   // load user defined shortcuts
   void loadShortcuts();
@@ -240,9 +251,15 @@ public:
 
   void execute() override {
     if (!m_popup) m_popup = new T();
-    m_popup->show();
-    m_popup->raise();
-    m_popup->activateWindow();
+
+    // close popup when using the command while open
+    if (m_popup->isVisible())
+      m_popup->hide();
+    else {
+      m_popup->show();
+      m_popup->raise();
+      m_popup->activateWindow();
+    }
   }
 };
 
@@ -264,9 +281,11 @@ class DVAPI DVMenuAction final : public QMenu {
   Q_OBJECT
 
   int m_triggeredActionIndex;
+  bool m_isForRecentFiles;
 
 public:
-  DVMenuAction(const QString &text, QWidget *parent, QList<QString> actions);
+  DVMenuAction(const QString &text, QWidget *parent, QList<QString> actions,
+               bool isForRecentFiles = true);
   void setActions(QList<QString> actions);
 
   int getTriggeredActionIndex() { return m_triggeredActionIndex; }

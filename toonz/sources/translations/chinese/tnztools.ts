@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="zh_CN">
+<TS version="2.1" language="zh_CN" sourcelanguage="en_US">
 <context>
     <name>ArrowToolOptionsBox</name>
     <message>
@@ -12,11 +12,11 @@
         <translation>位置</translation>
     </message>
     <message>
-        <source>E/W:</source>
+        <source>X:</source>
         <translation>左右:</translation>
     </message>
     <message>
-        <source>N/S:</source>
+        <source>Y:</source>
         <translation>上下:</translation>
     </message>
     <message>
@@ -87,6 +87,22 @@
         <source>Table</source>
         <translation>动画台</translation>
     </message>
+    <message>
+        <source>Flip Object Horizontally</source>
+        <translation>横向翻转物体</translation>
+    </message>
+    <message>
+        <source>Flip Object Vertically</source>
+        <translation>纵向翻转物体</translation>
+    </message>
+    <message>
+        <source>Rotate Object Left</source>
+        <translation>向左旋转物体</translation>
+    </message>
+    <message>
+        <source>Rotate Object Right</source>
+        <translation>向右旋转物体</translation>
+    </message>
 </context>
 <context>
     <name>BrushTool</name>
@@ -100,7 +116,7 @@
     </message>
     <message>
         <source>Accuracy:</source>
-        <translation>精度:</translation>
+        <translation type="vanished">精度:</translation>
     </message>
     <message>
         <source>Selective</source>
@@ -108,7 +124,7 @@
     </message>
     <message>
         <source>Preset:</source>
-        <translation>预设:</translation>
+        <translation type="vanished">预设:</translation>
     </message>
     <message>
         <source>Break Sharp Angles</source>
@@ -124,23 +140,23 @@
     </message>
     <message>
         <source>Cap</source>
-        <translation>端点</translation>
+        <translation type="vanished">端点</translation>
     </message>
     <message>
         <source>Join</source>
-        <translation>连接</translation>
+        <translation type="vanished">连接</translation>
     </message>
     <message>
         <source>Miter:</source>
-        <translation>斜接比例:</translation>
+        <translation type="vanished">斜接比例:</translation>
     </message>
     <message>
         <source>Size</source>
-        <translation>大小</translation>
+        <translation type="vanished">大小</translation>
     </message>
     <message>
         <source>Break</source>
-        <translation>断裂</translation>
+        <translation type="vanished">断裂</translation>
     </message>
     <message>
         <source>Pencil</source>
@@ -148,79 +164,79 @@
     </message>
     <message>
         <source>Pressure</source>
-        <translation>压感</translation>
+        <translation type="vanished">压感</translation>
     </message>
     <message>
         <source>Smooth:</source>
-        <translation>平滑:</translation>
+        <translation type="vanished">平滑:</translation>
     </message>
     <message>
         <source>Range:</source>
-        <translation>范围:</translation>
+        <translation type="vanished">范围:</translation>
     </message>
     <message>
         <source>Snap</source>
-        <translation>吸附</translation>
+        <translation type="vanished">吸附</translation>
     </message>
     <message>
         <source>&lt;custom&gt;</source>
-        <translation>&lt;定制&gt;</translation>
+        <translation type="vanished">&lt;定制&gt;</translation>
     </message>
     <message>
         <source>Off</source>
-        <translation>关闭</translation>
+        <translation type="vanished">关闭</translation>
     </message>
     <message>
         <source>Linear</source>
-        <translation>线性</translation>
+        <translation type="vanished">线性</translation>
     </message>
     <message>
         <source>In</source>
-        <translation>内</translation>
+        <translation type="vanished">内</translation>
     </message>
     <message>
         <source>Out</source>
-        <translation>外</translation>
+        <translation type="vanished">外</translation>
     </message>
     <message>
         <source>In&amp;Out</source>
-        <translation>内&amp;外</translation>
+        <translation type="vanished">内&amp;外</translation>
     </message>
     <message>
         <source>Low</source>
-        <translation>低</translation>
+        <translation type="vanished">低</translation>
     </message>
     <message>
         <source>High</source>
-        <translation>高</translation>
+        <translation type="vanished">高</translation>
     </message>
     <message>
         <source>Butt cap</source>
-        <translation>平头</translation>
+        <translation type="vanished">平头</translation>
     </message>
     <message>
         <source>Round cap</source>
-        <translation>圆头</translation>
+        <translation type="vanished">圆头</translation>
     </message>
     <message>
         <source>Projecting cap</source>
-        <translation>方头</translation>
+        <translation type="vanished">方头</translation>
     </message>
     <message>
         <source>Miter join</source>
-        <translation>斜接连接</translation>
+        <translation type="vanished">斜接连接</translation>
     </message>
     <message>
         <source>Round join</source>
-        <translation>圆角连接</translation>
+        <translation type="vanished">圆角连接</translation>
     </message>
     <message>
         <source>Bevel join</source>
-        <translation>斜角连接</translation>
+        <translation type="vanished">斜角连接</translation>
     </message>
     <message>
         <source>Med</source>
-        <translation>中</translation>
+        <translation type="vanished">中</translation>
     </message>
     <message>
         <source>Draw Order:</source>
@@ -260,6 +276,34 @@
         <source>Auto Select Drawing</source>
         <translation>自动选择绘图</translation>
     </message>
+    <message>
+        <source>Snap</source>
+        <translation>吸附</translation>
+    </message>
+    <message>
+        <source>Type:</source>
+        <translation>类型:</translation>
+    </message>
+    <message>
+        <source>Rectangular</source>
+        <translation>矩形</translation>
+    </message>
+    <message>
+        <source>Freehand</source>
+        <translation>手绘</translation>
+    </message>
+    <message>
+        <source>Low</source>
+        <translation>低</translation>
+    </message>
+    <message>
+        <source>Med</source>
+        <translation>中</translation>
+    </message>
+    <message>
+        <source>High</source>
+        <translation>高</translation>
+    </message>
 </context>
 <context>
     <name>ControlPointSelection</name>
@@ -280,6 +324,21 @@
     </message>
 </context>
 <context>
+    <name>EditAssistantsTool</name>
+    <message>
+        <source>&lt;choose to create&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Assistant Type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Order</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>EditTool</name>
     <message>
         <source>Scale Constraint:</source>
@@ -294,19 +353,19 @@
         <translation>全局关键帧</translation>
     </message>
     <message>
-        <source>Lock Center E/W</source>
+        <source>Lock Center X</source>
         <translation>锁定中心点(左右)</translation>
     </message>
     <message>
-        <source>Lock Center N/S</source>
+        <source>Lock Center Y</source>
         <translation>锁定中心点(上下)</translation>
     </message>
     <message>
-        <source>Lock Position E/W</source>
+        <source>Lock Position X</source>
         <translation>锁定位置(左右)</translation>
     </message>
     <message>
-        <source>Lock Position N/S</source>
+        <source>Lock Position Y</source>
         <translation>锁定位置(上下)</translation>
     </message>
     <message>
@@ -334,7 +393,7 @@
         <translation>锁定缩放(全局)</translation>
     </message>
     <message>
-        <source>E/W and N/S Positions</source>
+        <source>X and Y Positions</source>
         <translation>左右和上下位置</translation>
     </message>
     <message>
@@ -375,7 +434,7 @@
     </message>
     <message>
         <source>A/R</source>
-        <translation>A/R</translation>
+        <translation>长宽比</translation>
     </message>
     <message>
         <source>Mass</source>
@@ -442,7 +501,7 @@
     </message>
     <message>
         <source>Normal</source>
-        <translation>正常</translation>
+        <translation>常规</translation>
     </message>
     <message>
         <source>Rectangular</source>
@@ -468,6 +527,26 @@
         <source>Lines &amp; Areas</source>
         <translation>线和区域</translation>
     </message>
+    <message>
+        <source>Segment</source>
+        <translation>自动分段</translation>
+    </message>
+    <message>
+        <source>Linear</source>
+        <translation>线性</translation>
+    </message>
+    <message>
+        <source>Ease In</source>
+        <translation>渐入</translation>
+    </message>
+    <message>
+        <source>Ease Out</source>
+        <translation>渐出</translation>
+    </message>
+    <message>
+        <source>Ease In/Out</source>
+        <translation>渐入/出</translation>
+    </message>
 </context>
 <context>
     <name>FillTool</name>
@@ -481,7 +560,7 @@
     </message>
     <message>
         <source>Selective</source>
-        <translation>选择性</translation>
+        <translation type="vanished">选择性</translation>
     </message>
     <message>
         <source>Mode:</source>
@@ -513,7 +592,7 @@
     </message>
     <message>
         <source>Normal</source>
-        <translation>正常</translation>
+        <translation>常规</translation>
     </message>
     <message>
         <source>Rectangular</source>
@@ -539,6 +618,30 @@
         <source>Maximum Gap</source>
         <translation>最大间隙</translation>
     </message>
+    <message>
+        <source>Pick+Freehand</source>
+        <translation>拾取+手绘</translation>
+    </message>
+    <message>
+        <source>Empty Only</source>
+        <translation>仅空像素</translation>
+    </message>
+    <message>
+        <source>Close Gap</source>
+        <translation>闭合间隙</translation>
+    </message>
+    <message>
+        <source>Refer Fill</source>
+        <translation>参照填充</translation>
+    </message>
+    <message>
+        <source>Gap Close Distance:</source>
+        <translation>间隙闭合距离</translation>
+    </message>
+    <message>
+        <source>Extend Fill</source>
+        <translation>扩展填充</translation>
+    </message>
 </context>
 <context>
     <name>FingerTool</name>
@@ -549,6 +652,18 @@
     <message>
         <source>Invert</source>
         <translation>反转</translation>
+    </message>
+    <message>
+        <source>Mode:</source>
+        <translation>模式:</translation>
+    </message>
+    <message>
+        <source>Pick</source>
+        <translation>拾取</translation>
+    </message>
+    <message>
+        <source>Empty Only</source>
+        <translation>仅空像素</translation>
     </message>
 </context>
 <context>
@@ -597,6 +712,10 @@
         <source>&lt;custom&gt;</source>
         <translation>&lt;定制&gt;</translation>
     </message>
+    <message>
+        <source>Assistants</source>
+        <translation type="unfinished">辅助绘图</translation>
+    </message>
 </context>
 <context>
     <name>FullColorEraserTool</name>
@@ -626,7 +745,7 @@
     </message>
     <message>
         <source>Normal</source>
-        <translation>正常</translation>
+        <translation>常规</translation>
     </message>
     <message>
         <source>Rectangular</source>
@@ -639,6 +758,10 @@
     <message>
         <source>Polyline</source>
         <translation>折线</translation>
+    </message>
+    <message>
+        <source>MultiArc</source>
+        <translation type="unfinished">多段弧</translation>
     </message>
 </context>
 <context>
@@ -695,12 +818,28 @@
         <source>Lines &amp; Areas</source>
         <translation>线和区域</translation>
     </message>
+    <message>
+        <source>Lock Alpha</source>
+        <translation>锁定透明度</translation>
+    </message>
+    <message>
+        <source>Empty Only</source>
+        <translation type="unfinished">仅空像素</translation>
+    </message>
+    <message>
+        <source>Pick</source>
+        <translation type="unfinished">拾取</translation>
+    </message>
+    <message>
+        <source>Paint by Filling</source>
+        <translation type="unfinished">填充</translation>
+    </message>
 </context>
 <context>
     <name>PinchTool</name>
     <message>
         <source>Size:</source>
-        <translation>作用范围：</translation>
+        <translation>作用范围:</translation>
     </message>
     <message>
         <source>Corner:</source>
@@ -761,9 +900,9 @@
         <source>A group of skeletons already exists for current column. Replacing it will also substitute any existing vertex animation.
 
 Do you want to continue?</source>
-        <translation>当前列已经包含了一个骨架组。替换它会换掉全部现有的顶点动画。
+        <translation>当前列已经存在一组骨架。替换它也将替代任何现有的顶点动画。
 
-您要继续吗？</translation>
+你要继续吗？</translation>
     </message>
     <message>
         <source>Ok</source>
@@ -821,9 +960,9 @@ Do you want to continue?</source>
         <source>The previous vertex name will be discarded, and all associated keys will be lost.
 
 Do you want to proceed?</source>
-        <translation>之前的顶点名称会被放弃，所有关联的关键帧也会丢失。
+        <translation>之前的顶点名称将被丢弃，所有相关的键也将丢失。
 
-您要继续吗？</translation>
+你想继续吗？</translation>
     </message>
     <message>
         <source>Edit Mesh</source>
@@ -909,7 +1048,7 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>Selective</source>
-        <translation>选择性</translation>
+        <translation type="vanished">选择性</translation>
     </message>
     <message>
         <source>Pencil Mode</source>
@@ -999,6 +1138,30 @@ Do you want to proceed?</source>
         <source>Med</source>
         <translation>中</translation>
     </message>
+    <message>
+        <source>MultiArc</source>
+        <translation>多段弧</translation>
+    </message>
+    <message>
+        <source>Smooth</source>
+        <translation>平滑</translation>
+    </message>
+    <message>
+        <source>Rotate</source>
+        <translation>旋转</translation>
+    </message>
+    <message>
+        <source>Empty Only</source>
+        <translation type="unfinished">仅空像素</translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation type="unfinished">大小</translation>
+    </message>
+    <message>
+        <source>Opacity</source>
+        <translation type="unfinished">不透明度</translation>
+    </message>
 </context>
 <context>
     <name>PumpTool</name>
@@ -1071,19 +1234,19 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>The current tool cannot be used on a Vector Level.</source>
-        <translation>当前工具不能用在矢量层级上。</translation>
+        <translation type="vanished">当前工具不能用在矢量层级上。</translation>
     </message>
     <message>
         <source>The current tool cannot be used on a Toonz Level.</source>
-        <translation>当前工具不能用在 Toonz 层级上。</translation>
+        <translation type="vanished">当前工具不能用在 Toonz 层级上。</translation>
     </message>
     <message>
         <source>The current tool cannot be used on a Raster Level.</source>
-        <translation>当前工具不能用在光栅层级上。</translation>
+        <translation type="vanished">当前工具不能用在光栅层级上。</translation>
     </message>
     <message>
         <source>The current tool cannot be used on a Mesh Level.</source>
-        <translation>当前工具不能用在网格层级上。</translation>
+        <translation type="vanished">当前工具不能用在网格层级上。</translation>
     </message>
     <message>
         <source>The current tool cannot be used on a mesh-deformed level</source>
@@ -1091,7 +1254,7 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>The current frame is locked: any editing is forbidden.</source>
-        <translation>当前帧已经被锁定: 禁止所有编辑。</translation>
+        <translation>当前帧已经被锁定：禁止所有编辑。</translation>
     </message>
     <message>
         <source>Ok</source>
@@ -1111,7 +1274,7 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>RGB Picker (R%1, G%2, B%3)</source>
-        <translation>RGB 拾色器 (R%1, G%2, B%3)</translation>
+        <translation>RGB 拾色器(R%1, G%2, B%3)</translation>
     </message>
     <message>
         <source>Group</source>
@@ -1151,7 +1314,7 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>Set Save Box : (X%1,Y%2,W%3,H%4)-&gt;(X%5,Y%6,W%7,H%8)</source>
-        <translation>设置保存框 : (X%1,Y%2,W%3,H%4)-&gt;(X%5,Y%6,W%7,H%8)</translation>
+        <translation>设置保存框：(X%1,Y%2,W%3,H%4)-&gt;(X%5,Y%6,W%7,H%8)</translation>
     </message>
     <message>
         <source>The current column is hidden.</source>
@@ -1179,31 +1342,63 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>The selection cannot be updated. It is not editable.</source>
-        <translation>所选择的不能被更新。它不是可编辑的。</translation>
+        <translation>选择不能被更新。它是不可编辑的。</translation>
     </message>
     <message>
         <source>The selection cannot be deleted. It is not editable.</source>
-        <translation>所选择的不能被删除。它不是可编辑的。</translation>
+        <translation>选择不能被删除。它是不可编辑的。</translation>
     </message>
     <message>
         <source>The selection cannot be pasted. It is not editable.</source>
-        <translation>所选择的不能被粘贴。它不是可编辑的。</translation>
+        <translation>选择不能被粘贴。它是不可编辑的。</translation>
     </message>
     <message>
         <source>The selection cannot be grouped. It is not editable.</source>
-        <translation>所选择的不能被成组。它不是可编辑的。</translation>
+        <translation>选择不能被成组。它是不可编辑的。</translation>
     </message>
     <message>
         <source>The selection cannot be entered. It is not editable.</source>
-        <translation>所选择的不能被进入。它不是可编辑的。</translation>
+        <translation>选择不能被进入。它是不可编辑的。</translation>
     </message>
     <message>
         <source>The selection cannot be ungrouped. It is not editable.</source>
-        <translation>所选择的不能被取消群组。它不是可编辑的。</translation>
+        <translation>选择不能被解组。它是不可编辑的。</translation>
     </message>
     <message>
         <source>The selection cannot be moved. It is not editable.</source>
-        <translation>所选择的不能被移动。它不是可编辑的。</translation>
+        <translation>选择不能被移动。它是不可编辑的。</translation>
+    </message>
+    <message>
+        <source>Snap At Intersection</source>
+        <translation>吸附在交点</translation>
+    </message>
+    <message>
+        <source>Sort Vector Strokes With Palette Order Level : %1 Frame : %2</source>
+        <translation type="unfinished">用调色版顺序整理矢量线：%1 帧 ：%2</translation>
+    </message>
+    <message>
+        <source>Sort Vector Strokes With Palette Order Level : %1</source>
+        <translation type="unfinished">用调色版顺序整理矢量线：%1</translation>
+    </message>
+    <message>
+        <source>The current tool cannot be used on: </source>
+        <translation type="unfinished">当前工具不能被用于： </translation>
+    </message>
+    <message>
+        <source>, </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>You can use this tool on empty cell in Xsheet/Timeline.</source>
+        <translation type="unfinished">当前工具可用于摄影表/时间轴的空帧格</translation>
+    </message>
+    <message>
+        <source>You can use this tool with: </source>
+        <translation type="unfinished">当前工具可用于： </translation>
+    </message>
+    <message>
+        <source>Or just choose an empty cell in Xsheet/Timeline.</source>
+        <translation type="unfinished">或者在摄影表/时间轴中选择一个空帧格</translation>
     </message>
 </context>
 <context>
@@ -1218,7 +1413,7 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>Normal</source>
-        <translation>正常</translation>
+        <translation>常规</translation>
     </message>
     <message>
         <source>Rectangular</source>
@@ -1279,7 +1474,7 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>Normal</source>
-        <translation>正常</translation>
+        <translation>常规</translation>
     </message>
     <message>
         <source>Rectangular</source>
@@ -1297,12 +1492,28 @@ Do you want to proceed?</source>
         <source>current</source>
         <translation>当前</translation>
     </message>
+    <message>
+        <source>Ignore AutoPaint Inks</source>
+        <translation type="unfinished">忽略自动填充线条</translation>
+    </message>
 </context>
 <context>
     <name>RotateTool</name>
     <message>
         <source>Rotate On Camera Center</source>
         <translation>以相机中心旋转</translation>
+    </message>
+    <message>
+        <source>Rotate by Step</source>
+        <translation type="unfinished">步进旋转</translation>
+    </message>
+    <message>
+        <source>Step Angle:</source>
+        <translation type="unfinished">步进角度：</translation>
+    </message>
+    <message>
+        <source>Rotate Left/Right Angle:</source>
+        <translation type="unfinished">向左/向右旋转角度：</translation>
     </message>
 </context>
 <context>
@@ -1379,11 +1590,11 @@ Do you want to proceed?</source>
         <translation>旋转</translation>
     </message>
     <message>
-        <source>E/W:</source>
+        <source>X:</source>
         <translation>左右:</translation>
     </message>
     <message>
-        <source>N/S:</source>
+        <source>Y:</source>
         <translation>上下:</translation>
     </message>
     <message>
@@ -1401,6 +1612,22 @@ Do you want to proceed?</source>
     <message>
         <source>Position</source>
         <translation>位置</translation>
+    </message>
+    <message>
+        <source>Flip Selection Horizontally</source>
+        <translation>水平翻转选择</translation>
+    </message>
+    <message>
+        <source>Flip Selection Vertically</source>
+        <translation>垂直翻转选择</translation>
+    </message>
+    <message>
+        <source>Rotate Selection Left</source>
+        <translation>向左旋转选择</translation>
+    </message>
+    <message>
+        <source>Rotate Selection Right</source>
+        <translation>向右旋转选择</translation>
     </message>
 </context>
 <context>
@@ -1465,7 +1692,7 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>Palette must have more than one palette to be organized.</source>
-        <translation>必须要多个色板才能被组织。</translation>
+        <translation type="vanished">必须要多个色板才能被组织。</translation>
     </message>
     <message>
         <source>Mode:</source>
@@ -1491,13 +1718,327 @@ Do you want to proceed?</source>
         <source>Lines &amp; Areas</source>
         <translation>线和区域</translation>
     </message>
+    <message>
+        <source>No available palette.</source>
+        <translation type="unfinished">无可用调色板。</translation>
+    </message>
+    <message>
+        <source>Palette to be organized must have more than one page.</source>
+        <translation type="unfinished">要整理的调色板必须有一页以上</translation>
+    </message>
 </context>
 <context>
     <name>StylePickerToolOptionsBox</name>
     <message>
         <source>With this option being activated, the picked style will be
 moved to the end of the first page of the palette.</source>
-        <translation>打开这个选项，选中的样式将被移到色板第一页的最后。</translation>
+        <translation type="vanished">打开这个选项，选中的样式将被移到色板第一页的最后。</translation>
+    </message>
+    <message>
+        <source>With this option being activated, the picked style will replace
+the current style in current level.</source>
+        <translation type="unfinished">勾选此项，在颜色模型拾取的样式将会替换当前层级中的当前样式</translation>
+    </message>
+    <message>
+        <source>With this option being activated, the picked style will be
+moved to the end of the current style&apos;s page of the palette.</source>
+        <translation type="unfinished">勾选此项，拾取的样式将移动到当前样式所在页的末尾</translation>
+    </message>
+</context>
+<context>
+    <name>TAssistant</name>
+    <message>
+        <source>Magnetism</source>
+        <translation type="unfinished">磁力</translation>
+    </message>
+</context>
+<context>
+    <name>TAssistantBase</name>
+    <message>
+        <source>Enabled</source>
+        <translation type="unfinished">已启用</translation>
+    </message>
+</context>
+<context>
+    <name>TAssistantEllipse</name>
+    <message>
+        <source>Fish Eye</source>
+        <translation type="unfinished">鱼眼</translation>
+    </message>
+    <message>
+        <source>Circle</source>
+        <translation type="unfinished">圆</translation>
+    </message>
+    <message>
+        <source>Grid</source>
+        <translation type="unfinished">网格</translation>
+    </message>
+    <message>
+        <source>Depth Grid</source>
+        <translation type="unfinished">深度网格</translation>
+    </message>
+    <message>
+        <source>Flip Grids</source>
+        <translation type="unfinished">对称网格</translation>
+    </message>
+    <message>
+        <source>Ellipse</source>
+        <translation type="unfinished">椭圆</translation>
+    </message>
+    <message>
+        <source>Restrict A</source>
+        <translation type="unfinished">约束A</translation>
+    </message>
+    <message>
+        <source>Restrict B</source>
+        <translation type="unfinished">约束B</translation>
+    </message>
+    <message>
+        <source>Repeat</source>
+        <translation type="unfinished">重复</translation>
+    </message>
+    <message>
+        <source>Perspective</source>
+        <translation type="unfinished">透视</translation>
+    </message>
+    <message>
+        <source>Depth</source>
+        <translation type="unfinished">深度</translation>
+    </message>
+</context>
+<context>
+    <name>TAssistantPerspective</name>
+    <message>
+        <source>Perspective</source>
+        <translation type="unfinished">透视</translation>
+    </message>
+    <message>
+        <source>Parallel X</source>
+        <translation type="unfinished">平行X</translation>
+    </message>
+    <message>
+        <source>Parallel Y</source>
+        <translation type="unfinished">平行Y</translation>
+    </message>
+    <message>
+        <source>Parallel Z</source>
+        <translation type="unfinished">平行Z</translation>
+    </message>
+    <message>
+        <source>Grid XY</source>
+        <translation type="unfinished">XY面</translation>
+    </message>
+    <message>
+        <source>Grid YZ</source>
+        <translation type="unfinished">YZ面</translation>
+    </message>
+    <message>
+        <source>Grid ZX</source>
+        <translation type="unfinished">ZX面</translation>
+    </message>
+    <message>
+        <source>Show Box</source>
+        <translation type="unfinished">显示方体</translation>
+    </message>
+</context>
+<context>
+    <name>TAssistantVanishingPoint</name>
+    <message>
+        <source>Vanishing Point</source>
+        <translation type="unfinished">消失点</translation>
+    </message>
+    <message>
+        <source>Pass Through</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Grid</source>
+        <translation type="unfinished">网格</translation>
+    </message>
+    <message>
+        <source>Perspective</source>
+        <translation type="unfinished">透视</translation>
+    </message>
+    <message>
+        <source>Line</source>
+        <translation type="unfinished">直线</translation>
+    </message>
+    <message>
+        <source>Restrict A</source>
+        <translation type="unfinished">约束A</translation>
+    </message>
+    <message>
+        <source>Restrict B</source>
+        <translation type="unfinished">约束B</translation>
+    </message>
+    <message>
+        <source>Parallel</source>
+        <translation type="unfinished">平行</translation>
+    </message>
+</context>
+<context>
+    <name>TReplicator</name>
+    <message>
+        <source>Skip First Tracks</source>
+        <translation type="unfinished">跳过最初轨迹</translation>
+    </message>
+    <message>
+        <source>Skip Last Tracks</source>
+        <translation type="unfinished">跳过最后轨迹</translation>
+    </message>
+</context>
+<context>
+    <name>TReplicatorAffine</name>
+    <message>
+        <source>Replicator Affine</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fix Scale</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fix Aspect</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fix Angle</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fix Skew</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Count</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Inv. Count</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Pressure</source>
+        <translation type="unfinished">压感</translation>
+    </message>
+</context>
+<context>
+    <name>TReplicatorGrid</name>
+    <message>
+        <source>Replicator Grid</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fix Angle</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fix Skew</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mirror A</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mirror B</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Count A</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Inv. Count A</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Count B</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Inv. Count B</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TReplicatorJitter</name>
+    <message>
+        <source>Jitter</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Period</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Amplitude</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fix First Point</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fix Last Point</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TReplicatorMirror</name>
+    <message>
+        <source>Replicator Mirror</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Discrete Angle</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Pressure</source>
+        <translation type="unfinished">压感</translation>
+    </message>
+</context>
+<context>
+    <name>TReplicatorStar</name>
+    <message>
+        <source>Replicator Star</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Discrete Angle</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mirror</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Count</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TTool</name>
+    <message>
+        <source>Toonz Vector Level</source>
+        <translation type="unfinished">矢量层级</translation>
+    </message>
+    <message>
+        <source>Toonz Raster Level</source>
+        <translation type="unfinished">Toonz栅格层级</translation>
+    </message>
+    <message>
+        <source>Raster Level</source>
+        <translation type="unfinished">栅格层级</translation>
+    </message>
+    <message>
+        <source>Mesh Level</source>
+        <translation type="unfinished">网格层级</translation>
+    </message>
+    <message>
+        <source>Assistants Level</source>
+        <translation type="unfinished">辅助层级</translation>
     </message>
 </context>
 <context>
@@ -1546,6 +2087,141 @@ moved to the end of the first page of the palette.</source>
         <source>Pressure</source>
         <translation>压感</translation>
     </message>
+    <message>
+        <source>Lock Alpha</source>
+        <translation>锁定透明度</translation>
+    </message>
+    <message>
+        <source>Assistants</source>
+        <translation type="unfinished">辅助绘图</translation>
+    </message>
+</context>
+<context>
+    <name>ToonzVectorBrushTool</name>
+    <message>
+        <source>Size</source>
+        <translation>大小</translation>
+    </message>
+    <message>
+        <source>Accuracy:</source>
+        <translation>精度:</translation>
+    </message>
+    <message>
+        <source>Smooth:</source>
+        <translation>平滑:</translation>
+    </message>
+    <message>
+        <source>Preset:</source>
+        <translation>预设:</translation>
+    </message>
+    <message>
+        <source>&lt;custom&gt;</source>
+        <translation>&lt;定制&gt;</translation>
+    </message>
+    <message>
+        <source>Break</source>
+        <translation>断裂</translation>
+    </message>
+    <message>
+        <source>Pressure</source>
+        <translation>压感</translation>
+    </message>
+    <message>
+        <source>Cap</source>
+        <translation>端点</translation>
+    </message>
+    <message>
+        <source>Join</source>
+        <translation>连接</translation>
+    </message>
+    <message>
+        <source>Miter:</source>
+        <translation>斜接比例:</translation>
+    </message>
+    <message>
+        <source>Range:</source>
+        <translation>范围:</translation>
+    </message>
+    <message>
+        <source>Snap</source>
+        <translation>吸附</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>关闭</translation>
+    </message>
+    <message>
+        <source>Linear</source>
+        <translation>线性</translation>
+    </message>
+    <message>
+        <source>In</source>
+        <translation>内</translation>
+    </message>
+    <message>
+        <source>Out</source>
+        <translation>外</translation>
+    </message>
+    <message>
+        <source>In&amp;Out</source>
+        <translation>内&amp;外</translation>
+    </message>
+    <message>
+        <source>Low</source>
+        <translation>低</translation>
+    </message>
+    <message>
+        <source>Med</source>
+        <translation>中</translation>
+    </message>
+    <message>
+        <source>High</source>
+        <translation>高</translation>
+    </message>
+    <message>
+        <source>Butt cap</source>
+        <translation>平头</translation>
+    </message>
+    <message>
+        <source>Round cap</source>
+        <translation>圆头</translation>
+    </message>
+    <message>
+        <source>Projecting cap</source>
+        <translation>方头</translation>
+    </message>
+    <message>
+        <source>Miter join</source>
+        <translation>斜接连接</translation>
+    </message>
+    <message>
+        <source>Round join</source>
+        <translation>圆角连接</translation>
+    </message>
+    <message>
+        <source>Bevel join</source>
+        <translation>斜角连接</translation>
+    </message>
+    <message>
+        <source>Draw Order:</source>
+        <translation type="unfinished">绘制顺序:</translation>
+    </message>
+    <message>
+        <source>Over All</source>
+        <translation type="unfinished">在最上</translation>
+    </message>
+    <message>
+        <source>Under All</source>
+        <translation type="unfinished">在最下</translation>
+    </message>
+    <message>
+        <source>Palette Order</source>
+        <translation type="unfinished">按调色板顺序</translation>
+    </message>
+    <message>
+        <source>Assistants</source>
+        <translation type="unfinished">辅助绘图</translation>
+    </message>
 </context>
 <context>
     <name>TrackerTool</name>
@@ -1559,11 +2235,11 @@ moved to the end of the first page of the palette.</source>
     </message>
     <message>
         <source>X:</source>
-        <translation>X:</translation>
+        <translation>左右:</translation>
     </message>
     <message>
         <source>Y:</source>
-        <translation>Y:</translation>
+        <translation>上下:</translation>
     </message>
 </context>
 <context>
@@ -1667,6 +2343,10 @@ moved to the end of the first page of the palette.</source>
         <source>Bevel join</source>
         <translation>斜角连接</translation>
     </message>
+    <message>
+        <source>Include Intersection</source>
+        <translation>包括交点</translation>
+    </message>
 </context>
 <context>
     <name>VectorTapeTool</name>
@@ -1704,7 +2384,7 @@ moved to the end of the first page of the palette.</source>
     </message>
     <message>
         <source>Normal</source>
-        <translation>正常</translation>
+        <translation>常规</translation>
     </message>
     <message>
         <source>Rectangular</source>

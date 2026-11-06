@@ -18,6 +18,8 @@
 #include "toonz/levelset.h"
 #include "toonz/toonzscene.h"
 #include "toonz/txshsimplelevel.h"
+#include "toonz/txshpalettelevel.h"
+#include "toonz/txshsoundlevel.h"
 #include "toonz/txshleveltypes.h"
 
 // TnzQt includes
@@ -91,7 +93,7 @@ public:
     return QObject::tr("Move Level to Cast Folder");
   }
 };
-}
+}  // namespace
 
 //=============================================================================
 //
@@ -107,7 +109,7 @@ CastTreeViewer::CastTreeViewer(QWidget *parent)
   // qproperty-autoFillBackground: true;}");
 
   header()->close();
-  setIconSize(QSize(21, 17));
+  setIconSize(QSize(16, 16));
   setUniformRowHeights(true);
   // m_treeViewer->setColumnCount(1);
 
@@ -167,7 +169,7 @@ void CastTreeViewer::enableCommands() {
 
 void CastTreeViewer::onFolderChanged(QTreeWidgetItem *current,
                                      QTreeWidgetItem *previous) {
-  // rende la selezione corrente; serve per intercettare il comando MI_Clear
+  // makes the selection current; serves to intercept the MI_Clear command
   makeCurrent();
 }
 
@@ -237,7 +239,7 @@ void CastTreeViewer::rebuildCastTree() {
 
   QTreeWidgetItem *root =
       new QTreeWidgetItem((QTreeWidgetItem *)0, QStringList(rootName));
-  static QPixmap clapboard(":Resources/clapboard.png");
+  static QIcon clapboard = createQIcon("clapboard");
   root->setIcon(0, clapboard);
   insertTopLevelItem(0, root);
   populateFolder(root);
@@ -298,11 +300,11 @@ void CastTreeViewer::dragMoveEvent(QDragMoveEvent *event) {
         (scene->isUntitled()) ? L"Untitled" : scene->getSceneName();
     rootName = rootName.fromStdWString(name);
   }
-  if (m_dropTargetItem &&
-          m_dropTargetItem->data(0, Qt::DisplayRole).toString() ==
-              AudioFolderName ||
-      m_dropFilePath != TFilePath() &&
-          m_dropTargetItem->data(0, Qt::DisplayRole).toString() == rootName)
+  if ((m_dropTargetItem &&
+       m_dropTargetItem->data(0, Qt::DisplayRole).toString() ==
+           AudioFolderName) ||
+      (m_dropFilePath != TFilePath() &&
+       m_dropTargetItem->data(0, Qt::DisplayRole).toString() == rootName))
     m_dropTargetItem = 0;
 
   if (!m_dropTargetItem)
@@ -452,11 +454,7 @@ void CastTreeViewer::deleteFolder() {
 //
 //-----------------------------------------------------------------------------
 
-#if QT_VERSION >= 0x050500
 CastBrowser::CastBrowser(QWidget *parent, Qt::WindowFlags flags)
-#else
-CastBrowser::CastBrowser(QWidget *parent, Qt::WFlags flags)
-#endif
     : QSplitter(parent)
     , m_treeViewer(0)
     , m_folderName(0)
@@ -465,8 +463,6 @@ CastBrowser::CastBrowser(QWidget *parent, Qt::WFlags flags)
   // style sheet
   setObjectName("CastBrowser");
   setFrameStyle(QFrame::StyledPanel);
-  setStyleSheet("QSplitter::handle {height:4px;}");
-  setStyleSheet("#CastBrowser { margin:1px;border:0px }");
 
   m_treeViewer = new CastTreeViewer(this);
   m_treeViewer->resize(300, m_treeViewer->size().height());
@@ -474,12 +470,12 @@ CastBrowser::CastBrowser(QWidget *parent, Qt::WFlags flags)
   QFrame *box = new QFrame(this);
   box->setFrameStyle(QFrame::StyledPanel);
   QVBoxLayout *boxLayout = new QVBoxLayout(box);
-  boxLayout->setMargin(0);
+  boxLayout->setContentsMargins(0, 0, 0, 0);
   boxLayout->setSpacing(0);
 
   m_folderName = new QLabel("", box);
-  m_folderName->setFrameStyle(QFrame::StyledPanel);
-  m_folderName->setStyleSheet("border-bottom: 1px solid black");
+  m_folderName->setObjectName("CastBrowserFolderName");
+  m_folderName->setFrameStyle(QFrame::Box);
   m_itemViewer = new DvItemViewer(box, false, true, DvItemViewer::Cast);
   DvItemViewerPanel *viewerPanel = m_itemViewer->getPanel();
   viewerPanel->setMissingTextColor(QColor(200, 0, 0));
@@ -487,7 +483,9 @@ CastBrowser::CastBrowser(QWidget *parent, Qt::WFlags flags)
   castSelection->setBrowser(this);
   viewerPanel->setSelection(castSelection);
   viewerPanel->addColumn(DvItemListModel::FrameCount, 50);
+  viewerPanel->addColumn(DvItemListModel::FullPath, 300);
   m_itemViewer->setModel(this);
+  m_itemViewer->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 
   DvItemViewerTitleBar *titleBar = new DvItemViewerTitleBar(m_itemViewer, box);
   // titleBar->hide();
@@ -633,7 +631,16 @@ QVariant CastBrowser::getItemData(int index, DataType dataType,
     return item->getToolTip();
   else if (dataType == FrameCount)
     return item->getFrameCount();
-  else if (dataType == VersionControlStatus) {
+  else if (dataType == FullPath) {
+    ToonzScene *scene   = TApp::instance()->getCurrentScene()->getScene();
+    TXshSimpleLevel *sl = item->getSimpleLevel();
+    if (sl) return scene->decodeFilePath(sl->getPath()).getQString();
+    TXshPaletteLevel *pl = item->getPaletteLevel();
+    if (pl) return scene->decodeFilePath(pl->getPath()).getQString();
+    TXshSoundLevel *ml = item->getSoundLevel();
+    if (ml) return scene->decodeFilePath(ml->getPath()).getQString();
+    return "";
+  } else if (dataType == VersionControlStatus) {
     if (!item->exists())
       return VC_Missing;
     else
@@ -725,12 +732,13 @@ QMenu *CastBrowser::getContextMenu(QWidget *parent, int index) {
   bool paletteSelected     = false;
   bool vectorLevelSelected = false;
   bool meshLevelSelected   = false;
+  bool toonzRasterLevelSelected = false;
   bool otherFileSelected   = false;
   int levelSelectedCount   = 0;
   for (it = indices.begin(); it != indices.end(); ++it) {
     int index = *it;
     if (index < 0 || index >= m_castItems->getItemCount())
-      continue;  // non dovrebbe mai succedere
+      continue;  // should never happen
     TXshSimpleLevel *sl = m_castItems->getItem(index)->getSimpleLevel();
     if (!sl) {
       if (m_castItems->getItem(index)->getPaletteLevel())
@@ -741,9 +749,11 @@ QMenu *CastBrowser::getContextMenu(QWidget *parent, int index) {
     }
     levelSelectedCount++;
     if (sl->getType() == PLI_XSHLEVEL)
-      vectorLevelSelected = true;
+        vectorLevelSelected = true;
     else if (sl->getType() == MESH_XSHLEVEL)
-      meshLevelSelected = true;
+        meshLevelSelected = true;
+    else if (sl->getType() == TZP_XSHLEVEL)
+        toonzRasterLevelSelected = true;
     else
       otherFileSelected = true;
   }
@@ -764,9 +774,11 @@ QMenu *CastBrowser::getContextMenu(QWidget *parent, int index) {
     menu->addAction(cm->getAction(MI_EditLevel));
   if (!paletteSelected) menu->addAction(cm->getAction(MI_SaveLevel));
   menu->addSeparator();
-  // MI_ConvertToVectors se sono stati selezionati solo livelli non vettoriali
+  // MI_ConvertToVectors if only non-vector layers were selected
   if (!audioSelected && !paletteSelected && !vectorLevelSelected)
     menu->addAction(cm->getAction(MI_ConvertToVectors));
+  if (!audioSelected && !paletteSelected && !toonzRasterLevelSelected)
+      menu->addAction(cm->getAction(MI_ConvertToToonzRaster));
   menu->addSeparator();
   menu->addAction(cm->getAction(MI_RemoveLevel));
   menu->addAction(cm->getAction(MI_RemoveUnused));

@@ -13,6 +13,9 @@
 #define DVVAR DV_IMPORT_VAR
 #endif
 
+/* FreeBSD defines atop() macro in standard includes. */
+#undef atop
+
 //===============================================================
 
 //  Forward declarations
@@ -169,7 +172,7 @@ DVAPI void quickPut(const TRasterP &out, const TRasterCM32P &up,
                     const TPixel32 &globalColorScale = TPixel::Black,
                     bool inksOnly                    = false);
 
-// for trasparency check, ink check and paint check
+// for transparency check, ink check and paint check
 
 class CmappedQuickputSettings {
 public:
@@ -178,15 +181,32 @@ public:
 
   int m_inkIndex, m_paintIndex;
 
-  bool m_inksOnly, m_transparencyCheck, m_blackBgCheck;
+  bool m_inksOnly, m_transparencyCheck, m_blackBgCheck, m_isOnionSkin;
+  int m_gapCheckIndex = -1;
+
+  bool m_inkCheckEnabled;
+  bool m_ink1CheckEnabled;
+  bool m_paintCheckEnabled;
+
+  TPixel m_inkCheckColor;
+  TPixel m_ink1CheckColor;
+  TPixel m_paintCheckColor;
 
   CmappedQuickputSettings()
       : m_globalColorScale(TPixel32::Black)
       , m_inksOnly(false)
       , m_transparencyCheck(false)
       , m_blackBgCheck(false)
+      , m_isOnionSkin(false)
+      , m_gapCheckIndex(-1)
       , m_inkIndex(-1)
-      , m_paintIndex(-1) {}
+      , m_paintIndex(-1)
+      , m_inkCheckEnabled(false)
+      , m_ink1CheckEnabled(false)
+      , m_paintCheckEnabled(false)
+      , m_inkCheckColor(TPixel::Red)
+      , m_ink1CheckColor(TPixel::Red)
+      , m_paintCheckColor(TPixel::Red) {}
 };
 
 DVAPI void quickPut(const TRasterP &dn, const TRasterCM32P &upCM32,
@@ -280,10 +300,10 @@ DVAPI void ropmin(const TRasterP &rup, const TRasterP &rdown,
 
 DVAPI void ropmax(const TRasterP &rup, const TRasterP &rdown,
                   const TRasterP &rout);
-DVAPI void linearburn(const TRasterP &rup, const TRasterP &rdown,
-                      const TRasterP &rout);
-DVAPI void overlay(const TRasterP &rup, const TRasterP &rdown,
-                   const TRasterP &rout);
+// DVAPI void linearburn(const TRasterP &rup, const TRasterP &rdown,
+//                       const TRasterP &rout);
+// DVAPI void overlay(const TRasterP &rup, const TRasterP &rdown,
+//                    const TRasterP &rout);
 
 //! Make a premultiply of all raster pixels
 DVAPI void premultiply(const TRasterP &ras);
@@ -344,6 +364,7 @@ struct RaylitParams {
   double m_scale;
   bool m_invert;
   bool m_includeInput;
+  double m_radius;
 };
 
 //! Make raylit effect on \b srcRas raster and put the result in \b dstRas.
@@ -384,7 +405,7 @@ DVAPI void swapRBChannels(const TRaster32P &r);
 
 //! Convert TRasterP in an old toonz raster!
 /*! Use the same buffer, not creates a new raster (the palette is new instead!)
-  */
+ */
 DVAPI _RASTER *convertRaster50to46(const TRasterP &inRas,
                                    const TPaletteP &inPalette);
 
@@ -405,4 +426,12 @@ DVAPI void lockRaster(_RASTER *raster);
 //! inactivity periods.
 DVAPI void unlockRaster(_RASTER *raster);
 
-}  // TRop namespace
+// conversion between sRGB <--> Linear RGB
+DVAPI void toLinearRGB(TRasterP raster, double gamma,
+                       bool sourceIsPremultiplied = true);
+DVAPI void tosRGB(TRasterP raster, double gamma,
+                  bool sourceIsPremultiplied = true);
+
+DVAPI void adjustGain(TRasterP raster, int gainStep, double gamma);
+
+}  // namespace TRop

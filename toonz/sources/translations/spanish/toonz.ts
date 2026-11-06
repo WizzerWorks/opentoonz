@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="es" sourcelanguage="en">
+<TS version="2.1" language="es_ES" sourcelanguage="en_US">
 <context>
     <name>AddFilmstripFramesPopup</name>
     <message>
@@ -67,7 +67,7 @@
     </message>
     <message>
         <source>Add Thickness</source>
-        <translation>Agregar grosor</translation>
+        <translation>Adicionar grosor</translation>
     </message>
     <message>
         <source>Constant Thickness</source>
@@ -128,7 +128,7 @@
     </message>
     <message>
         <source>Sync with XSheet</source>
-        <translation>Sincronizar con planilla</translation>
+        <translation type="vanished">Sincronizar con planilla</translation>
     </message>
     <message>
         <source> </source>
@@ -137,15 +137,137 @@
     <message>
         <source>The microphone is not available: 
 Please select a different device or check the microphone.</source>
-        <translation>El micrófono no está disponible: 
+        <translation type="vanished">El micrófono no está disponible: 
 Por favor seleccionar un dispositivo diferente o comprobar el micrófono.</translation>
+    </message>
+    <message>
+        <source>Sync with XSheet/Timeline</source>
+        <translation>Sincronizar con planilla/línea de tiempo</translation>
+    </message>
+    <message>
+        <source>Device: </source>
+        <translation>Dispositivo: </translation>
+    </message>
+    <message>
+        <source>Sample rate: </source>
+        <translation>Tasa de muestreo: </translation>
+    </message>
+    <message>
+        <source>Sample format: </source>
+        <translation>Formato de muestreo: </translation>
+    </message>
+    <message>
+        <source>8000 Hz</source>
+        <translation>8000 Hz</translation>
+    </message>
+    <message>
+        <source>11025 Hz</source>
+        <translation>11025 Hz</translation>
+    </message>
+    <message>
+        <source>22050 Hz</source>
+        <translation>22050 Hz</translation>
+    </message>
+    <message>
+        <source>44100 Hz</source>
+        <translation>44100 Hz</translation>
+    </message>
+    <message>
+        <source>48000 Hz</source>
+        <translation>48000 Hz</translation>
+    </message>
+    <message>
+        <source>96000 Hz</source>
+        <translation>96000 Hz</translation>
+    </message>
+    <message>
+        <source>Mono 8-Bits</source>
+        <translation>8 bits mono</translation>
+    </message>
+    <message>
+        <source>Stereo 8-Bits</source>
+        <translation>8 bits estéreo</translation>
+    </message>
+    <message>
+        <source>Mono 16-Bits</source>
+        <translation>16 bits mono</translation>
+    </message>
+    <message>
+        <source>Stereo 16-Bits</source>
+        <translation>16 bits estéreo</translation>
+    </message>
+    <message>
+        <source>Audio input device to record</source>
+        <translation>Dispositivo de entrada de audio a grabar</translation>
+    </message>
+    <message>
+        <source>Number of samples per second, 44.1KHz = CD Quality</source>
+        <translation>Cantidad de muestras por segundo, 44.1 KHz = calidad CD</translation>
+    </message>
+    <message>
+        <source>Number of channels and bits per sample, 16-bits recommended</source>
+        <translation>Cantidad de canales y bits por muestra, 16 bits recomendado</translation>
+    </message>
+    <message>
+        <source>Play animation from current frame while recording/playback</source>
+        <translation>Reproducir la animación desde el fotograma actual, mientras se graba/reproduce</translation>
+    </message>
+    <message>
+        <source>Save recording and insert into new column</source>
+        <translation>Guardar la grabación e insertarla en una nueva columna</translation>
+    </message>
+    <message>
+        <source>Refresh list of connected audio input devices</source>
+        <translation>Refrescar la lista de dispositivos de entrada de audio conectados</translation>
+    </message>
+    <message>
+        <source>Record failed: 
+Make sure there&apos;s XSheet or Timeline in the room.</source>
+        <translation>Falló la grabación: 
+Asegurarse de que haya una planilla o línea de tiempo en el espacio de trabajo.</translation>
+    </message>
+    <message>
+        <source>Failed to save WAV file:
+Make sure you have write permissions in folder.</source>
+        <translation>Fallo al guardar el archivo WAV:
+Asegurarse de tener permisos de escritura en la carpeta.</translation>
+    </message>
+    <message>
+        <source>Audio format unsupported:
+Nearest format will be internally used.</source>
+        <translation>Formato de audio no soportado:
+Se utilizará internamente el formato más cercano.</translation>
+    </message>
+    <message>
+        <source>192000 Hz</source>
+        <translation>192000 Hz</translation>
+    </message>
+    <message>
+        <source>Mono 24-Bits</source>
+        <translation>24 bits mono</translation>
+    </message>
+    <message>
+        <source>Stereo 24-Bits</source>
+        <translation>24 bits estéreo</translation>
+    </message>
+    <message>
+        <source>Mono 32-Bits</source>
+        <translation>32 bits mono</translation>
+    </message>
+    <message>
+        <source>Stereo 32-Bits</source>
+        <translation>32 bits estéreo</translation>
+    </message>
+    <message>
+        <source>Bind to Current Room</source>
+        <translation>Enlazar a espacio de trabajo actual</translation>
     </message>
 </context>
 <context>
     <name>AutoInputCellNumberPopup</name>
     <message>
         <source>Auto Input Cell Number</source>
-        <translation>Ingresar números de acetatos automáticamente</translation>
+        <translation>Introducir números de celda automáticamente</translation>
     </message>
     <message>
         <source>Overwrite</source>
@@ -189,7 +311,7 @@ Por favor seleccionar un dispositivo diferente o comprobar el micrófono.</trans
     </message>
     <message>
         <source>No available cells or columns are selected.</source>
-        <translation>No hay acetatos o columnas seleccionadas.</translation>
+        <translation>No hay celdas o columnas seleccionadas.</translation>
     </message>
     <message>
         <source>Selected level has no frames between From and To.</source>
@@ -221,6 +343,201 @@ todos los fotogramas del nivel seleccionado.</translation>
     </message>
 </context>
 <context>
+    <name>AutoLipSyncPopup</name>
+    <message>
+        <source>Auto Lip Sync</source>
+        <translation>Sincro labial automático</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Aplicar</translation>
+    </message>
+    <message>
+        <source>A I Drawing</source>
+        <translation>A I</translation>
+    </message>
+    <message>
+        <source>O Drawing</source>
+        <translation>O</translation>
+    </message>
+    <message>
+        <source>E Drawing</source>
+        <translation>E</translation>
+    </message>
+    <message>
+        <source>U Drawing</source>
+        <translation>U</translation>
+    </message>
+    <message>
+        <source>L Drawing</source>
+        <translation>L</translation>
+    </message>
+    <message>
+        <source>W Q Drawing</source>
+        <translation>W Q</translation>
+    </message>
+    <message>
+        <source>M B P Drawing</source>
+        <translation>M B P</translation>
+    </message>
+    <message>
+        <source>F V Drawing</source>
+        <translation>F V</translation>
+    </message>
+    <message>
+        <source>Rest Drawing</source>
+        <translation>Reposo</translation>
+    </message>
+    <message>
+        <source>C D G K N R S Th Y Z</source>
+        <translation>C D G K N R S Th Y Z</translation>
+    </message>
+    <message>
+        <source>Extend Rest Drawing to End Marker</source>
+        <translation>Extender dibujo de Reposo hasta el marcador de fin</translation>
+    </message>
+    <message>
+        <source>Audio Source: </source>
+        <translation>Fuente de audio: </translation>
+    </message>
+    <message>
+        <source>Audio Script (Optional, Improves accuracy): </source>
+        <translation>Guión de audio (opcional, mejora la calidad): </translation>
+    </message>
+    <message>
+        <source>A script significantly increases the accuracy of the lip sync.</source>
+        <translation>Un guión mejora significativamente la precisión de la sincronización labial</translation>
+    </message>
+    <message>
+        <source>Previous Drawing</source>
+        <translation>Dibujo anterior</translation>
+    </message>
+    <message>
+        <source>Next Drawing</source>
+        <translation>Dibujo siguiente</translation>
+    </message>
+    <message>
+        <source>Insert at Frame: </source>
+        <translation>Insertar en fotograma: </translation>
+    </message>
+    <message>
+        <source>Thumbnails are not available for sub-Xsheets.
+Please use the frame numbers for reference.</source>
+        <translation>No se muestran miniaturas para sub-planillas.
+Usar los números de fotograma como referencia.</translation>
+    </message>
+    <message>
+        <source>Unable to apply lip sync data to this column type</source>
+        <translation>No es posible aplicar datos de sincronización labial a este tipo de columna</translation>
+    </message>
+    <message>
+        <source>Rhubarb not found, please set the location in Preferences.</source>
+        <translation>Rhubarb no encontrado, por favor definir su ubicación en las Preferencias.</translation>
+    </message>
+    <message>
+        <source>Choose File...</source>
+        <translation>Escoger archivo...</translation>
+    </message>
+    <message>
+        <source>Please choose an audio file and try again.</source>
+        <translation>Por favor escoger un archivo de audio e intentar de nuevo.</translation>
+    </message>
+    <message>
+        <source>Rhubarb Processing Error:
+
+</source>
+        <translation>Error de procesamiento de Rhubarb:
+
+</translation>
+    </message>
+    <message>
+        <source>Please choose a lip sync data file to continue.</source>
+        <translation>Por favor escoger un archivo de datos de sincro labial para continuar.</translation>
+    </message>
+    <message>
+        <source>Cannot find the file specified. 
+Please choose a valid lip sync data file to continue.</source>
+        <translation>No es posible encontrar el archivo especificado. 
+Por favor escoger un archivo válido de sincronización labial para continuar.</translation>
+    </message>
+    <message>
+        <source>Unable to open the file: 
+</source>
+        <translation>No es posible abrir el archivo: 
+</translation>
+    </message>
+    <message>
+        <source>Invalid data file.
+ Please choose a valid lip sync data file to continue.</source>
+        <translation>Archivo de datos inválido.
+ Por favor escoger un archivo válido de datos de sincronización labial para continuar.</translation>
+    </message>
+    <message>
+        <source>SubXSheet Frame </source>
+        <translation>Dibujo en sub-planilla </translation>
+    </message>
+    <message>
+        <source>Drawing: </source>
+        <translation>Dibujo: </translation>
+    </message>
+    <message>
+        <source>Analyzing audio...</source>
+        <translation>Analizando audio...</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Frame </source>
+        <translation>Fotograma</translation>
+    </message>
+    <message>
+        <source>Audio file field is not available.</source>
+        <translation>El campo de audio no está disponible.</translation>
+    </message>
+    <message>
+        <source>Please select an audio file first.</source>
+        <translation>Seleccionar primero un archivo de audio.</translation>
+    </message>
+    <message>
+        <source>Audio file does not exist.</source>
+        <translation>El archivo de audio no existe.</translation>
+    </message>
+    <message>
+        <source>Rhubarb process timed out after %1 seconds. The process may be stuck.</source>
+        <translation>El proceso de Rhubarb expiró luego de %1 segundos. Es posible que el proceso se encuentre trancado.</translation>
+    </message>
+    <message>
+        <source>Rhubarb process crashed.</source>
+        <translation>El proceso de Rhubarb se cerró de forma inesperada.</translation>
+    </message>
+    <message>
+        <source>Rhubarb failed to start. Check if the path is correct.</source>
+        <translation>Error al iniciar Rhubarb. Comprobar si la ruta es correcta.</translation>
+    </message>
+    <message>
+        <source>Rhubarb crashed during execution.</source>
+        <translation>Rhubarb se cerró de forma inesperada durante su ejecución.</translation>
+    </message>
+    <message>
+        <source>Rhubarb process timed out.</source>
+        <translation>El proceso de Rhubarb expiró.</translation>
+    </message>
+    <message>
+        <source>Communication error with Rhubarb process.</source>
+        <translation>Error de comunicación con el proceso de Rhubarb.</translation>
+    </message>
+    <message>
+        <source>Unknown error occurred with Rhubarb.</source>
+        <translation>Ocurrió un error desconocido con Rhubarb.</translation>
+    </message>
+    <message>
+        <source>Cancelling...</source>
+        <translation>Cancelando...</translation>
+    </message>
+</context>
+<context>
     <name>AutocenterPopup</name>
     <message>
         <source>Autocenter</source>
@@ -228,11 +545,86 @@ todos los fotogramas del nivel seleccionado.</translation>
     </message>
     <message>
         <source>Pegbar Holes:</source>
-        <translation>Huecos de barra de sujeción:</translation>
+        <translation>Huecos del papel:</translation>
     </message>
     <message>
         <source>Field Guide:</source>
         <translation>Guía de campos:</translation>
+    </message>
+</context>
+<context>
+    <name>BaseViewerPanel</name>
+    <message>
+        <source>GUI Show / Hide</source>
+        <translation>Mostrar en interfaz</translation>
+    </message>
+    <message>
+        <source>Playback Toolbar</source>
+        <translation>Barra de herramientas de reproducción</translation>
+    </message>
+    <message>
+        <source>Frame Slider</source>
+        <translation>Deslizador de fotogramas</translation>
+    </message>
+    <message>
+        <source>Safe Area (Right Click to Select)</source>
+        <translation>Áreas de seguridad (clic derecho para seleccionar)</translation>
+    </message>
+    <message>
+        <source>Field Guide</source>
+        <translation>Guía de campos</translation>
+    </message>
+    <message>
+        <source>Camera Stand View</source>
+        <translation>Vista de mesa de trabajo</translation>
+    </message>
+    <message>
+        <source>3D View</source>
+        <translation>Vista 3D</translation>
+    </message>
+    <message>
+        <source>Camera View</source>
+        <translation>Vista de cámara</translation>
+    </message>
+    <message>
+        <source>Freeze</source>
+        <translation>Congelar</translation>
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation>Previsualizar</translation>
+    </message>
+    <message>
+        <source>Sub-camera Preview</source>
+        <translation>Previsualizar región</translation>
+    </message>
+    <message>
+        <source>Untitled</source>
+        <translation>Sin título</translation>
+    </message>
+    <message>
+        <source>Scene: </source>
+        <translation>Escena: </translation>
+    </message>
+    <message>
+        <source>   ::   Frame: </source>
+        <translation>   ::   Fotograma: </translation>
+    </message>
+    <message>
+        <source>  ::  Zoom : </source>
+        <translation>  ::  Ampliación : </translation>
+    </message>
+    <message>
+        <source> (Flipped)</source>
+        <translation> (Invertido)</translation>
+    </message>
+    <message>
+        <source>   ::   Level: </source>
+        <translation>   ::   Nivel: </translation>
+    </message>
+    <message>
+        <source>Level: </source>
+        <translation>Nivel: </translation>
     </message>
 </context>
 <context>
@@ -374,11 +766,11 @@ Detenerla o esperar a su finalización antes de eliminarla.</translation>
     </message>
     <message>
         <source>Load Preset</source>
-        <translation>Cargar ajuste</translation>
+        <translation>Cargar preajuste</translation>
     </message>
     <message>
         <source>Save as Preset</source>
-        <translation>Guardar como ajuste</translation>
+        <translation>Guardar como preajuste</translation>
     </message>
     <message>
         <source>Close</source>
@@ -444,6 +836,32 @@ Detenerla o esperar a su finalización antes de eliminarla.</translation>
         <source>Image</source>
         <translation>Imagen</translation>
     </message>
+    <message>
+        <source>Export Board Image</source>
+        <translation>Exportar imagen del panel</translation>
+    </message>
+    <message>
+        <source>File Name Suffix:</source>
+        <translation>Sufijo del nombre de archivo:</translation>
+    </message>
+    <message>
+        <source>File name suffix can&apos;t be empty.</source>
+        <translation>El sufijo del nombre de archivo no puede estar vacío.</translation>
+    </message>
+    <message>
+        <source>There is no board image to export.</source>
+        <translation>No hay ninguna imagen del panel que exportar.</translation>
+    </message>
+    <message>
+        <source>It is not possible to save because the selected file format is not supported.</source>
+        <translation>No es posible guardar porque el formato de archivo seleccionado no es soportado.</translation>
+    </message>
+    <message>
+        <source>File %1 already exists.
+Do you want to overwrite it?</source>
+        <translation>El archivo %1 ya existe.
+¿Sobrescribirlo?</translation>
+    </message>
 </context>
 <context>
     <name>BoardView</name>
@@ -483,6 +901,121 @@ Detenerla o esperar a su finalización antes de eliminarla.</translation>
     </message>
 </context>
 <context>
+    <name>BrushPresetPanel</name>
+    <message>
+        <source>No brush tool selected</source>
+        <translation>No está seleccionada la herramienta Pincel</translation>
+    </message>
+    <message>
+        <source>Remove selected preset</source>
+        <translation>Eliminar el preajueste seleccionado</translation>
+    </message>
+    <message>
+        <source>Add current settings as new preset</source>
+        <translation>Agregar las opciones actuales como un nuevo preajueste</translation>
+    </message>
+    <message>
+        <source>Refresh preset list</source>
+        <translation>Refrescar la lista de preajustes</translation>
+    </message>
+    <message>
+        <source>View mode</source>
+        <translation>Modo de visualización</translation>
+    </message>
+    <message>
+        <source>Brush Presets</source>
+        <translation>Preajustes de pincel</translation>
+    </message>
+    <message>
+        <source>Vector Brush</source>
+        <translation>Pincel vectorial</translation>
+    </message>
+    <message>
+        <source>Toonz Raster Brush</source>
+        <translation>Pincel de Imagen de Toonz</translation>
+    </message>
+    <message>
+        <source>MyPaint Brush</source>
+        <translation>Pincel MyPaint</translation>
+    </message>
+    <message>
+        <source>MyPaint Brush Tnz</source>
+        <translation>Pincel MyPaint Tnz</translation>
+    </message>
+    <message>
+        <source>Raster Brush</source>
+        <translation>Pincel de Imagen</translation>
+    </message>
+    <message>
+        <source>Invalid Name</source>
+        <translation>Nombre inválido</translation>
+    </message>
+    <message>
+        <source>Please enter a valid preset name.</source>
+        <translation>Introducir un nombre válido de preajuste.</translation>
+    </message>
+    <message>
+        <source>Add Preset</source>
+        <translation>Agregar preajuste</translation>
+    </message>
+    <message>
+        <source>Please use the [+] button in the Tool Options Bar to add new presets.
+
+The new preset will automatically appear in this panel.</source>
+        <translation>Usar el botón [+] en la Barra de opciones de la herramienta para agregar nuevos preajustes.
+
+El nuevo preajuste aparecerá utomáticamente en este panel.</translation>
+    </message>
+    <message>
+        <source>Remove Preset</source>
+        <translation>Eliminar preajuste</translation>
+    </message>
+    <message>
+        <source>Are you sure you want to remove the preset &apos;%1&apos;?</source>
+        <translation>¿Seguro eliminar el preajuste &apos;%1&apos;?</translation>
+    </message>
+    <message>
+        <source>Please use the [-] button in the Tool Options Bar to remove presets.
+
+The change will automatically be reflected in this panel.</source>
+        <translation>Usar el botón [-] en la Barra de opcopnes de la herramienta para eliminar preajustes.
+
+El cambio se reflejará automáticamente en este panel.</translation>
+    </message>
+    <message>
+        <source>List</source>
+        <translation>Lista</translation>
+    </message>
+    <message>
+        <source>Small</source>
+        <translation>Íconos pequeños</translation>
+    </message>
+    <message>
+        <source>Medium</source>
+        <translation>Íconos medianos</translation>
+    </message>
+    <message>
+        <source>Large</source>
+        <translation>Íconos grandes</translation>
+    </message>
+    <message>
+        <source>GUI Show / Hide</source>
+        <translation>Mostrar / Ocultar interfaz</translation>
+    </message>
+    <message>
+        <source>Cell Borders</source>
+        <translation>Bordes de celdas</translation>
+    </message>
+    <message>
+        <source>Cell Backgrounds</source>
+        <translation>Fondo de celdas</translation>
+    </message>
+    <message>
+        <source> [WIP]</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>CameraCaptureLevelControl</name>
     <message>
         <source>Black Point Value</source>
@@ -505,7 +1038,7 @@ Detenerla o esperar a su finalización antes de eliminarla.</translation>
     <name>CameraCaptureLevelHistogram</name>
     <message>
         <source>Click to Update Histogram</source>
-        <translation>Clic para actualizar el histograma</translation>
+        <translation type="vanished">Clic para actualizar el histograma</translation>
     </message>
     <message>
         <source>Drag to Move White Point</source>
@@ -537,6 +1070,24 @@ Detenerla o esperar a su finalización antes de eliminarla.</translation>
     <message>
         <source>Current Camera Settings</source>
         <translation>Opciones de la cámara actual</translation>
+    </message>
+</context>
+<context>
+    <name>CameraTrackPreviewArea</name>
+    <message>
+        <source>Fit To Window</source>
+        <translation>Ajustar a la ventana</translation>
+    </message>
+</context>
+<context>
+    <name>Canon</name>
+    <message>
+        <source>AC Power</source>
+        <translation>Encendido</translation>
+    </message>
+    <message>
+        <source>Full</source>
+        <translation>Completo</translation>
     </message>
 </context>
 <context>
@@ -616,51 +1167,51 @@ Do you want to crop the canvas?</source>
     <name>CaptureSettingsPopup</name>
     <message>
         <source>Define Device</source>
-        <translation>Definir dispositivo</translation>
+        <translation type="vanished">Definir dispositivo</translation>
     </message>
     <message>
         <source>V Resolution</source>
-        <translation>Resolución V</translation>
+        <translation type="vanished">Resolución V</translation>
     </message>
     <message>
         <source>H Resolution</source>
-        <translation>Resolución H</translation>
+        <translation type="vanished">Resolución H</translation>
     </message>
     <message>
         <source>White Calibration</source>
-        <translation>Calibración de blancos</translation>
+        <translation type="vanished">Calibración de blancos</translation>
     </message>
     <message>
         <source>Capture</source>
-        <translation>Capturar</translation>
+        <translation type="vanished">Capturar</translation>
     </message>
     <message>
         <source>Brightness:</source>
-        <translation>Brillo:</translation>
+        <translation type="vanished">Brillo:</translation>
     </message>
     <message>
         <source>Contrast:</source>
-        <translation>Contraste:</translation>
+        <translation type="vanished">Contraste:</translation>
     </message>
     <message>
         <source> Upside-down</source>
-        <translation> Dar vuelta</translation>
+        <translation type="vanished"> Dar vuelta</translation>
     </message>
     <message>
         <source>A Device is Connected.</source>
-        <translation>Se ha conectado un dispositivo.</translation>
+        <translation type="vanished">Se ha conectado un dispositivo.</translation>
     </message>
     <message>
         <source>No cameras found.</source>
-        <translation>No se han encontrado cámaras.</translation>
+        <translation type="vanished">No se han encontrado cámaras.</translation>
     </message>
     <message>
         <source>Device Disconnected.</source>
-        <translation>Dispositivo desconectado.</translation>
+        <translation type="vanished">Dispositivo desconectado.</translation>
     </message>
     <message>
         <source>No Device Defined.</source>
-        <translation>No se ha definido un dispositivo.</translation>
+        <translation type="vanished">No se ha definido un dispositivo.</translation>
     </message>
 </context>
 <context>
@@ -702,14 +1253,21 @@ Do you want to crop the canvas?</source>
     </message>
 </context>
 <context>
+    <name>CellMarksPopup</name>
+    <message>
+        <source>Cell Marks Settings</source>
+        <translation>Opciones de marcado de celdas</translation>
+    </message>
+</context>
+<context>
     <name>ChooseCameraDialog</name>
     <message>
         <source>Ok</source>
-        <translation>Aceptar</translation>
+        <translation type="vanished">Aceptar</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation>Cancelar</translation>
+        <translation type="vanished">Cancelar</translation>
     </message>
 </context>
 <context>
@@ -779,7 +1337,7 @@ nuevo al iniciar el proceso de limpieza.</translation>
     </message>
     <message>
         <source>Couldn&apos;t create directory &quot;%1&quot;</source>
-        <translation>No fue posible crear el directorio &quot;%1&quot;</translation>
+        <translation>No fue posible crear la carpeta &quot;%1&quot;</translation>
     </message>
     <message>
         <source>Couldn&apos;t open &quot;%1&quot; for write</source>
@@ -986,7 +1544,7 @@ What do you want to do?</source>
     </message>
     <message>
         <source>Pegbar Holes</source>
-        <translation>Huecos de barra de sujeción</translation>
+        <translation>Huecos del papel</translation>
     </message>
     <message>
         <source>Field Guide</source>
@@ -994,11 +1552,11 @@ What do you want to do?</source>
     </message>
     <message>
         <source>Bottom</source>
-        <translation>Inferior</translation>
+        <translation>Abajo</translation>
     </message>
     <message>
         <source>Top</source>
-        <translation>Superior</translation>
+        <translation>Arriba</translation>
     </message>
     <message>
         <source>Left</source>
@@ -1007,6 +1565,10 @@ What do you want to do?</source>
     <message>
         <source>Right</source>
         <translation>Derecha</translation>
+    </message>
+    <message>
+        <source>Format:</source>
+        <translation>Formato:</translation>
     </message>
 </context>
 <context>
@@ -1017,7 +1579,7 @@ What do you want to do?</source>
     </message>
     <message>
         <source>Pegbar Holes:</source>
-        <translation>Huecos de barra de sujeción:</translation>
+        <translation>Huecos del papel:</translation>
     </message>
     <message>
         <source>Field Guide:</source>
@@ -1060,6 +1622,21 @@ What do you want to do?</source>
     <message>
         <source>Level Name:</source>
         <translation type="vanished">Nombre del nivel:</translation>
+    </message>
+</context>
+<context>
+    <name>ColorFiltersPopup</name>
+    <message>
+        <source>Color Filters Settings</source>
+        <translation>Opciones de filtrado de color</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Limpiar</translation>
+    </message>
+    <message>
+        <source>Color Filter %1</source>
+        <translation>Filtro de color %1</translation>
     </message>
 </context>
 <context>
@@ -1166,27 +1743,27 @@ What do you want to do? </source>
     <name>ComboViewerPanel</name>
     <message>
         <source>Safe Area (Right Click to Select)</source>
-        <translation>Áreas de seguridad (clic derecho para seleccionar)</translation>
+        <translation type="vanished">Áreas de seguridad (clic derecho para seleccionar)</translation>
     </message>
     <message>
         <source>Field Guide</source>
-        <translation>Guía de campos</translation>
+        <translation type="vanished">Guía de campos</translation>
     </message>
     <message>
         <source>Camera Stand View</source>
-        <translation>Vista de mesa de trabajo</translation>
+        <translation type="vanished">Vista de mesa de trabajo</translation>
     </message>
     <message>
         <source>3D View</source>
-        <translation>Vista 3D</translation>
+        <translation type="vanished">Vista 3D</translation>
     </message>
     <message>
         <source>Camera View</source>
-        <translation>Vista de cámara</translation>
+        <translation type="vanished">Vista de cámara</translation>
     </message>
     <message>
         <source>Freeze</source>
-        <translation>Congelar</translation>
+        <translation type="vanished">Congelar</translation>
     </message>
     <message>
         <source>GUI Show / Hide</source>
@@ -1202,19 +1779,19 @@ What do you want to do? </source>
     </message>
     <message>
         <source>Console</source>
-        <translation>Consola</translation>
+        <translation type="vanished">Consola</translation>
     </message>
     <message>
         <source>Preview</source>
-        <translation>Previsualizar</translation>
+        <translation type="vanished">Previsualizar</translation>
     </message>
     <message>
         <source>Sub-camera Preview</source>
-        <translation>Previsualizar región</translation>
+        <translation type="vanished">Previsualizar región</translation>
     </message>
     <message>
         <source>Untitled</source>
-        <translation>Sin título</translation>
+        <translation type="vanished">Sin título</translation>
     </message>
     <message>
         <source>Scene: </source>
@@ -1222,11 +1799,11 @@ What do you want to do? </source>
     </message>
     <message>
         <source>   ::   Frame: </source>
-        <translation>   ::   Fotograma: </translation>
+        <translation type="vanished">   ::   Fotograma: </translation>
     </message>
     <message>
         <source>   ::   Level: </source>
-        <translation>   ::   Nivel: </translation>
+        <translation type="vanished">   ::   Nivel: </translation>
     </message>
     <message>
         <source>Level: </source>
@@ -1234,15 +1811,23 @@ What do you want to do? </source>
     </message>
     <message>
         <source> (Flipped)</source>
-        <translation> (Invertido)</translation>
+        <translation type="vanished"> (Invertido)</translation>
     </message>
     <message>
         <source>[SCENE]: </source>
-        <translation>[ESCENA]: </translation>
+        <translation type="vanished">[ESCENA]: </translation>
     </message>
     <message>
         <source>[LEVEL]: </source>
-        <translation>[NIVEL]: </translation>
+        <translation type="vanished">[NIVEL]: </translation>
+    </message>
+    <message>
+        <source>Playback Toolbar</source>
+        <translation>Barra de herramientas de reproducción</translation>
+    </message>
+    <message>
+        <source>Frame Slider</source>
+        <translation>Deslizador de fotogramas</translation>
     </message>
 </context>
 <context>
@@ -1256,7 +1841,7 @@ What do you want to do? </source>
     <name>CommandBarListTree</name>
     <message>
         <source>----Separator----</source>
-        <translation>----Separador----</translation>
+        <translation type="vanished">----Separador----</translation>
     </message>
 </context>
 <context>
@@ -1293,6 +1878,10 @@ What do you want to do? </source>
         <source>Duplicated commands will be ignored. Only the last one will appear in the menu bar.</source>
         <translation>Los comandos duplicados serán ignorados. Sólo el último aparecerá en la barra.</translation>
     </message>
+    <message>
+        <source>Search:</source>
+        <translation>Buscar:</translation>
+    </message>
 </context>
 <context>
     <name>CommandBarTree</name>
@@ -1317,6 +1906,131 @@ What do you want to do? </source>
     <message>
         <source>Theirs</source>
         <translation>De otros</translation>
+    </message>
+</context>
+<context>
+    <name>ConvertFolderPopup</name>
+    <message>
+        <source>Level %1 already exists; skipped.
+</source>
+        <translation>El nivel %1 ya existe; omitido.</translation>
+    </message>
+    <message>
+        <source>Failed to remove existing level %1; skipped.
+</source>
+        <translation>Falla al eliminar el nivel existente %1; omitido.</translation>
+    </message>
+    <message>
+        <source>Converting level %1 of %2: %3</source>
+        <translation>Convirtiendo nivel %1 de %2: %3</translation>
+    </message>
+    <message>
+        <source>Convert aborted.
+</source>
+        <translation>Conversión abortada.</translation>
+    </message>
+    <message>
+        <source>Level %1 has no frame; skipped.</source>
+        <translation>El nivel %1 no contiene fotogramas; omitido.</translation>
+    </message>
+    <message>
+        <source>Convert TZP In Folder</source>
+        <translation>Convertir TZP en carpeta</translation>
+    </message>
+    <message>
+        <source>Convert</source>
+        <translation>Convertir</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Skip Existing Files</source>
+        <translation>Omitir archivos existentes</translation>
+    </message>
+    <message>
+        <source>Apply to Subfolder</source>
+        <translation>Aplicar a subcarpeta</translation>
+    </message>
+    <message>
+        <source>Convert TZP in Folder</source>
+        <translation>Convertir TZP en carpeta</translation>
+    </message>
+    <message>
+        <source>Folder to convert:</source>
+        <translation>Carpeta a convertir:</translation>
+    </message>
+    <message>
+        <source>[SKIP] </source>
+        <translation>[OMITIR] </translation>
+    </message>
+    <message>
+        <source>[OVERWRITE] </source>
+        <translation>[SOBRESCRIBIR] </translation>
+    </message>
+    <message>
+        <source>Target folder is not specified.</source>
+        <translation>Carpeta de destino no especificada.</translation>
+    </message>
+    <message>
+        <source>No files will be converted.</source>
+        <translation>No se convertirá ningún archivo.</translation>
+    </message>
+    <message>
+        <source>Cofirmation</source>
+        <translation>Confirmación</translation>
+    </message>
+    <message>
+        <source>Converting %1 files. Are you sure?</source>
+        <translation>Convirtiendo %1 archivos. ¿Confirmar?</translation>
+    </message>
+    <message>
+        <source>Convert TZP in folder
+</source>
+        <translation>Convertir TZP en carpeta</translation>
+    </message>
+    <message>
+        <source>Target Folder: %1
+</source>
+        <translation>Carpeta de destino: %1</translation>
+    </message>
+    <message>
+        <source>Skip Existing Files: %1
+</source>
+        <translation>Omitir archivos existentes: %1</translation>
+    </message>
+    <message>
+        <source>Apply to Subfolder: %1
+</source>
+        <translation>Aplicar a subcarpeta: %1</translation>
+    </message>
+    <message>
+        <source>Approx. levels to be converted: %1
+
+</source>
+        <translation>Niveles (aprox) a ser convertidos: %1</translation>
+    </message>
+    <message>
+        <source>Started: </source>
+        <translation>Iniciado: </translation>
+    </message>
+    <message>
+        <source>Convert aborted:</source>
+        <translation>Conversión abortada:</translation>
+    </message>
+    <message>
+        <source>Convert completed:</source>
+        <translation>Conversión completada:</translation>
+    </message>
+    <message>
+        <source>  %1 level(s) done, %2 level(s) skipped with %3 error(s).
+</source>
+        <translation>  %1 niveles procesados, %2 niveles omitidos con %3 errores.</translation>
+    </message>
+    <message>
+        <source>Ended: </source>
+        <translation>Finalizado: </translation>
     </message>
 </context>
 <context>
@@ -1363,7 +2077,7 @@ What do you want to do? </source>
     </message>
     <message>
         <source>Convert 1 Level</source>
-        <translation>Convertir 1 nivel</translation>
+        <translation type="vanished">Convertir 1 nivel</translation>
     </message>
     <message>
         <source>Convert %1 Levels</source>
@@ -1551,7 +2265,7 @@ What do you want to do? </source>
 be appended to the palette after conversion in 
 order to save the effort of creating styles 
 before color designing.</source>
-        <translation>Si esta activa, los estilos de la paleta predefinida
+        <translation type="vanished">Si esta activa, los estilos de la paleta predefinida
 ($TOONZSTUDIOPALETTE\cleanup_default.tpl) serán 
 anexados a la paleta, luego de la conversión para 
 ahorrar el esfuerzo de tener que crear estilos antes 
@@ -1590,6 +2304,182 @@ contuviera información de PPP, entonces se usarán los de la cámara actual.
     <message>
         <source>Level %1 converting to same file format; skipped.</source>
         <translation>Se está intentando convertir el nivel %1 al mismo formato que ya tenía; será omitido.</translation>
+    </message>
+    <message>
+        <source>When activated, styles of the default palette
+($TOONZSTUDIOPALETTE\Global Palettes\Default Palettes\Cleanup_Palette.tpl) will 
+be appended to the palette after conversion in 
+order to save the effort of creating styles 
+before color designing.</source>
+        <translation>Cuendo esté activado, los estilos de la paleta predefinida
+($TOONZSTUDIOPALETTE\Global Palettes\Default Palettes\Cleanup_Palette.tpl) 
+serán anexados a la paleta luego de la conversión 
+para ahorrar el esfuerzo de tener que crear estilos 
+antes del disieño de color.</translation>
+    </message>
+    <message>
+        <source>Convert 1 Level : %1</source>
+        <translation>Convertir 1 nivel: %1</translation>
+    </message>
+</context>
+<context>
+    <name>ConvertResultPopup</name>
+    <message>
+        <source>Save log file..</source>
+        <translation>Guardar archivo de registro..</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Cerrar</translation>
+    </message>
+    <message>
+        <source>Do you want to save the log?</source>
+        <translation>¿Guardar un registro?</translation>
+    </message>
+</context>
+<context>
+    <name>CrashHandler</name>
+    <message>
+        <source>&lt;b&gt;OpenToonz crashed unexpectedly.&lt;/b&gt;</source>
+        <translation>&lt;b&gt;OpenToonz se ha cerrado de forma inesperada.&lt;/b&gt;</translation>
+    </message>
+    <message>
+        <source>A crash report has been generated.</source>
+        <translation>Se ha generado un reporte de la falla.</translation>
+    </message>
+    <message>
+        <source>To report, click &apos;Open Issue Webpage&apos; to access OpenToonz&apos;s Issues page on GitHub.</source>
+        <translation>Para reportarla, hacer clic en &apos;Abrir página de incidentes&apos; para acceder a la página de reporte de incidentes de OpenToonz en GitHub.</translation>
+    </message>
+    <message>
+        <source>Click on the &apos;New issue&apos; button and fill out the form.</source>
+        <translation>Hacer clic en el botón &apos;New issue&apos; y rellenar el formulario (en inglés, por favor).</translation>
+    </message>
+    <message>
+        <source>System Configuration and Problem Details:</source>
+        <translation>Configuración del sistema y detalles del problema:</translation>
+    </message>
+    <message>
+        <source>Copy to Clipboard</source>
+        <translation>Copiar al portapapeles</translation>
+    </message>
+    <message>
+        <source>Open Issue Webpage</source>
+        <translation>Abrir página de incidentes</translation>
+    </message>
+    <message>
+        <source>Open Reports Folder</source>
+        <translation>Abrir carpeta de reportes</translation>
+    </message>
+    <message>
+        <source>Close Application</source>
+        <translation>Cerrar aplicación</translation>
+    </message>
+    <message>
+        <source>OpenToonz crashed!</source>
+        <translation>¡OpenToonz se ha cerrado!</translation>
+    </message>
+    <message>
+        <source>Application is in unstable state and must be restarted.</source>
+        <translation>La aplicación se encuentra en un estado inestable y deberá ser reiniciada.</translation>
+    </message>
+    <message>
+        <source>Resuming is not recommended and may lead to an unrecoverable crash.</source>
+        <translation>No es recomendable continuar su uso, debido a que es posible que esto lleve a un cierre irrecuperable.</translation>
+    </message>
+    <message>
+        <source>Ignore advice and try to resume program?</source>
+        <translation>¿Ignorar el consejo e intentar continuar usando el programa?</translation>
+    </message>
+    <message>
+        <source>Ignore crash?</source>
+        <translation>¿Ignorar el cierre?</translation>
+    </message>
+</context>
+<context>
+    <name>CustomPanelEditorPopup</name>
+    <message>
+        <source>Template folder %1 not found.</source>
+        <translation>Carpeta de plantillas %1 no encontrada.</translation>
+    </message>
+    <message>
+        <source>Template files not found.</source>
+        <translation>Archivos de plantilla no encontrados.</translation>
+    </message>
+    <message>
+        <source>%1 (Edit)</source>
+        <translation>%1 (Editar)</translation>
+    </message>
+    <message>
+        <source>Button</source>
+        <translation>Botón</translation>
+    </message>
+    <message>
+        <source>Scroller</source>
+        <translation>Deslizador</translation>
+    </message>
+    <message>
+        <source>Please input the panel name.</source>
+        <translation>Por favor introducir el nombre del panel.</translation>
+    </message>
+    <message>
+        <source>The custom panel %1 already exists. Do you want to overwrite?</source>
+        <translation>El panel personalizado %1 ya existe. ¿Sobrescribirlo?</translation>
+    </message>
+    <message>
+        <source>Overwrite</source>
+        <translation>Sobrescribir</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Failed to create folder.</source>
+        <translation>Falla al crear carpeta.</translation>
+    </message>
+    <message>
+        <source>Failed to open the template.</source>
+        <translation>Falla al abrir la plantilla.</translation>
+    </message>
+    <message>
+        <source>Failed to open the file for writing.</source>
+        <translation>Falla al abrir el archivo para su escritura.</translation>
+    </message>
+    <message>
+        <source>Custom Panel Editor</source>
+        <translation>Editor de panel personalizado</translation>
+    </message>
+    <message>
+        <source>a control in the panel</source>
+        <translation>un control en el panel</translation>
+    </message>
+    <message>
+        <source>Command List</source>
+        <translation>Lista de comandos</translation>
+    </message>
+    <message>
+        <source>Register</source>
+        <translation>Registrar</translation>
+    </message>
+    <message>
+        <source>Template:</source>
+        <translation>Plantilla:</translation>
+    </message>
+    <message>
+        <source>Search:</source>
+        <translation>Buscar:</translation>
+    </message>
+    <message>
+        <source>Panel name:</source>
+        <translation>Nombre del panel:</translation>
+    </message>
+</context>
+<context>
+    <name>CustomPanelUIField</name>
+    <message>
+        <source>Drag and set command</source>
+        <translation>Arrastrar y definir comando</translation>
     </message>
 </context>
 <context>
@@ -1640,6 +2530,14 @@ contuviera información de PPP, entonces se usarán los de la cámara actual.
         <source>OK</source>
         <translation>Aceptar</translation>
     </message>
+    <message>
+        <source>TWAIN</source>
+        <translation>TWAIN</translation>
+    </message>
+    <message>
+        <source>Internal</source>
+        <translation>Interno</translation>
+    </message>
 </context>
 <context>
     <name>DeleteInkDialog</name>
@@ -1665,7 +2563,7 @@ contuviera información de PPP, entonces se usarán los de la cámara actual.
     </message>
     <message>
         <source>Style Index:</source>
-        <translation>Índice del estilo:</translation>
+        <translation>Identificador de estilo:</translation>
     </message>
     <message>
         <source>Apply to Frames:</source>
@@ -1762,6 +2660,14 @@ contuviera información de PPP, entonces se usarán los de la cámara actual.
     <message>
         <source>The local path does not exist:</source>
         <translation>La ruta local no existe:</translation>
+    </message>
+    <message>
+        <source>Unlock</source>
+        <translation>Desbloquear</translation>
+    </message>
+    <message>
+        <source>Revert</source>
+        <translation>Revertir</translation>
     </message>
 </context>
 <context>
@@ -1866,6 +2772,190 @@ contuviera información de PPP, entonces se usarán los de la cámara actual.
     </message>
 </context>
 <context>
+    <name>ExportAllLevelsPopup</name>
+    <message>
+        <source>Export All</source>
+        <translation>Exportar todos</translation>
+    </message>
+    <message>
+        <source>Skip</source>
+        <translation>Omitir</translation>
+    </message>
+    <message>
+        <source>No level found in the camera view or levels are null!!</source>
+        <translation>¡Ningún nivel encontrado en la vista de cámara o los niveles son nulos!</translation>
+    </message>
+    <message>
+        <source>Please select a Folder!</source>
+        <translation>¡Seleccionar una carpeta!</translation>
+    </message>
+    <message>
+        <source>It is not possible to create the %1 folder.</source>
+        <translation>No es posible crear la carpeta %1.</translation>
+    </message>
+    <message>
+        <source>Export failed,please delete exported files and try again.</source>
+        <translation>Error al exportar, borrar los archivos ya exportados e intentar de nuevo.</translation>
+    </message>
+</context>
+<context>
+    <name>ExportCalibrationFilePopup</name>
+    <message>
+        <source>Export Camera Calibration Settings</source>
+        <translation>Exportar opciones de calibración de cámara</translation>
+    </message>
+</context>
+<context>
+    <name>ExportCameraTrackPopup</name>
+    <message>
+        <source>Export Camera Track</source>
+        <translation>Exportar rastreo de cámara</translation>
+    </message>
+    <message>
+        <source>Draw On Keyframes</source>
+        <translation>Dibujar en claves</translation>
+    </message>
+    <message>
+        <source>Draw On Navigation Tags</source>
+        <translation>Dibujar en etiquetas de navegación</translation>
+    </message>
+    <message>
+        <source>Top Left</source>
+        <translation>Superior izquierda</translation>
+    </message>
+    <message>
+        <source>Top Right</source>
+        <translation>Superior derecha</translation>
+    </message>
+    <message>
+        <source>Center</source>
+        <translation>Centro</translation>
+    </message>
+    <message>
+        <source>Bottom Left</source>
+        <translation>Inferior izquierda</translation>
+    </message>
+    <message>
+        <source>Bottom Right</source>
+        <translation>Inferior derecha</translation>
+    </message>
+    <message>
+        <source>Draw Numbers On Track Line</source>
+        <translation>Dibujar números en la línea de rastreo</translation>
+    </message>
+    <message>
+        <source>Export</source>
+        <translation>Exportar</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Specify frame numbers where the camera rectangles will be drawn. Separate numbers by comma &quot;,&quot; .</source>
+        <translation>Especificar los números de fotograma donde se dibujarán los rectángulos de la cámara. Separar los números usando comas &quot;,&quot; .</translation>
+    </message>
+    <message>
+        <source>None</source>
+        <translation>Ninguna</translation>
+    </message>
+    <message>
+        <source>All frames</source>
+        <translation>En todos los fotogramas</translation>
+    </message>
+    <message>
+        <source>Every 2 frames</source>
+        <translation>Cada 2 fotogramas</translation>
+    </message>
+    <message>
+        <source>Every 3 frames</source>
+        <translation>Cada 3 fotogramas</translation>
+    </message>
+    <message>
+        <source>Every 4 frames</source>
+        <translation>Cada 4 fotogramas</translation>
+    </message>
+    <message>
+        <source>Every 5 frames</source>
+        <translation>Cada 5 fotogramas</translation>
+    </message>
+    <message>
+        <source>Every 6 frames</source>
+        <translation>Cada 6 fotogramas</translation>
+    </message>
+    <message>
+        <source>Every 8 frames</source>
+        <translation>Cada 8 fotogramas</translation>
+    </message>
+    <message>
+        <source>Every 10 frames</source>
+        <translation>Cada 10 fotogramas</translation>
+    </message>
+    <message>
+        <source>Every 12 frames</source>
+        <translation>Cada 12 fotogramas</translation>
+    </message>
+    <message>
+        <source>Target Column:</source>
+        <translation>Columna objetivo:</translation>
+    </message>
+    <message>
+        <source>Background:</source>
+        <translation>Fondo:</translation>
+    </message>
+    <message>
+        <source>Line Color:</source>
+        <translation>Color de líneas:</translation>
+    </message>
+    <message>
+        <source>Camera Rectangles</source>
+        <translation>Rectángulos de cámara</translation>
+    </message>
+    <message>
+        <source>Specify Frames Manually:</source>
+        <translation>Especificar fotogramas manualmente:</translation>
+    </message>
+    <message>
+        <source>Track Lines</source>
+        <translation>Líneas de rastreo</translation>
+    </message>
+    <message>
+        <source>Graduation Marks Interval:</source>
+        <translation>Intervalo de marcas de graduación:</translation>
+    </message>
+    <message>
+        <source>Frame Numbers</source>
+        <translation>Números de fotograma</translation>
+    </message>
+    <message>
+        <source>Camera Rect Corner:</source>
+        <translation>Esquina del marco de cámara:</translation>
+    </message>
+    <message>
+        <source>Font Family:</source>
+        <translation>Familia de tipografía:</translation>
+    </message>
+    <message>
+        <source>Font Size:</source>
+        <translation>Tamaño de tipografía:</translation>
+    </message>
+    <message>
+        <source>Col %1 (%2)</source>
+        <translation>Col %1 (%2)</translation>
+    </message>
+    <message>
+        <source>Please specify one of the following file formats; jpg, jpeg, bmp, png, and tif</source>
+        <translation>Por favor especificar uno de los siguientes formatos de archivo; jpg, jpeg, bmp, png, y tif</translation>
+    </message>
+</context>
+<context>
+    <name>ExportCurrentSceneCommandHandler</name>
+    <message>
+        <source>You must save the current scene first.</source>
+        <translation>Es necesario guardar antes la escena actual.</translation>
+    </message>
+</context>
+<context>
     <name>ExportCurvePopup</name>
     <message>
         <source>Export Curve</source>
@@ -1904,11 +2994,35 @@ contuviera información de PPP, entonces se usarán los de la cámara actual.
     </message>
     <message>
         <source>The file name cannot be empty or contain any of the following characters:(new line)  \ / : * ? &quot;  |</source>
-        <translation>El nombre de archivo no puede estar vacío o contener cualquiera de los siguientes caracteres:(nueva línea)  \ / : * ? &quot;  |</translation>
+        <translation type="vanished">El nombre de archivo no puede estar vacío o contener cualquiera de los siguientes caracteres:(nueva línea)  \ / : * ? &quot;  |</translation>
     </message>
     <message>
         <source>File Browser</source>
         <translation>Explorador de archivos</translation>
+    </message>
+    <message>
+        <source>Export Level: No Level Selected</source>
+        <translation>Exportar nivel: Ningún nivel seleccionado</translation>
+    </message>
+    <message>
+        <source>Export Level: %1 Level Selected</source>
+        <translation>Exportar nivel: Nivel %1 seleccionado</translation>
+    </message>
+    <message>
+        <source>Please select a folder!</source>
+        <translation>¡Seleccionar una carpeta!</translation>
+    </message>
+    <message>
+        <source>Please select at least one level(column).</source>
+        <translation>Seleccionar al menos un nivel (o columna).</translation>
+    </message>
+    <message>
+        <source>It is not possible to create the %1 folder.</source>
+        <translation>No es posible crear la carpeta %1.</translation>
+    </message>
+    <message>
+        <source>Please type file name!</source>
+        <translation>¡Introducir nombre de archivo!</translation>
     </message>
 </context>
 <context>
@@ -1923,7 +3037,7 @@ contuviera información de PPP, entonces se usarán los de la cámara actual.
     </message>
     <message>
         <source>Vectors Export Box</source>
-        <translation>Exportación vectorial</translation>
+        <translation>Exportación de vectores</translation>
     </message>
     <message>
         <source>Width:</source>
@@ -1963,7 +3077,7 @@ contuviera información de PPP, entonces se usarán los de la cámara actual.
     </message>
     <message>
         <source>Add Thickness</source>
-        <translation>Agregar grosor</translation>
+        <translation>Adicionar grosor</translation>
     </message>
     <message>
         <source>Constant Thickness</source>
@@ -1984,6 +3098,63 @@ contuviera información de PPP, entonces se usarán los de la cámara actual.
     <message>
         <source>Height: </source>
         <translation>Altura: </translation>
+    </message>
+    <message>
+        <source>Create Folder(equal file name)</source>
+        <translation>Crear carpeta (igual nombre de archivo)</translation>
+    </message>
+</context>
+<context>
+    <name>ExportOCACommand</name>
+    <message>
+        <source>Save Images in EXR Format</source>
+        <translation>Guardar imágenes en formato EXR</translation>
+    </message>
+    <message>
+        <source>Rasterize Vectors</source>
+        <translation>Vectores a imagen</translation>
+    </message>
+    <message>
+        <source>Frame Offset: </source>
+        <translation type="vanished">Desplazamiento de fotogramas: </translation>
+    </message>
+    <message>
+        <source>Checked: Images are saved as EXR
+Unchecked: Images are saved as PNG</source>
+        <translation>Activado: Las imágenes serán guardadas como EXR
+Desactivado: Las imágenes serán guardadas como PNG</translation>
+    </message>
+    <message>
+        <source>Checked: Rasterize into EXR/PNG
+Unchecked: Vectors are saved as SVG</source>
+        <translation>Activado: Convertir a imagen EXR/PNG
+Desactivado: Los vectores serán guardados en formato SVG</translation>
+    </message>
+    <message>
+        <source>Starting Frame Offset</source>
+        <translation type="vanished">Desplazamiento inicial de los fotogramas</translation>
+    </message>
+    <message>
+        <source>Hide</source>
+        <translation>Ocultar</translation>
+    </message>
+    <message>
+        <source>Exporting...</source>
+        <translation>Exportando...</translation>
+    </message>
+    <message>
+        <source>Starting...</source>
+        <translation>Iniciando...</translation>
+    </message>
+    <message>
+        <source>Export Reference Layers</source>
+        <translation>Exportar capas de referencia</translation>
+    </message>
+    <message>
+        <source>Checked: Layers with Preview Visible OFF are also exported
+Unchecked: Only layers with Preview Visible ON are exported</source>
+        <translation>Marcado: Las capas con la Visibilidad en previsualización apagada también serán exportadas
+Desmarcado: Sólo las capas con la Visibilidad en previsualización encendida serán exportadas</translation>
     </message>
 </context>
 <context>
@@ -2055,6 +3226,322 @@ contuviera información de PPP, entonces se usarán los de la cámara actual.
         <source>The project name you specified is already used.</source>
         <translation>El nombre de proyecto especificado ya está en uso.</translation>
     </message>
+    <message>
+        <source>Create In:</source>
+        <translation>Crear en:</translation>
+    </message>
+    <message>
+        <source>Project &apos;%1&apos; already exists</source>
+        <translation>El proyecto &apos;%1&apos; ya existe</translation>
+    </message>
+    <message>
+        <source>Export as Standalone Scene</source>
+        <translation>Exportar como escena autónoma</translation>
+    </message>
+    <message>
+        <source>Export To:</source>
+        <translation>Exportar a:</translation>
+    </message>
+    <message>
+        <source>Target folder already exists and not empty.
+ %1</source>
+        <translation>La carpeta de destino ya existe y no está vacía.
+ %1</translation>
+    </message>
+</context>
+<context>
+    <name>ExportXDTSCommand</name>
+    <message>
+        <source>None</source>
+        <translation type="vanished">Ninguna</translation>
+    </message>
+    <message>
+        <source>All columns</source>
+        <translation type="vanished">Todas las columnas</translation>
+    </message>
+    <message>
+        <source>Only active columns</source>
+        <translation type="vanished">Sólo columnas activas</translation>
+    </message>
+    <message>
+        <source>Inbetween symbol mark</source>
+        <translation type="vanished">Marca de intermedios</translation>
+    </message>
+    <message>
+        <source>Reverse sheet symbol mark</source>
+        <translation type="vanished">Marca de planilla invertida</translation>
+    </message>
+    <message>
+        <source>Target column</source>
+        <translation type="vanished">Columna objetivo</translation>
+    </message>
+</context>
+<context>
+    <name>ExportXsheetPdfPopup</name>
+    <message>
+        <source>Export Xsheet PDF</source>
+        <translation>Exportar planilla como PDF</translation>
+    </message>
+    <message>
+        <source>Print Export DateTime</source>
+        <translation>Fecha y hora de exportación</translation>
+    </message>
+    <message>
+        <source>Print Scene Path</source>
+        <translation>Ruta de la escena</translation>
+    </message>
+    <message>
+        <source>Print Soundtrack</source>
+        <translation>Pista de sonido</translation>
+    </message>
+    <message>
+        <source>Print Scene Name</source>
+        <translation>Nombre de escena</translation>
+    </message>
+    <message>
+        <source>Put Serial Frame Numbers Over Pages</source>
+        <translation>Colocar números de fotograma seriales en las páginas</translation>
+    </message>
+    <message>
+        <source>Print Level Names On The Bottom</source>
+        <translation>Nombres de nivel debajo</translation>
+    </message>
+    <message>
+        <source>Print Dialogue</source>
+        <translation>Diálogo de impresión</translation>
+    </message>
+    <message>
+        <source>Text</source>
+        <translation>Texto</translation>
+    </message>
+    <message>
+        <source>Image</source>
+        <translation>Imagen</translation>
+    </message>
+    <message>
+        <source>&lt; Prev</source>
+        <translation>&lt; Ant</translation>
+    </message>
+    <message>
+        <source>Next &gt;</source>
+        <translation>Sig &gt;</translation>
+    </message>
+    <message>
+        <source>Export PDF</source>
+        <translation>Exportar PDF</translation>
+    </message>
+    <message>
+        <source>Export PNG</source>
+        <translation>Exportar PNG</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>ACTIONS</source>
+        <translation>ACCIONES</translation>
+    </message>
+    <message>
+        <source>CELLS</source>
+        <translation>CELDAS</translation>
+    </message>
+    <message>
+        <source>Always</source>
+        <translation>Siempre</translation>
+    </message>
+    <message>
+        <source>More Than 3 Continuous Cells</source>
+        <translation>Más de 3 celdas continuas</translation>
+    </message>
+    <message>
+        <source>None</source>
+        <translation>Nunca</translation>
+    </message>
+    <message>
+        <source>Template Settings</source>
+        <translation>Opciones de plantilla</translation>
+    </message>
+    <message>
+        <source>Template:</source>
+        <translation>Plantilla:</translation>
+    </message>
+    <message>
+        <source>Line color:</source>
+        <translation>Color de líneas:</translation>
+    </message>
+    <message>
+        <source>Template font:</source>
+        <translation>Tipografía plantilla:</translation>
+    </message>
+    <message>
+        <source>Logo:</source>
+        <translation>Logo:</translation>
+    </message>
+    <message>
+        <source>Export Settings</source>
+        <translation>Opciones de exportación</translation>
+    </message>
+    <message>
+        <source>Output area:</source>
+        <translation>Área a imprimir:</translation>
+    </message>
+    <message>
+        <source>Output font:</source>
+        <translation>Tipografía:</translation>
+    </message>
+    <message>
+        <source>Continuous line:</source>
+        <translation>Líneas continuas:</translation>
+    </message>
+    <message>
+        <source>Inbetween mark:</source>
+        <translation type="vanished">Marca de intermedios:</translation>
+    </message>
+    <message>
+        <source>Reverse sheet mark:</source>
+        <translation type="vanished">Marca de planilla invertida:</translation>
+    </message>
+    <message>
+        <source>Keyframe mark:</source>
+        <translation>Marca de claves:</translation>
+    </message>
+    <message>
+        <source>Memo:</source>
+        <translation>Anotaciones:</translation>
+    </message>
+    <message>
+        <source>Save in:</source>
+        <translation>Guardar en:</translation>
+    </message>
+    <message>
+        <source>Name:</source>
+        <translation>Nombre:</translation>
+    </message>
+    <message>
+        <source>B4 size, 3 seconds sheet</source>
+        <translation>Hoja B4, 3 segundos</translation>
+    </message>
+    <message>
+        <source>B4 size, 6 seconds sheet</source>
+        <translation>Hoja B4, 6 segundos</translation>
+    </message>
+    <message>
+        <source>A3 size, 3 seconds sheet</source>
+        <translation>Hoja A3, 3 segundos</translation>
+    </message>
+    <message>
+        <source>A3 size, 6 seconds sheet</source>
+        <translation>Hoja A3, 6 segundos</translation>
+    </message>
+    <message>
+        <source>Col%1</source>
+        <translation>Col%1</translation>
+    </message>
+    <message>
+        <source>The preset file %1 is not valid.</source>
+        <translation>El archivo de preajuste %1 no es válido.</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n page(s)</source>
+        <translation>
+            <numerusform>%n página</numerusform>
+            <numerusform>%n páginas</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>%1 x %2 pages</source>
+        <translation>%1 x %2 páginas</translation>
+    </message>
+    <message>
+        <source>Please specify the file name.</source>
+        <translation>Por favor especificar el nombre de archivo.</translation>
+    </message>
+    <message>
+        <source>The file %1 already exists.
+Do you want to overwrite it?</source>
+        <translation>El archivo %1 ya existe.
+¿Sobreescribirlo?</translation>
+    </message>
+    <message>
+        <source>A folder %1 does not exist.
+Do you want to create it?</source>
+        <translation>No existe una carpeta llamada %1.
+¿Crearla?</translation>
+    </message>
+    <message>
+        <source>Failed to create folder %1.</source>
+        <translation>Falla al crear la carpeta %1.</translation>
+    </message>
+    <message>
+        <source>Frame length:</source>
+        <translation>Longitud en fotogramas:</translation>
+    </message>
+    <message>
+        <source>Inbetween mark 1:</source>
+        <translation>Marca de intermedio 1:</translation>
+    </message>
+    <message>
+        <source>Inbetween mark 2:</source>
+        <translation>Marca de intermedio 2:</translation>
+    </message>
+    <message>
+        <source>Export CSV</source>
+        <translation>Exportar CSV</translation>
+    </message>
+    <message>
+        <source>Failed to create file %1.</source>
+        <translation>Error al crear archivo %1.</translation>
+    </message>
+</context>
+<context>
+    <name>ExpressionReferenceManager</name>
+    <message>
+        <source>Expression monitoring restarted: &quot;%1&quot;</source>
+        <translation>Monitoreo de expresiones reiniciado: &quot;%1&quot;</translation>
+    </message>
+    <message>
+        <source>Expression modified: &quot;%1&quot; key at frame %2, %3 -&gt; %4</source>
+        <translation>Expresión modificada: &quot;%1&quot; clave en el fotograma %2, %3 -&gt; %4</translation>
+    </message>
+    <message>
+        <source>Following parameters will lose reference in expressions:</source>
+        <translation>Los siguientes parámetros perderán su referencia en expresiones:</translation>
+    </message>
+    <message>
+        <source>(To be in the sub xsheet)</source>
+        <translation>(Para estar dentro de la sub-planilla)</translation>
+    </message>
+    <message>
+        <source>Do you want to continue the operation anyway ?</source>
+        <translation>¿Continuar la operación de todas formas?</translation>
+    </message>
+    <message>
+        <source>(In the current xsheet)</source>
+        <translation>(En la planilla actual)</translation>
+    </message>
+    <message>
+        <source>(To be brought from the subxsheet)</source>
+        <translation>(Para ser traída desde la sub-planilla)</translation>
+    </message>
+    <message>
+        <source>
+Do you want to explode anyway ?</source>
+        <translation>
+¿Disolver de todas formas?</translation>
+    </message>
+    <message>
+        <source>(In a sub xsheet)</source>
+        <translation>(En una sub-planilla)</translation>
+    </message>
+    <message>
+        <source>Following parameters may contain broken references in expressions:</source>
+        <translation>Es posible que los siguientes parámetros contengan referencias perdidas en expresiones:</translation>
+    </message>
+    <message>
+        <source>Do you want to save the scene anyway ?</source>
+        <translation>¿Guardar la escena de todas formas?</translation>
+    </message>
 </context>
 <context>
     <name>FarmServerListView</name>
@@ -2091,11 +3578,11 @@ contuviera información de PPP, entonces se usarán los de la cámara actual.
     </message>
     <message>
         <source>Preview Screensaver</source>
-        <translation>Previsualizar protector de pantalla</translation>
+        <translation type="vanished">Previsualizar protector de pantalla</translation>
     </message>
     <message>
         <source>Install Screensaver</source>
-        <translation>Instalar protector de pantalla</translation>
+        <translation type="vanished">Instalar protector de pantalla</translation>
     </message>
     <message>
         <source>Load As Sub-xsheet</source>
@@ -2229,6 +3716,20 @@ contuviera información de PPP, entonces se usarán los de la cámara actual.
         <source>The input folder path was invalid.</source>
         <translation>La ruta a la carpeta de origen es inválida.</translation>
     </message>
+    <message>
+        <source>Level %1 already exists
+Do you want to duplicate it?</source>
+        <translation>El nivel %1 ya existe
+¿Duplicarlo?</translation>
+    </message>
+    <message>
+        <source>Duplicate</source>
+        <translation>Duplicarlo</translation>
+    </message>
+    <message>
+        <source>Don&apos;t Duplicate</source>
+        <translation>No duplicarlo</translation>
+    </message>
 </context>
 <context>
     <name>FileBrowserPopup</name>
@@ -2295,11 +3796,38 @@ contuviera información de PPP, entonces se usarán los de la cámara actual.
     <name>FileSettingsPopup</name>
     <message>
         <source>Save in:</source>
-        <translation>Guardar en:</translation>
+        <translation type="vanished">Guardar en:</translation>
     </message>
     <message>
         <source>File Format:</source>
-        <translation>Formato de archivo:</translation>
+        <translation type="vanished">Formato de archivo:</translation>
+    </message>
+</context>
+<context>
+    <name>FillHolesDialog</name>
+    <message>
+        <source>Fill Small Holes</source>
+        <translation>Rellenar pequeños huecos</translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation>Tamaño</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Aplicar</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>No Toonz Raster Level Selected</source>
+        <translation>Ningún nivel de Imagen de Toonz seleccionado</translation>
+    </message>
+    <message>
+        <source>Filling Holes...</source>
+        <translation>Rellenando huecos...</translation>
     </message>
 </context>
 <context>
@@ -2334,24 +3862,24 @@ contuviera información de PPP, entonces se usarán los de la cámara actual.
     <message>
         <source>Click to Reset Shift &amp; Trace Markers to Neighbor Frames
 Hold F2 Key on the Viewer to Show This Frame Only</source>
-        <translation>Clic para restablecer los marcadores de Desplazar y trazar a los fotogramas adyacentes
+        <translation>Clic para restablecer los marcadores de Desplazar y calcar a los fotogramas adyacentes
 Mantener presionada la tecla F2 para ver sólo este fotograma en el visor</translation>
     </message>
     <message>
         <source>Click to Hide This Frame from Shift &amp; Trace
 Hold F1 Key on the Viewer to Show This Frame Only</source>
-        <translation>Clic para ocultar este fotograma al usar Desplazar y trazar
+        <translation>Clic para ocultar este fotograma al usar Desplazar y calcar
 Mantener presionada la tecla F1 para ver sólo este fotograma en el visor</translation>
     </message>
     <message>
         <source>Click to Hide This Frame from Shift &amp; Trace
 Hold F3 Key on the Viewer to Show This Frame Only</source>
-        <translation>Clic para ocultar este fotograma al usar Desplazar y trazar
+        <translation>Clic para ocultar este fotograma al usar Desplazar y calcar
 Mantener presionada la tecla F3 para ver sólo este fotograma en el visor</translation>
     </message>
     <message>
         <source>Click to Move Shift &amp; Trace Marker</source>
-        <translation>Clic para mover aquí el marcador de Desplazar y trazar</translation>
+        <translation>Clic para mover aquí el marcador de Desplazar y calcar</translation>
     </message>
 </context>
 <context>
@@ -2362,11 +3890,35 @@ Mantener presionada la tecla F3 para ver sólo este fotograma en el visor</trans
     </message>
     <message>
         <source>no icon</source>
-        <translation>sin ícono</translation>
+        <translation>sin miniaturas</translation>
     </message>
     <message>
         <source>Auto Inbetween</source>
         <translation>Generar intermedios de forma automática</translation>
+    </message>
+    <message>
+        <source>INBETWEEN</source>
+        <translation>INTERMEDIAR</translation>
+    </message>
+    <message>
+        <source>Panel Settings</source>
+        <translation>Opciones del panel</translation>
+    </message>
+    <message>
+        <source>Toggle Orientation</source>
+        <translation>Cambiar orientación</translation>
+    </message>
+    <message>
+        <source>Show/Hide Drop Down Menu</source>
+        <translation>Menú desplegable</translation>
+    </message>
+    <message>
+        <source>Show/Hide Level Navigator</source>
+        <translation>Navegador de nivel</translation>
+    </message>
+    <message>
+        <source>Select Level</source>
+        <translation>Seleccionar nivel</translation>
     </message>
 </context>
 <context>
@@ -2413,6 +3965,10 @@ Do you want to overwrite it?</source>
         <source>It is not possible to take or compare snapshots for Toonz vector levels.</source>
         <translation>No es posible tomar o comparar capturas en niveles vectoriales de OpenToonz.</translation>
     </message>
+    <message>
+        <source>Gamma : %1</source>
+        <translation>Gama : %1</translation>
+    </message>
 </context>
 <context>
     <name>FlipbookPanel</name>
@@ -2434,6 +3990,34 @@ Do you want to overwrite it?</source>
     <message>
         <source>Configure Codec</source>
         <translation>Configurar</translation>
+    </message>
+    <message>
+        <source>. (period)</source>
+        <translation>. (punto)</translation>
+    </message>
+    <message>
+        <source>_ (underscore)</source>
+        <translation>_ (guión bajo)</translation>
+    </message>
+    <message>
+        <source>No padding</source>
+        <translation>Sin cifras fijas</translation>
+    </message>
+    <message>
+        <source>Frame Number Format</source>
+        <translation>Formato de números de fotograma</translation>
+    </message>
+    <message>
+        <source>Separate Character:</source>
+        <translation>Caracter separador:</translation>
+    </message>
+    <message>
+        <source>Padding:</source>
+        <translation>Cifras fijas:</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Cerrar</translation>
     </message>
 </context>
 <context>
@@ -2522,7 +4106,7 @@ Do you want to overwrite it?</source>
     </message>
     <message>
         <source>  ::  Zoom : </source>
-        <translation>  ::  Zoom : </translation>
+        <translation>  ::  Ampliación : </translation>
     </message>
     <message>
         <source>Load / Append Images</source>
@@ -2607,7 +4191,7 @@ Do you want to overwrite it?</source>
     </message>
     <message>
         <source>Remove Preset</source>
-        <translation>Eliminar ajuste</translation>
+        <translation>Eliminar preajuste</translation>
     </message>
     <message>
         <source>Yes</source>
@@ -2624,6 +4208,17 @@ Do you want to overwrite it?</source>
     <message>
         <source>It is not possible to delete %1.</source>
         <translation>No es posible borrar %1.</translation>
+    </message>
+    <message>
+        <source>Search:</source>
+        <translation>Buscar:</translation>
+    </message>
+</context>
+<context>
+    <name>IoCmd::ConvertingPopup</name>
+    <message>
+        <source>Error occurred.</source>
+        <translation>Ocurrió un error.</translation>
     </message>
 </context>
 <context>
@@ -2704,26 +4299,34 @@ Do you want to overwrite it?</source>
     </message>
     <message>
         <source>Zoom in (Ctrl-click to zoom in all the way)</source>
-        <translation>Acercar (Ctrl-clic para un acercamiento máximo)</translation>
+        <translation>Ampliar (Ctrl-clic para una ampliación máxima)</translation>
     </message>
     <message>
         <source>Zoom out (Ctrl-click to zoom out all the way)</source>
-        <translation>Alejar (Ctrl-clic para un alejamiento máximo)</translation>
+        <translation>Reducir (Ctrl-clic para una reducción máxima)</translation>
+    </message>
+    <message>
+        <source>Zoom in/out of xsheet</source>
+        <translation>Ampliar/reducir el tiempo</translation>
+    </message>
+    <message>
+        <source>%1 frames per page</source>
+        <translation>%1 fotogramas por página</translation>
     </message>
 </context>
 <context>
     <name>LayerHeaderPanel</name>
     <message>
-        <source>Preview Visbility Toggle All</source>
-        <translation>Ver todas en procesamiento</translation>
+        <source>Preview Visibility Toggle All</source>
+        <translation type="vanished">Ver todas en procesamiento</translation>
     </message>
     <message>
         <source>Camera Stand Visibility Toggle All</source>
-        <translation>Ver todas en mesa de trabajo</translation>
+        <translation type="vanished">Ver todas en mesa de trabajo</translation>
     </message>
     <message>
         <source>Lock Toggle All</source>
-        <translation>Bloquear todas</translation>
+        <translation type="vanished">Bloquear todas</translation>
     </message>
 </context>
 <context>
@@ -2808,7 +4411,7 @@ Do you want to create it?</source>
     </message>
     <message>
         <source>Unable to create</source>
-        <translation>No es posible crear</translation>
+        <translation type="vanished">No es posible crear</translation>
     </message>
     <message>
         <source>OK</source>
@@ -2824,19 +4427,35 @@ Do you want to create it?</source>
     </message>
     <message>
         <source>Toonz Vector Level</source>
-        <translation>Nivel vectorial de Toonz</translation>
+        <translation>Vectorial de Toonz</translation>
     </message>
     <message>
         <source>Toonz Raster Level</source>
-        <translation>Nivel de imagen de Toonz</translation>
+        <translation>Imagen de Toonz</translation>
     </message>
     <message>
         <source>Raster Level</source>
-        <translation>Nivel de imagen</translation>
+        <translation>Imagen</translation>
     </message>
     <message>
         <source>Scan Level</source>
-        <translation>Nivel de escaneo</translation>
+        <translation>Escaneo</translation>
+    </message>
+    <message>
+        <source>Format:</source>
+        <translation>Formato:</translation>
+    </message>
+    <message>
+        <source>Frame Format</source>
+        <translation>Formato de fotogramas</translation>
+    </message>
+    <message>
+        <source>Assistants Level</source>
+        <translation>Asistentes</translation>
+    </message>
+    <message>
+        <source>Unable to create %1</source>
+        <translation>No es posible crear %1</translation>
     </message>
 </context>
 <context>
@@ -2875,7 +4494,7 @@ Do you want to create it?</source>
     </message>
     <message>
         <source>Use Camera DPI</source>
-        <translation>Usar PPP de cámara</translation>
+        <translation>Usar PPP de la cámara</translation>
     </message>
     <message>
         <source>Camera DPI:</source>
@@ -2981,115 +4600,119 @@ Do you want to create it?</source>
         <source>Another Level Type</source>
         <translation>Nivel de otro tipo</translation>
     </message>
+    <message>
+        <source>Color Space Gamma:</source>
+        <translation>Gama del espacio de color:</translation>
+    </message>
 </context>
 <context>
     <name>LineTestCapturePane</name>
     <message>
         <source>Name:</source>
-        <translation>Nombre:</translation>
+        <translation type="vanished">Nombre:</translation>
     </message>
     <message>
         <source>Frame:</source>
-        <translation>Fotograma:</translation>
+        <translation type="vanished">Fotograma:</translation>
     </message>
     <message>
         <source>Increment:</source>
-        <translation>Incremento:</translation>
+        <translation type="vanished">Incremento:</translation>
     </message>
     <message>
         <source>Step:</source>
-        <translation>Exposición:</translation>
+        <translation type="vanished">Exposición:</translation>
     </message>
     <message>
         <source>Mode:</source>
-        <translation>Modo:</translation>
+        <translation type="vanished">Modo:</translation>
     </message>
     <message>
         <source>New     </source>
-        <translation>Nuevo     </translation>
+        <translation type="vanished">Nuevo     </translation>
     </message>
     <message>
         <source>Overwite     </source>
-        <translation>Sobrescribir </translation>
+        <translation type="vanished">Sobrescribir </translation>
     </message>
     <message>
         <source>Insert</source>
-        <translation>Insertar</translation>
+        <translation type="vanished">Insertar</translation>
     </message>
     <message>
         <source> Onion Skin  </source>
-        <translation> Piel de cebolla  </translation>
+        <translation type="vanished"> Piel de cebolla  </translation>
     </message>
     <message>
         <source> View Frame</source>
-        <translation> Ver fotograma</translation>
+        <translation type="vanished"> Ver fotograma</translation>
     </message>
     <message>
         <source>Fade:</source>
-        <translation>Desvanecimiento:</translation>
+        <translation type="vanished">Desvanecimiento:</translation>
     </message>
     <message>
         <source> Connection</source>
-        <translation> Conexión</translation>
+        <translation type="vanished"> Conexión</translation>
     </message>
     <message>
         <source>       Capture       </source>
-        <translation>       Capturar       </translation>
+        <translation type="vanished">       Capturar       </translation>
     </message>
     <message>
         <source>Capture Settings</source>
-        <translation>Opciones de captura</translation>
+        <translation type="vanished">Opciones de captura</translation>
     </message>
     <message>
         <source>   File Settings    </source>
-        <translation>   Opciones de archivo    </translation>
+        <translation type="vanished">   Opciones de archivo    </translation>
     </message>
     <message>
         <source>Bad Selection.</source>
-        <translation>Selección errónea.</translation>
+        <translation type="vanished">Selección errónea.</translation>
     </message>
     <message>
         <source>No Device Defined.</source>
-        <translation>Ningún dispositivo definido.</translation>
+        <translation type="vanished">Ningún dispositivo definido.</translation>
     </message>
     <message>
         <source>Cannot connect Camera</source>
-        <translation>No es posible conectar cámara</translation>
+        <translation type="vanished">No es posible conectar cámara</translation>
     </message>
     <message>
         <source>Device Disconnected.</source>
-        <translation>Dispositivo desconectado.</translation>
+        <translation type="vanished">Dispositivo desconectado.</translation>
     </message>
     <message>
         <source>LineTest Capture</source>
-        <translation>Capturar con LineTest</translation>
+        <translation type="vanished">Capturar con LineTest</translation>
     </message>
 </context>
 <context>
     <name>LineTestPane</name>
     <message>
         <source>Preview</source>
-        <translation>Previsualizar</translation>
+        <translation type="vanished">Previsualizar</translation>
     </message>
     <message>
         <source>Untitled</source>
-        <translation>Sin título</translation>
+        <translation type="vanished">Sin título</translation>
     </message>
     <message>
         <source>Scene: </source>
-        <translation>Escena: </translation>
+        <translation type="vanished">Escena: </translation>
     </message>
     <message>
         <source>   ::   Frame: </source>
-        <translation>   ::   Fotograma: </translation>
+        <translation type="vanished">   ::   Fotograma: </translation>
     </message>
     <message>
         <source>   ::   Level: </source>
-        <translation>   ::   Nivel: </translation>
+        <translation type="vanished">   ::   Nivel: </translation>
     </message>
     <message>
         <source>Level: </source>
-        <translation>Nivel: </translation>
+        <translation type="vanished">Nivel: </translation>
     </message>
 </context>
 <context>
@@ -3115,7 +4738,7 @@ Do you want to create it?</source>
     <name>LipSyncPopup</name>
     <message>
         <source>Apply Lip Sync Data</source>
-        <translation>Aplicar datos de sincronización labial</translation>
+        <translation>Sincronización labial</translation>
     </message>
     <message>
         <source>Apply</source>
@@ -3123,39 +4746,39 @@ Do you want to create it?</source>
     </message>
     <message>
         <source>A I Drawing</source>
-        <translation>Dibujo para A I</translation>
+        <translation>A I</translation>
     </message>
     <message>
         <source>O Drawing</source>
-        <translation>Dibujo para O</translation>
+        <translation>O</translation>
     </message>
     <message>
         <source>E Drawing</source>
-        <translation>Dibujo para E</translation>
+        <translation>E</translation>
     </message>
     <message>
         <source>U Drawing</source>
-        <translation>Dibujo para U</translation>
+        <translation>U</translation>
     </message>
     <message>
         <source>L Drawing</source>
-        <translation>Dibujo para L</translation>
+        <translation>L</translation>
     </message>
     <message>
         <source>W Q Drawing</source>
-        <translation>Dibujo para W Q</translation>
+        <translation>W Q</translation>
     </message>
     <message>
         <source>M B P Drawing</source>
-        <translation>Dibujo para M B P</translation>
+        <translation>M B P</translation>
     </message>
     <message>
         <source>F V Drawing</source>
-        <translation>Dibujo para F V</translation>
+        <translation>F V</translation>
     </message>
     <message>
         <source>Rest Drawing</source>
-        <translation>Dibujo de reposo</translation>
+        <translation>Reposo</translation>
     </message>
     <message>
         <source>C D G K N R S Th Y Z</source>
@@ -3163,7 +4786,7 @@ Do you want to create it?</source>
     </message>
     <message>
         <source>Extend Rest Drawing to End Marker</source>
-        <translation>Extender dibujo de reposo hasta el marcador de fin</translation>
+        <translation>Extender dibujo de Reposo hasta el marcador de fin</translation>
     </message>
     <message>
         <source>Previous Drawing</source>
@@ -3209,12 +4832,31 @@ Usar los números de fotograma como referencia.</translation>
         <source>Drawing: </source>
         <translation>Dibujo: </translation>
     </message>
+    <message>
+        <source>Frame </source>
+        <translation>Fotograma</translation>
+    </message>
+    <message>
+        <source>Invalid configuration or data.</source>
+        <translation>Configuración o datos inválidos.</translation>
+    </message>
+    <message>
+        <source>Invalid data file. Need at least one phoneme entry.</source>
+        <translation>Archivo de datos inválido. Se necesita la entrada de al menos un fonema.</translation>
+    </message>
 </context>
 <context>
     <name>LoadBoardPresetFilePopup</name>
     <message>
         <source>Load Clapperboard Settings Preset</source>
-        <translation>Cargar ajuste de opciones de claqueta</translation>
+        <translation>Cargar preajuste de opciones de claqueta</translation>
+    </message>
+</context>
+<context>
+    <name>LoadCalibrationFilePopup</name>
+    <message>
+        <source>Load Camera Calibration Settings</source>
+        <translation>Cargar opciones de calibración de cámara</translation>
     </message>
 </context>
 <context>
@@ -3301,11 +4943,11 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>All Icons</source>
-        <translation>Todos los íconos</translation>
+        <translation>Todas las miniaturas</translation>
     </message>
     <message>
         <source>All Icons &amp; Images</source>
-        <translation>Todos los íconos e imágenes</translation>
+        <translation>Todas las miniaturas e imágenes</translation>
     </message>
     <message>
         <source>Load Level</source>
@@ -3321,7 +4963,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>TLV Caching Behavior</source>
-        <translation>Caché de niveles TLV</translation>
+        <translation type="vanished">Caché de niveles TLV</translation>
     </message>
     <message>
         <source>Load Subsequence Level</source>
@@ -3386,6 +5028,10 @@ Usar los números de fotograma como referencia.</translation>
     <message>
         <source>Subsampling:</source>
         <translation>Sub-muestreo:</translation>
+    </message>
+    <message>
+        <source>Raster Level Caching Behavior</source>
+        <translation>Caché de niveles de imagen</translation>
     </message>
 </context>
 <context>
@@ -3573,7 +5219,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;Save Scene</source>
-        <translation>&amp;Guardar escena</translation>
+        <translation type="vanished">&amp;Guardar escena</translation>
     </message>
     <message>
         <source>&amp;Save Scene As...</source>
@@ -3645,11 +5291,11 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;Save Default Settings</source>
-        <translation>&amp;Guardar opciones predefinidas</translation>
+        <translation type="vanished">&amp;Guardar opciones predefinidas</translation>
     </message>
     <message>
         <source>&amp;Output Settings...</source>
-        <translation>&amp;Opciones de salida...</translation>
+        <translation>&amp;Opciones de procesamiento...</translation>
     </message>
     <message>
         <source>&amp;Preview Settings...</source>
@@ -3693,7 +5339,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;Save As Preset</source>
-        <translation>&amp;Guardar como ajuste</translation>
+        <translation>&amp;Guardar como preajuste</translation>
     </message>
     <message>
         <source>&amp;Preferences...</source>
@@ -3721,7 +5367,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;Invert Selection</source>
-        <translation>&amp;Invertir la selección</translation>
+        <translation>&amp;Invertir selección</translation>
     </message>
     <message>
         <source>&amp;Undo</source>
@@ -3773,11 +5419,11 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;Bring to Front</source>
-        <translation>&amp;Traer al frente</translation>
+        <translation type="vanished">&amp;Traer al frente</translation>
     </message>
     <message>
         <source>&amp;Bring Forward</source>
-        <translation>&amp;Traer hacia adelante</translation>
+        <translation type="vanished">&amp;Traer hacia adelante</translation>
     </message>
     <message>
         <source>&amp;Send Back</source>
@@ -3785,7 +5431,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;Send Backward</source>
-        <translation>&amp;Enviar hacia atrás</translation>
+        <translation type="vanished">&amp;Enviar hacia atrás</translation>
     </message>
     <message>
         <source>&amp;Enter Group</source>
@@ -3833,7 +5479,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;Cleanup</source>
-        <translation>&amp;Limpiar</translation>
+        <translation>&amp;Limpiar...</translation>
     </message>
     <message>
         <source>&amp;Add Frames...</source>
@@ -3901,15 +5547,15 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;Open Sub-xsheet</source>
-        <translation>&amp;Entrar en sub-planilla</translation>
+        <translation type="vanished">&amp;Entrar en sub-planilla</translation>
     </message>
     <message>
         <source>&amp;Close Sub-xsheet</source>
-        <translation>&amp;Salir de sub-planilla</translation>
+        <translation type="vanished">&amp;Salir de sub-planilla</translation>
     </message>
     <message>
         <source>Explode Sub-xsheet</source>
-        <translation>Disolver sub-planilla</translation>
+        <translation type="vanished">Disolver sub-planilla</translation>
     </message>
     <message>
         <source>Collapse</source>
@@ -3917,7 +5563,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;Save Sub-xsheet As...</source>
-        <translation>&amp;Guardar sub-planilla como...</translation>
+        <translation type="vanished">&amp;Guardar sub-planilla como...</translation>
     </message>
     <message>
         <source>Resequence</source>
@@ -3925,7 +5571,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>Clone Sub-xsheet</source>
-        <translation>Clonar sub-planilla</translation>
+        <translation type="vanished">Clonar sub-planilla</translation>
     </message>
     <message>
         <source>&amp;Apply Match Lines...</source>
@@ -3945,7 +5591,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;New FX...</source>
-        <translation>&amp;Nuevo efecto...</translation>
+        <translation>&amp;Explorador de efectos...</translation>
     </message>
     <message>
         <source>&amp;New Output</source>
@@ -4033,7 +5679,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;Clone</source>
-        <translation>&amp;Clonar</translation>
+        <translation type="vanished">&amp;Clonar</translation>
     </message>
     <message>
         <source>Drawing Substitution Forward</source>
@@ -4053,7 +5699,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;Set Key</source>
-        <translation>&amp;Marcar fotograma clave</translation>
+        <translation>&amp;Marcar clave</translation>
     </message>
     <message>
         <source>&amp;Camera Box</source>
@@ -4077,11 +5723,11 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;Transparency Check  </source>
-        <translation>Comprobación de &amp;transparencia</translation>
+        <translation>Comprobación de &amp;transparencias</translation>
     </message>
     <message>
         <source>&amp;Ink Check</source>
-        <translation>Comprobación de t&amp;inta</translation>
+        <translation>Comprobación de &amp;tinta</translation>
     </message>
     <message>
         <source>&amp;Paint Check</source>
@@ -4109,7 +5755,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;Capture</source>
-        <translation>&amp;Capturar</translation>
+        <translation type="vanished">&amp;Capturar</translation>
     </message>
     <message>
         <source>Play</source>
@@ -4245,11 +5891,11 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;LineTest Viewer</source>
-        <translation>&amp;Visor de LineTest</translation>
+        <translation type="vanished">&amp;Visor de LineTest</translation>
     </message>
     <message>
         <source>&amp;LineTest Capture</source>
-        <translation>&amp;Capturar con LineTest</translation>
+        <translation type="vanished">&amp;Capturar con LineTest</translation>
     </message>
     <message>
         <source>&amp;Xsheet</source>
@@ -4545,7 +6191,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>Zoom Tool</source>
-        <translation>Zoom</translation>
+        <translation>Ampliar</translation>
     </message>
     <message>
         <source>Rotate Tool</source>
@@ -4557,11 +6203,11 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>Zoom In</source>
-        <translation>Acercar</translation>
+        <translation>Ampliar</translation>
     </message>
     <message>
         <source>Zoom Out</source>
-        <translation>Alejar</translation>
+        <translation>Reducir</translation>
     </message>
     <message>
         <source>Reset View</source>
@@ -4612,7 +6258,7 @@ Usar los números de fotograma como referencia.</translation>
         <translation>Rango de fotogramas</translation>
     </message>
     <message>
-        <source>Inverse kinematics</source>
+        <source>Inverse Kinematics</source>
         <translation>Esqueleto - Cinemática inversa</translation>
     </message>
     <message>
@@ -4677,7 +6323,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>Brush Preset</source>
-        <translation>Pincel - Ajustes</translation>
+        <translation>Pincel - Preajustes</translation>
     </message>
     <message>
         <source>Geometric Shape</source>
@@ -4753,7 +6399,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>Active Axis - Shear</source>
-        <translation>Animar - Operación - Inclinación</translation>
+        <translation>Animar - Operación - Sesgo</translation>
     </message>
     <message>
         <source>Active Axis - Center</source>
@@ -4833,7 +6479,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;Field Guide in Capture Window</source>
-        <translation>&amp;Guía de campos en ventana de captura</translation>
+        <translation type="vanished">&amp;Guía de campos en ventana de captura</translation>
     </message>
     <message>
         <source>&amp;Guide</source>
@@ -4845,7 +6491,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>Shift and Trace</source>
-        <translation>Desplazar y trazar</translation>
+        <translation>Desplazar y calcar</translation>
     </message>
     <message>
         <source>Edit Shift</source>
@@ -4865,7 +6511,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>Prev Drawing</source>
-        <translation>Dibujo anterior</translation>
+        <translation type="vanished">Dibujo anterior</translation>
     </message>
     <message>
         <source>Toggle Autofill on Current Palette Color</source>
@@ -4873,7 +6519,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;Export</source>
-        <translation>&amp;Exportar</translation>
+        <translation type="vanished">&amp;Exportar</translation>
     </message>
     <message>
         <source>Increase max brush thickness</source>
@@ -4977,7 +6623,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>Prev Step</source>
-        <translation>Intervalo anterior</translation>
+        <translation type="vanished">Intervalo anterior</translation>
     </message>
     <message>
         <source>Untitled</source>
@@ -5037,27 +6683,27 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;Replace Parent Directory...</source>
-        <translation>&amp;Reemplazar directorio superior...</translation>
+        <translation>&amp;Reemplazar carpeta superior...</translation>
     </message>
     <message>
         <source>1&apos;s</source>
-        <translation>simple</translation>
+        <translation type="vanished">simple</translation>
     </message>
     <message>
         <source>2&apos;s</source>
-        <translation>doble</translation>
+        <translation type="vanished">doble</translation>
     </message>
     <message>
         <source>3&apos;s</source>
-        <translation>triple</translation>
+        <translation type="vanished">triple</translation>
     </message>
     <message>
         <source>4&apos;s</source>
-        <translation>cuádruple</translation>
+        <translation type="vanished">cuádruple</translation>
     </message>
     <message>
         <source>&amp;Ink#1 Check</source>
-        <translation>Comprobación de t&amp;inta № 1</translation>
+        <translation>Comprobación de t&amp;inta №1</translation>
     </message>
     <message>
         <source>Compare to Snapshot</source>
@@ -5181,7 +6827,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>Mode - Lines &amp; Areas</source>
-        <translation>Modo - Líneas y áreas</translation>
+        <translation type="vanished">Modo - Líneas y áreas</translation>
     </message>
     <message>
         <source>Type - Normal</source>
@@ -5189,7 +6835,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>Type - Rectangular</source>
-        <translation>Tipo - Rectangular</translation>
+        <translation>Tipo - Marco</translation>
     </message>
     <message>
         <source>Type - Freehand</source>
@@ -5213,7 +6859,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>Toggle Edit in Place</source>
-        <translation>Editar en contexto</translation>
+        <translation type="vanished">Editar en contexto</translation>
     </message>
     <message>
         <source>&amp;ComboViewer</source>
@@ -5221,7 +6867,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;History</source>
-        <translation>&amp;Historia</translation>
+        <translation>&amp;Historial</translation>
     </message>
     <message>
         <source>&amp;About OpenToonz...</source>
@@ -5292,7 +6938,7 @@ Usar los números de fotograma como referencia.</translation>
         <translation>Barra de herramientas de planilla</translation>
     </message>
     <message>
-        <source>SnapSensitivity</source>
+        <source>Snap Sensitivity</source>
         <translation>Adherencia - Sensibilidad</translation>
     </message>
     <message>
@@ -5301,7 +6947,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>New Vector Level</source>
-        <translation>Nuevo nivel vectorial</translation>
+        <translation type="vanished">Nuevo nivel vectorial</translation>
     </message>
     <message>
         <source>&amp;New Toonz Raster Level</source>
@@ -5309,7 +6955,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>New Toonz Raster Level</source>
-        <translation>Nuevo nivel de imagen de Toonz</translation>
+        <translation type="vanished">Nuevo nivel de imagen de Toonz</translation>
     </message>
     <message>
         <source>&amp;New Raster Level</source>
@@ -5317,7 +6963,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>New Raster Level</source>
-        <translation>Nuevo nivel de imagen</translation>
+        <translation type="vanished">Nuevo nivel de imagen</translation>
     </message>
     <message>
         <source>Alpha Channel</source>
@@ -5329,7 +6975,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>Auto Input Cell Number...</source>
-        <translation>Ingresar números de acetatos automáticamente...</translation>
+        <translation>Introducir números de celda automáticamente...</translation>
     </message>
     <message>
         <source>Reframe with Empty Inbetweens...</source>
@@ -5349,7 +6995,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;Apply Lip Sync Data to Column</source>
-        <translation>&amp;Aplicar datos de sincro labial a columna</translation>
+        <translation>&amp;Aplicar sincro labial a columna</translation>
     </message>
     <message>
         <source>&amp;Paste Numbers</source>
@@ -5361,7 +7007,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>Vectors to Toonz Raster</source>
-        <translation>Vectorial a imagen de Toonz</translation>
+        <translation type="vanished">Vectorial a imagen de Toonz</translation>
     </message>
     <message>
         <source>Replace Vectors with Simplified Vectors</source>
@@ -5409,7 +7055,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;Fill In Empty Cells</source>
-        <translation>&amp;Rellenar acetatos vacíos</translation>
+        <translation>&amp;Rellenar celdas vacías</translation>
     </message>
     <message>
         <source>Toggle Cursor Size Outline</source>
@@ -5433,7 +7079,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>Speed In / Speed Out Interpolation</source>
-        <translation>Interpolación Bézier</translation>
+        <translation>Interpolación Bezier</translation>
     </message>
     <message>
         <source>Ease In / Ease Out Interpolation</source>
@@ -5469,11 +7115,11 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>&amp;Send to Back</source>
-        <translation>&amp;Enviar al fondo</translation>
+        <translation type="vanished">&amp;Enviar al fondo</translation>
     </message>
     <message>
         <source>Reset Zoom</source>
-        <translation>Restablecer zoom</translation>
+        <translation>Restablecer ampliación</translation>
     </message>
     <message>
         <source>Reset Rotation</source>
@@ -5529,11 +7175,11 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>Prev Key</source>
-        <translation>Clave anterior</translation>
+        <translation type="vanished">Clave anterior</translation>
     </message>
     <message>
         <source>&amp;FX Editor</source>
-        <translation>Editor de e&amp;fectos</translation>
+        <translation>Opciones de e&amp;fectos</translation>
     </message>
     <message>
         <source>&amp;Stop Motion Controls</source>
@@ -5589,7 +7235,7 @@ Usar los números de fotograma como referencia.</translation>
     </message>
     <message>
         <source>Toggle Stop Motion Zoom</source>
-        <translation>Stop-motion - Zoom</translation>
+        <translation>Stop-motion - Ampliación</translation>
     </message>
     <message>
         <source>Lower Stop Motion Level Subsampling</source>
@@ -5653,7 +7299,9 @@ o es posible que se termine borrando algún archivo usado por ésta.</translatio
     </message>
     <message>
         <source>To report a bug, click on the button below to open a web browser window for OpenToonz&apos;s Issues page on https://github.com.  Click on the &apos;New issue&apos; button and fill out the form.</source>
-        <translation>Para reportar un error: Hacer clic en el botón de abajo para abrir un navegador web e ir a la página de reportes de OpenToonz en https://github.com.  Allí, hacer clic en el botón &apos;New issue&apos; y rellenar el formulario con los datos del problema (en inglés, por favor).</translation>
+        <translation>Para reportar un error: Hacer clic en el botón de abajo para abrir un navegador web e ir a la página de Incidentes de OpenToonz en https://github.com.
+Allí, hacer clic en el botón &apos;New issue&apos; y rellenar el formulario con los datos del problema (en inglés).
+Por favor, sólo reportar errores confirmados y reproducibles, no utilizar ese sitio antes de aprender a usar correctamente el programa.</translation>
     </message>
     <message>
         <source>Vector Guided Drawing</source>
@@ -5669,7 +7317,7 @@ o es posible que se termine borrando algún archivo usado por ésta.</translatio
     </message>
     <message>
         <source>&amp;Community Forum...</source>
-        <translation>&amp;Foro de la comunidad...</translation>
+        <translation>Foro de la &amp;comunidad...</translation>
     </message>
     <message>
         <source>&amp;Report a Bug...</source>
@@ -5677,7 +7325,7 @@ o es posible que se termine borrando algún archivo usado por ésta.</translatio
     </message>
     <message>
         <source>Guided Drawing Controls</source>
-        <translation>Controles de asistencia para dibujo vectorial</translation>
+        <translation>Asistente para dibujo vectorial</translation>
     </message>
     <message>
         <source>Flip Next Guide Stroke Direction</source>
@@ -5686,6 +7334,720 @@ o es posible que se termine borrando algún archivo usado por ésta.</translatio
     <message>
         <source>Flip Previous Guide Stroke Direction</source>
         <translation>Trazo de guía - Invertir dirección anterior</translation>
+    </message>
+    <message>
+        <source>Save All</source>
+        <translation type="vanished">Guardar todo</translation>
+    </message>
+    <message>
+        <source>&amp;Paste as a Copy</source>
+        <translation>&amp;Pegar como copia</translation>
+    </message>
+    <message>
+        <source>&amp;Move to Back</source>
+        <translation>&amp;Mover al fondo</translation>
+    </message>
+    <message>
+        <source>&amp;Move Back One</source>
+        <translation>&amp;Mover hacia atrás</translation>
+    </message>
+    <message>
+        <source>&amp;Move Forward One</source>
+        <translation>&amp;Mover hacia adelante</translation>
+    </message>
+    <message>
+        <source>&amp;Move to Front</source>
+        <translation>&amp;Mover al frente</translation>
+    </message>
+    <message>
+        <source>&amp;Open Sub-Xsheet</source>
+        <translation>&amp;Abrir sub-planilla</translation>
+    </message>
+    <message>
+        <source>&amp;Close Sub-Xsheet</source>
+        <translation>&amp;Cerrar sub-planilla</translation>
+    </message>
+    <message>
+        <source>Explode Sub-Xsheet</source>
+        <translation>Disolver sub-planilla</translation>
+    </message>
+    <message>
+        <source>&amp;Save Sub-Xsheet As...</source>
+        <translation>&amp;Guardar sub-planilla como...</translation>
+    </message>
+    <message>
+        <source>Clone Sub-Xsheet</source>
+        <translation>Clonar sub-planilla</translation>
+    </message>
+    <message>
+        <source>&amp;Clone Cells</source>
+        <translation>&amp;Clonar celdas</translation>
+    </message>
+    <message>
+        <source>Reframe on 1&apos;s</source>
+        <translation>Reexponer a fotograma simple</translation>
+    </message>
+    <message>
+        <source>Reframe on 2&apos;s</source>
+        <translation>Reexponer a fotograma doble</translation>
+    </message>
+    <message>
+        <source>Reframe on 3&apos;s</source>
+        <translation>Reexponer a fotograma triple</translation>
+    </message>
+    <message>
+        <source>Reframe on 4&apos;s</source>
+        <translation>Reexponer a fotograma cuádruple</translation>
+    </message>
+    <message>
+        <source>Previous Drawing</source>
+        <translation>Dibujo anterior</translation>
+    </message>
+    <message>
+        <source>Previous Step</source>
+        <translation>Intervalo anterior</translation>
+    </message>
+    <message>
+        <source>Previous Key</source>
+        <translation>Clave anterior</translation>
+    </message>
+    <message>
+        <source>About OpenToonz...</source>
+        <translation type="vanished">Acerca de OpenToonz...</translation>
+    </message>
+    <message>
+        <source>Online Manual...</source>
+        <translation type="vanished">Manual en línea...</translation>
+    </message>
+    <message>
+        <source>What&apos;s New...</source>
+        <translation type="vanished">Novedades de esta versión...</translation>
+    </message>
+    <message>
+        <source>Community Forum...</source>
+        <translation type="vanished">Foro de la comunidad...</translation>
+    </message>
+    <message>
+        <source>Report a Bug...</source>
+        <translation type="vanished">Reportar un error...</translation>
+    </message>
+    <message>
+        <source>Geometric Shape Rectangle</source>
+        <translation>Geometría - Forma - Rectángulo</translation>
+    </message>
+    <message>
+        <source>Geometric Shape Circle</source>
+        <translation>Geometría - Forma - Círculo</translation>
+    </message>
+    <message>
+        <source>Geometric Shape Ellipse</source>
+        <translation>Geometría - Forma - Elipse</translation>
+    </message>
+    <message>
+        <source>Geometric Shape Line</source>
+        <translation>Geometría - Forma - Línea</translation>
+    </message>
+    <message>
+        <source>Geometric Shape Polyline</source>
+        <translation>Geometría - Forma - Curva Bezier</translation>
+    </message>
+    <message>
+        <source>Geometric Shape Arc</source>
+        <translation>Geometría - Forma - Arco</translation>
+    </message>
+    <message>
+        <source>Geometric Shape MultiArc</source>
+        <translation>Geometría - Forma - Arco múltiple</translation>
+    </message>
+    <message>
+        <source>Geometric Shape Polygon</source>
+        <translation>Geometría - Forma - Polígono</translation>
+    </message>
+    <message>
+        <source>Mode - Lines &amp;&amp; Areas</source>
+        <translation>Modo - Líneas y áreas</translation>
+    </message>
+    <message>
+        <source>Mode - Endpoint to Endpoint</source>
+        <translation>Modo - Extremo a extremo</translation>
+    </message>
+    <message>
+        <source>Mode - Endpoint to Line</source>
+        <translation>Modo - Extremo a línea</translation>
+    </message>
+    <message>
+        <source>Mode - Line to Line</source>
+        <translation>Modo - Línea a línea</translation>
+    </message>
+    <message>
+        <source>Type - Segment</source>
+        <translation>Tipo - Segmento</translation>
+    </message>
+    <message>
+        <source>TypeTool Style - Oblique</source>
+        <translation>Texto - Estilo - Cursiva</translation>
+    </message>
+    <message>
+        <source>TypeTool Style - Regular</source>
+        <translation>Texto - Estilo - Normal</translation>
+    </message>
+    <message>
+        <source>TypeTool Style - Bold Oblique</source>
+        <translation>Texto - Estilo - Negrita cursiva</translation>
+    </message>
+    <message>
+        <source>TypeTool Style - Bold</source>
+        <translation>Texto - Estilo - Negrita</translation>
+    </message>
+    <message>
+        <source>Skeleton Mode</source>
+        <translation>Esqueleto - Modo</translation>
+    </message>
+    <message>
+        <source>Edit Mesh Mode</source>
+        <translation>Modo - Editar malla</translation>
+    </message>
+    <message>
+        <source>Paint Rigid Mode</source>
+        <translation>Modo - Pintar rigidez</translation>
+    </message>
+    <message>
+        <source>Animate Tool - Next Mode</source>
+        <translation>Animar - Modo siguiente</translation>
+    </message>
+    <message>
+        <source>Animate Tool - Position</source>
+        <translation>Animar - Posición</translation>
+    </message>
+    <message>
+        <source>Animate Tool - Rotation</source>
+        <translation>Animar - Rotación</translation>
+    </message>
+    <message>
+        <source>Animate Tool - Scale</source>
+        <translation>Animar - Escala</translation>
+    </message>
+    <message>
+        <source>Animate Tool - Shear</source>
+        <translation>Animar - Sesgo</translation>
+    </message>
+    <message>
+        <source>Animate Tool - Center</source>
+        <translation>Animar - Centro</translation>
+    </message>
+    <message>
+        <source>Animate Tool - All</source>
+        <translation>Animar - Todo</translation>
+    </message>
+    <message>
+        <source>Selection Tool - Next Type</source>
+        <translation>Seleccionar - Tipo siguiente</translation>
+    </message>
+    <message>
+        <source>Selection Tool - Rectangular</source>
+        <translation>Seleccionar - Marco</translation>
+    </message>
+    <message>
+        <source>Selection Tool - Freehand</source>
+        <translation>Seleccionar - Lazo</translation>
+    </message>
+    <message>
+        <source>Selection Tool - Polyline</source>
+        <translation>Seleccionar - Línea poligonal</translation>
+    </message>
+    <message>
+        <source>Geometric Tool - Next Shape</source>
+        <translation>Geometría - Forma siguiente</translation>
+    </message>
+    <message>
+        <source>Geometric Tool - Rectangle</source>
+        <translation>Geometría - Rectángulo</translation>
+    </message>
+    <message>
+        <source>Geometric Tool - Circle</source>
+        <translation>Geometría - Círculo</translation>
+    </message>
+    <message>
+        <source>Geometric Tool - Ellipse</source>
+        <translation>Geometría - Elipse</translation>
+    </message>
+    <message>
+        <source>Geometric Tool - Line</source>
+        <translation>Geometría - Línea</translation>
+    </message>
+    <message>
+        <source>Geometric Tool - Polyline</source>
+        <translation>Geometría - Curva Bezier</translation>
+    </message>
+    <message>
+        <source>Geometric Tool - Arc</source>
+        <translation>Geometría - Arco</translation>
+    </message>
+    <message>
+        <source>Geometric Tool - MultiArc</source>
+        <translation>Geometría - Arco múltiple</translation>
+    </message>
+    <message>
+        <source>Geometric Tool - Polygon</source>
+        <translation>Geometría - Polígono</translation>
+    </message>
+    <message>
+        <source>Type Tool - Next Style</source>
+        <translation>Texto - Estilo siguiente</translation>
+    </message>
+    <message>
+        <source>Type Tool - Oblique</source>
+        <translation>Texto - Cursiva</translation>
+    </message>
+    <message>
+        <source>Type Tool - Regular</source>
+        <translation>Texto - Normal</translation>
+    </message>
+    <message>
+        <source>Type Tool - Bold Oblique</source>
+        <translation>Texto - Negrita cursiva</translation>
+    </message>
+    <message>
+        <source>Type Tool - Bold</source>
+        <translation>Texto - Negrita</translation>
+    </message>
+    <message>
+        <source>Fill Tool - Next Type</source>
+        <translation>Rellenar - Tipo siguiente</translation>
+    </message>
+    <message>
+        <source>Fill Tool - Normal</source>
+        <translation>Rellenar - Normal</translation>
+    </message>
+    <message>
+        <source>Fill Tool - Rectangular</source>
+        <translation>Rellenar - Marco</translation>
+    </message>
+    <message>
+        <source>Fill Tool - Freehand</source>
+        <translation>Rellenar - Lazo</translation>
+    </message>
+    <message>
+        <source>Fill Tool - Polyline</source>
+        <translation>Rellenar - Línea poligonal</translation>
+    </message>
+    <message>
+        <source>Fill Tool - Next Mode</source>
+        <translation>Rellenar - Modo siguiente</translation>
+    </message>
+    <message>
+        <source>Fill Tool - Lines &amp; Areas</source>
+        <translation>Rellenar - Líneas y áreas</translation>
+    </message>
+    <message>
+        <source>Eraser Tool - Next Type</source>
+        <translation>Borrador - Tipo siguiente</translation>
+    </message>
+    <message>
+        <source>Eraser Tool - Normal</source>
+        <translation>Borrador - Normal</translation>
+    </message>
+    <message>
+        <source>Eraser Tool - Rectangular</source>
+        <translation>Borrador - Marco</translation>
+    </message>
+    <message>
+        <source>Eraser Tool - Freehand</source>
+        <translation>Borrador - Lazo</translation>
+    </message>
+    <message>
+        <source>Eraser Tool - Polyline</source>
+        <translation>Borrador - Línea poligonal</translation>
+    </message>
+    <message>
+        <source>Eraser Tool - Segment</source>
+        <translation>Borrador - Segmento</translation>
+    </message>
+    <message>
+        <source>Tape Tool - Next Type</source>
+        <translation>Cinta - Tipo siguiente</translation>
+    </message>
+    <message>
+        <source>Tape Tool - Normal</source>
+        <translation>Cinta - Normal</translation>
+    </message>
+    <message>
+        <source>Tape Tool - Rectangular</source>
+        <translation>Cinta - Marco</translation>
+    </message>
+    <message>
+        <source>Tape Tool - Next Mode</source>
+        <translation>Cinta - Modo siguiente</translation>
+    </message>
+    <message>
+        <source>Tape Tool - Endpoint to Endpoint</source>
+        <translation>Cinta - Extremo a extremo</translation>
+    </message>
+    <message>
+        <source>Tape Tool - Endpoint to Line</source>
+        <translation>Cinta - Extremo a línea</translation>
+    </message>
+    <message>
+        <source>Tape Tool - Line to Line</source>
+        <translation>Cinta - Línea a línea</translation>
+    </message>
+    <message>
+        <source>Style Picker Tool - Next Mode</source>
+        <translation>Selector de estilos - Modo siguiente</translation>
+    </message>
+    <message>
+        <source>Style Picker Tool - Lines &amp; Areas</source>
+        <translation>Selector de estilos - Líneas y áreas</translation>
+    </message>
+    <message>
+        <source>RGB Picker Tool - Next Type</source>
+        <translation>Selector de color - Tipo siguiente</translation>
+    </message>
+    <message>
+        <source>RGB Picker Tool - Normal</source>
+        <translation>Selector de color - Normal</translation>
+    </message>
+    <message>
+        <source>RGB Picker Tool - Rectangular</source>
+        <translation>Selector de color - Marco</translation>
+    </message>
+    <message>
+        <source>RGB Picker Tool - Freehand</source>
+        <translation>Selector de color - Lazo</translation>
+    </message>
+    <message>
+        <source>RGB Picker Tool - Polyline</source>
+        <translation>Selector de color - Línea poligonal</translation>
+    </message>
+    <message>
+        <source>Skeleton Tool - Next Mode</source>
+        <translation>Esqueleto - Modo siguiente</translation>
+    </message>
+    <message>
+        <source>Skeleton Tool - Build Skeleton</source>
+        <translation>Esqueleto - Crear esqueleto</translation>
+    </message>
+    <message>
+        <source>Skeleton Tool - Animate</source>
+        <translation>Esqueleto - Animar</translation>
+    </message>
+    <message>
+        <source>Skeleton Tool - Inverse Kinematics</source>
+        <translation>Esqueleto - Cinemática inversa</translation>
+    </message>
+    <message>
+        <source>Plastic Tool - Next Mode</source>
+        <translation>Plástico - Modo siguiente</translation>
+    </message>
+    <message>
+        <source>Plastic Tool - Edit Mesh</source>
+        <translation>Plástico - Editar malla</translation>
+    </message>
+    <message>
+        <source>Plastic Tool - Paint Rigid</source>
+        <translation>Plástico - Pintar rigidez</translation>
+    </message>
+    <message>
+        <source>Plastic Tool - Build Skeleton</source>
+        <translation>Plástico - Crear esqueleto</translation>
+    </message>
+    <message>
+        <source>Plastic Tool - Animate</source>
+        <translation>Plástico - Animar</translation>
+    </message>
+    <message>
+        <source>&amp;Export Stop Motion Image Sequence</source>
+        <translation>Exportar secuencia de imágenes de stop-&amp;motion</translation>
+    </message>
+    <message>
+        <source>Pick Focus Check Location</source>
+        <translation>Escoger ubicación de comprobación del foco</translation>
+    </message>
+    <message>
+        <source>Remove frame before Stop Motion Camera</source>
+        <translation>Eliminar fotograma anterior a la imagen de cámara</translation>
+    </message>
+    <message>
+        <source>Next Frame including Stop Motion Camera</source>
+        <translation>Fotograma siguiente, incluyendo imagen de cámara</translation>
+    </message>
+    <message>
+        <source>Show original live view images.</source>
+        <translation>Mostrar imágenes en vivo originales</translation>
+    </message>
+    <message>
+        <source>&amp;Export Xsheet to PDF</source>
+        <translation>&amp;Exportar planilla a PDF</translation>
+    </message>
+    <message>
+        <source>Export TVPaint JSON File</source>
+        <translation>Exportar archivo JSON de TVPaint</translation>
+    </message>
+    <message>
+        <source>&amp;Apply Auto Lip Sync to Column</source>
+        <translation>&amp;Aplicar sincro labial automático a columna</translation>
+    </message>
+    <message>
+        <source>Zoom In And Fit Floating Panel</source>
+        <translation>Ampliar y ajustar a panel flotante</translation>
+    </message>
+    <message>
+        <source>Zoom Out And Fit Floating Panel</source>
+        <translation>Reducir y ajustar a panel flotante</translation>
+    </message>
+    <message>
+        <source>Set Cell Mark </source>
+        <translation>Definir marca de celda </translation>
+    </message>
+    <message>
+        <source>Reset rooms to their default?</source>
+        <translation>¿Restablecer espacios de trabajo a sus valores predefinidos?</translation>
+    </message>
+    <message>
+        <source>All user rooms will be lost!</source>
+        <translation>Se perderán todos los espacios de trabajo personalizados</translation>
+    </message>
+    <message>
+        <source>Reset Rooms</source>
+        <translation>Restablecer espacios de trabajo</translation>
+    </message>
+    <message>
+        <source>You must restart OpenToonz, close it now?</source>
+        <translation>Es necesario reiniciar OpenToonz, ¿hacerlo ahora?</translation>
+    </message>
+    <message>
+        <source>&amp;Convert TZP Files In Folder...</source>
+        <translation>&amp;Convertir archivos TZP en carpeta...</translation>
+    </message>
+    <message>
+        <source>Export Open Cel Animation (OCA)</source>
+        <translation>Exportar archivo OCA (Open Cel Animation)</translation>
+    </message>
+    <message>
+        <source>&amp;Export Current Scene</source>
+        <translation>&amp;Exportar escena actual</translation>
+    </message>
+    <message>
+        <source>&amp;Export Camera Track</source>
+        <translation>&amp;Exportar rastreo de cámara</translation>
+    </message>
+    <message>
+        <source>Toggle Navigation Tag</source>
+        <translation>Agregar/Quitar etiqueta de navegación</translation>
+    </message>
+    <message>
+        <source>Next Tag</source>
+        <translation>Etiqueta siguiente</translation>
+    </message>
+    <message>
+        <source>Previous Tag</source>
+        <translation>Etiqueta anterior</translation>
+    </message>
+    <message>
+        <source>Edit Tag</source>
+        <translation>Editar etiqueta</translation>
+    </message>
+    <message>
+        <source>Remove Tags</source>
+        <translation>Eliminar etiquetas</translation>
+    </message>
+    <message>
+        <source>Toggle Blank Frames</source>
+        <translation>Alternar fotogramas en blanco</translation>
+    </message>
+    <message>
+        <source>Toggle Viewer Preview</source>
+        <translation>Alternar previsualización en el visor</translation>
+    </message>
+    <message>
+        <source>Toggle Viewer Sub-camera Preview</source>
+        <translation>Alternar previsualización de región en el visor</translation>
+    </message>
+    <message>
+        <source>&amp;Preproduction Board</source>
+        <translation>&amp;Panel de preproducción</translation>
+    </message>
+    <message>
+        <source>Toggle Main Window&apos;s See Through Mode</source>
+        <translation>Ventana principal semi transparente</translation>
+    </message>
+    <message>
+        <source>&amp;Custom Panels</source>
+        <translation>&amp;Paneles personalizados</translation>
+    </message>
+    <message>
+        <source>&amp;Custom Panel Editor...</source>
+        <translation>&amp;Editor de paneles personalizados...</translation>
+    </message>
+    <message>
+        <source>&amp;Paste Cell Content</source>
+        <translation>&amp;Pegar contenido de celda</translation>
+    </message>
+    <message>
+        <source>&amp;Viewer Histogram</source>
+        <translation>&amp;Histograma del visor</translation>
+    </message>
+    <message>
+        <source>Paint Brush - Next Mode</source>
+        <translation>Brocha - Modo siguiente</translation>
+    </message>
+    <message>
+        <source>Paint Brush - Areas</source>
+        <translation>Brocha - Áreas</translation>
+    </message>
+    <message>
+        <source>Paint Brush - Lines</source>
+        <translation>Brocha - Líneas</translation>
+    </message>
+    <message>
+        <source>Paint Brush - Lines &amp; Areas</source>
+        <translation>Brocha - Líneas y áreas</translation>
+    </message>
+    <message>
+        <source>Fill Tool - Pick+Freehand</source>
+        <translation>Rellenar - Escoger+lazo</translation>
+    </message>
+    <message>
+        <source>Type - Pick+Freehand</source>
+        <translation>Texto - Escoger+lazo</translation>
+    </message>
+    <message>
+        <source>Flip Selection/Object Horizontally</source>
+        <translation>Invertir selección u objeto horizontalmente</translation>
+    </message>
+    <message>
+        <source>Flip Selection/Object Vertically</source>
+        <translation>Invertir selección u objeto verticalmente</translation>
+    </message>
+    <message>
+        <source>Rotate Selection/Object Left</source>
+        <translation>Rotar selección u objeto en sentido antihorario</translation>
+    </message>
+    <message>
+        <source>Rotate Selection/Object Right</source>
+        <translation>Rotar selección u objeto en sentido horario</translation>
+    </message>
+    <message>
+        <source>Import Open Cel Animation (OCA)</source>
+        <translation>Importar Open Cel Animation (OCA)</translation>
+    </message>
+    <message>
+        <source>&amp;New Assistant Level</source>
+        <translation>&amp;Nuevo nivel de asistentes</translation>
+    </message>
+    <message>
+        <source>Toggle Sub-Xsheet Navigation Bar</source>
+        <translation>Alternar barra de navegación de sub-planillas</translation>
+    </message>
+    <message>
+        <source>Edit Assistants</source>
+        <translation>Editar asistentes</translation>
+    </message>
+    <message>
+        <source>Show build date in title</source>
+        <translation>Mostrar fecha de compilación en título</translation>
+    </message>
+    <message>
+        <source>&amp;Save Scene Only</source>
+        <translation>&amp;Guardar sólo la escena</translation>
+    </message>
+    <message>
+        <source>&amp;Set Scene Settings as Default</source>
+        <translation>Guardar opcione&amp;s predefinidas</translation>
+    </message>
+    <message>
+        <source>Export Stylos Exchange Format(SXF)</source>
+        <translation>Exportar Stylos Exchange Format (SXF)</translation>
+    </message>
+    <message>
+        <source>&amp;Clear Viewer Content</source>
+        <translation>&amp;Limpiar contenido del visor</translation>
+    </message>
+    <message>
+        <source>&amp;Export All Levels... </source>
+        <translation>&amp;Exportar todos los niveles... </translation>
+    </message>
+    <message>
+        <source>&amp;Sort Strokes with Palette Order</source>
+        <translation>Ordenar trazo&amp;s según orden de paleta</translation>
+    </message>
+    <message>
+        <source>Convert to Toonz Raster...</source>
+        <translation>Convertir a Imagen de Toonz...</translation>
+    </message>
+    <message>
+        <source>&amp;Fill Holes...</source>
+        <translation>&amp;Rellenar huecos...</translation>
+    </message>
+    <message>
+        <source>Show Shift Origin</source>
+        <translation>Mostrar origen de desplazamiento</translation>
+    </message>
+    <message>
+        <source>&amp;Brush Presets</source>
+        <translation>Preajustes de &amp;pinceles</translation>
+    </message>
+    <message>
+        <source>&amp;Tool Properties</source>
+        <translation>Panel de opciones de &amp;herramientas</translation>
+    </message>
+    <message>
+        <source>&amp;Locator</source>
+        <translation>&amp;Localizador</translation>
+    </message>
+    <message>
+        <source>Toggle Viewer Indicators</source>
+        <translation>Alternar indicadores del visor</translation>
+    </message>
+    <message>
+        <source>Zoom View</source>
+        <translation>Ampliar</translation>
+    </message>
+    <message>
+        <source>Rotate View</source>
+        <translation>Rotar</translation>
+    </message>
+    <message>
+        <source>Pan View</source>
+        <translation>Desplazar</translation>
+    </message>
+    <message>
+        <source>Empty Only</source>
+        <translation>Sólo vacío</translation>
+    </message>
+    <message>
+        <source>Eraser Type - MultiArc</source>
+        <translation>Borrador - Tipo - Arco múltiple</translation>
+    </message>
+    <message>
+        <source>Rotate Viewer Left</source>
+        <translation>Rotar visor antihorario</translation>
+    </message>
+    <message>
+        <source>Rotate Viewer Right</source>
+        <translation>Rotar visor horario</translation>
+    </message>
+    <message>
+        <source>Rotate View Left</source>
+        <translation>Rotar vista antihorario</translation>
+    </message>
+    <message>
+        <source>Rotate View Right</source>
+        <translation>Rotar vista horario</translation>
+    </message>
+    <message>
+        <source>Viewer Scrub</source>
+        <translation>Arrastrar en visor</translation>
+    </message>
+    <message>
+        <source> [WIP]</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This feature is a work in progress.
+Please be advised that it may have incomplete implementation or cause unexpected behavior.
+We welcome your feedback and assistance with its development!</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -5763,7 +8125,7 @@ Huecos</translation>
 (i.e. with the same index and the same color), the existing style will be used.
 Otherwise, a new style will be added to &quot;match lines&quot; page.</source>
         <translation>Fusionar tintas: Si el nivel de destino contiene el mismo estilo que la tinta de
-la línea de coincidencia (mismo índice y color), el estilo existente será usado.
+la línea de coincidencia (mismo identificador y color), el estilo existente será usado.
 Sino, se agregará  un nuevo estilo a la página llamada &quot;Match lines&quot;.</translation>
     </message>
 </context>
@@ -5794,6 +8156,10 @@ Sino, se agregará  un nuevo estilo a la página llamada &quot;Match lines&quot;
 N.B. Duplicated commands will be ignored. Only the last one will appear in the menu bar.</source>
         <translation>Nota: Si se coloca un título poco común a un submenú, éste puede no aparecer traducido a otros idiomas.
 Nota: Los comandos duplicados serán ignorados. Sólo el último aparecerá en la barra de menúes.</translation>
+    </message>
+    <message>
+        <source>Search:</source>
+        <translation>Buscar:</translation>
     </message>
 </context>
 <context>
@@ -5967,6 +8333,85 @@ What do you want to do?</source>
     </message>
 </context>
 <context>
+    <name>NavTagEditorPopup</name>
+    <message>
+        <source>Edit Tag</source>
+        <translation>Editar etiqueta</translation>
+    </message>
+    <message>
+        <source>Frame %1 Label:</source>
+        <translation>Fotograma %1:</translation>
+    </message>
+    <message>
+        <source>Magenta</source>
+        <translation>Magenta</translation>
+    </message>
+    <message>
+        <source>Red</source>
+        <translation>Rojo</translation>
+    </message>
+    <message>
+        <source>Green</source>
+        <translation>Verde</translation>
+    </message>
+    <message>
+        <source>Blue</source>
+        <translation>Azul</translation>
+    </message>
+    <message>
+        <source>Yellow</source>
+        <translation>Amarillo</translation>
+    </message>
+    <message>
+        <source>Cyan</source>
+        <translation>Cian</translation>
+    </message>
+    <message>
+        <source>White</source>
+        <translation>Blanco</translation>
+    </message>
+    <message>
+        <source>Dark Magenta</source>
+        <translation>Magenta oscuro</translation>
+    </message>
+    <message>
+        <source>Dark Red</source>
+        <translation>Rojo oscuro</translation>
+    </message>
+    <message>
+        <source>Dark Green</source>
+        <translation>Verde oscuro</translation>
+    </message>
+    <message>
+        <source>Dark Blue</source>
+        <translation>Azul oscuro</translation>
+    </message>
+    <message>
+        <source>Dark Yellow</source>
+        <translation>Amarillo oscuro</translation>
+    </message>
+    <message>
+        <source>Dark Cyan</source>
+        <translation>Cian oscuro</translation>
+    </message>
+    <message>
+        <source>Dark Gray</source>
+        <translation>Gris oscuro</translation>
+    </message>
+    <message>
+        <source>Color:</source>
+        <translation>Color:</translation>
+    </message>
+    <message>
+        <source>Ok</source>
+        <translation>Aceptar</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+</context>
+<context>
     <name>OutputSettingsPopup</name>
     <message>
         <source>Save in:</source>
@@ -6114,7 +8559,7 @@ What do you want to do?</source>
     </message>
     <message>
         <source>Output Settings</source>
-        <translation>Opciones de salida</translation>
+        <translation>Opciones de procesamiento</translation>
     </message>
     <message>
         <source>8 bits</source>
@@ -6146,7 +8591,7 @@ What do you want to do?</source>
     </message>
     <message>
         <source>Other Settings</source>
-        <translation>Otras opciones</translation>
+        <translation type="vanished">Otras opciones</translation>
     </message>
     <message>
         <source>Add</source>
@@ -6222,7 +8667,7 @@ What do you want to do?</source>
     </message>
     <message>
         <source>Presets:</source>
-        <translation>Ajustes:</translation>
+        <translation>Preajustes:</translation>
     </message>
     <message>
         <source>Frame Start:</source>
@@ -6238,7 +8683,7 @@ What do you want to do?</source>
     </message>
     <message>
         <source>Frame Rate (linked to Scene Settings):</source>
-        <translation>Velocidad (fps):</translation>
+        <translation type="vanished">Velocidad (fps):</translation>
     </message>
     <message>
         <source>  To:</source>
@@ -6250,15 +8695,15 @@ What do you want to do?</source>
     </message>
     <message>
         <source>Add preset</source>
-        <translation>Agregar ajuste</translation>
+        <translation>Agregar preajuste</translation>
     </message>
     <message>
         <source>Enter the name for the output settings preset.</source>
-        <translation>Ingresar nombre del ajuste de opciones de salida.</translation>
+        <translation>Introducir nombre del preajuste de opciones de procesamiento.</translation>
     </message>
     <message>
         <source>Add output settings preset</source>
-        <translation>Agregar ajuste de opciones de salida</translation>
+        <translation>Agregar preajuste de opciones de procesamiento</translation>
     </message>
     <message>
         <source>&lt;custom&gt;</source>
@@ -6266,7 +8711,7 @@ What do you want to do?</source>
     </message>
     <message>
         <source>Remove preset</source>
-        <translation>Eliminar ajuste</translation>
+        <translation>Eliminar preajuste</translation>
     </message>
     <message>
         <source>Warning</source>
@@ -6293,7 +8738,7 @@ The parameters to be saved are:
 - File options
 - Resample Balance
 - Channel width</source>
-        <translation>Guardar las opciones actuales de salida.
+        <translation type="vanished">Guardar las opciones actuales de salida.
 Los parámetros que serán guardados son:
 - Opciones de cámara
 - Carpeta de proyecto donde se guardará
@@ -6301,6 +8746,92 @@ Los parámetros que serán guardados son:
 - Opciones de archivo
 - Filtro de remuestreo
 - Profundidad de color</translation>
+    </message>
+    <message>
+        <source>Camera</source>
+        <translation>Cámara</translation>
+    </message>
+    <message>
+        <source>File</source>
+        <translation>Archivo</translation>
+    </message>
+    <message>
+        <source>More</source>
+        <translation>Más</translation>
+    </message>
+    <message>
+        <source>More Settings</source>
+        <translation>Más opciones</translation>
+    </message>
+    <message>
+        <source>Frame Rate:</source>
+        <translation>Velocidad (fps):</translation>
+    </message>
+    <message>
+        <source>(linked to Scene Settings)</source>
+        <translation>(vinculada a Opciones de escena)</translation>
+    </message>
+    <message>
+        <source>Save current output settings.
+The parameters to be saved are:
+- Camera settings
+- Project folder to be saved in
+- File format
+- File options
+- Resample Balance
+- Channel width
+- Linear Color Space
+- Color Space Gamma</source>
+        <translation>Guardar opciones actuales de procesamiento.
+Los parámetros a ser guardados son:
+- Opciones de cámara
+- Carpeta del proyecto en dónde guardar
+- Formato de archivo
+- Opciones de archivo
+- Filtro
+- Profundidad de color
+- Espacio de color lineal
+- Gama del espacio de color</translation>
+    </message>
+    <message>
+        <source>Color</source>
+        <translation>Color</translation>
+    </message>
+    <message>
+        <source>Color Settings</source>
+        <translation>Opciones de color</translation>
+    </message>
+    <message>
+        <source>Sync with Output Settings</source>
+        <translation>Sincronizar con Opciones de procesamiento</translation>
+    </message>
+    <message>
+        <source>32 bit Floating point</source>
+        <translation>32 bits decimal</translation>
+    </message>
+    <message>
+        <source>On rendering, color values will be temporarily converted to linear light from nonlinear RGB values by using color space gamma.</source>
+        <translation>Durante el procesamiento, los valores de color serán convertidos temporalmente desde valores RGB no lineales a valores lineales, según la opción Gama del espacio de color.</translation>
+    </message>
+    <message>
+        <source>Color Space Gamma value is used for conversion between the linear and nonlinear color spaces,
+when the &quot;Linear Color Space&quot; option is enabled.</source>
+        <translation>El valor Gama del espacio de color será usado para la conversión entre los espacios de color lineal y no lineal,
+cuando la opción &quot;Espacio de color lineal&quot; se encuentre habilitada.</translation>
+    </message>
+    <message>
+        <source>
+Input less than 1.0 to sync the value with the output settings.</source>
+        <translation>
+Introducir un valor menor a 1.0 para sincronizarlo con las Opciones de procesamiento.</translation>
+    </message>
+    <message>
+        <source>Linear Color Space:</source>
+        <translation>Espacio de color lineal:</translation>
+    </message>
+    <message>
+        <source>Color Space Gamma:</source>
+        <translation>Gama del espacio de color:</translation>
     </message>
 </context>
 <context>
@@ -6377,6 +8908,13 @@ What do you want to do?</source>
     </message>
 </context>
 <context>
+    <name>PaletteViewerPanel</name>
+    <message>
+        <source>Freeze</source>
+        <translation>Congelar</translation>
+    </message>
+</context>
+<context>
     <name>PencilTestPopup</name>
     <message>
         <source>Camera Capture</source>
@@ -6400,7 +8938,7 @@ What do you want to do?</source>
     </message>
     <message>
         <source>Image adjust</source>
-        <translation>Ajustes de imagen</translation>
+        <translation>Ajuste de imagen</translation>
     </message>
     <message>
         <source>Upside down</source>
@@ -6412,11 +8950,11 @@ What do you want to do?</source>
     </message>
     <message>
         <source>Display</source>
-        <translation>Mostrar</translation>
+        <translation type="vanished">Mostrar</translation>
     </message>
     <message>
         <source>Show onion skin</source>
-        <translation>Mostrar piel de cebolla</translation>
+        <translation type="vanished">Mostrar piel de cebolla</translation>
     </message>
     <message>
         <source>Interval timer</source>
@@ -6424,7 +8962,7 @@ What do you want to do?</source>
     </message>
     <message>
         <source>Use interval timer</source>
-        <translation>Usar temporizador</translation>
+        <translation type="vanished">Usar temporizador</translation>
     </message>
     <message>
         <source>Capture
@@ -6486,11 +9024,11 @@ What do you want to do?</source>
     </message>
     <message>
         <source>Opacity(%):</source>
-        <translation>Opacidad(%):</translation>
+        <translation>Opacidad (%):</translation>
     </message>
     <message>
         <source>Interval(sec):</source>
-        <translation>Intervalo(seg):</translation>
+        <translation>Intervalo (seg):</translation>
     </message>
     <message>
         <source>No camera found</source>
@@ -6503,7 +9041,7 @@ What do you want to do?</source>
     <message>
         <source>Start Capturing
 [Return key]</source>
-        <translation>Comenzar captura
+        <translation>Iniciar captura
 [tecla Intro]</translation>
     </message>
     <message>
@@ -6574,7 +9112,7 @@ Do you want to overwrite it?</source>
     </message>
     <message>
         <source>Capture</source>
-        <translation type="vanished">Capturar</translation>
+        <translation>Capturar</translation>
     </message>
     <message>
         <source>Subfolder</source>
@@ -6709,6 +9247,112 @@ ADVERTENCIA : Tamaño de imagen no coincidente. El tamaño de la imagen guardada
         <source>Subcamera</source>
         <translation>Región</translation>
     </message>
+    <message>
+        <source>Use Direct Show Webcam Drivers</source>
+        <translation>Usar controladores de cámara web de Direct Show</translation>
+    </message>
+    <message>
+        <source>Use MJPG with Webcam</source>
+        <translation>Usar MJPG con cámaras web</translation>
+    </message>
+    <message>
+        <source>Onion skin</source>
+        <translation>Piel de cebolla</translation>
+    </message>
+    <message>
+        <source>Calibration</source>
+        <translation>Calibración</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Start calibration</source>
+        <translation>Iniciar calibración</translation>
+    </message>
+    <message>
+        <source>Load</source>
+        <translation>Cargar</translation>
+    </message>
+    <message>
+        <source>Export</source>
+        <translation>Exportar</translation>
+    </message>
+    <message>
+        <source>Open Readme.txt for Camera calibration...</source>
+        <translation>Abrir Readme.txt para calibración de cámara...</translation>
+    </message>
+    <message>
+        <source>Failed to save calibration settings.</source>
+        <translation>Falla al guardar opciones de calibración.</translation>
+    </message>
+    <message>
+        <source>Do you want to restart camera calibration?</source>
+        <translation>¿Reiniciar calibración de cámara?</translation>
+    </message>
+    <message>
+        <source>Couldn&apos;t load %1</source>
+        <translation>No fue posible cargar %1</translation>
+    </message>
+    <message>
+        <source>Overwriting the current calibration. Are you sure?</source>
+        <translation>Sobrescribiendo la calibración actual. ¿Confirmar?</translation>
+    </message>
+    <message>
+        <source>Couldn&apos;t save %1</source>
+        <translation>No fue posible guardar %1</translation>
+    </message>
+    <message>
+        <source>DPI:Auto</source>
+        <translation>PPP:Auto</translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation>Tamaño</translation>
+    </message>
+    <message>
+        <source>Position</source>
+        <translation>Posición</translation>
+    </message>
+    <message>
+        <source>DPI:%1</source>
+        <translation>PPP:%1</translation>
+    </message>
+    <message>
+        <source>This option specifies DPI for newly created levels.
+Adding frames to the existing level won&apos;t refer to this value.
+Auto: If the subcamera is not active, apply the current camera dpi.
+      If the subcamera is active, compute the dpi so that
+      the image will fit to the camera frame.
+Custom : Always use the custom dpi specified here.</source>
+        <translation>Esta opción especifica los PPP para la creación de nuevos niveles.
+No se usará al agregar dibujos a un nivel existente.
+Auto: Si la Región no se encontrara activa, aplicará el valor actual de PPP de la cámara.
+      Si la Región se encontrara activa, calculará los PPP de manera que
+      la imagen se ajuste al encuadre de la cámara.
+Personalizado : Siempre usará los PPP especificados aquí.</translation>
+    </message>
+    <message>
+        <source>Auto</source>
+        <translation>Automático</translation>
+    </message>
+    <message>
+        <source>Custom</source>
+        <translation>Personalizado</translation>
+    </message>
+    <message>
+        <source>Save Current Image Adjust Parameters As Default</source>
+        <translation>Guardar parámetros actuales de ajuste de imagen como predefinidos</translation>
+    </message>
+    <message>
+        <source>BG Reduction is set but the White BG image is missing. Please capture the White BG again.</source>
+        <translation>La reducción de fondo se encuentra activa, pero falta la imagen con el fondo vacío. Capturarla nuevamente.</translation>
+    </message>
+    <message>
+        <source>Do you want to save the current parameters as the default values?</source>
+        <translation>¿Guardar los parámetros actuales como valores predefinidos?</translation>
+    </message>
 </context>
 <context>
     <name>PencilTestSaveInFolderPopup</name>
@@ -6718,7 +9362,7 @@ ADVERTENCIA : Tamaño de imagen no coincidente. El tamaño de la imagen guardada
     </message>
     <message>
         <source>Infomation</source>
-        <translation>Información</translation>
+        <translation type="vanished">Información</translation>
     </message>
     <message>
         <source>Subfolder Name</source>
@@ -6824,6 +9468,10 @@ Set the output folder path to the subfolder as well.</source>
         <translation>Guardar la escena actual en la subcarpeta.
 También establecer la ruta de salida a esa carpeta.</translation>
     </message>
+    <message>
+        <source>Information</source>
+        <translation>Información</translation>
+    </message>
 </context>
 <context>
     <name>PltGizmoPopup</name>
@@ -6911,6 +9559,10 @@ También establecer la ruta de salida a esa carpeta.</translation>
         <source>Alpha</source>
         <translation>Alfa</translation>
     </message>
+    <message>
+        <source>Bind to Current Room</source>
+        <translation>Enlazar a espacio de trabajo actual</translation>
+    </message>
 </context>
 <context>
     <name>PreferencesPopup</name>
@@ -6924,11 +9576,7 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Use Default Viewer for Movie Formats</source>
-        <translation>Usar reproductor predefinido para formatos de película</translation>
-    </message>
-    <message>
-        <source>Minimize Raster Memory Fragmentation*</source>
-        <translation type="vanished">Minimizar fragmentación de imágenes en memoria*</translation>
+        <translation type="vanished">Usar reproductor predefinido para formatos de película</translation>
     </message>
     <message>
         <source>Save Automatically Every Minutes</source>
@@ -6940,15 +9588,15 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Cells Only</source>
-        <translation>Sólo acetatos</translation>
+        <translation>Sólo celdas</translation>
     </message>
     <message>
         <source>Cells and Column Data</source>
-        <translation>Acetatos y datos de la columna</translation>
+        <translation>Celdas y datos de la columna</translation>
     </message>
     <message>
         <source>Cell-dragging Behaviour:</source>
-        <translation>Comportamiento al arrastrar acetatos:</translation>
+        <translation>Comportamiento al arrastrar celdas:</translation>
     </message>
     <message>
         <source>Interface</source>
@@ -6976,7 +9624,7 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Step:</source>
-        <translation type="vanished">Intervalo:</translation>
+        <translation>Intervalo:</translation>
     </message>
     <message>
         <source>Height*:</source>
@@ -6984,14 +9632,14 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Loading</source>
-        <translation>Carga</translation>
+        <translation type="vanished">Carga</translation>
     </message>
     <message>
         <source>Expose Loaded Levels in Xsheet</source>
-        <translation>Exponer niveles cargados en planilla</translation>
+        <translation>Exponer automáticamente en la planilla los niveles al ser cargados</translation>
     </message>
     <message>
-        <source>Create Sub-folder when Importing Sub-xsheet</source>
+        <source>Create Sub-folder when Importing Sub-Xsheet</source>
         <translation>Crear sub-carpetas al importar sub-planillas</translation>
     </message>
     <message>
@@ -7000,7 +9648,7 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Keep Original Cleaned Up Drawings As Backup</source>
-        <translation>Mantener originales de los dibujos limpiados</translation>
+        <translation>Preservar dibujos limpiados intactos como respaldo</translation>
     </message>
     <message>
         <source>Animation</source>
@@ -7016,7 +9664,7 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Speed In / Speed Out</source>
-        <translation>Bézier</translation>
+        <translation>Bezier</translation>
     </message>
     <message>
         <source>Ease In / Ease Out</source>
@@ -7044,7 +9692,7 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Display in a New Flipbook Window</source>
-        <translation>Mostrar en una nueva ventana de reproductor</translation>
+        <translation type="vanished">Mostrar en una nueva ventana de reproductor</translation>
     </message>
     <message>
         <source>Rewind after Playback</source>
@@ -7059,11 +9707,7 @@ También establecer la ruta de salida a esa carpeta.</translation>
         <translation type="vanished">   Color de fotogramas siguientes: </translation>
     </message>
     <message>
-        <source>   Previous  Frames Correction: </source>
-        <translation type="vanished">   Color de fotogramas anteriores: </translation>
-    </message>
-    <message>
-        <source>Display Lines Only </source>
+        <source>Display Lines Only</source>
         <translation>Sólo mostrar líneas</translation>
     </message>
     <message>
@@ -7076,7 +9720,7 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Undo Memory Size (MB):</source>
-        <translation type="vanished">Deshacer - Tamaño de memoria (MB):</translation>
+        <translation>Deshacer - Tamaño de memoria (MB):</translation>
     </message>
     <message>
         <source>Render Task Chunk Size:</source>
@@ -7084,15 +9728,7 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Show Info in Rendered Frames</source>
-        <translation>Sobreimprimir información en los fotogramas procesados</translation>
-    </message>
-    <message>
-        <source>*Changes will take effect the next time you run Toonz</source>
-        <translation type="vanished">*Los cambios entrarán en vigor la próxima vez que se ejecute OpenToonz</translation>
-    </message>
-    <message>
-        <source>Language*:</source>
-        <translation type="vanished">Idioma*:</translation>
+        <translation type="vanished">Sobreimprimir información en los fotogramas procesados</translation>
     </message>
     <message>
         <source>cm</source>
@@ -7128,7 +9764,7 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Scan File Format:</source>
-        <translation>Formato de archivo al escanear:</translation>
+        <translation type="vanished">Formato de archivo al escanear:</translation>
     </message>
     <message>
         <source>Default Level Type:</source>
@@ -7136,15 +9772,15 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Toonz Vector Level</source>
-        <translation>Nivel vectorial de Toonz</translation>
+        <translation>Vectorial de Toonz</translation>
     </message>
     <message>
         <source>Toonz Raster Level</source>
-        <translation>Nivel de imagen de Toonz</translation>
+        <translation>Imagen de Toonz</translation>
     </message>
     <message>
         <source>Raster Level</source>
-        <translation>Nivel de imagen</translation>
+        <translation>Imagen</translation>
     </message>
     <message>
         <source>Width:</source>
@@ -7152,7 +9788,7 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Height:</source>
-        <translation type="vanished">Altura:</translation>
+        <translation>Altura:</translation>
     </message>
     <message>
         <source>DPI:</source>
@@ -7164,7 +9800,7 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Minimize Savebox after Editing</source>
-        <translation>Minimizar marco delimitador luego de editar</translation>
+        <translation type="vanished">Ajustar marco delimitador luego de cada edición</translation>
     </message>
     <message>
         <source>Use the TLV Savebox to Limit Filling Operations</source>
@@ -7175,20 +9811,16 @@ También establecer la ruta de salida a esa carpeta.</translation>
         <translation>Grosor del papel:</translation>
     </message>
     <message>
-        <source>Enable Version Control *</source>
-        <translation type="vanished">Habilitar control de versiones *</translation>
-    </message>
-    <message>
         <source>Transparency Check</source>
-        <translation>Comprobación de transparencia</translation>
+        <translation>Comprobación de transparencias</translation>
     </message>
     <message>
-        <source>   Ink Color on White Bg: </source>
-        <translation type="vanished">   Tinta (fondo blanco): </translation>
+        <source>Ink Color on White BG:</source>
+        <translation>Tinta (fondo blanco):</translation>
     </message>
     <message>
-        <source>   Ink Color on Black Bg: </source>
-        <translation type="vanished">   Tinta (fondo negro): </translation>
+        <source>Ink Color on Black BG:</source>
+        <translation>Tinta (fondo negro):</translation>
     </message>
     <message>
         <source> Paint Color: </source>
@@ -7196,7 +9828,7 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Fit to Flipbook</source>
-        <translation>Ajustar al reproductor</translation>
+        <translation type="vanished">Ajustar al reproductor</translation>
     </message>
     <message>
         <source>New Level Format</source>
@@ -7212,7 +9844,7 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Visualization</source>
-        <translation>Visualización</translation>
+        <translation type="vanished">Visualización</translation>
     </message>
     <message>
         <source>Show Lines with Thickness 0</source>
@@ -7243,16 +9875,16 @@ También establecer la ruta de salida a esa carpeta.</translation>
         <translation>Ignorar el canal alfa de los niveles en la columna 1</translation>
     </message>
     <message>
-        <source>Minimize Raster Memory Fragmentation *</source>
-        <translation>Minimizar fragmentación de imágenes en memoria *</translation>
+        <source>Minimize Raster Memory Fragmentation*</source>
+        <translation>Minimizar fragmentación de imágenes en memoria*</translation>
     </message>
     <message>
-        <source>* Changes will take effect the next time you run Toonz</source>
+        <source>* Changes will take effect the next time you run OpenToonz</source>
         <translation>* Los cambios entrarán en vigor la próxima vez que se ejecute OpenToonz</translation>
     </message>
     <message>
         <source>Move Current Frame by Clicking on Xsheet / Numerical Columns Cell Area</source>
-        <translation>Mover fotograma actual haciendo clic en el área de acetatos de las columnas numéricas de la planilla</translation>
+        <translation>Mover fotograma actual haciendo clic en el área de celdas de las columnas numéricas de la planilla</translation>
     </message>
     <message>
         <source>Enable Actual Pixel View on Scene Editing Mode</source>
@@ -7260,7 +9892,7 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Display Level Name on Each Marker</source>
-        <translation>Mostrar nombre de niveles en cada marcador</translation>
+        <translation type="vanished">Mostrar nombre de niveles en cada marcador</translation>
     </message>
     <message>
         <source>Show Raster Images Darken Blended in Camstand View</source>
@@ -7268,15 +9900,15 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Show &quot;ABC&quot; Appendix to the Frame Number in Xsheet Cell</source>
-        <translation>Mostrar el sufijo &quot;ABC&quot; detrás del número de fotograma en los acetatos de la planilla</translation>
+        <translation>Mostrar el sufijo &quot;ABC&quot; detrás del número de fotograma en las celdas de la planilla</translation>
     </message>
     <message>
         <source>Automatically Remove Scene Number from Loaded Level Name</source>
         <translation>Eliminar automáticamente el número de escena del nombre de un nivel cargado</translation>
     </message>
     <message>
-        <source>Multi Layer Style Picker : Switch Levels by Picking</source>
-        <translation>Selector de estilos: Cambiar de nivel al seleccionar</translation>
+        <source>Multi Layer Style Picker: Switch Levels by Picking</source>
+        <translation type="vanished">Selector de estilos: Cambiar de nivel al seleccionar</translation>
     </message>
     <message>
         <source>Onion Skin ON</source>
@@ -7288,51 +9920,43 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Category</source>
-        <translation>Categorías</translation>
+        <translation type="vanished">Categorías</translation>
     </message>
     <message>
-        <source>Undo Memory Size (MB)</source>
-        <translation>Deshacer - Tamaño de memoria (MB)</translation>
+        <source>Level Strip Icon Size*:</source>
+        <translation type="vanished">Tamaño de íconos*:</translation>
     </message>
     <message>
-        <source>Icon Size *</source>
-        <translation>Tamaño de íconos *</translation>
-    </message>
-    <message>
-        <source>X</source>
+        <source>x</source>
         <translation type="vanished">x</translation>
     </message>
     <message>
-        <source>Viewer  Shrink</source>
-        <translation>Visor       Reducción</translation>
+        <source>Viewer Shrink:</source>
+        <translation>Visor      Reducción:</translation>
     </message>
     <message>
-        <source>Step</source>
-        <translation>Intervalo</translation>
+        <source>Viewer BG Color:</source>
+        <translation>Fondo del visor:</translation>
     </message>
     <message>
-        <source>Viewer BG Color</source>
-        <translation>Fondo del visor</translation>
+        <source>Preview BG Color:</source>
+        <translation>Fondo previsualización:</translation>
     </message>
     <message>
-        <source>Preview BG Color</source>
-        <translation>Fondo previsualización</translation>
+        <source>Chessboard Color 1:</source>
+        <translation>Damero - Color 1:</translation>
     </message>
     <message>
-        <source>ChessBoard Color 1</source>
-        <translation>Damero - Color 1</translation>
+        <source>Chessboard Color 2:</source>
+        <translation>Damero - Color 2:</translation>
     </message>
     <message>
-        <source>Chessboard Color 2</source>
-        <translation>Damero - Color 2</translation>
+        <source>Viewer Zoom Center:</source>
+        <translation type="vanished">Centro de zoom en visor:</translation>
     </message>
     <message>
-        <source>Viewer Zoom Center</source>
-        <translation>Centro de zoom en visor</translation>
-    </message>
-    <message>
-        <source>Language *:</source>
-        <translation>Idioma *:</translation>
+        <source>Language*:</source>
+        <translation>Idioma*:</translation>
     </message>
     <message>
         <source>Default TLV Caching Behavior</source>
@@ -7343,10 +9967,6 @@ También establecer la ruta de salida a esa carpeta.</translation>
         <translation type="vanished">Miniatura de columnas</translation>
     </message>
     <message>
-        <source>  Height:</source>
-        <translation>  Altura:</translation>
-    </message>
-    <message>
         <source>Default Interpolation:</source>
         <translation>Interpolación predefinida:</translation>
     </message>
@@ -7355,16 +9975,8 @@ También establecer la ruta de salida a esa carpeta.</translation>
         <translation>Fotogramas siguientes:</translation>
     </message>
     <message>
-        <source>Previous  Frames Correction:</source>
+        <source>Previous Frames Correction:</source>
         <translation>Fotogramas anteriores:</translation>
-    </message>
-    <message>
-        <source>Ink Color on White Bg:</source>
-        <translation>Tinta (fondo blanco):</translation>
-    </message>
-    <message>
-        <source>Ink Color on Black Bg:</source>
-        <translation>Tinta (fondo negro):</translation>
     </message>
     <message>
         <source>Paint Color:</source>
@@ -7376,7 +9988,7 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Show Keyframes on Cell Area</source>
-        <translation>Mostrar fotogramas clave en el área de acetatos</translation>
+        <translation>Mostrar fotogramas clave en el área de celdas</translation>
     </message>
     <message>
         <source>Mouse Cursor</source>
@@ -7392,11 +10004,11 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>All Icons</source>
-        <translation>Todos los íconos</translation>
+        <translation>Todas las miniaturas</translation>
     </message>
     <message>
         <source>All Icons &amp; Images</source>
-        <translation>Todos los íconos e imágenes</translation>
+        <translation>Todas las miniaturas e imágenes</translation>
     </message>
     <message>
         <source>At Once</source>
@@ -7455,8 +10067,8 @@ También establecer la ruta de salida a esa carpeta.</translation>
         <translation>Personalizada*</translation>
     </message>
     <message>
-        <source>Custom Project Path(s): </source>
-        <translation>Rutas personalizadas de proyectos: </translation>
+        <source>Custom Project Path(s):</source>
+        <translation>Rutas personalizadas de proyectos:</translation>
     </message>
     <message>
         <source>Advanced: Multiple paths can be separated by ** (No Spaces)</source>
@@ -7468,7 +10080,7 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Import/Export</source>
-        <translation>Importación/Exportación</translation>
+        <translation type="vanished">Importación/Exportación</translation>
     </message>
     <message>
         <source>Show Onion Skin During Playback</source>
@@ -7479,8 +10091,8 @@ También establecer la ruta de salida a esa carpeta.</translation>
         <translation>píxeles</translation>
     </message>
     <message>
-        <source>Interval(Minutes): </source>
-        <translation>Intervalo (minutos): </translation>
+        <source>Interval (Minutes):</source>
+        <translation>Intervalo (minutos):</translation>
     </message>
     <message>
         <source>Additional Project Locations</source>
@@ -7512,11 +10124,11 @@ También establecer la ruta de salida a esa carpeta.</translation>
     </message>
     <message>
         <source>Please provide the path where FFmpeg is located on your computer.</source>
-        <translation>Por favor indicar la ruta a la ubicación de FFmpeg en el sistema.</translation>
+        <translation>Introducir la ruta hasta la ubicación de FFmpeg en el sistema.</translation>
     </message>
     <message>
-        <source>FFmpeg Path: </source>
-        <translation>Ruta a FFmpeg: </translation>
+        <source>FFmpeg Path:</source>
+        <translation>Ruta a FFmpeg:</translation>
     </message>
     <message>
         <source>Number of seconds to wait for FFmpeg to complete processing the output:</source>
@@ -7557,12 +10169,12 @@ Is it OK to release these shortcuts?</source>
         <translation>Espacios de trabajo*:</translation>
     </message>
     <message>
-        <source>Please indicate where you would like exports from Fast Render(MP4) to go.</source>
-        <translation>Por favor indicar dónde se desea ubicar los archivos generados al usar Procesar rápido a MP4.</translation>
+        <source>Please indicate where you would like exports from Fast Render (MP4) to go.</source>
+        <translation>Introducir la ruta donde guardar archivos al usar Procesar rápido a MP4.</translation>
     </message>
     <message>
-        <source>Fast Render Path: </source>
-        <translation>Ruta para procesamiento rápido: </translation>
+        <source>Fast Render Path:</source>
+        <translation>Ruta para procesamiento rápido:</translation>
     </message>
     <message>
         <source>Replace Level after SaveLevelAs command</source>
@@ -7570,11 +10182,11 @@ Is it OK to release these shortcuts?</source>
     </message>
     <message>
         <source>Use Arrow Key to Shift Cell Selection</source>
-        <translation>Usar teclas de flechas para cambiar la selección de acetatos</translation>
+        <translation>Usar teclas de flechas para cambiar la selección de celdas</translation>
     </message>
     <message>
         <source>Enable to Input Cells without Double Clicking</source>
-        <translation>Habilitar el ingreso de acetatos sin hacer doble clic</translation>
+        <translation type="vanished">Habilitar el ingreso de celdas sin hacer doble clic</translation>
     </message>
     <message>
         <source>Watch File System and Update File Browser Automatically</source>
@@ -7585,7 +10197,7 @@ Is it OK to release these shortcuts?</source>
         <translation>Usar los PPP de la cámara para todas las imágenes importadas</translation>
     </message>
     <message>
-        <source>Show Toolbar in the XSheet </source>
+        <source>Show Toolbar in the Xsheet</source>
         <translation>Mostrar la barra de herramientas en la planilla</translation>
     </message>
     <message>
@@ -7626,11 +10238,11 @@ Is it OK to release these shortcuts?</source>
     </message>
     <message>
         <source>Default TLV Caching Behavior:</source>
-        <translation>Comportamiento de caché de imágenes de Toonz (TLV):</translation>
+        <translation type="vanished">Comportamiento de caché de imágenes de Toonz (TLV):</translation>
     </message>
     <message>
         <source>Column Icon:</source>
-        <translation>Íconos de columna:</translation>
+        <translation>Miniaturas de columnas:</translation>
     </message>
     <message>
         <source>Palette Type on Loading Raster Image as Color Model:</source>
@@ -7646,7 +10258,7 @@ Is it OK to release these shortcuts?</source>
     </message>
     <message>
         <source>Enable OpenToonz Commands&apos; Shortcut Keys While Renaming Cell</source>
-        <translation>Habilitar atajos de teclado de OpenToonz mientras se está renombrando un acetato</translation>
+        <translation>Habilitar atajos de teclado de OpenToonz mientras se está renombrando una celda</translation>
     </message>
     <message>
         <source>Life is too short for Comic Sans</source>
@@ -7657,8 +10269,8 @@ Is it OK to release these shortcuts?</source>
         <translation>Buena suerte.  A partir de ahora estás por las tuyas.</translation>
     </message>
     <message>
-        <source>Font *:</source>
-        <translation>Tipografía *:</translation>
+        <source>Font*:</source>
+        <translation>Tipografía*:</translation>
     </message>
     <message>
         <source>Font Weight *:</source>
@@ -7702,7 +10314,7 @@ Is it OK to release these shortcuts?</source>
     </message>
     <message>
         <source>Show Current Time Indicator (Timeline Mode only)</source>
-        <translation>Mostrar indicador de tiempo actual (sólo en modo Línea de tiempo)</translation>
+        <translation type="vanished">Mostrar indicador de tiempo actual (sólo en modo Línea de tiempo)</translation>
     </message>
     <message>
         <source>Project Folder Aliases (+drawings, +scenes, etc.)</source>
@@ -7724,11 +10336,11 @@ la relatividad al resolver la ruta de un archvo.</translation>
     </message>
     <message>
         <source>Open the dropdown to display all options</source>
-        <translation>Abrir menú para desplegar todas las opciones</translation>
+        <translation type="vanished">Abrir menú para desplegar todas las opciones</translation>
     </message>
     <message>
         <source>Cycle through the available options</source>
-        <translation>Recorrer opciones cíclicamente</translation>
+        <translation type="vanished">Recorrer opciones cíclicamente</translation>
     </message>
     <message>
         <source>Path Alias Priority:</source>
@@ -7740,7 +10352,7 @@ la relatividad al resolver la ruta de un archvo.</translation>
     </message>
     <message>
         <source>Dropdown Shortcuts:</source>
-        <translation>Atajos de menúes desplegables:</translation>
+        <translation type="vanished">Atajos de menúes desplegables:</translation>
     </message>
     <message>
         <source>Show Raster Images Darken Blended</source>
@@ -7756,7 +10368,7 @@ la relatividad al resolver la ruta de un archvo.</translation>
     </message>
     <message>
         <source>Expand Function Editor Header to Match Xsheet Toolbar Height*</source>
-        <translation>También expandir la altura del editor de funciones*</translation>
+        <translation type="vanished">También expandir la altura del editor de funciones*</translation>
     </message>
     <message>
         <source>Colors</source>
@@ -7787,8 +10399,8 @@ la relatividad al resolver la ruta de un archvo.</translation>
         <translation>Disposición de encabezado de columnas*:</translation>
     </message>
     <message>
-        <source>Color Calibration using 3D Look-up Table *</source>
-        <translation>Calibración de color usando una tabla de consulta 3D *</translation>
+        <source>Color Calibration using 3D Look-up Table*</source>
+        <translation type="vanished">Calibración de color usando una tabla de consulta 3D*</translation>
     </message>
     <message>
         <source>Enable auto-stretch frame</source>
@@ -7825,12 +10437,12 @@ También, se establecerá el destino inicial de salida para las nuevas escenas e
         <translation>Editor de funciones*:</translation>
     </message>
     <message>
-        <source>3DLUT File for [%1] *:</source>
-        <translation>Archivo 3DLUT para [%1] *:</translation>
+        <source>3DLUT File for [%1]*:</source>
+        <translation type="vanished">Archivo 3DLUT para [%1]*:</translation>
     </message>
     <message>
         <source>Cursor Options</source>
-        <translation>Opciones de puntero</translation>
+        <translation type="vanished">Opciones de puntero</translation>
     </message>
     <message>
         <source>Basic Cursor Type:</source>
@@ -7882,7 +10494,7 @@ También, se establecerá el destino inicial de salida para las nuevas escenas e
     </message>
     <message>
         <source>Use Onion Skin Colors for Reference Drawings of Shift and Trace</source>
-        <translation>Usar los colores de Piel de cebolla en los dibujos de referencia de Desplazar y trazar</translation>
+        <translation>Usar los colores de Piel de cebolla en los dibujos de referencia de Desplazar y calcar</translation>
     </message>
     <message>
         <source>Tablet Settings</source>
@@ -7909,8 +10521,8 @@ También, se establecerá el destino inicial de salida para las nuevas escenas e
         <translation>Archivo</translation>
     </message>
     <message>
-        <source>Style *:</source>
-        <translation>Estilo *:</translation>
+        <source>Style*:</source>
+        <translation>Estilo*:</translation>
     </message>
     <message>
         <source>Matte color is used for background when overwriting raster levels with transparent pixels
@@ -7919,8 +10531,8 @@ in non alpha-enabled image format.</source>
 contengan píxeles transparentes en formatos de imagen sin soporte para canal alfa.</translation>
     </message>
     <message>
-        <source>Matte color: </source>
-        <translation>Color de transparencia: </translation>
+        <source>Matte color:</source>
+        <translation>Color de transparencia:</translation>
     </message>
     <message>
         <source>Current Column Color:</source>
@@ -7931,8 +10543,8 @@ contengan píxeles transparentes en formatos de imagen sin soporte para canal al
         <translation>Respaldar escena y niveles de animación al guardar</translation>
     </message>
     <message>
-        <source># of backups to keep: </source>
-        <translation>Cantidad de respaldos a conservar: </translation>
+        <source># of backups to keep:</source>
+        <translation>Cantidad de respaldos a conservar:</translation>
     </message>
     <message>
         <source>Enable Autocreation</source>
@@ -7948,7 +10560,7 @@ contengan píxeles transparentes en formatos de imagen sin soporte para canal al
     </message>
     <message>
         <source>Enable Creation in Hold Cells</source>
-        <translation>Creación en acetatos de mantenimiento</translation>
+        <translation>Creación en celdas de mantenimiento</translation>
     </message>
     <message>
         <source>Enable Autorenumber</source>
@@ -7963,8 +10575,8 @@ contengan píxeles transparentes en formatos de imagen sin soporte para canal al
         <translation>Mostrar columna de cámara</translation>
     </message>
     <message>
-        <source>Level Editor Box Color</source>
-        <translation>Fondo del visor (niveles)</translation>
+        <source>Level Editor Box Color:</source>
+        <translation>Fondo del visor (niveles):</translation>
     </message>
     <message>
         <source>Incremental</source>
@@ -7987,8 +10599,542 @@ contengan píxeles transparentes en formatos de imagen sin soporte para canal al
         <translation>Habilitar control mediante gestos táctiles</translation>
     </message>
     <message>
-        <source>Number of Frames to Play for Short Play</source>
-        <translation>Cantidad de fotogramas en Reproducción breve</translation>
+        <source>Number of Frames to Play for Short Play:</source>
+        <translation type="vanished">Cantidad de fotogramas en Reproducción breve:</translation>
+    </message>
+    <message>
+        <source>Switch to dark icons</source>
+        <translation type="vanished">Cambiar a íconos oscuros</translation>
+    </message>
+    <message>
+        <source>Level Strip Thumbnail Size*:</source>
+        <translation>Tamaño de miniaturas*:</translation>
+    </message>
+    <message>
+        <source>Color Calibration using 3D Look-up Table</source>
+        <translation>Calibración de color mediante Tabla de consulta 3D</translation>
+    </message>
+    <message>
+        <source>3DLUT File for [%1]:</source>
+        <translation>Archivo 3DLUT para [%1]:</translation>
+    </message>
+    <message>
+        <source>Clear Undo History when Saving Levels</source>
+        <translation>Limpiar historial de Deshacer al guardar niveles</translation>
+    </message>
+    <message>
+        <source>Use %1 to Resize Brush</source>
+        <translation type="vanished">Usar %1 para redimensionar pincel</translation>
+    </message>
+    <message>
+        <source>Switch Tool Temporarily Keypress Length (ms):</source>
+        <translation>Duración de presión para cambio temporal de herramienta (ms):</translation>
+    </message>
+    <message>
+        <source>[Experimental Feature] </source>
+        <translation>[Función experimental] </translation>
+    </message>
+    <message>
+        <source>Automatically Modify Expression On Moving Referenced Objects</source>
+        <translation>Modificar expresiones automáticamente al mover objetos referenciados</translation>
+    </message>
+    <message>
+        <source>Edit Additional Style Sheet..</source>
+        <translation>Editar hoja de estilo adicional...</translation>
+    </message>
+    <message>
+        <source>Icon Theme*:</source>
+        <translation type="vanished">Tema de íconos*:</translation>
+    </message>
+    <message>
+        <source>Show Icons In Menu*</source>
+        <translation>Mostrar íconos en menúes*</translation>
+    </message>
+    <message>
+        <source>Use Qt&apos;s Native Windows Ink Support*
+(CAUTION: This options is for maintenance purpose. 
+ Do not activate this option or the tablet won&apos;t work properly.)</source>
+        <translation>Usar soporte nativo de Qt para Windows Ink*
+(PRECAUCIÓN: Esta opción es para propósitos de mantenimiento. 
+ No activarla o la tableta dejará de funcionar correctamente.)</translation>
+    </message>
+    <message>
+        <source>30bit Display*</source>
+        <translation>Visualización de 30 bits*</translation>
+    </message>
+    <message>
+        <source>Automatically Remove Unused Levels From Scene Cast</source>
+        <translation>Eliminar automáticamente de Componentes de la escena los niveles no usados</translation>
+    </message>
+    <message>
+        <source>Allow Multi-Thread in FFMPEG Rendering (UNSTABLE)</source>
+        <translation>Permitir procesamiento multi-hilo en FFMPEG (más inestable)</translation>
+    </message>
+    <message>
+        <source>Rhubarb Path:</source>
+        <translation>Ruta a Rhubarb:</translation>
+    </message>
+    <message>
+        <source>Rhubarb Timeout:</source>
+        <translation>Tiempo de espera por Rhubarb:</translation>
+    </message>
+    <message>
+        <source>Default Raster / Scan Level Format:</source>
+        <translation>Formato predefinido para niveles de Imagen / Escaneo:</translation>
+    </message>
+    <message>
+        <source>Level Name Display:</source>
+        <translation>Mostrar nombres de nivel:</translation>
+    </message>
+    <message>
+        <source>Number of Frames to Play 
+for Short Play:</source>
+        <translation type="vanished">Cantidad de fotogramas de 
+Reproducción breve:</translation>
+    </message>
+    <message>
+        <source>Minimum</source>
+        <translation>Mínimo</translation>
+    </message>
+    <message>
+        <source>Display on Each Marker</source>
+        <translation>En cada marcador</translation>
+    </message>
+    <message>
+        <source>Display on Column Header</source>
+        <translation>En encabezado de columna</translation>
+    </message>
+    <message>
+        <source>Auto Lip-Sync</source>
+        <translation>Sincro labial automático</translation>
+    </message>
+    <message>
+        <source>Check Availability</source>
+        <translation>Comprobar disponibilidad</translation>
+    </message>
+    <message>
+        <source>Enabling multi-thread rendering will render significantly faster 
+but a random crash might occur, use at your own risk.</source>
+        <translation>Habilitar el procesamiento multi-hilo posibilitará una velocidad siginificativamente mayor 
+pero es posible que se produzcan ocasionales cuelgues; usar a propio riesgo.</translation>
+    </message>
+    <message>
+        <source>OpenToonz can use Rhubarb for auto lip-syncing.
+</source>
+        <translation>OpenToonz puede usar Rhubarb para generar una sincronización labial automática.
+</translation>
+    </message>
+    <message>
+        <source>Rhubarb is not bundled with OpenToonz.
+</source>
+        <translation>Rhubarb no viene incluído con OpenToonz.
+</translation>
+    </message>
+    <message>
+        <source>Please provide the path where Rhubarb is located on your computer.</source>
+        <translation>Introducir la ruta hasta la ubicación de Rhubarb en el sistema.</translation>
+    </message>
+    <message>
+        <source>Number of seconds to wait for Rhubarb to complete processing the audio:</source>
+        <translation>Cantidad de segundos a esperar para que Rhubarb complete el procesamiento del audio:</translation>
+    </message>
+    <message>
+        <source>Show Column Parent&apos;s Color in the Xsheet</source>
+        <translation>Mostrar color del superior de la columna en la planilla</translation>
+    </message>
+    <message>
+        <source>Raster Level Caching Behavior:</source>
+        <translation>Comportamiento caché de niveles de Imagen:</translation>
+    </message>
+    <message>
+        <source>Delete Command Behaviour:</source>
+        <translation>Comportamiento del comando Borrar:</translation>
+    </message>
+    <message>
+        <source>Paste Cells Behaviour:</source>
+        <translation>Comportamiento al pegar celdas:</translation>
+    </message>
+    <message>
+        <source>Highlight Line Every Second</source>
+        <translation>Línea resaltada en cada segundo</translation>
+    </message>
+    <message>
+        <source>Show Current Time Indicator</source>
+        <translation>Mostrar indicador de tiempo actual</translation>
+    </message>
+    <message>
+        <source>Triangle Top Left</source>
+        <translation>Triángulo (arriba izquierda)</translation>
+    </message>
+    <message>
+        <source>Triangle Top Right</source>
+        <translation>Triángulo (arriba derecha)</translation>
+    </message>
+    <message>
+        <source>Triangle Bottom Left</source>
+        <translation>Triángulo (abajo izquierda)</translation>
+    </message>
+    <message>
+        <source>Triangle Bottom Right</source>
+        <translation>Triángulo (abajo derecha)</translation>
+    </message>
+    <message>
+        <source>Triangle Up</source>
+        <translation>Triángulo (arriba)</translation>
+    </message>
+    <message>
+        <source>Triangle Down</source>
+        <translation>Triángulo (abajo)</translation>
+    </message>
+    <message>
+        <source>Triangle Left</source>
+        <translation>Triángulo (izquierda)</translation>
+    </message>
+    <message>
+        <source>Triangle Right</source>
+        <translation>Triángulo (derecha)</translation>
+    </message>
+    <message>
+        <source>Clear Cell / Frame</source>
+        <translation>Eliminar celda o dibujo</translation>
+    </message>
+    <message>
+        <source>Remove and Shift Cells / Frames Up</source>
+        <translation>Eliminar y desplazar celdas o dibujos hacia arriba</translation>
+    </message>
+    <message>
+        <source>Insert Paste Whole Data</source>
+        <translation>Pegar datos completos (insertar)</translation>
+    </message>
+    <message>
+        <source>Overwrite Paste Cell Numbers</source>
+        <translation>Pegar números de celda (sobrescribir)</translation>
+    </message>
+    <message>
+        <source>Show Sub-Xsheet Navigation Bar</source>
+        <translation>Mostrar barra de navegación de sub-planillas</translation>
+    </message>
+    <message>
+        <source>Expand Function Editor Header to Match Xsheet Header Height*</source>
+        <translation>Expandir encabezado del Editor de funciones para que coincida con el de la Planilla*</translation>
+    </message>
+    <message>
+        <source>Unify Preview and Camstand Visibility Toggles</source>
+        <translation>Unificar interruptores de visibilidad en mesa de trabajo y procesamiento</translation>
+    </message>
+    <message>
+        <source>Link Column Name with Level</source>
+        <translation>Vincular nombre de columna con nombre del nivel allí expuesto</translation>
+    </message>
+    <message>
+        <source>Disable Dragging Cells</source>
+        <translation>Deshabilitar el arrastre de celdas</translation>
+    </message>
+    <message>
+        <source>Xsheet Tools</source>
+        <translation>Herramientas de Planilla</translation>
+    </message>
+    <message>
+        <source>This option will do the following:
+- When setting a cell in the empty column, level name will be copied to the column name
+- Typing the cell without level name in the empty column will try to use a level with the same name as the column
+The behavior may be changed in the future development.</source>
+        <translation>Esta opción hará lo siguiente:
+- Al establecer una celda en una columna vacía, el nombre del nivel será copiado al de la columna
+- Al introducir en una celda sin incluir un nombre de nivel en una columna vacía, intentará usar un nivel con el mismo nombre que la columna
+Este comportamiento podría ser modificado en el futuro.</translation>
+    </message>
+    <message>
+        <source>Add Info water mark in Rendered Frames</source>
+        <translation>Agregar marca de agua informativa en fotogramas procesados</translation>
+    </message>
+    <message>
+        <source>Lazy Load Rooms</source>
+        <translation>Carga diferida de Espacios de trabajo</translation>
+    </message>
+    <message>
+        <source>Zoom In/Out Center:</source>
+        <translation>Centro de ampliación/reducción:</translation>
+    </message>
+    <message>
+        <source>Show Room Bind Buttons*</source>
+        <translation>Mostrar botones Enlazar a espacio de trabajo actual*</translation>
+    </message>
+    <message>
+        <source>Show Viewer Indicators</source>
+        <translation>Mostrar indicadores del Visor</translation>
+    </message>
+    <message>
+        <source>Rasterize Vector with Anti Aliasing</source>
+        <translation>Vectores a Imagen usando suavizado de bordes</translation>
+    </message>
+    <message>
+        <source>Normalize Imported Image Sequences:</source>
+        <translation>Normalización de secuencias de imágenes:</translation>
+    </message>
+    <message>
+        <source>Convert Imported NAA Image Sequences to TLV:</source>
+        <translation>Conversión de secuencias sin suavizado a TLV:</translation>
+    </message>
+    <message>
+        <source>Use QuickTime to decode/code .mov and .3gp (If Installed)</source>
+        <translation>Usar QuickTime para codificar/decodificar .mov y .3gp (si estuviera instalado)</translation>
+    </message>
+    <message>
+        <source>Minimize Savebox after Editing (Toonz Raster Level)</source>
+        <translation>Minimizar marco delimitador luego de editar (Imagen de Toonz)</translation>
+    </message>
+    <message>
+        <source>Define Filling Region Using both Lines and Areas</source>
+        <translation>Definir región de relleno usando líneas y áreas</translation>
+    </message>
+    <message>
+        <source>Paint Under Lines in Refer Fill</source>
+        <translation>Pintar debajo de líneas al usar opción Otras capas</translation>
+    </message>
+    <message>
+        <source>Style Picker: Switch Current Level by Picking on Multi Layer</source>
+        <translation>Selector de estilos: Cambiar nivel actual al seleccionar estilo de otro nivel</translation>
+    </message>
+    <message>
+        <source>Brush Tool: Use %1 to Resize</source>
+        <translation>Pincel: Usar %1 para cambiar tamaño</translation>
+    </message>
+    <message>
+        <source>Draw Cursor at End of Stroke</source>
+        <translation>Dibujar puntero al final del trazo</translation>
+    </message>
+    <message>
+        <source>Geometric Tool: Click Twice to Create Arcs</source>
+        <translation>Geometría: Clic dos veces para crear arcos</translation>
+    </message>
+    <message>
+        <source>Handle Size (%):</source>
+        <translation>Tamaño manipulador (%):</translation>
+    </message>
+    <message>
+        <source>Handle Color:</source>
+        <translation>Color manipulador:</translation>
+    </message>
+    <message>
+        <source>Always Drag Frame Cell</source>
+        <translation>Siempre arrastrar celdas con dibujos</translation>
+    </message>
+    <message>
+        <source>Cell Input Method:</source>
+        <translation>Método de introducción en celdas:</translation>
+    </message>
+    <message>
+        <source>Preview Movie Formats in Default System Viewer</source>
+        <translation>Usar reproductor predefinido para formatos de película</translation>
+    </message>
+    <message>
+        <source>Number of Frames to Play 
+for Short Play Command:</source>
+        <translation>Cantidad de fotogramas a reproducir 
+con el comando Reproducción breve: </translation>
+    </message>
+    <message>
+        <source>Always Open New Flipbook Window </source>
+        <translation>Mostrar en una nueva ventana de reproductor</translation>
+    </message>
+    <message>
+        <source>Fit to Flipbook when Flipbook Window Open</source>
+        <translation>Ajustar al reproductor</translation>
+    </message>
+    <message>
+        <source>Ink Check Color:</source>
+        <translation>Comprobación de tinta:</translation>
+    </message>
+    <message>
+        <source>Ink#1 Check Color:</source>
+        <translation>Comprobación de tinta №1:</translation>
+    </message>
+    <message>
+        <source>Paint Check Color:</source>
+        <translation>Comprobación de pintura:</translation>
+    </message>
+    <message>
+        <source>Automatic by Scene</source>
+        <translation>Automática para cada escena</translation>
+    </message>
+    <message>
+        <source>Always ask before renaming</source>
+        <translation>Preguntar siempre antes de renombrar</translation>
+    </message>
+    <message>
+        <source>Normalize sequence names automatically</source>
+        <translation>Normalizar nombres de secuencia automáticamente</translation>
+    </message>
+    <message>
+        <source>Keep original filenames</source>
+        <translation>Mantener nombres originales</translation>
+    </message>
+    <message>
+        <source>Always ask before converting</source>
+        <translation>Preguntar siempre antes de convertir</translation>
+    </message>
+    <message>
+        <source>Convert raster level automatically</source>
+        <translation>Convertir niveles de Imagen automáticamente</translation>
+    </message>
+    <message>
+        <source>Do not convert</source>
+        <translation>No convertir</translation>
+    </message>
+    <message>
+        <source>Input by Double Click Only</source>
+        <translation>Doble clic para introducir</translation>
+    </message>
+    <message>
+        <source>Input by Numpad</source>
+        <translation>Teclado numérico para introducir</translation>
+    </message>
+    <message>
+        <source>Input by Single Click</source>
+        <translation>Clic para introducir</translation>
+    </message>
+    <message>
+        <source>Preview/Render</source>
+        <translation>Previs/Procesamiento</translation>
+    </message>
+    <message>
+        <source>Load/Import</source>
+        <translation>Carga/Importación</translation>
+    </message>
+    <message>
+        <source>Decoder/Encoder</source>
+        <translation>Compresores</translation>
+    </message>
+    <message>
+        <source>Vector Visualize</source>
+        <translation>Visualización vectorial</translation>
+    </message>
+    <message>
+        <source>Addons</source>
+        <translation>Adicionales</translation>
+    </message>
+    <message>
+        <source>Automatically sets folder based on scene type:
+Standalone -&gt; $scenefolder
+Project -&gt; project folder aliases (+drawing...)</source>
+        <translation>Establece automáticamente la carpeta basándose en el tipo de escena:
+Autónoma -&gt; $scenefolder
+Proyecto -&gt; alias de carpetas del proyecto (+drawing, etc.)</translation>
+    </message>
+    <message>
+        <source>enabled</source>
+        <translation>habilitado</translation>
+    </message>
+    <message>
+        <source>disabled</source>
+        <translation>deshabilitado</translation>
+    </message>
+    <message>
+        <source>rooms will load on demand</source>
+        <translation>los espacios de trabajo serán cargados a demanda</translation>
+    </message>
+    <message>
+        <source>all rooms load at startup</source>
+        <translation>todos los espacios de trabajo serán cargados al inicio</translation>
+    </message>
+    <message>
+        <source>Lazy loading %1 - %2</source>
+        <translation>Carga diferida %1 - %2</translation>
+    </message>
+    <message>
+        <source>Default Level Size</source>
+        <translation>Tamaño predefinido de nivel</translation>
+    </message>
+    <message>
+        <source>Fill Tool Options (Toonz Raster Level)</source>
+        <translation>Opciones de Rellenar (Imagen de Toonz)</translation>
+    </message>
+    <message>
+        <source>Brush Cursor Options</source>
+        <translation>Opciones de puntero de Pincel</translation>
+    </message>
+    <message>
+        <source>Animate Tool</source>
+        <translation>Animar</translation>
+    </message>
+    <message>
+        <source>Xsheet Column Area</source>
+        <translation>Encabezado de columnas de la Planilla</translation>
+    </message>
+    <message>
+        <source>Xsheet Cell Area</source>
+        <translation>Área de celdas de la Planilla</translation>
+    </message>
+    <message>
+        <source>Viewer</source>
+        <translation>Visor</translation>
+    </message>
+    <message>
+        <source>Play Control</source>
+        <translation>Control de reproducción</translation>
+    </message>
+    <message>
+        <source>Render</source>
+        <translation>Procesamiento</translation>
+    </message>
+    <message>
+        <source>Ink and Paint Check</source>
+        <translation>Comprobación de tinta y pintura</translation>
+    </message>
+    <message>
+        <source>Windows Explorer Thumbnails (Shell Extension)</source>
+        <translation>Miniaturas en Explorador de Windows (integración con el SO)</translation>
+    </message>
+    <message>
+        <source>Enable thumbnails for OpenToonz files (.tnz, .pli, .tlv) in Windows Explorer. 
+Administrator privileges are required; you may need to restart Explorer for changes to take effect.</source>
+        <translation>Habilita la visualización de miniaturas para archivos de OpenToonz (.tnz, .pli, .tlv) en el Explorador de Windows. 
+Se necesitarán privilegios de Administrador; es posible que sea necesario reiniciar el sistema para que los cambios surtan efecto.</translation>
+    </message>
+    <message>
+        <source>Uninstall</source>
+        <translation>Desinstalar</translation>
+    </message>
+    <message>
+        <source>Install</source>
+        <translation>Instalar</translation>
+    </message>
+</context>
+<context>
+    <name>PreferencesPopup::AdditionalStyleEdit</name>
+    <message>
+        <source>Additional Style Sheet</source>
+        <translation>Hoja de estilo adicional</translation>
+    </message>
+    <message>
+        <source>OK</source>
+        <translation>Aceptar</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Aplicar</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Cerrar</translation>
+    </message>
+</context>
+<context>
+    <name>PreferencesPopup::Display30bitChecker</name>
+    <message>
+        <source>Check 30bit display availability</source>
+        <translation>Comprobar disponibilidad de visualización de 30 bits</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Cerrar</translation>
+    </message>
+    <message>
+        <source>If the lower gradient looks smooth and has no banding compared to the upper gradient,
+30bit display is available in the current configuration.</source>
+        <translation>Si el gradiente inferior luce suave y no presenta bandeo, comparado con el gradiente superior,
+la visualización de 30 bits se encuentra disponible en la configuración actual.</translation>
     </message>
 </context>
 <context>
@@ -8008,6 +11154,21 @@ contengan píxeles transparentes en formatos de imagen sin soporte para canal al
     <message>
         <source>Priority</source>
         <translation>Prioridad</translation>
+    </message>
+</context>
+<context>
+    <name>PresetNamePopup</name>
+    <message>
+        <source>Enter Preset Name</source>
+        <translation>Introducir nombre del preajuste</translation>
+    </message>
+    <message>
+        <source>OK</source>
+        <translation>Aceptar</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
     </message>
 </context>
 <context>
@@ -8124,6 +11285,64 @@ Do you want to overwrite it?</source>
     <message>
         <source>Project:</source>
         <translation>Proyecto:</translation>
+    </message>
+    <message>
+        <source>Standard</source>
+        <translation>Estándar</translation>
+    </message>
+    <message>
+        <source>Custom</source>
+        <translation>Personalizado</translation>
+    </message>
+    <message>
+        <source>Accept Non-alphabet Suffix</source>
+        <translation>Aceptar sufijo no alfabético</translation>
+    </message>
+    <message>
+        <source>In the standard mode files with the following file name are handled as sequential images:
+[LEVEL_NAME][&quot;.&quot;or&quot;_&quot;][FRAME_NUMBER][SUFFIX].[EXTENSION]
+For [SUFFIX] zero or one occurrences of alphabet (a-z, A-Z) can be used in the standard mode.</source>
+        <translation>En el modo Estándar los archivos con los siguientes nombres serán tratados como imágenes secuenciales:
+[NOMBRE_NIVEL][&quot;.&quot; o &quot;_&quot;][NÚMERO_FOTOGRAMA][SUFIJO].[EXTENSIÓN]
+Para el [SUFIJO] en el modo Estándar será posible usar un caracter alfabético (a-z, A-Z).</translation>
+    </message>
+    <message>
+        <source>In the custom mode you can customize the file path rules.
+Note that this mode uses regular expression for file name validation and may slow the operation.</source>
+        <translation>En el modo Personalizado es posible crear reglas para las rutas de archivos.
+Nótese que este modo usa una expresión regular para la validación de los nombres de archivo, lo cual puede enlentecer el funcionamiento.</translation>
+    </message>
+    <message>
+        <source>1</source>
+        <translation>1</translation>
+    </message>
+    <message>
+        <source>2</source>
+        <translation>2</translation>
+    </message>
+    <message>
+        <source>3</source>
+        <translation>3</translation>
+    </message>
+    <message>
+        <source>5</source>
+        <translation>5</translation>
+    </message>
+    <message>
+        <source>Unlimited</source>
+        <translation>ilimitada</translation>
+    </message>
+    <message>
+        <source>Project Folder</source>
+        <translation>Carpetas del proyecto</translation>
+    </message>
+    <message>
+        <source>Maximum Letter Count For Suffix</source>
+        <translation>Cantidad máxima de letras para el sufijo</translation>
+    </message>
+    <message>
+        <source>File Path Rules</source>
+        <translation>Reglas de rutas de archivo</translation>
     </message>
 </context>
 <context>
@@ -8363,7 +11582,7 @@ What do you want to do? </source>
     </message>
     <message>
         <source>LineTest Viewer</source>
-        <translation>Visor de LineTest</translation>
+        <translation type="vanished">Visor de LineTest</translation>
     </message>
     <message>
         <source>Xsheet</source>
@@ -8375,15 +11594,15 @@ What do you want to do? </source>
     </message>
     <message>
         <source>It is not possible to paste the cells: there is a circular reference.</source>
-        <translation>No es posible pegar los acetatos: existe una referencia circular.</translation>
+        <translation>No es posible pegar las celdas: existe una referencia circular.</translation>
     </message>
     <message>
         <source> Task added to the Batch Render List.</source>
-        <translation>Tarea agregada a la lista de tareas de procesamiento</translation>
+        <translation type="vanished">Tarea agregada a la lista de tareas de procesamiento</translation>
     </message>
     <message>
         <source> Task added to the Batch Cleanup List.</source>
-        <translation>Tarea agregada a la lista de tareas de limpieza</translation>
+        <translation type="vanished">Tarea agregada a la lista de tareas de limpieza</translation>
     </message>
     <message>
         <source>Deleting %1. Are you sure?</source>
@@ -8416,7 +11635,7 @@ La operación no podrá ser deshecha: ¿seguro?</translation>
     </message>
     <message>
         <source>One asset imported</source>
-        <translation>Un recurso importado</translation>
+        <translation type="vanished">Un recurso importado</translation>
     </message>
     <message>
         <source>%1 assets imported</source>
@@ -8530,7 +11749,7 @@ el nivel tiene que ser guardado antes.</translation>
     </message>
     <message>
         <source>Converting %1 images to tlv format...</source>
-        <translation>Conviertiendo %1 imágenes al formato TLV...</translation>
+        <translation type="vanished">Conviertiendo %1 imágenes al formato TLV...</translation>
     </message>
     <message>
         <source>File %1 doesn&apos;t belong to the current project.
@@ -8636,11 +11855,11 @@ Are you sure you want to revert to previous version?</source>
     </message>
     <message>
         <source>Include relevant pegbars in the sub-xsheet as well.</source>
-        <translation>También incluir las barras de sujeción relevantes en la sub-planilla.</translation>
+        <translation type="vanished">También incluir las barras de sujeción relevantes en la sub-planilla.</translation>
     </message>
     <message>
         <source>Include only selected columns in the sub-xsheet.</source>
-        <translation>Incluir sólo las columnas seleccionadas en la sub-planilla.</translation>
+        <translation type="vanished">Incluir sólo las columnas seleccionadas en la sub-planilla.</translation>
     </message>
     <message>
         <source>Exploding Sub-xsheet: what you want to do?</source>
@@ -8648,11 +11867,11 @@ Are you sure you want to revert to previous version?</source>
     </message>
     <message>
         <source>Bring relevant pegbars in the main xsheet.</source>
-        <translation>Traer barras de sujeción relevantes a la planilla principal.</translation>
+        <translation type="vanished">Traer barras de sujeción relevantes a la planilla principal.</translation>
     </message>
     <message>
         <source>Bring only columns in the main xsheet.</source>
-        <translation>Traer sólo columnas a la planilla principal.</translation>
+        <translation type="vanished">Traer sólo columnas a la planilla principal.</translation>
     </message>
     <message>
         <source>Invalid selection: each selected column must contain one single level with increasing frame numbering.</source>
@@ -8660,7 +11879,7 @@ Are you sure you want to revert to previous version?</source>
     </message>
     <message>
         <source>It is not possible to delete lines because no column, cell or level strip frame was selected.</source>
-        <translation>No es posible borrar líneas porque no se ha seleccionado ningún fotograma en una columna, acetato o cinta de nivel.</translation>
+        <translation>No es posible borrar líneas porque no se ha seleccionado ninguna columna, celda o fotograma de la cinta de nivel.</translation>
     </message>
     <message>
         <source>The %1 file has been generated</source>
@@ -8728,7 +11947,7 @@ Are you sure you want to revert to previous version?</source>
     </message>
     <message>
         <source>The rooms will be reset the next time you run Toonz.</source>
-        <translation>Los espacios de trabajo serán restablecidos la próxima vez que se ejecute OpenToonz.</translation>
+        <translation type="vanished">Los espacios de trabajo serán restablecidos la próxima vez que se ejecute OpenToonz.</translation>
     </message>
     <message>
         <source>Saving previewed frames....</source>
@@ -8744,7 +11963,7 @@ Are you sure you want to revert to previous version?</source>
     </message>
     <message>
         <source>Change project</source>
-        <translation type="vanished">Cambiar proyecto</translation>
+        <translation>Cambiar proyecto</translation>
     </message>
     <message>
         <source>It is not possible to delete the selection.</source>
@@ -8752,11 +11971,11 @@ Are you sure you want to revert to previous version?</source>
     </message>
     <message>
         <source>It is not possible to paste vectors in the current cell.</source>
-        <translation>No es posible pegar vectores en el acetato actual.</translation>
+        <translation>No es posible pegar vectores en la celda actual.</translation>
     </message>
     <message>
         <source>It is not possible to paste image on the current cell.</source>
-        <translation>No es posible pegar una imagen en el acetato actual.</translation>
+        <translation>No es posible pegar una imagen en la celda actual.</translation>
     </message>
     <message>
         <source>It is not possible to paste data: there is nothing to paste.</source>
@@ -8864,7 +12083,7 @@ Algunos niveles no han sido cargados porque su versión no es soportada.</transl
     </message>
     <message>
         <source>Save the scene first</source>
-        <translation>Guardar antes la escena</translation>
+        <translation type="vanished">Guardar antes la escena</translation>
     </message>
     <message>
         <source>It is not possible to load the %1 level.</source>
@@ -8888,7 +12107,7 @@ Algunos niveles no han sido cargados porque su versión no es soportada.</transl
     </message>
     <message>
         <source>Selected cells must be in the same column.</source>
-        <translation>Los acetatos seleccionados deben estar en la misma columna.</translation>
+        <translation>Las celdas seleccionadas deben estar en la misma columna.</translation>
     </message>
     <message>
         <source>Match lines can be deleted from Toonz raster levels only</source>
@@ -8952,11 +12171,11 @@ Algunos niveles no han sido cargados porque su versión no es soportada.</transl
     </message>
     <message>
         <source>The style index you specified is not available in the palette of the destination level.</source>
-        <translation>El índice del estilo especificado no se encuentra disponible en la paleta del nivel de destino.</translation>
+        <translation>El identificador de estilo especificado no se encuentra disponible en la paleta del nivel de destino.</translation>
     </message>
     <message>
         <source>The style index range you specified is not valid: please separate values with a comma (e.g. 1,2,5) or with a dash (e.g. 4-7 will refer to indexes 4, 5, 6 and 7).</source>
-        <translation>El rango de índices de estilo especificado no es válido: por favor separar los valores usando comas (p.ej: 1,2,5) o con un guión (p.ej: 4-7 para incluir los índices 4, 5, 6 y 7).</translation>
+        <translation>El rango de identificadores de estilos especificado no es válido: por favor separar los valores usando comas (p.ej: 1,2,5) o con un guión (p.ej: 4-7 para incluir los identificadores 4, 5, 6 y 7).</translation>
     </message>
     <message>
         <source>The frame range you specified is not valid: please separate values with a comma (e.g. 1,2,5) or with a dash (e.g. 4-7 will refer to frames 4, 5, 6 and 7).</source>
@@ -9020,7 +12239,7 @@ Algunos niveles no han sido cargados porque su versión no es soportada.</transl
     </message>
     <message>
         <source>LineTest Capture</source>
-        <translation>Capturar con LineTest</translation>
+        <translation type="vanished">Capturar con LineTest</translation>
     </message>
     <message>
         <source>It is not possible to save images in camera stand view.</source>
@@ -9032,7 +12251,7 @@ Algunos niveles no han sido cargados porque su versión no es soportada.</transl
     </message>
     <message>
         <source>A convertion task is in progress! wait until it stops or cancel it</source>
-        <translation>¡Existe una tarea de conversión en curso! Esperar a que finalice o cancelarla.</translation>
+        <translation type="vanished">¡Existe una tarea de conversión en curso! Esperar a que finalice o cancelarla.</translation>
     </message>
     <message>
         <source>Error loading scene %1 :%2</source>
@@ -9044,7 +12263,7 @@ Algunos niveles no han sido cargados porque su versión no es soportada.</transl
     </message>
     <message>
         <source>There was an error saving the %1 scene.</source>
-        <translation>Se produjo un error al guardar la escena %1.</translation>
+        <translation type="vanished">Se produjo un error al guardar la escena %1.</translation>
     </message>
     <message>
         <source>It is not possible to export the scene %1 because it does not belong to any project.</source>
@@ -9209,7 +12428,7 @@ Are you sure ?</source>
     </message>
     <message>
         <source>Set Keyframe : %1</source>
-        <translation>Marcar fotograma clave: %1</translation>
+        <translation>Marcar clave: %1</translation>
     </message>
     <message>
         <source>Close SubXsheet</source>
@@ -9217,7 +12436,7 @@ Are you sure ?</source>
     </message>
     <message>
         <source>Select a sub-xsheet cell.</source>
-        <translation>Seleccionar un acetato de la sub-planilla.</translation>
+        <translation>Seleccionar una celda de la sub-planilla.</translation>
     </message>
     <message>
         <source>Collapse</source>
@@ -9360,7 +12579,7 @@ Are you sure to </source>
     </message>
     <message>
         <source>Clear Cells :  Col%1</source>
-        <translation>Limpiar acetatos:  Col%1</translation>
+        <translation>Limpiar celdas:  Col%1</translation>
     </message>
     <message>
         <source>Reverse</source>
@@ -9432,11 +12651,11 @@ Are you sure to </source>
     </message>
     <message>
         <source>Paste Key Frames</source>
-        <translation>Pegar fotogramas clave</translation>
+        <translation>Pegar claves</translation>
     </message>
     <message>
         <source>Delete Key Frames</source>
-        <translation>Borrar fotogramas clave</translation>
+        <translation>Borrar claves</translation>
     </message>
     <message>
         <source>Copy File</source>
@@ -9444,31 +12663,31 @@ Are you sure to </source>
     </message>
     <message>
         <source>Paste  File  : </source>
-        <translation>Pegar archivo: </translation>
+        <translation type="vanished">Pegar archivo: </translation>
     </message>
     <message>
         <source>Duplicate  File  : </source>
-        <translation>Duplicar archivo: </translation>
+        <translation type="vanished">Duplicar archivo: </translation>
     </message>
     <message>
         <source>Paste Cells</source>
-        <translation>Pegar acetatos</translation>
+        <translation>Pegar celdas</translation>
     </message>
     <message>
         <source>Delete Cells</source>
-        <translation>Borrar acetatos</translation>
+        <translation>Borrar celdas</translation>
     </message>
     <message>
         <source>Cut Cells</source>
-        <translation>Cortar acetatos</translation>
+        <translation>Cortar celdas</translation>
     </message>
     <message>
         <source>Insert Cells</source>
-        <translation>Insertar acetatos</translation>
+        <translation>Insertar celdas</translation>
     </message>
     <message>
         <source>Paste (Strokes)</source>
-        <translation>Pegar (trazo)</translation>
+        <translation>Pegar (trazos)</translation>
     </message>
     <message>
         <source>Paste</source>
@@ -9480,7 +12699,7 @@ Are you sure to </source>
     </message>
     <message>
         <source>Overwrite Paste Cells</source>
-        <translation>Pegar y sobrescribir acetatos</translation>
+        <translation>Pegar celdas (sobrescribir)</translation>
     </message>
     <message>
         <source>Cannot paste data 
@@ -9514,7 +12733,7 @@ Are you sure to </source>
     </message>
     <message>
         <source>Rename Cell  at Column %1  Frame %2</source>
-        <translation>Renombrar acetato en columna %1  fotograma %2</translation>
+        <translation>Renombrar celda en columna %1  fotograma %2</translation>
     </message>
     <message>
         <source>Move Level</source>
@@ -9542,7 +12761,7 @@ Are you sure to </source>
     </message>
     <message>
         <source>Move Keyframe</source>
-        <translation>Mover fotograma clave</translation>
+        <translation>Mover clave</translation>
     </message>
     <message>
         <source>Inbetween  : Level %1,  </source>
@@ -9568,7 +12787,7 @@ error no definido.</translation>
     </message>
     <message>
         <source>Move keyframe handle  : %1  Handle of the keyframe %2</source>
-        <translation>Mover tangente de fotograma clave: %1  Tangente del fotograma %2</translation>
+        <translation>Mover tangente del clave: %1  Tangente del clave %2</translation>
     </message>
     <message>
         <source>Toggle cycle of  %1</source>
@@ -9576,7 +12795,7 @@ error no definido.</translation>
     </message>
     <message>
         <source>History</source>
-        <translation>Historia</translation>
+        <translation>Historial</translation>
     </message>
     <message>
         <source>[Drag] to move position</source>
@@ -9596,11 +12815,11 @@ error no definido.</translation>
     </message>
     <message>
         <source>[Drag&amp;Drop] to copy separator to menu bar</source>
-        <translation>[Arrastrar y soltar] para copiar el separador a la barra de menúes</translation>
+        <translation type="vanished">[Arrastrar y soltar] para copiar el separador a la barra de menúes</translation>
     </message>
     <message>
         <source>[Drag&amp;Drop] to copy command to menu bar</source>
-        <translation>[Arrastrar y soltar] para copiar el comando a la barra de menúes</translation>
+        <translation type="vanished">[Arrastrar y soltar] para copiar el comando a la barra de menúes</translation>
     </message>
     <message>
         <source>Cannot open menubar settings template file. Re-installing Toonz will solve this problem.</source>
@@ -9710,7 +12929,7 @@ Are you sure?</source>
     </message>
     <message>
         <source>Skipping frame.</source>
-        <translation>Omitiendo fotograma.</translation>
+        <translation type="vanished">Omitiendo fotograma.</translation>
     </message>
     <message>
         <source>Toonz cannot Save this Level</source>
@@ -9730,7 +12949,7 @@ Are you sure?</source>
     </message>
     <message>
         <source>Layer name</source>
-        <translation>Nombre de capa</translation>
+        <translation type="vanished">Nombre de capa</translation>
     </message>
     <message>
         <source>Command Bar</source>
@@ -9738,7 +12957,7 @@ Are you sure?</source>
     </message>
     <message>
         <source>Auto Input Cell Numbers : %1</source>
-        <translation>Ingresar números de acetatos automáticamente : %1</translation>
+        <translation>Introducir números de celda automáticamente : %1</translation>
     </message>
     <message>
         <source>Insert</source>
@@ -9806,7 +13025,7 @@ No volverán a ser abiertos correctamente la siguiente vez que se cargue la esce
     </message>
     <message>
         <source>Apply Lip Sync Data</source>
-        <translation>Aplicar datos de sincronización labial</translation>
+        <translation>Sincronización labial</translation>
     </message>
     <message>
         <source>Paste Numbers</source>
@@ -9814,11 +13033,11 @@ No volverán a ser abiertos correctamente la siguiente vez que se cargue la esce
     </message>
     <message>
         <source>It is not possible to paste the cells: Some column is locked or column type is not match.</source>
-        <translation>No es posible pegar los acetatos: Alguna columna está bloqueada o su tipo no concuerda.</translation>
+        <translation>No es posible pegar las celdas: Alguna columna está bloqueada o su tipo no concuerda.</translation>
     </message>
     <message>
         <source>This command only works on vector cells.</source>
-        <translation>Este comando sólo funciona sobre acetatos vectoriales.</translation>
+        <translation>Este comando sólo funciona sobre celdas vectoriales.</translation>
     </message>
     <message>
         <source>Please select only one column for this command.</source>
@@ -9826,7 +13045,7 @@ No volverán a ser abiertos correctamente la siguiente vez que se cargue la esce
     </message>
     <message>
         <source>All selected cells must belong to the same level.</source>
-        <translation>Todos los acetatos seleccionados deben pertenecer al mismo nivel.</translation>
+        <translation>Todas las celdas seleccionadas deben pertenecer al mismo nivel.</translation>
     </message>
     <message>
         <source>Simplify Vectors : Level %1</source>
@@ -9852,7 +13071,7 @@ Guardar primero la escena.</translation>
 A partial save file was generated and changes may be manually salvaged from &apos;%2&apos;.
 
 Do you wish to continue loading the last good save or stop and try to salvage the prior save?</source>
-        <translation>Una operación de guardado anterior de la escena &apos;%1&apos; fue interrumpida de forma crítica. 
+        <translation type="vanished">Una operación de guardado anterior de la escena &apos;%1&apos; fue interrumpida de forma crítica. 
 
 Se generó un archivo parcialmente guardado, siendo posible rescatar los cambios de forma manual desde &apos;%2&apos;.
 
@@ -9892,7 +13111,7 @@ Allow duplicate?</source>
     </message>
     <message>
         <source>Fill In Empty Cells</source>
-        <translation>Rellenar acetatos vacíos</translation>
+        <translation>Rellenar celdas vacías</translation>
     </message>
     <message>
         <source>Check for the latest version on launch.</source>
@@ -9900,7 +13119,7 @@ Allow duplicate?</source>
     </message>
     <message>
         <source>Nothing to replace: no cells or columns selected.</source>
-        <translation>Nada que reemplazar: no se han seleccionado acetatos o columnas.</translation>
+        <translation>Nada que reemplazar: no se han seleccionado celdas o columnas.</translation>
     </message>
     <message>
         <source>Couldn&apos;t load %1</source>
@@ -9924,7 +13143,7 @@ Allow duplicate?</source>
     </message>
     <message>
         <source>A separation task is in progress! wait until it stops or cancel it</source>
-        <translation>¡Existe una tarea de separación en curso! Esperar a que finalice o cancelarla</translation>
+        <translation type="vanished">¡Existe una tarea de separación en curso! Esperar a que finalice o cancelarla</translation>
     </message>
     <message>
         <source>Duplicate Frame in XSheet</source>
@@ -10143,7 +13362,7 @@ en las Preferencias, para poder usar esta opción en la planilla o línea de tie
     </message>
     <message>
         <source>Unsopporter raster format, cannot save</source>
-        <translation>Formato de imagen no soportado, no es posible guardar</translation>
+        <translation type="vanished">Formato de imagen no soportado, no es posible guardar</translation>
     </message>
     <message>
         <source>Cannot create %1 : %2</source>
@@ -10202,7 +13421,7 @@ Do you want to overwrite it?</source>
     <message>
         <source>The file %1 already exists.
 Do you want to overwrite it?</source>
-        <translation>El archivo %1 ya existe.
+        <translation type="vanished">El archivo %1 ya existe.
 ¿Sobreescribirlo?</translation>
     </message>
     <message>
@@ -10215,7 +13434,7 @@ Do you want to overwrite it?</source>
     </message>
     <message>
         <source>Please enable &quot;Show Keyframes on Cell Area&quot; to show or hide the camera column.</source>
-        <translation>Por favor activar &quot;Mostrar fotogramas clave en el área de acetatos&quot; para poder mostrar u ocultar la columna de cámara.</translation>
+        <translation>Por favor activar &quot;Mostrar fotogramas clave en el área de celdas&quot; para poder mostrar u ocultar la columna de cámara.</translation>
     </message>
     <message>
         <source>The chosen folder path does not exist.
@@ -10289,7 +13508,7 @@ Do you want to create it?</source>
     </message>
     <message>
         <source>Stop Motion Controller</source>
-        <translation>Controlador de stop-motion</translation>
+        <translation>Controles de stop-motion</translation>
     </message>
     <message>
         <source>Camera Column Switch :  </source>
@@ -10297,7 +13516,7 @@ Do you want to create it?</source>
     </message>
     <message>
         <source>Vector Guided Drawing Controls</source>
-        <translation>Controles de asistencia para dibujo vectorial</translation>
+        <translation>Asistente para dibujo vectorial</translation>
     </message>
     <message>
         <source>Vector Guided Drawing</source>
@@ -10319,6 +13538,726 @@ Do you want to create it?</source>
         <source>Close</source>
         <translation>Cerrar</translation>
     </message>
+    <message>
+        <source>No columns can be exported.</source>
+        <translation>Ninguna columna puede ser exportada.</translation>
+    </message>
+    <message>
+        <source>Export Exchange Digital Time Sheet (XDTS)</source>
+        <translation>Exportar XDTS (Exchange Digital Time Sheet)</translation>
+    </message>
+    <message>
+        <source>Maintain parenting relationships in the sub-xsheet as well.</source>
+        <translation>Mantener relaciones jerárquicas también en la sub-planilla.</translation>
+    </message>
+    <message>
+        <source>Include the selected columns in the sub-xsheet without parenting info.</source>
+        <translation>Incluir las columnas seleccionadas en la sub-planilla sin información jerárquica.</translation>
+    </message>
+    <message>
+        <source>Maintain parenting relationships in the main xsheet.</source>
+        <translation>Mantener relaciones jerárquicas de la planilla principal.</translation>
+    </message>
+    <message>
+        <source>Bring columns in the main xsheet without parenting.</source>
+        <translation>Traer columnas de la planilla principal sin jerarquías.</translation>
+    </message>
+    <message>
+        <source>and %1 more item(s).</source>
+        <translation>y %1 elemento(s) más.</translation>
+    </message>
+    <message>
+        <source>Convert to Vectors</source>
+        <translation>Convertir en vectorial</translation>
+    </message>
+    <message>
+        <source>There are no copied cells to duplicate.</source>
+        <translation>No hay celdas copiadas para duplicar.</translation>
+    </message>
+    <message>
+        <source>Cannot paste cells on locked layers.</source>
+        <translation>No es posible pegar celdas en capas bloqueadas.</translation>
+    </message>
+    <message>
+        <source>Can&apos;t place drawings on the camera column.</source>
+        <translation>No es posible colocar dibujos en la columna de cámara.</translation>
+    </message>
+    <message>
+        <source>Cannot duplicate frames in read only levels</source>
+        <translation>No es posible duplicar fotogramas de niveles de sólo lectura</translation>
+    </message>
+    <message>
+        <source>Can only duplicate frames in image sequence levels.</source>
+        <translation>Sólo es posible duplicar fotogramas en niveles de secuencia de imágenes.</translation>
+    </message>
+    <message>
+        <source>Toggle vector column as mask. </source>
+        <translation>Columna vectorial como máscara. </translation>
+    </message>
+    <message>
+        <source>Script file %1 does not exists.</source>
+        <translation>El archivo %1 no existe.</translation>
+    </message>
+    <message>
+        <source>Add Level to Scene Cast : %1</source>
+        <translation>Agregar nivel a Componentes de la escena : %1</translation>
+    </message>
+    <message>
+        <source>The Premultiply options in the following levels are disabled, since PNG files are premultiplied on loading in the current version: %1</source>
+        <translation>Las opciones de premultiplicación se encuentran deshabilitadas para los siguientes niveles, dado que en la versión actual los archivos PNG son premultiplicados al ser cargados: %1</translation>
+    </message>
+    <message>
+        <source>Restart</source>
+        <translation>Reiniciar</translation>
+    </message>
+    <message>
+        <source>+</source>
+        <comment>XSheetPDF</comment>
+        <translation>+</translation>
+    </message>
+    <message>
+        <source>&apos;</source>
+        <comment>XSheetPDF:second</comment>
+        <translation>&quot; </translation>
+    </message>
+    <message>
+        <source>&quot;</source>
+        <comment>XSheetPDF:frame</comment>
+        <translation>f  </translation>
+    </message>
+    <message>
+        <source>TOT</source>
+        <comment>XSheetPDF</comment>
+        <translation>TOT</translation>
+    </message>
+    <message>
+        <source>th</source>
+        <comment>XSheetPDF</comment>
+        <translation>de </translation>
+    </message>
+    <message>
+        <source>None</source>
+        <comment>XSheetPDF CellMark</comment>
+        <translation>Ninguna</translation>
+    </message>
+    <message>
+        <source>Dot</source>
+        <comment>XSheetPDF CellMark</comment>
+        <translation>Punto</translation>
+    </message>
+    <message>
+        <source>Circle</source>
+        <comment>XSheetPDF CellMark</comment>
+        <translation>Círculo</translation>
+    </message>
+    <message>
+        <source>Filled circle</source>
+        <comment>XSheetPDF CellMark</comment>
+        <translation>Círculo sólido</translation>
+    </message>
+    <message>
+        <source>Asterisk</source>
+        <comment>XSheetPDF CellMark</comment>
+        <translation>Asterisco</translation>
+    </message>
+    <message>
+        <source>ACTION</source>
+        <comment>XSheetPDF</comment>
+        <translation>ACCIÓN</translation>
+    </message>
+    <message>
+        <source>S</source>
+        <comment>XSheetPDF</comment>
+        <translation>S</translation>
+    </message>
+    <message>
+        <source>CELL</source>
+        <comment>XSheetPDF</comment>
+        <translation>CELDA</translation>
+    </message>
+    <message>
+        <source>CAMERA</source>
+        <comment>XSheetPDF</comment>
+        <translation>CÁMARA</translation>
+    </message>
+    <message>
+        <source>EPISODE</source>
+        <comment>XSheetPDF</comment>
+        <translation>EPISODIO</translation>
+    </message>
+    <message>
+        <source>SEQ.</source>
+        <comment>XSheetPDF</comment>
+        <translation>SEC.</translation>
+    </message>
+    <message>
+        <source>SCENE</source>
+        <comment>XSheetPDF</comment>
+        <translation>ESCENA</translation>
+    </message>
+    <message>
+        <source>TIME</source>
+        <comment>XSheetPDF</comment>
+        <translation>TIEMPO</translation>
+    </message>
+    <message>
+        <source>NAME</source>
+        <comment>XSheetPDF</comment>
+        <translation>NOMBRE</translation>
+    </message>
+    <message>
+        <source>SHEET</source>
+        <comment>XSheetPDF</comment>
+        <translation>HOJA</translation>
+    </message>
+    <message>
+        <source>TITLE</source>
+        <comment>XSheetPDF</comment>
+        <translation>TÍTULO</translation>
+    </message>
+    <message>
+        <source>CAMERAMAN</source>
+        <comment>XSheetPDF</comment>
+        <translation>CAMARÓGRAFO</translation>
+    </message>
+    <message>
+        <source>Create folder</source>
+        <translation>Crear carpeta</translation>
+    </message>
+    <message>
+        <source>TVPaint JSON file cannot be exported from untitled scene. Save the scene first.</source>
+        <translation>No es posible exportar un archivo JSON de TVPaint a partir de una escena sin título. Guardar la escena antes.</translation>
+    </message>
+    <message>
+        <source>No columns can be exported. Please note the followings:
+ - The level files must be placed at the same or child folder relative to the scene file.
+ - Currently only the columns containing raster levels can be exported.</source>
+        <translation>No es posible exportar columnas. Por favor tomar nota de lo siguiente:
+ - Los archivos de nivel deben ser colocados en la misma carpeta o en una subcarpeta relativa al archivo de escena.
+ - Actualmente sólo las columnas que contengan niveles de Imagen pueden ser exportadas.</translation>
+    </message>
+    <message>
+        <source>Export TVPaint JSON File</source>
+        <translation>Exportar archivo JSON de TVPaint</translation>
+    </message>
+    <message>
+        <source>Removed unused level %1 from the scene cast. (This behavior can be disabled in Preferences.)</source>
+        <translation>Se eliminó el nivel no usado %1 de los Componentes de la escena. (Este comportamiento puede ser deshabilitado en las Preferencias.)</translation>
+    </message>
+    <message>
+        <source>Removed unused levels from the scene cast. (This behavior can be disabled in Preferences.)</source>
+        <translation>Se removieron los niveles no usados de los Componentes de la escena. (Este comportamiento puede ser deshabilitado en las Preferencias.)</translation>
+    </message>
+    <message>
+        <source>A prior save of Scene &apos;%1&apos; was critically interrupted. 
+
+A partial save file was generated and changes may be manually salvaged from &apos;%2&apos;.
+
+Do you wish to continue loading the last good save or stop and try to salvage the prior save?</source>
+        <translation>Una acción de guardado anterior de la escena &apos;%1&apos; fue interrumpida de forma crítica. 
+
+Se generó un archivo parcial y los cambios pueden ser guardados manualmente a partir de &apos;%2&apos;.
+
+¿Continuar cargando la última versión guardada correctamente o detener la acción e intentar salvar la versión guardada previamente?</translation>
+    </message>
+    <message>
+        <source>Edit Cell Mark #%1</source>
+        <translation>Editar marca de celda №%1</translation>
+    </message>
+    <message>
+        <source>A conversion task is in progress! wait until it stops or cancel it</source>
+        <translation type="vanished">¡Ya hay una tarea de conversión en progreso! Esperar hasta que finalice o cancelarla</translation>
+    </message>
+    <message>
+        <source>None</source>
+        <comment>Cell Mark</comment>
+        <translation>Ninguna</translation>
+    </message>
+    <message>
+        <source>Set Cell Mark at Column %1  Frame %2 to %3</source>
+        <translation>Definir marca de celda en columna %1  fotograma %2 a %3</translation>
+    </message>
+    <message>
+        <source>Apply Auto Lip Sync</source>
+        <translation>Aplicar sincro labial automático</translation>
+    </message>
+    <message>
+        <source>Export Camera Track Image</source>
+        <translation>Exportar imagen de rastreo de cámara</translation>
+    </message>
+    <message>
+        <source>Save log text</source>
+        <translation>Guardar texto de registro</translation>
+    </message>
+    <message>
+        <source>The log file already exists.
+ Do you want to overwrite it?</source>
+        <translation>El archivo de registro ya existe.
+¿Sobrescribirlo?</translation>
+    </message>
+    <message>
+        <source>Layer: </source>
+        <translation>Capa: </translation>
+    </message>
+    <message>
+        <source>Export Open Cel Animation (OCA)</source>
+        <translation>Exportar Open Cel Animation (OCA)</translation>
+    </message>
+    <message>
+        <source>%1 has been exported successfully.</source>
+        <translation>%1 ha sido exportado exitosamente.</translation>
+    </message>
+    <message>
+        <source>All columns</source>
+        <translation>Todas las columnas</translation>
+    </message>
+    <message>
+        <source>Only active columns</source>
+        <translation>Sólo columnas activas</translation>
+    </message>
+    <message>
+        <source>Cell Mark for Inbetween Symbol 1 (O)</source>
+        <translation type="vanished">Marca de celda para el símbolo de intermedios 1 (O)</translation>
+    </message>
+    <message>
+        <source>Cell Mark for Inbetween Symbol 2 (*)</source>
+        <translation type="vanished">Marca de celda para el símbolo de intermedios 2 (*)</translation>
+    </message>
+    <message>
+        <source>Target column</source>
+        <translation>Columnas a exportar</translation>
+    </message>
+    <message>
+        <source>Loading Raster Images To Cache...</source>
+        <translation>Cargando imágenes a caché...</translation>
+    </message>
+    <message>
+        <source>Remove Frames  : Level %1 : Frame </source>
+        <translation>Eliminar fotogramas  : Nivel %1 : Fotograma </translation>
+    </message>
+    <message>
+        <source>Can&apos;t paste full raster data on a non full raster level.</source>
+        <translation>No es posible pegar datos completos de imagen en un nivel de imagen no completo.</translation>
+    </message>
+    <message>
+        <source>Edit Color Filter #%1</source>
+        <translation>Editar filtro de color №%1</translation>
+    </message>
+    <message>
+        <source>Preproduction Board</source>
+        <translation>Panel de preproducción</translation>
+    </message>
+    <message>
+        <source>Copy Columns</source>
+        <comment>TColumnSelection</comment>
+        <translation>Copiar columnas</translation>
+    </message>
+    <message>
+        <source>Paste Columns</source>
+        <comment>TColumnSelection</comment>
+        <translation>Pegar columnas</translation>
+    </message>
+    <message>
+        <source>Cut Columns</source>
+        <comment>TColumnSelection</comment>
+        <translation>Cortar columnas</translation>
+    </message>
+    <message>
+        <source>Delete Columns</source>
+        <comment>TColumnSelection</comment>
+        <translation>Borrar columnas</translation>
+    </message>
+    <message>
+        <source>Insert Columns</source>
+        <comment>TColumnSelection</comment>
+        <translation>Insertar columnas</translation>
+    </message>
+    <message>
+        <source>Copy Cells</source>
+        <comment>TCellSelection</comment>
+        <translation>Copiar celdas</translation>
+    </message>
+    <message>
+        <source>Paste Cells</source>
+        <comment>TCellSelection</comment>
+        <translation>Pegar celdas</translation>
+    </message>
+    <message>
+        <source>Overwrite Paste Cells</source>
+        <comment>TCellSelection</comment>
+        <translation>Pegar celdas (sobrescribir)</translation>
+    </message>
+    <message>
+        <source>Cut Cells</source>
+        <comment>TCellSelection</comment>
+        <translation>Cortar celdas</translation>
+    </message>
+    <message>
+        <source>Delete Cells</source>
+        <comment>TCellSelection</comment>
+        <translation>Borrar celdas</translation>
+    </message>
+    <message>
+        <source>Insert Cells</source>
+        <comment>TCellSelection</comment>
+        <translation>Insertar celdas</translation>
+    </message>
+    <message>
+        <source>Pasting external image from clipboard.
+
+What do you want to do?</source>
+        <translation>Pegando imagen externa desde el portapapeles.
+
+¿Qué hacer?</translation>
+    </message>
+    <message>
+        <source>New raster level</source>
+        <translation>Nuevo nivel de Imagen</translation>
+    </message>
+    <message>
+        <source>The rooms will be reset the next time you run OpenToonz.</source>
+        <translation>Los espacios de trabajo serán restablecidos la próxima vez que se ejecute OpenToonz.</translation>
+    </message>
+    <message>
+        <source>[Drag&amp;Drop] to copy separator to %1</source>
+        <translation>[Arrastrar] para copiar el separador hacia %1</translation>
+    </message>
+    <message>
+        <source>[Drag&amp;Drop] to copy command to %1</source>
+        <translation>[Arrastrar] para copiar el comando hacia %1</translation>
+    </message>
+    <message>
+        <source>Keyframe Symbol:</source>
+        <translation>Símbolo de clave:</translation>
+    </message>
+    <message>
+        <source>Reference Frame Symbol:</source>
+        <translation>Símbolo fotograma de referencia:</translation>
+    </message>
+    <message>
+        <source>Unable to create OCA folder.</source>
+        <translation>No es posible crear carpeta OCA.</translation>
+    </message>
+    <message>
+        <source>Unable to open OCA file for saving.</source>
+        <translation>No es posible abrir archivo OCA para guardar.</translation>
+    </message>
+    <message>
+        <source>Unable to create folder for saving layers.</source>
+        <translation>No es posible crear carpeta para guardar capas.</translation>
+    </message>
+    <message>
+        <source>Import Open Cel Animation (OCA)</source>
+        <translation>Importar Open Cel Animation (OCA)</translation>
+    </message>
+    <message>
+        <source>OCA Import cancelled : empty filepath.</source>
+        <translation>Importación OCA cancelada: ruta de archivo vacía.</translation>
+    </message>
+    <message>
+        <source>OCA Import file : %1</source>
+        <translation>Importar archivo OCA: %1</translation>
+    </message>
+    <message>
+        <source>Do you want to import or load image files from their original location?</source>
+        <translation>¿Importar o cargar los archivos desde su ubicación original?</translation>
+    </message>
+    <message>
+        <source>Failed to load OCA file: %1</source>
+        <translation>Error al cargar archivo OCA: %1</translation>
+    </message>
+    <message>
+        <source>Unable to open OCA file for loading.</source>
+        <translation>No es posible abrir archivo OCA para cargarlo.</translation>
+    </message>
+    <message>
+        <source>Reading OCA file: %1</source>
+        <translation>Leyendo archivo OCA: %1</translation>
+    </message>
+    <message>
+        <source>Parse error at %1 while loading OCA file.</source>
+        <translation>Error de análisis en %1 mientras se cargaba el archivo OCA.</translation>
+    </message>
+    <message>
+        <source>Blending mode &apos;%1&apos; not implemented for %2 &apos;%3&apos;</source>
+        <translation>Modo de fusión &apos;%1&apos; no implementado para %2 &apos;%3&apos;</translation>
+    </message>
+    <message>
+        <source>Skipped %1 &apos;%2&apos;. No image file indicated.</source>
+        <translation>Se omitió %1 &apos;%2&apos;. No se indicó un archivo de imagen.</translation>
+    </message>
+    <message>
+        <source>Unable to load images for %1 &apos;%2&apos;.</source>
+        <translation>No es posible cargar imágenes para %1 &apos;%2&apos;.</translation>
+    </message>
+    <message>
+        <source>Sub-layers in grouplayer &apos;%1&apos; will be imported without grouping.</source>
+        <translation>Las sub-capas de la capa de grupo &apos;%1&apos; serán importadas sin agrupación.</translation>
+    </message>
+    <message>
+        <source>Skipping unimplemented %1 &apos;%2&apos;</source>
+        <translation>Omitiendo %1 &apos;%2&apos; no implementado</translation>
+    </message>
+    <message>
+        <source>Ignore all future warnings and errors.</source>
+        <translation>Ignorar todas las futuras advertencias y errores.</translation>
+    </message>
+    <message>
+        <source>Inbetween Symbol1 (O):</source>
+        <translation>Símbolo de intermedio 1 (O):</translation>
+    </message>
+    <message>
+        <source>Inbetween Symbol2 (*):</source>
+        <translation>Símbolo de intermedio 2 (*):</translation>
+    </message>
+    <message>
+        <source>The visibility toggles of following columns are modified 
+due to &quot;Unify Preview and Camstand Visibility Toggles&quot; preference option : 
+  %1</source>
+        <translation>Los interruptores de visibilidad de las siguientes columnas se modificaron debido a la opción 
+&quot;Unificar interruptores de visibilidad en mesa de trabajo y procesamiento&quot; en las preferencias: 
+  %1</translation>
+    </message>
+    <message>
+        <source>Cell marks for XDTS symbols</source>
+        <translation>Marcas de celdas para símbolos XDTS</translation>
+    </message>
+    <message>
+        <source>The Keyframe and the Reference Frame symbols will be exported in an unofficial format,
+which may not be displayed correctly or may cause errors in applications other than XDTS Viewer.</source>
+        <translation>Los símbolos de dibujos clave y fotogramas de referencia serán exportados en un formato no oficial,
+que podría no ser mostrado correctamente o que podría causar errores en aplicaciones distintas al Visor de XDTS.</translation>
+    </message>
+    <message>
+        <source>Error while loading SXF scene: %1</source>
+        <translation>Error al cargar escena SXF: %1</translation>
+    </message>
+    <message>
+        <source>SXF data has no frames to import.</source>
+        <translation>Los datos SXF no contienen fotogramas que importar.</translation>
+    </message>
+    <message>
+        <source>Import SXF Area</source>
+        <translation>Importar área SXF</translation>
+    </message>
+    <message>
+        <source>ACTION</source>
+        <translation>ACCIÓN</translation>
+    </message>
+    <message>
+        <source>CELL</source>
+        <translation>CELDA</translation>
+    </message>
+    <message>
+        <source>Current XSheet is emepty.</source>
+        <translation>La planilla actual está vacía.</translation>
+    </message>
+    <message>
+        <source>ACTION &amp; CELL</source>
+        <translation>ACCIÓN Y CELDA</translation>
+    </message>
+    <message>
+        <source>Direction</source>
+        <translation>Dirección</translation>
+    </message>
+    <message>
+        <source>Enter text here...
+Supports multiple lines</source>
+        <translation>Introducir texto aquí...
+Soporta múltiples líneas</translation>
+    </message>
+    <message>
+        <source>Large Font</source>
+        <translation>Tipografía grande</translation>
+    </message>
+    <message>
+        <source>Text Encoding:</source>
+        <translation>Codificación del texto:</translation>
+    </message>
+    <message>
+        <source>Cell marks for SXF symbols</source>
+        <translation>Marcas de celdas para símbolos SXF</translation>
+    </message>
+    <message>
+        <source>Inbetween Symbol1 (○)</source>
+        <translation>Símbolo de intermedio 1 (○)</translation>
+    </message>
+    <message>
+        <source>Inbetween Symbol2 (●):</source>
+        <translation>Símbolo de intermedio 2 (●):</translation>
+    </message>
+    <message>
+        <source>Target Column:</source>
+        <translation>Columna objetivo:</translation>
+    </message>
+    <message>
+        <source>Export Area:</source>
+        <translation>Exportar área:</translation>
+    </message>
+    <message>
+        <source>Export SXF File</source>
+        <translation>Exportar archivo SXF</translation>
+    </message>
+    <message>
+        <source>Failed to export SXF file.%1</source>
+        <translation>Error al exportar archivo SXF .%1</translation>
+    </message>
+    <message>
+        <source>Cannot clear: level is read-only or no level is selected.</source>
+        <translation>No es posible limpiar: el nivel es de sólo lectura o no se seleccionó ningún nivel.</translation>
+    </message>
+    <message>
+        <source>No frame to clear.</source>
+        <translation>Ningún fotograma que limpiar.</translation>
+    </message>
+    <message>
+        <source>Add separator for Frames</source>
+        <translation>Agregar separador para Fotogramas</translation>
+    </message>
+    <message>
+        <source>It is not possible to load the scene %1 because it does not belong to any project.
+Please delete scenes.xml if this scene dones&apos;t belong to any project.</source>
+        <translation>No es posible cargar la escena %1 porque no pertenece a ningún proyecto.
+Borrar el archivo scenes.xml si esta escena no perteneciera a ningún proyecto.</translation>
+    </message>
+    <message>
+        <source>There were problems loading the scene %1.
+Details:
+
+%2</source>
+        <translation>Hubo problemas al cargar la escena %1.
+Detalles:
+
+%2</translation>
+    </message>
+    <message>
+        <source>%1
+
+is an image sequence that can be converted into a TLV format 
+Would you like to convert it?</source>
+        <translation>%1
+
+es una secuencia de imágenes que puede ser convertida a formato TLV
+¿Convertirla?</translation>
+    </message>
+    <message>
+        <source>No, use as is</source>
+        <translation>No, usarla tal como está</translation>
+    </message>
+    <message>
+        <source>Image sequence detected, but the filenames are missing a separator: 
+OpenToonz requires a separator (such as an underscore (_) or dot (.) 
+between the name and the frame number to recognize sequences properly.
+Example: A0001.png → A.0001.png
+
+Would you like OpenToonz to automatically add a dot to fix the sequence format?
+
+%1 (and similar files)</source>
+        <translation>Secuencia de imágenes detectada, sin embargo a los nombres de archivo les falta un separador: 
+OpenToonz requiere un separador (como un guion bajo (_) o un punto (.) ) 
+entre el nombre base y el número de fotograma, para poder reconocer secuencias apropiadamente.
+Ejemplo: A0001.png → A.0001.png
+
+¿Agregar automáticamente un punto para corregir el formato de la secuencia?
+
+%1 (y archivos similares)</translation>
+    </message>
+    <message>
+        <source>Yes, add dot</source>
+        <translation>Sí, agregar un punto</translation>
+    </message>
+    <message>
+        <source>No, treat as single frame</source>
+        <translation>No, tratarlos como fotogramas individuales</translation>
+    </message>
+    <message>
+        <source>Hide Viewer Indicators</source>
+        <translation>Ocultar indicadores del visor</translation>
+    </message>
+    <message>
+        <source>Show Viewer Indicators</source>
+        <translation>Mostrar indicadores del visor</translation>
+    </message>
+    <message>
+        <source>Create Level %1 at Column %2</source>
+        <translation>Crear nivel %1 en columna %2</translation>
+    </message>
+    <message>
+        <source>Paste File: </source>
+        <translation>Pegar archivo: </translation>
+    </message>
+    <message>
+        <source>Duplicate File: </source>
+        <translation>Duplicar archivo: </translation>
+    </message>
+    <message>
+        <source>Task added to the Batch Render List.</source>
+        <translation>Tarea agregada a la lista de tareas de procesamiento.</translation>
+    </message>
+    <message>
+        <source>Task added to the Batch Cleanup List.</source>
+        <translation>Tarea agregada a la lista de tareas de limpieza.</translation>
+    </message>
+    <message>
+        <source>Deleting folder %1. Are you sure?</source>
+        <translation>Se borrará la carpeta %1. ¿Seguro?</translation>
+    </message>
+    <message>
+        <source>A conversion task is in progress! Wait until it stops or cancel it.</source>
+        <translation>¡Existe una tarea de conversión en progreso! Esperar hasta que se detenga o cancelarla.</translation>
+    </message>
+    <message>
+        <source>Error loading scene %1 : %2</source>
+        <translation>Error al cargar la escena %1 : %2</translation>
+    </message>
+    <message>
+        <source>Error saving scene %1</source>
+        <translation>Error al guardar la escena %1</translation>
+    </message>
+    <message>
+        <source>A separation task is in progress! Wait until it stops or cancel it.</source>
+        <translation>¡Existe una tarea de separación en progreso! Esperar hasta que se detenga o cancelarla.</translation>
+    </message>
+    <message>
+        <source>Cannot paste into the camera column.</source>
+        <translation>No es posible pegar en la columna de Cámara.</translation>
+    </message>
+    <message>
+        <source>Brush Presets</source>
+        <translation>Preajustes de pinceles</translation>
+    </message>
+    <message>
+        <source>Tool Properties</source>
+        <translation>Opciones de herramientas</translation>
+    </message>
+    <message>
+        <source>Fx Browser</source>
+        <translation>Explorador de efectos</translation>
+    </message>
+    <message>
+        <source>Locator</source>
+        <translation>Localizador</translation>
+    </message>
+    <message>
+        <source>The specified name is already assigned to the folder.</source>
+        <translation>El nombre especificado ya está asignado a la carpeta</translation>
+    </message>
+    <message>
+        <source>Unsupported raster format, cannot save</source>
+        <translation>Formato de imagen no soportado, no es posible guardar</translation>
+    </message>
+    <message>
+        <source>Bind to Current Room</source>
+        <translation>Enlazar a espacio de trabajo actual</translation>
+    </message>
+    <message>
+        <source>Converting %1 to tlv format...</source>
+        <translation>Convirtiendo %1 a formato TLV...</translation>
+    </message>
+    <message>
+        <source> [WIP]</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ReframePopup</name>
@@ -10332,7 +14271,7 @@ Do you want to create it?</source>
     </message>
     <message>
         <source>steps</source>
-        <translation>fotogramas</translation>
+        <translation type="vanished">fotogramas</translation>
     </message>
     <message>
         <source>with</source>
@@ -10340,11 +14279,11 @@ Do you want to create it?</source>
     </message>
     <message>
         <source>(</source>
-        <translation>(</translation>
+        <translation type="vanished">(</translation>
     </message>
     <message>
         <source> blank cells will be inserted.)</source>
-        <translation> acetatos en blanco serán insertados).</translation>
+        <translation type="vanished"> celdas en blanco serán insertadas).</translation>
     </message>
     <message>
         <source>Reframe with Empty Inbetweens</source>
@@ -10353,6 +14292,18 @@ Do you want to create it?</source>
     <message>
         <source>empty inbetweens</source>
         <translation>intermedios vacíos</translation>
+    </message>
+    <message>
+        <source>Number of steps:</source>
+        <translation>Exposición:</translation>
+    </message>
+    <message>
+        <source>s</source>
+        <translation>fotogramas</translation>
+    </message>
+    <message>
+        <source>(%1 blank cells will be inserted.)</source>
+        <translation>(%1 celdas en blanco serán insertadas.)</translation>
     </message>
 </context>
 <context>
@@ -10384,6 +14335,14 @@ Do you want to create it?</source>
     <message>
         <source>The file name cannot be empty or contain any of the following characters:(new line)  \ / : * ? &quot;  |</source>
         <translation>El nombre del archivo no puede estar vacío ni contener ninguno de los siguientes caracteres:(nueva línea)  \ / : * ? &quot;  |</translation>
+    </message>
+    <message>
+        <source>Renaming Folder </source>
+        <translation>Renombrando carpeta </translation>
+    </message>
+    <message>
+        <source>Folder Name:</source>
+        <translation>Nombre de carpeta:</translation>
     </message>
 </context>
 <context>
@@ -10419,6 +14378,20 @@ El archivo de sonido no será incluido en el clip procesado.</translation>
                            The output result may differ from what you expect. What do you want to do?</source>
         <translation>La escena %1 tiene una resolución distinta a la de la escena %2.
                            El resultado producido puede diferir de lo esperado. ¿Qué se desea hacer?</translation>
+    </message>
+    <message>
+        <source>Please specify an file name.</source>
+        <translation>Por favor especificar un nombre de archivo.</translation>
+    </message>
+    <message>
+        <source>Drag a scene into the box to export a scene.</source>
+        <translation>Arrastrar una escena dentro del marco para exportarla.</translation>
+    </message>
+    <message>
+        <source>The %1 scene contains a plastic deformed level.
+These levels can&apos;t be exported with this tool.</source>
+        <translation>La escena %1 contiene un nivel deformado con plástico.
+Estos niveles no pueden ser exportados usando esta función.</translation>
     </message>
 </context>
 <context>
@@ -10471,7 +14444,7 @@ El archivo de sonido no será incluido en el clip procesado.</translation>
     <name>ReplaceParentDirectoryPopup</name>
     <message>
         <source>Replace Parent Directory</source>
-        <translation>Reemplazar directorio superior</translation>
+        <translation>Reemplazar carpeta superior</translation>
     </message>
     <message>
         <source>Replace</source>
@@ -10480,6 +14453,26 @@ El archivo de sonido no será incluido en el clip procesado.</translation>
     <message>
         <source>Nothing to replace: no cells or columns selected.</source>
         <translation type="vanished">Nada que reemplazar: no se han seleccionado acetatos o columnas.</translation>
+    </message>
+    <message>
+        <source>The level paths have been replaced as follows:
+
+</source>
+        <translation>Las rutas de los niveles han sido reemplazadas de la siguiente manera:
+
+</translation>
+    </message>
+    <message>
+        <source>%1 : No change was made.
+</source>
+        <translation>%1 : No se ha realizado ningún cambio.
+</translation>
+    </message>
+    <message>
+        <source>%1 : %2 -&gt; %3
+</source>
+        <translation>%1 : %2 -&gt; %3
+</translation>
     </message>
 </context>
 <context>
@@ -10525,7 +14518,15 @@ El archivo de sonido no será incluido en el clip procesado.</translation>
     </message>
     <message>
         <source>Left click and drag to move guide. Right click to delete guide</source>
-        <translation>Clic izquierdo y arrastrar para mover guía. Clic derecho para borrar guía</translation>
+        <translation type="vanished">Clic izquierdo y arrastrar para mover guía. Clic derecho para borrar guía</translation>
+    </message>
+    <message>
+        <source>Left-click and drag to move guide, right-click to delete guide.</source>
+        <translation>Clic izquierdo y arrastrar para moverguía, clic derecho para borrar guía.</translation>
+    </message>
+    <message>
+        <source>Click to create a horizontal guide</source>
+        <translation>Clic para crear una guía horizontal</translation>
     </message>
 </context>
 <context>
@@ -10551,7 +14552,7 @@ El archivo de sonido no será incluido en el clip procesado.</translation>
     <name>SVNCommitDialog</name>
     <message>
         <source>Version Control: Put changes</source>
-        <translation>Control de versiones: Envío de cambios</translation>
+        <translation type="vanished">Control de versiones: Envío de cambios</translation>
     </message>
     <message>
         <source>Select / Deselect All</source>
@@ -10571,11 +14572,11 @@ El archivo de sonido no será incluido en el clip procesado.</translation>
     </message>
     <message>
         <source>Put Scene Contents</source>
-        <translation>Enviar contenido de la escena</translation>
+        <translation type="vanished">Enviar contenido de la escena</translation>
     </message>
     <message>
         <source>Put</source>
-        <translation>Enviar</translation>
+        <translation type="vanished">Enviar</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -10587,7 +14588,7 @@ El archivo de sonido no será incluido en el clip procesado.</translation>
     </message>
     <message>
         <source>Set needs-lock property...</source>
-        <translation>Definir propiedad bloqueo-requerido...</translation>
+        <translation type="vanished">Definir propiedad bloqueo-requerido...</translation>
     </message>
     <message>
         <source>Committing %1 items...</source>
@@ -10595,19 +14596,19 @@ El archivo de sonido no será incluido en el clip procesado.</translation>
     </message>
     <message>
         <source>Put done successfully.</source>
-        <translation>Envío realizado exitosamente.</translation>
+        <translation type="vanished">Envío realizado exitosamente.</translation>
     </message>
     <message>
         <source>Putting %1 items...</source>
-        <translation>Enviando %1 elementos...</translation>
+        <translation type="vanished">Enviando %1 elementos...</translation>
     </message>
     <message>
         <source>No items to put.</source>
-        <translation>Ningún elemento que enviar.</translation>
+        <translation type="vanished">Ningún elemento que enviar.</translation>
     </message>
     <message>
         <source>%1 items to put.</source>
-        <translation>%1 elementos a enviar.</translation>
+        <translation type="vanished">%1 elementos a enviar.</translation>
     </message>
     <message>
         <source>%1 Selected / %2 Total</source>
@@ -10617,12 +14618,40 @@ El archivo de sonido no será incluido en el clip procesado.</translation>
         <source>Close</source>
         <translation>Cerrar</translation>
     </message>
+    <message>
+        <source>Version Control: Commit changes</source>
+        <translation>Control de versiones: Envío de cambios</translation>
+    </message>
+    <message>
+        <source>Commit Scene Contents</source>
+        <translation>Enviar contenido de la escena</translation>
+    </message>
+    <message>
+        <source>Commit</source>
+        <translation>Enviar</translation>
+    </message>
+    <message>
+        <source>Setting needs-lock property...</source>
+        <translation>Definir propiedad bloqueo-requerido...</translation>
+    </message>
+    <message>
+        <source>Commit completed successfully.</source>
+        <translation>Envío completado exitoosamente.</translation>
+    </message>
+    <message>
+        <source>No items to commit.</source>
+        <translation>Ningún elemento que enviar.</translation>
+    </message>
+    <message>
+        <source>%1 items to commit.</source>
+        <translation>%1 elementos a ser enviados.</translation>
+    </message>
 </context>
 <context>
     <name>SVNCommitFrameRangeDialog</name>
     <message>
         <source>Version Control: Put</source>
-        <translation>Control de versiones: Envío</translation>
+        <translation type="vanished">Control de versiones: Envío</translation>
     </message>
     <message>
         <source>Note: the file will be updated too.</source>
@@ -10634,7 +14663,7 @@ El archivo de sonido no será incluido en el clip procesado.</translation>
     </message>
     <message>
         <source>Put</source>
-        <translation>Enviar</translation>
+        <translation type="vanished">Enviar</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -10642,7 +14671,7 @@ El archivo de sonido no será incluido en el clip procesado.</translation>
     </message>
     <message>
         <source>Put done successfully.</source>
-        <translation>Envío realizado con éxito.</translation>
+        <translation type="vanished">Envío realizado con éxito.</translation>
     </message>
     <message>
         <source>Locking file...</source>
@@ -10662,7 +14691,7 @@ El archivo de sonido no será incluido en el clip procesado.</translation>
     </message>
     <message>
         <source>Putting changes...</source>
-        <translation>Enviando los cambios...</translation>
+        <translation type="vanished">Enviando los cambios...</translation>
     </message>
     <message>
         <source>Updating file...</source>
@@ -10675,6 +14704,33 @@ El archivo de sonido no será incluido en el clip procesado.</translation>
     <message>
         <source>Setting the needs-lock property to hook file...</source>
         <translation>Definiendo la propiedad bloqueo-requerido para el archivo de anclaje...</translation>
+    </message>
+    <message>
+        <source>Version Control: Commit Frame Range</source>
+        <translation>Control de versiones: Envío de rango de fotogramas</translation>
+    </message>
+    <message>
+        <source>Commit</source>
+        <translation>Enviar</translation>
+    </message>
+    <message>
+        <source>Commit completed successfully.</source>
+        <translation>Envío completado exitosamente.</translation>
+    </message>
+    <message>
+        <source>Committing changes...</source>
+        <translation>Enviando cambios...</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Cerrar</translation>
+    </message>
+</context>
+<context>
+    <name>SVNConfigWriter</name>
+    <message>
+        <source>Select</source>
+        <translation>Seleccionar</translation>
     </message>
 </context>
 <context>
@@ -11027,6 +15083,10 @@ El archivo de sonido no será incluido en el clip procesado.</translation>
         <source>Revert done successfully.</source>
         <translation>Reversión completada exitosamente.</translation>
     </message>
+    <message>
+        <source>Close</source>
+        <translation>Cerrar</translation>
+    </message>
 </context>
 <context>
     <name>SVNRevertFrameRangeDialog</name>
@@ -11061,6 +15121,10 @@ El archivo de sonido no será incluido en el clip procesado.</translation>
     <message>
         <source>It is not possible to revert the file.</source>
         <translation>No es posible revertir el archivo.</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Cerrar</translation>
     </message>
 </context>
 <context>
@@ -11313,10 +15377,17 @@ Por favor enviar o revertir los cambios antes.</translation>
     </message>
 </context>
 <context>
+    <name>SaveBoardImagePopup</name>
+    <message>
+        <source>Export Board Image</source>
+        <translation>Exportar imagen del panel</translation>
+    </message>
+</context>
+<context>
     <name>SaveBoardPresetFilePopup</name>
     <message>
         <source>Save Clapperboard Settings As Preset</source>
-        <translation>Guardar opciones de claqueta como ajuste</translation>
+        <translation>Guardar opciones de claqueta como preajuste</translation>
     </message>
 </context>
 <context>
@@ -11353,6 +15424,13 @@ Por favor enviar o revertir los cambios antes.</translation>
     </message>
 </context>
 <context>
+    <name>SaveLogTxtPopup</name>
+    <message>
+        <source>Failed to open the file %1</source>
+        <translation>Falla al abrir el archivo %1</translation>
+    </message>
+</context>
+<context>
     <name>SavePaletteAsPopup</name>
     <message>
         <source>Save Palette</source>
@@ -11367,11 +15445,11 @@ Por favor enviar o revertir los cambios antes.</translation>
     <name>SavePresetPopup</name>
     <message>
         <source>Save Preset</source>
-        <translation>Guardar ajuste</translation>
+        <translation>Guardar preajuste</translation>
     </message>
     <message>
         <source>Preset Name:</source>
-        <translation>Nombre del ajuste:</translation>
+        <translation>Nombre del preajuste:</translation>
     </message>
     <message>
         <source>Save</source>
@@ -11383,7 +15461,7 @@ Por favor enviar o revertir los cambios antes.</translation>
     </message>
     <message>
         <source>It is not possible to create the preset folder %1.</source>
-        <translation>No es posible crear la carpeta de ajustes %1.</translation>
+        <translation>No es posible crear la carpeta de preajustes %1.</translation>
     </message>
     <message>
         <source>Do you want to overwrite?</source>
@@ -11493,6 +15571,172 @@ Por favor enviar o revertir los cambios antes.</translation>
     </message>
 </context>
 <context>
+    <name>SceneBrowser</name>
+    <message>
+        <source>Some files that you want to edit are currently opened. Close them first.</source>
+        <translation>Algunos archivos que desea editar se encuentran abiertos actualmente. Cerrarlos primero.</translation>
+    </message>
+    <message>
+        <source>Some files that you want to unlock are currently opened. Close them first.</source>
+        <translation>Algunos archivos que desea desbloquear se encuentran abiertos actualmente. Cerrarlos primero.</translation>
+    </message>
+    <message>
+        <source>Folder: </source>
+        <translation>Carpeta: </translation>
+    </message>
+    <message>
+        <source>Open folder failed</source>
+        <translation>Fallo al abrir la carpeta</translation>
+    </message>
+    <message>
+        <source>The input folder path was invalid.</source>
+        <translation>La ruta a la carpeta de origen es inválida.</translation>
+    </message>
+    <message>
+        <source>Can&apos;t change file extension</source>
+        <translation>No es posible cambiar la extensión del archivo</translation>
+    </message>
+    <message>
+        <source>Can&apos;t set a drawing number</source>
+        <translation>No es posible definir un número para el dibujo</translation>
+    </message>
+    <message>
+        <source>Can&apos;t rename. File already exists: </source>
+        <translation>No es posible renombrar. El archivo ya existe: </translation>
+    </message>
+    <message>
+        <source>Couldn&apos;t rename </source>
+        <translation>No fue posible renombrar </translation>
+    </message>
+    <message>
+        <source>Load As Sub-xsheet</source>
+        <translation>Cargar como sub-planilla</translation>
+    </message>
+    <message>
+        <source>Load</source>
+        <translation>Cargar</translation>
+    </message>
+    <message>
+        <source>Rename</source>
+        <translation>Renombrar</translation>
+    </message>
+    <message>
+        <source>Convert to Painted TLV</source>
+        <translation type="vanished">Convertir a TLV pintado</translation>
+    </message>
+    <message>
+        <source>Convert to Unpainted TLV</source>
+        <translation type="vanished">Convertir a TLV no pintado</translation>
+    </message>
+    <message>
+        <source>Version Control</source>
+        <translation>Control de versiones</translation>
+    </message>
+    <message>
+        <source>Edit</source>
+        <translation>Editar</translation>
+    </message>
+    <message>
+        <source>Edit Frame Range...</source>
+        <translation>Editar rango de fotogramas...</translation>
+    </message>
+    <message>
+        <source>Put...</source>
+        <translation>Enviar...</translation>
+    </message>
+    <message>
+        <source>Revert</source>
+        <translation>Revertir</translation>
+    </message>
+    <message>
+        <source>Get</source>
+        <translation>Obtener</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>Borrar</translation>
+    </message>
+    <message>
+        <source>Get Revision...</source>
+        <translation>Obtener revisión...</translation>
+    </message>
+    <message>
+        <source>Unlock</source>
+        <translation>Desbloquear</translation>
+    </message>
+    <message>
+        <source>Edit Info</source>
+        <translation>Información de edición</translation>
+    </message>
+    <message>
+        <source>Revision History...</source>
+        <translation>Historial de revisiones...</translation>
+    </message>
+    <message>
+        <source>Unlock Frame Range</source>
+        <translation>Desbloquear rango de fotogramas</translation>
+    </message>
+    <message>
+        <source>Save Scene</source>
+        <translation>Guardar escena</translation>
+    </message>
+    <message>
+        <source>Scene name:</source>
+        <translation>Nombre de la escena:</translation>
+    </message>
+    <message>
+        <source>There was an error copying %1 to %2</source>
+        <translation>Se produjo un error al copiar %1 a %2</translation>
+    </message>
+    <message>
+        <source>Convert To Unpainted Tlv</source>
+        <translation type="vanished">Convertir a TLV no pintado</translation>
+    </message>
+    <message>
+        <source>Warning: level %1 already exists; overwrite?</source>
+        <translation type="vanished">Advertencia: el nivel %1 ya existe; ¿sobrescribirlo?</translation>
+    </message>
+    <message>
+        <source>Yes</source>
+        <translation type="vanished">Sí</translation>
+    </message>
+    <message>
+        <source>No</source>
+        <translation type="vanished">No</translation>
+    </message>
+    <message>
+        <source>Done: All Levels  converted to TLV Format</source>
+        <translation type="vanished">Hecho: Todos los niveles han sido convertidos a formato TLV</translation>
+    </message>
+    <message>
+        <source>Convert To Painted Tlv</source>
+        <translation type="vanished">Convertir a TLV pintado</translation>
+    </message>
+    <message>
+        <source>Done: 2 Levels  converted to TLV Format</source>
+        <translation type="vanished">Hecho: 2 niveles convertidos a formato TLV</translation>
+    </message>
+    <message>
+        <source>New Folder</source>
+        <translation>Nueva carpeta</translation>
+    </message>
+    <message>
+        <source>It is not possible to create the %1 folder.</source>
+        <translation>No es posible crear la carpeta %1.</translation>
+    </message>
+</context>
+<context>
+    <name>SceneBrowserButtonBar</name>
+    <message>
+        <source>Create new scene</source>
+        <translation>Crear nueva escena</translation>
+    </message>
+    <message>
+        <source>Create scene</source>
+        <translation>Crear escena</translation>
+    </message>
+</context>
+<context>
     <name>SceneSettingsPopup</name>
     <message>
         <source>Scene Settings</source>
@@ -11511,8 +15755,8 @@ Por favor enviar o revertir los cambios antes.</translation>
         <translation type="vanished">Color de fondo del visor:</translation>
     </message>
     <message>
-        <source>   Preview BG Color:</source>
-        <translation type="vanished">  Color de fondo previsualización:</translation>
+        <source>Preview BG Color:</source>
+        <translation type="vanished">Color de fondo previsualización:</translation>
     </message>
     <message>
         <source>Checkerboard Color 1:</source>
@@ -11524,7 +15768,7 @@ Por favor enviar o revertir los cambios antes.</translation>
     </message>
     <message>
         <source>Image Subsampling:</source>
-        <translation>Submuestreo (imágenes):</translation>
+        <translation>Submuestreo (imagen):</translation>
     </message>
     <message>
         <source>      Marker Interval:</source>
@@ -11544,7 +15788,7 @@ Por favor enviar o revertir los cambios antes.</translation>
     </message>
     <message>
         <source>TLV Subsampling:</source>
-        <translation>Submuestreo (imágenes Toonz):</translation>
+        <translation>Submuestreo (imagen Toonz):</translation>
     </message>
     <message>
         <source>Start Frame:</source>
@@ -11573,6 +15817,61 @@ Por favor enviar o revertir los cambios antes.</translation>
     <message>
         <source>Enable Column Color Filter and Transparency for Rendering</source>
         <translation>Habilitar Opacidad y Filtro de color de columnas durante el procesamiento</translation>
+    </message>
+    <message>
+        <source>Edit Cell Marks</source>
+        <translation>Editar marcas de celda</translation>
+    </message>
+    <message>
+        <source>Cell Marks:</source>
+        <translation>Marcas de celda:</translation>
+    </message>
+    <message>
+        <source>Edit Column Color Filters</source>
+        <translation>Editar filtros de color de columnas</translation>
+    </message>
+</context>
+<context>
+    <name>SceneViewer</name>
+    <message>
+        <source>FROZEN</source>
+        <translation>CONGELADO</translation>
+    </message>
+    <message>
+        <source>Motion Path Selected</source>
+        <translation>Trayectoria de movimiento seleccionada</translation>
+    </message>
+    <message>
+        <source>Transparency Check</source>
+        <translation>Comprobación de transparencias</translation>
+    </message>
+    <message>
+        <source>Ink Check</source>
+        <translation>Comprobación de tinta</translation>
+    </message>
+    <message>
+        <source>Ink#1 Check</source>
+        <translation>Comprobación de tinta №1</translation>
+    </message>
+    <message>
+        <source>Paint Check</source>
+        <translation>Comprobación de pintura</translation>
+    </message>
+    <message>
+        <source>Inks Only Check</source>
+        <translation>Ver sólo tinta</translation>
+    </message>
+    <message>
+        <source>Black BG Check</source>
+        <translation>Ver con fondo negro</translation>
+    </message>
+    <message>
+        <source>Fill Check</source>
+        <translation>Comprobación de áreas rellenables</translation>
+    </message>
+    <message>
+        <source>Gap Check</source>
+        <translation>Comprobación de huecos</translation>
     </message>
 </context>
 <context>
@@ -11655,7 +15954,7 @@ Por favor enviar o revertir los cambios antes.</translation>
     </message>
     <message>
         <source>Table</source>
-        <translation>Mesa</translation>
+        <translation>mesa</translation>
     </message>
     <message>
         <source>Select %1</source>
@@ -11689,36 +15988,40 @@ Por favor enviar o revertir los cambios antes.</translation>
         <source>Ease In/Out Interpolation</source>
         <translation>Aceleración y desaceleración suaves</translation>
     </message>
+    <message>
+        <source>Rotate View</source>
+        <translation>Rotar vista</translation>
+    </message>
 </context>
 <context>
     <name>SceneViewerPanel</name>
     <message>
         <source>Freeze</source>
-        <translation>Congelar</translation>
+        <translation type="vanished">Congelar</translation>
     </message>
     <message>
         <source>Camera Stand View</source>
-        <translation>Vista de mesa de trabajo</translation>
+        <translation type="vanished">Vista de mesa de trabajo</translation>
     </message>
     <message>
         <source>3D View</source>
-        <translation>Vista 3D</translation>
+        <translation type="vanished">Vista 3D</translation>
     </message>
     <message>
         <source>Camera View</source>
-        <translation>Vista de cámara</translation>
+        <translation type="vanished">Vista de cámara</translation>
     </message>
     <message>
         <source>Preview</source>
-        <translation>Previsualizar</translation>
+        <translation type="vanished">Previsualizar</translation>
     </message>
     <message>
         <source>Sub-camera Preview</source>
-        <translation>Previsualizar región</translation>
+        <translation type="vanished">Previsualizar región</translation>
     </message>
     <message>
         <source>Untitled</source>
-        <translation>Sin título</translation>
+        <translation type="vanished">Sin título</translation>
     </message>
     <message>
         <source>Scene: </source>
@@ -11726,11 +16029,11 @@ Por favor enviar o revertir los cambios antes.</translation>
     </message>
     <message>
         <source>   ::   Frame: </source>
-        <translation>   ::   Fotograma: </translation>
+        <translation type="vanished">   ::   Fotograma: </translation>
     </message>
     <message>
         <source>   ::   Level: </source>
-        <translation>   ::   Nivel: </translation>
+        <translation type="vanished">   ::   Nivel: </translation>
     </message>
     <message>
         <source>Level: </source>
@@ -11738,27 +16041,39 @@ Por favor enviar o revertir los cambios antes.</translation>
     </message>
     <message>
         <source>  ::  Zoom : </source>
-        <translation>  ::  Zoom : </translation>
+        <translation type="vanished">  ::  Zoom : </translation>
     </message>
     <message>
         <source>Safe Area (Right Click to Select)</source>
-        <translation>Áreas de seguridad (clic derecho para seleccionar)</translation>
+        <translation type="vanished">Áreas de seguridad (clic derecho para seleccionar)</translation>
     </message>
     <message>
         <source>Field Guide</source>
-        <translation>Guía de campos</translation>
+        <translation type="vanished">Guía de campos</translation>
     </message>
     <message>
         <source> (Flipped)</source>
-        <translation> (Invertido)</translation>
+        <translation type="vanished"> (Invertido)</translation>
     </message>
     <message>
         <source>[SCENE]: </source>
-        <translation>[ESCENA]: </translation>
+        <translation type="vanished">[ESCENA]: </translation>
     </message>
     <message>
         <source>[LEVEL]: </source>
-        <translation>[NIVEL]: </translation>
+        <translation type="vanished">[NIVEL]: </translation>
+    </message>
+    <message>
+        <source>GUI Show / Hide</source>
+        <translation type="vanished">Mostrar en interfaz</translation>
+    </message>
+    <message>
+        <source>Playback Toolbar</source>
+        <translation type="vanished">Barra de herramientas de reproducción</translation>
+    </message>
+    <message>
+        <source>Frame Slider</source>
+        <translation type="vanished">Deslizador de fotogramas</translation>
     </message>
 </context>
 <context>
@@ -11903,6 +16218,22 @@ Por favor enviar o revertir los cambios antes.</translation>
         <source>Converting level %1 of %2: %3</source>
         <translation>Convirtiendo nivel %1 de %2: %3</translation>
     </message>
+    <message>
+        <source>Save Settings</source>
+        <translation>Guardar opciones</translation>
+    </message>
+    <message>
+        <source>Load Settings</source>
+        <translation>Cargar opciones</translation>
+    </message>
+    <message>
+        <source>Failed to load %1.</source>
+        <translation>Falla al cargar %1.</translation>
+    </message>
+    <message>
+        <source>Failed to create the folder.</source>
+        <translation>Falla al crear la carpeta.</translation>
+    </message>
 </context>
 <context>
     <name>SeparateSwatch</name>
@@ -11947,11 +16278,11 @@ Por favor enviar o revertir los cambios antes.</translation>
     </message>
     <message>
         <source>Delete Current Preset</source>
-        <translation>Borrar el ajuste actual</translation>
+        <translation>Borrar el preajuste actual</translation>
     </message>
     <message>
         <source>Save Current Shortcuts as New Preset</source>
-        <translation>Guardar los atajos actuales como un nuevo ajuste</translation>
+        <translation>Guardar los atajos actuales como un nuevo preajuste</translation>
     </message>
     <message>
         <source>Apply</source>
@@ -11959,7 +16290,7 @@ Por favor enviar o revertir los cambios antes.</translation>
     </message>
     <message>
         <source>Use selected preset as shortcuts</source>
-        <translation>Usar los atajos del ajuste seleccionado</translation>
+        <translation>Usar los atajos del preajuste seleccionado</translation>
     </message>
     <message>
         <source>Clear All Shortcuts</source>
@@ -11987,11 +16318,11 @@ Por favor enviar o revertir los cambios antes.</translation>
     </message>
     <message>
         <source>Included presets cannot be deleted.</source>
-        <translation>No es posible borrar los ajustes predefinidos.</translation>
+        <translation>No es posible borrar los preajustes predefinidos.</translation>
     </message>
     <message>
         <source>Are you sure you want to delete the preset: </source>
-        <translation>¿Seguro borrar el ajuste: </translation>
+        <translation>¿Seguro borrar el preajuste: </translation>
     </message>
     <message>
         <source>?</source>
@@ -12007,7 +16338,7 @@ Por favor enviar o revertir los cambios antes.</translation>
     </message>
     <message>
         <source>Shortcut Presets</source>
-        <translation>Ajustes de atajos</translation>
+        <translation>Preajustes de atajos</translation>
     </message>
     <message>
         <source>Delete</source>
@@ -12023,7 +16354,7 @@ Por favor enviar o revertir los cambios antes.</translation>
     </message>
     <message>
         <source>Preset:</source>
-        <translation>Ajustes:</translation>
+        <translation>Preajustes:</translation>
     </message>
     <message>
         <source>Saving Shortcuts</source>
@@ -12035,11 +16366,11 @@ Por favor enviar o revertir los cambios antes.</translation>
     </message>
     <message>
         <source>Enter Preset Name</source>
-        <translation>Ingresar nombre del ajuste</translation>
+        <translation>Introducir nombre del preajuste</translation>
     </message>
     <message>
         <source>Preset Name:</source>
-        <translation>Nombre del ajuste:</translation>
+        <translation>Nombre del preajuste:</translation>
     </message>
 </context>
 <context>
@@ -12070,7 +16401,7 @@ Por favor enviar o revertir los cambios antes.</translation>
     </message>
     <message>
         <source>Cells</source>
-        <translation>Acetatos</translation>
+        <translation>Celdas</translation>
     </message>
     <message>
         <source>View</source>
@@ -12078,7 +16409,7 @@ Por favor enviar o revertir los cambios antes.</translation>
     </message>
     <message>
         <source>Windows</source>
-        <translation>Ventanas</translation>
+        <translation>Paneles</translation>
     </message>
     <message>
         <source>Right-click Menu Commands</source>
@@ -12128,13 +16459,45 @@ Por favor enviar o revertir los cambios antes.</translation>
         <source>Help</source>
         <translation>Ayuda</translation>
     </message>
+    <message>
+        <source>Stop Motion</source>
+        <translation>Stop Motion</translation>
+    </message>
+    <message>
+        <source>Cell Mark</source>
+        <translation>Marca de celda</translation>
+    </message>
+    <message>
+        <source>SubMenu Commands</source>
+        <translation>Comandos de submenú</translation>
+    </message>
+    <message>
+        <source>Advanced</source>
+        <translation>Avanzado</translation>
+    </message>
+    <message>
+        <source>Custom Panels</source>
+        <translation>Paneles personalizados</translation>
+    </message>
+    <message>
+        <source>Brush Presets</source>
+        <translation>Pincel - Preajustes guardados</translation>
+    </message>
+    <message>
+        <source>Brush Sizes</source>
+        <translation>Pincel - Tamaños predefinidos</translation>
+    </message>
+    <message>
+        <source>Special Modifier Keys</source>
+        <translation>Teclas modificadoras especiales</translation>
+    </message>
 </context>
 <context>
     <name>ShortcutViewer</name>
     <message>
         <source>%1 is already assigned to &apos;%2&apos;
 Assign to &apos;%3&apos;?</source>
-        <translation>%1 ya se encuentra asignado a &apos;%2&apos;
+        <translation type="vanished">%1 ya se encuentra asignado a &apos;%2&apos;
 ¿Asignarlo a &apos;%3&apos;?</translation>
     </message>
     <message>
@@ -12144,6 +16507,18 @@ Assign to &apos;%3&apos;?</source>
     <message>
         <source>No</source>
         <translation>No</translation>
+    </message>
+    <message>
+        <source>&apos;%1&apos; is already assigned to &apos;%2&apos;
+Assign to &apos;%3&apos;?</source>
+        <translation>&apos;%1&apos; ya se encuentra asignado a &apos;%2&apos;
+¿Asignar a &apos;%3&apos;?</translation>
+    </message>
+    <message>
+        <source>Initial sequence &apos;%1&apos; is assigned to &apos;%2&apos; which takes priority.
+Assign shortcut sequence anyway?</source>
+        <translation>La secuencia inicial &apos;%1&apos; ya se encuentra asignada a &apos;%2&apos;, que tendrá prioridad.
+¿Asignar igualmente como atajo?</translation>
     </message>
 </context>
 <context>
@@ -12170,7 +16545,7 @@ Assign to &apos;%3&apos;?</source>
     </message>
     <message>
         <source>Windows</source>
-        <translation>Ventanas</translation>
+        <translation>Paneles</translation>
     </message>
     <message>
         <source>Other Windows</source>
@@ -12218,19 +16593,19 @@ Assign to &apos;%3&apos;?</source>
     </message>
     <message>
         <source>Cells</source>
-        <translation>Acetatos</translation>
+        <translation>Celdas</translation>
     </message>
     <message>
         <source>Reframe</source>
-        <translation>Reexponer acetatos</translation>
+        <translation>Reexponer dibujos</translation>
     </message>
     <message>
         <source>Step</source>
-        <translation>Aumentar exposición</translation>
+        <translation>Editar exposición</translation>
     </message>
     <message>
         <source>Each</source>
-        <translation>Uno de cada</translation>
+        <translation>Conservar dibujos</translation>
     </message>
     <message>
         <source>File</source>
@@ -12290,7 +16665,7 @@ Assign to &apos;%3&apos;?</source>
     </message>
     <message>
         <source>New</source>
-        <translation>Crear</translation>
+        <translation>Nuevo</translation>
     </message>
     <message>
         <source>Adjust</source>
@@ -12329,7 +16704,7 @@ Assign to &apos;%3&apos;?</source>
     </message>
     <message>
         <source>Create a New Scene</source>
-        <translation>Crear una nueva escena</translation>
+        <translation>Crear nueva escena</translation>
     </message>
     <message>
         <source>Open Scene</source>
@@ -12445,29 +16820,29 @@ Assign to &apos;%3&apos;?</source>
     </message>
     <message>
         <source>Preset name</source>
-        <translation>Nombre del ajuste</translation>
+        <translation>Nombre del preajuste</translation>
     </message>
     <message>
         <source>Enter the name for %1</source>
-        <translation>Ingresar el nombre para %1</translation>
+        <translation>Introducir el nombre para %1</translation>
     </message>
     <message>
         <source>Error : Preset Name is Invalid</source>
-        <translation>Error : El nombre del ajuste no es válido</translation>
+        <translation>Error : El nombre del preajuste no es válido</translation>
     </message>
     <message>
         <source>The preset name must not use &apos;,&apos;(comma).</source>
-        <translation>El nombre del ajuste no debe usar &apos;,&apos;(comas).</translation>
+        <translation>El nombre del preajuste no debe usar &apos;,&apos;(comas).</translation>
     </message>
     <message>
         <source>Bad camera preset</source>
-        <translation>Ajuste de cámara incorrecto</translation>
+        <translation>Preajuste de cámara incorrecto</translation>
     </message>
     <message>
         <source>&apos;%1&apos; doesn&apos;t seem to be a well formed camera preset. 
 Possibly the preset file has been corrupted</source>
-        <translation>&apos;%1&apos; no parece ser un ajuste de cámara bien formado. 
-Es posible que el archivo del ajuste esté corrupto</translation>
+        <translation>&apos;%1&apos; no parece ser un preajuste de cámara bien formado. 
+Es posible que el archivo del preajuste esté corrupto</translation>
     </message>
     <message>
         <source>The width must be greater than zero.</source>
@@ -12496,6 +16871,22 @@ Es posible que el archivo del ajuste esté corrupto</translation>
     <message>
         <source>Failed to create the folder.</source>
         <translation>El proyecto de la escena seleccionada &apos;%1&apos; no se encuentra en la lista Proyecto actual y es posible que no abra automáticamente.</translation>
+    </message>
+    <message>
+        <source>Open Project...</source>
+        <translation>Abrir proyecto...</translation>
+    </message>
+    <message>
+        <source>Explore Folder</source>
+        <translation>Explorar carpeta</translation>
+    </message>
+    <message>
+        <source>Open Existing Scene</source>
+        <translation>Abrir escena</translation>
+    </message>
+    <message>
+        <source>New Scene</source>
+        <translation>Nueva escena</translation>
     </message>
 </context>
 <context>
@@ -12655,7 +17046,51 @@ ADVERTENCIA : Tamaño de imagen no coincidente. El tamaño del nivel con esa rut
     </message>
     <message>
         <source>Cannot capture webcam image unless live view is active.</source>
-        <translation>No es posible capturar imágenes con una cámara web a menos que Ver en vivo se encuentre activo.</translation>
+        <translation type="vanished">No es posible capturar imágenes con una cámara web a menos que Ver en vivo se encuentre activo.</translation>
+    </message>
+    <message>
+        <source>Please start live view before using time lapse.</source>
+        <translation>Por favor iniciar la vista en vivo antes de usar el temporizador de intervalos.</translation>
+    </message>
+    <message>
+        <source>Cannot capture image unless live view is active.</source>
+        <translation>No es posible capturar imágenes a menos que la vista en vivo se encuentre activa.</translation>
+    </message>
+    <message>
+        <source>No level exists with the current name.</source>
+        <translation>No existe ningún nivel con el nombre actual.</translation>
+    </message>
+    <message>
+        <source>This is not an image level.</source>
+        <translation>Este no es un nivel de imagen.</translation>
+    </message>
+    <message>
+        <source>This is not a stop motion level.</source>
+        <translation>Este no es un nivel de stop-motion.</translation>
+    </message>
+    <message>
+        <source>Could not find an xsheet level with  the current level</source>
+        <translation>No fue posible encontrar una planilla con el nivel actual.</translation>
+    </message>
+    <message>
+        <source>No export path given.</source>
+        <translation>No se proporcionó una ruta de exportación.</translation>
+    </message>
+    <message>
+        <source>Could not find the source file.</source>
+        <translation>No pudo encontrarse el archivo de origen.</translation>
+    </message>
+    <message>
+        <source>Overwrite existing files?</source>
+        <translation>¿Sobrescribir archivos existentes?</translation>
+    </message>
+    <message>
+        <source>An error occurred.  Aborting.</source>
+        <translation>Ocurrió un error.  Abortando.</translation>
+    </message>
+    <message>
+        <source>Successfully exported %1 images.</source>
+        <translation>Se exportaron %1 imágenes de forma exitosa.</translation>
     </message>
 </context>
 <context>
@@ -12738,11 +17173,11 @@ ADVERTENCIA : Tamaño de imagen no coincidente. El tamaño del nivel con esa rut
     </message>
     <message>
         <source>Zoom</source>
-        <translation>Zoom</translation>
+        <translation type="vanished">Zoom</translation>
     </message>
     <message>
         <source>Pick Zoom</source>
-        <translation>Detalle de zoom</translation>
+        <translation type="vanished">Detalle de zoom</translation>
     </message>
     <message>
         <source>&lt;</source>
@@ -12850,7 +17285,7 @@ ADVERTENCIA : Tamaño de imagen no coincidente. El tamaño del nivel con esa rut
     </message>
     <message>
         <source>Black Screen for Capture</source>
-        <translation>Oscurecer cámara al capturar</translation>
+        <translation type="vanished">Oscurecer cámara al capturar</translation>
     </message>
     <message>
         <source>Use Reduced Resolution Images</source>
@@ -12866,7 +17301,7 @@ ADVERTENCIA : Tamaño de imagen no coincidente. El tamaño del nivel con esa rut
     </message>
     <message>
         <source>Use Numpad Shortcuts When Active</source>
-        <translation>Usar atajos del teclado numérico</translation>
+        <translation>Usar atajos de teclado numérico</translation>
     </message>
     <message>
         <source>Show Live View on All Frames</source>
@@ -12878,7 +17313,7 @@ ADVERTENCIA : Tamaño de imagen no coincidente. El tamaño del nivel con esa rut
     </message>
     <message>
         <source>Level Subsampling: </source>
-        <translation>Sub-muestreo del nivel: </translation>
+        <translation type="vanished">Sub-muestreo del nivel: </translation>
     </message>
     <message>
         <source>Opacity:</source>
@@ -12911,6 +17346,216 @@ ADVERTENCIA : Tamaño de imagen no coincidente. El tamaño del nivel con esa rut
     <message>
         <source>Stop Live View</source>
         <translation>Detener en vivo</translation>
+    </message>
+    <message>
+        <source>Light</source>
+        <translation>Luz</translation>
+    </message>
+    <message>
+        <source>Motion</source>
+        <translation>Movimiento</translation>
+    </message>
+    <message>
+        <source>Camera Status</source>
+        <translation>Estado de la cámara</translation>
+    </message>
+    <message>
+        <source>Show original live view images in timeline</source>
+        <translation>Mostrar imágenes originales en vivo en la línea de tiempo</translation>
+    </message>
+    <message>
+        <source>Check</source>
+        <translation>Comprobar</translation>
+    </message>
+    <message>
+        <source>Zoom in to check focus</source>
+        <translation>Ampliar para comprobar el foco</translation>
+    </message>
+    <message>
+        <source>Pick</source>
+        <translation>Escoger</translation>
+    </message>
+    <message>
+        <source>Set focus check location</source>
+        <translation>Definir ubicación de comprobación de foco</translation>
+    </message>
+    <message>
+        <source>Select a camera to change settings.</source>
+        <translation>Seleccionar una cámara para cambiar sus opciones.</translation>
+    </message>
+    <message>
+        <source>insert webcam name here</source>
+        <translation>insertar nombre de cámara aquí</translation>
+    </message>
+    <message>
+        <source>Manual Focus</source>
+        <translation>Foco manual</translation>
+    </message>
+    <message>
+        <source>Focus: </source>
+        <translation>Foco: </translation>
+    </message>
+    <message>
+        <source>Brightness: </source>
+        <translation>Brillo: </translation>
+    </message>
+    <message>
+        <source>Contrast: </source>
+        <translation>Contraste: </translation>
+    </message>
+    <message>
+        <source>Gain: </source>
+        <translation>Ganancia: </translation>
+    </message>
+    <message>
+        <source>Saturation: </source>
+        <translation>Saturación: </translation>
+    </message>
+    <message>
+        <source>More</source>
+        <translation>Más</translation>
+    </message>
+    <message>
+        <source>Time Lapse</source>
+        <translation type="vanished">Lapso</translation>
+    </message>
+    <message>
+        <source>Use time lapse</source>
+        <translation type="vanished">Usar lapso</translation>
+    </message>
+    <message>
+        <source>Interval(sec):</source>
+        <translation>Intervalo (seg):</translation>
+    </message>
+    <message>
+        <source>Blackout all Screens</source>
+        <translation>Apagar todas las pantallas</translation>
+    </message>
+    <message>
+        <source>Test</source>
+        <translation>Probar</translation>
+    </message>
+    <message>
+        <source>Screen 1</source>
+        <translation>Pantalla 1</translation>
+    </message>
+    <message>
+        <source>Screen 2</source>
+        <translation>Pantalla 2</translation>
+    </message>
+    <message>
+        <source>Screen 3</source>
+        <translation>Pantalla 3</translation>
+    </message>
+    <message>
+        <source>Motion Control</source>
+        <translation>Control de movimiento</translation>
+    </message>
+    <message>
+        <source>Port: </source>
+        <translation>Puerto: </translation>
+    </message>
+    <message>
+        <source> - Battery: </source>
+        <translation> - Batería: </translation>
+    </message>
+    <message>
+        <source>Aperture: Auto</source>
+        <translation>Apertura: Auto</translation>
+    </message>
+    <message>
+        <source>Shutter Speed: Auto</source>
+        <translation>Obturación: Auto</translation>
+    </message>
+    <message>
+        <source>Start Capturing</source>
+        <translation>Iniciar captura</translation>
+    </message>
+    <message>
+        <source>Stop Capturing</source>
+        <translation>Detener captura</translation>
+    </message>
+    <message>
+        <source>Use Time Lapse</source>
+        <translation>Temporizador de intervalos</translation>
+    </message>
+    <message>
+        <source>Requires restarting camera when toggled
+NP 1 = Previous Frame
+NP 2 = Next Frame
+NP 3 = Jump To Camera
+NP 5 = Toggle Live View
+NP 6 = Short Play
+NP 8 = Loop
+NP 0 = Play
+Period = Use Live View Images
+Plus = Raise Opacity
+Minus = Lower Opacity
+Enter = Capture
+BackSpace = Remove Frame
+Multiply = Toggle Zoom
+Divide = Focus Check</source>
+        <translation>Requiere reiniciar la cámara cuando se active
+1 = Fotograma anterior
+2 = Fotograma siguiente
+3 = Saltar a cámara
+5 = Ver en vivo
+6 = Reproducción breve
+8 = Reproducir cíclicamente
+0 = Reproducir
+Punto = Usar imágenes en vivo
+Suma = Aumentar opacidad
+Resta = Disminuir opacidad
+Intro = Capturar
+Retroceso = Eliminar fotograma
+Multiplicación = Alternar ampliación
+División = Comprobar foco</translation>
+    </message>
+    <message>
+        <source>Show Camera Below Other Levels</source>
+        <translation>Mostrar cámara debajo de los otros niveles</translation>
+    </message>
+    <message>
+        <source>Play Sound on Capture</source>
+        <translation>Reproducir sonido al capturar</translation>
+    </message>
+    <message>
+        <source>Make a click sound on each capture</source>
+        <translation>Reproduce un clic cada vez que se realiza una captura</translation>
+    </message>
+</context>
+<context>
+    <name>StopMotionSerial</name>
+    <message>
+        <source>No Device</source>
+        <translation>sin dispositivo</translation>
+    </message>
+</context>
+<context>
+    <name>SubCameraButton</name>
+    <message>
+        <source>Save Current Subcamera</source>
+        <translation>Guardar región actual</translation>
+    </message>
+    <message>
+        <source>Delete Preset</source>
+        <translation>Borrar preajuste</translation>
+    </message>
+    <message>
+        <source>Delete %1</source>
+        <translation>Borrar %1</translation>
+    </message>
+    <message>
+        <source>Overwriting the existing subcamera preset. Are you sure?</source>
+        <translation>Se sobrescribirá el preajuste de región. ¿Seguro?</translation>
+    </message>
+    <message>
+        <source>Question</source>
+        <translation>Consulta</translation>
+    </message>
+    <message>
+        <source>Deleting the subcamera preset %1. Are you sure?</source>
+        <translation>Se borrará el preajuste de región %1. ¿Seguro?</translation>
     </message>
 </context>
 <context>
@@ -12970,6 +17615,28 @@ Clic en el botón con la flecha para crear una nueva sub-planilla</translation>
     <message>
         <source>It is not possible to automatically save an untitled scene.</source>
         <translation type="vanished">No es posible guardar de forma automática una escena sin título.</translation>
+    </message>
+</context>
+<context>
+    <name>TPanel</name>
+    <message>
+        <source>Bind to Current Room</source>
+        <translation>Enlazar a espacio de trabajo actual</translation>
+    </message>
+</context>
+<context>
+    <name>TPanelTitleBarButtonForPreview</name>
+    <message>
+        <source>Current frame</source>
+        <translation>Fotograma actual</translation>
+    </message>
+    <message>
+        <source>All preview range frames</source>
+        <translation>Todos los fotogramas del rango de previsualización</translation>
+    </message>
+    <message>
+        <source>Selected cells - Auto play</source>
+        <translation>Celdas seleccionadas - Reproducción automática</translation>
     </message>
 </context>
 <context>
@@ -13283,7 +17950,7 @@ Clic en el botón con la flecha para crear una nueva sub-planilla</translation>
     </message>
     <message>
         <source>Selected Cells</source>
-        <translation>Acetatos seleccionados</translation>
+        <translation>Celdas seleccionadas</translation>
     </message>
     <message>
         <source>Selected Frame Range</source>
@@ -13323,6 +17990,153 @@ Clic en el botón con la flecha para crear una nueva sub-planilla</translation>
     <message>
         <source>Older Version</source>
         <translation>Versión más antigua:</translation>
+    </message>
+</context>
+<context>
+    <name>ToolPropertiesPanel</name>
+    <message>
+        <source>Tool Properties</source>
+        <translation>Opciones de herramientas</translation>
+    </message>
+    <message>
+        <source>Tool Properties - %1</source>
+        <translation>Herramienta: %1</translation>
+    </message>
+    <message>
+        <source>Properties for Fill tool - Coming soon!</source>
+        <translation>¡Proximamente opciones para la herramienta Rellenar!</translation>
+    </message>
+    <message>
+        <source>Properties for Eraser tool - Coming soon!</source>
+        <translation>¡Proximamente opciones para la herramienta Borrador!</translation>
+    </message>
+    <message>
+        <source>Properties for this tool - Coming soon!</source>
+        <translation>¡Proximamente opciones para esta herramienta!</translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation>Tamaño</translation>
+    </message>
+    <message>
+        <source>Hardness</source>
+        <translation>Dureza</translation>
+    </message>
+    <message>
+        <source>Opacity</source>
+        <translation>Opacidad</translation>
+    </message>
+    <message>
+        <source>Lock Alpha</source>
+        <translation>Preservar alfa</translation>
+    </message>
+    <message>
+        <source>Pencil Mode</source>
+        <translation>Lápiz</translation>
+    </message>
+    <message>
+        <source>Draw Order</source>
+        <translation>Orden</translation>
+    </message>
+    <message>
+        <source>Cap</source>
+        <translation>Extremos</translation>
+    </message>
+    <message>
+        <source>Join</source>
+        <translation>Esquinas</translation>
+    </message>
+    <message>
+        <source>Smooth</source>
+        <translation>Estabilidad</translation>
+    </message>
+    <message>
+        <source>Assistants</source>
+        <translation>Asistentes</translation>
+    </message>
+    <message>
+        <source>Pressure</source>
+        <translation>Presión</translation>
+    </message>
+    <message>
+        <source>Accuracy</source>
+        <translation>Precisión</translation>
+    </message>
+    <message>
+        <source>Break Angles</source>
+        <translation>Quebrar</translation>
+    </message>
+    <message>
+        <source>Frame Range</source>
+        <translation>Rango de fotogramas</translation>
+    </message>
+    <message>
+        <source>Snap</source>
+        <translation>Adherencia</translation>
+    </message>
+    <message>
+        <source>Sensitivity</source>
+        <translation>Adherencia: Sensibilidad</translation>
+    </message>
+    <message>
+        <source>Miter</source>
+        <translation>Inglete</translation>
+    </message>
+    <message>
+        <source>Modifier Size</source>
+        <translation>Modificador de Tamaño</translation>
+    </message>
+    <message>
+        <source>Modifier Opacity</source>
+        <translation>Modificador de Opacidad</translation>
+    </message>
+    <message>
+        <source>Eraser</source>
+        <translation>Borrador</translation>
+    </message>
+    <message>
+        <source>Min</source>
+        <translation>Mín</translation>
+    </message>
+    <message>
+        <source>Max</source>
+        <translation>Máx</translation>
+    </message>
+    <message>
+        <source>Min:</source>
+        <translation>Mín:</translation>
+    </message>
+    <message>
+        <source>Max:</source>
+        <translation>Máx:</translation>
+    </message>
+    <message>
+        <source>GUI Show / Hide</source>
+        <translation>Mostrar en interfaz</translation>
+    </message>
+    <message>
+        <source>Single Slider (Max Only)</source>
+        <translation>Un único deslizador (Máx)</translation>
+    </message>
+    <message>
+        <source>Show Labels</source>
+        <translation>Etiquetas</translation>
+    </message>
+    <message>
+        <source>Show Numeric Fields</source>
+        <translation>Campos numéricos</translation>
+    </message>
+    <message>
+        <source>Cell Borders</source>
+        <translation>Bordes de celdas</translation>
+    </message>
+    <message>
+        <source>Cell Backgrounds</source>
+        <translation>Fondo de celdas</translation>
+    </message>
+    <message>
+        <source>Show Icons</source>
+        <translation>Íconos</translation>
     </message>
 </context>
 <context>
@@ -13611,6 +18425,20 @@ Clic en el botón con la flecha para crear una nueva sub-planilla</translation>
         <source>Load Vectorizer Parameters</source>
         <translation>Cargar opciones de vectorización</translation>
     </message>
+    <message>
+        <source>Align Boundary Strokes Direction</source>
+        <translation>Alinear dirección de trazos exteriores</translation>
+    </message>
+    <message>
+        <source>Align boundary strokes direction to be the same.
+(clockwise, i.e. left to right as viewed from inside of the shape)</source>
+        <translation>Alinea la dirección de los trazos exteriores para que sea consistente.
+(en sentido horario)</translation>
+    </message>
+    <message>
+        <source>Options</source>
+        <translation>Opciones</translation>
+    </message>
 </context>
 <context>
     <name>VersionControl</name>
@@ -13654,7 +18482,7 @@ Por favor ver la guía de usuario para obtener más detalles.</translation>
     <name>XDTSImportPopup</name>
     <message>
         <source>Importing XDTS file %1</source>
-        <translation>Abriendo archivo XDTS %1</translation>
+        <translation type="vanished">Importando archivo XDTS %1</translation>
     </message>
     <message>
         <source>Load</source>
@@ -13676,12 +18504,127 @@ Por favor ver la guía de usuario para obtener más detalles.</translation>
         <source>Level Path</source>
         <translation>Ruta del nivel</translation>
     </message>
+    <message>
+        <source>None</source>
+        <translation>Ninguna</translation>
+    </message>
+    <message>
+        <source>Inbetween symbol mark</source>
+        <translation type="vanished">Marca de intermedios</translation>
+    </message>
+    <message>
+        <source>Reverse sheet symbol mark</source>
+        <translation type="vanished">Marca de planilla invertida</translation>
+    </message>
+    <message>
+        <source>Cell Mark for Inbetween Symbol 1 (O)</source>
+        <translation type="vanished">Marca de celda para el símbolo de intermedios 1 (O)</translation>
+    </message>
+    <message>
+        <source>Cell Mark for Inbetween Symbol 2 (*)</source>
+        <translation type="vanished">Marca de celda para el símbolo de intermedios 2 (*)</translation>
+    </message>
+    <message>
+        <source>Importing %1 file %2</source>
+        <translation>Importando %1 archivo %2</translation>
+    </message>
+    <message>
+        <source>Rename Image Sequence</source>
+        <translation>Renombrar secuencia de imágenes</translation>
+    </message>
+    <message>
+        <source>Do not Convert</source>
+        <translation>No convertir</translation>
+    </message>
+    <message>
+        <source>Convert Every Level with Settings Popup</source>
+        <translation>Convertir cada nivel con un diálogo de opciones</translation>
+    </message>
+    <message>
+        <source>Convert Unpainted Aliasing Raster(Inks Only)</source>
+        <translation>Convertir Imagen no pintada sin suavizado de bordes (sólo tintas)</translation>
+    </message>
+    <message>
+        <source>Append Default Palette</source>
+        <translation>Anexar paleta predefinida</translation>
+    </message>
+    <message>
+        <source>When activated, styles of the default palette
+($TOONZSTUDIOPALETTE\Global Palettes\Default Palettes\Cleanup_Palette.tpl) will 
+be appended to the palette after conversion</source>
+        <translation>Cuando esté activa, los estilos de la paleta predefinida
+($TOONZSTUDIOPALETTE\Global Palettes\Default Palettes\Cleanup_Palette.tpl) 
+serán anexados a la paleta, luego de la conversión</translation>
+    </message>
+    <message>
+        <source>Image DPI</source>
+        <translation>PPP de la imagen</translation>
+    </message>
+    <message>
+        <source>Current Camera DPI</source>
+        <translation>PPP de cámara actual</translation>
+    </message>
+    <message>
+        <source>Custom DPI</source>
+        <translation>PPP personalizados</translation>
+    </message>
+    <message>
+        <source>DPI:</source>
+        <translation>PPP:</translation>
+    </message>
+    <message>
+        <source>Cell marks for %1 symbols</source>
+        <translation>Marcas de celda para símbolos %1</translation>
+    </message>
+    <message>
+        <source>Inbetween Symbol1 (%1):</source>
+        <translation>Símbolo de intermedio 1 (%1):</translation>
+    </message>
+    <message>
+        <source>Inbetween Symbol2 (%1):</source>
+        <translation>Símbolo de intermedio 2 (%1):</translation>
+    </message>
+    <message>
+        <source>Keyframe Symbol:</source>
+        <translation>Símbolo de dibujo clave:</translation>
+    </message>
+    <message>
+        <source>Reference Frame Symbol:</source>
+        <translation>Símbolo de fotograma de referencia:</translation>
+    </message>
+    <message>
+        <source>Convert Raster to TLV : </source>
+        <translation>Convertir Imagen a TLV : </translation>
+    </message>
+</context>
+<context>
+    <name>XsheetGUI::BreadcrumbArea</name>
+    <message>
+        <source>  &gt;  </source>
+        <translation>  &gt;  </translation>
+    </message>
+    <message>
+        <source>  |  </source>
+        <translation>  |  </translation>
+    </message>
+    <message>
+        <source>---</source>
+        <translation>---</translation>
+    </message>
+    <message>
+        <source>Main</source>
+        <translation>Principal</translation>
+    </message>
+    <message>
+        <source>Xsheet Depth:</source>
+        <translation>Profundidad de planilla:</translation>
+    </message>
 </context>
 <context>
     <name>XsheetGUI::CellArea</name>
     <message>
         <source>Click to select keyframe, drag to move it</source>
-        <translation>Clic para seleccionar un fotograma clave, arrastrar para moverlo</translation>
+        <translation>Clic para seleccionar un clave, arrastrar para moverlo</translation>
     </message>
     <message>
         <source>Click and drag to set the acceleration range</source>
@@ -13705,7 +18648,7 @@ Por favor ver la guía de usuario para obtener más detalles.</translation>
     </message>
     <message>
         <source>Click and drag to repeat selected cells</source>
-        <translation>Arrastrar para repetir los acetatos seleccionados (detecta secuencias de forma inteligente)</translation>
+        <translation>Arrastrar para repetir las celdas seleccionadas (detecta secuencias de forma inteligente)</translation>
     </message>
     <message>
         <source>Open Memo</source>
@@ -13717,15 +18660,15 @@ Por favor ver la guía de usuario para obtener más detalles.</translation>
     </message>
     <message>
         <source>Reframe</source>
-        <translation>Reexponer acetatos</translation>
+        <translation>Reexponer dibujos</translation>
     </message>
     <message>
         <source>Step</source>
-        <translation>Editar exposición de acetatos</translation>
+        <translation>Editar exposición de dibujos</translation>
     </message>
     <message>
         <source>Each</source>
-        <translation>Conservar acetatos</translation>
+        <translation>Conservar dibujos</translation>
     </message>
     <message>
         <source>Replace</source>
@@ -13733,7 +18676,7 @@ Por favor ver la guía de usuario para obtener más detalles.</translation>
     </message>
     <message>
         <source>Edit Cell Numbers</source>
-        <translation>Editar números de acetatos</translation>
+        <translation>Editar números de celdas</translation>
     </message>
     <message>
         <source>Replace Level</source>
@@ -13750,6 +18693,29 @@ Por favor ver la guía de usuario para obtener más detalles.</translation>
     <message>
         <source>Edit Image</source>
         <translation>Editar imagen</translation>
+    </message>
+    <message>
+        <source>Lip Sync</source>
+        <translation>Sincro labial</translation>
+    </message>
+    <message>
+        <source>Cell Mark</source>
+        <translation>Marcar celda</translation>
+    </message>
+    <message>
+        <source>None</source>
+        <translation>Ninguna</translation>
+    </message>
+    <message>
+        <source>Interpolation on %1&apos;s</source>
+        <translation>Exposición de interpolación x%1</translation>
+    </message>
+</context>
+<context>
+    <name>XsheetGUI::ChangeObjectParent</name>
+    <message>
+        <source>Table</source>
+        <translation>Mesa</translation>
     </message>
 </context>
 <context>
@@ -13828,7 +18794,7 @@ Por favor ver la guía de usuario para obtener más detalles.</translation>
     </message>
     <message>
         <source>Reframe</source>
-        <translation>Reexponer acetatos</translation>
+        <translation>Reexponer dibujos</translation>
     </message>
     <message>
         <source>Subsampling</source>
@@ -13890,6 +18856,30 @@ Por favor ver la guía de usuario para obtener más detalles.</translation>
         <source>Show Camera Column</source>
         <translation>Mostrar columna de cámara</translation>
     </message>
+    <message>
+        <source>Unlock</source>
+        <translation>Desbloquear</translation>
+    </message>
+    <message>
+        <source>Lock</source>
+        <translation>Bloquear</translation>
+    </message>
+    <message>
+        <source>Click to select parent handle</source>
+        <translation>Clic para seleccionar el centro del objeto superior</translation>
+    </message>
+    <message>
+        <source>Click to select parent object</source>
+        <translation>Clic para seleccionar el objeto superior</translation>
+    </message>
+    <message>
+        <source>Show Column Parent Colors</source>
+        <translation>Mostrar color de columna superior</translation>
+    </message>
+    <message>
+        <source>Show the column parent&apos;s color in the Xsheet</source>
+        <translation>Muestra el color del superior de la columna en la Planilla</translation>
+    </message>
 </context>
 <context>
     <name>XsheetGUI::ColumnTransparencyPopup</name>
@@ -13932,6 +18922,10 @@ Por favor ver la guía de usuario para obtener más detalles.</translation>
     <message>
         <source>Opacity:</source>
         <translation>Opacidad:</translation>
+    </message>
+    <message>
+        <source>Lock Column</source>
+        <translation>Bloquear columna</translation>
     </message>
 </context>
 <context>
@@ -14045,24 +19039,36 @@ Por favor ver la guía de usuario para obtener más detalles.</translation>
     <message>
         <source>Click to Reset Shift &amp; Trace Markers to Neighbor Frames
 Hold F2 Key on the Viewer to Show This Frame Only</source>
-        <translation>Clic para restablecer los marcadores de Desplazar y trazar a los fotogramas adyacentes
+        <translation>Clic para restablecer los marcadores de Desplazar y calcar a los fotogramas adyacentes
 Mantener presionada la tecla F2 para ver sólo este fotograma en el visor</translation>
     </message>
     <message>
         <source>Click to Hide This Frame from Shift &amp; Trace
 Hold F1 Key on the Viewer to Show This Frame Only</source>
-        <translation>Clic para ocultar este fotograma al usar Desplazar y trazar
+        <translation>Clic para ocultar este fotograma al usar Desplazar y calcar
 Mantener presionada la tecla F1 para ver sólo este fotograma en el visor</translation>
     </message>
     <message>
         <source>Click to Hide This Frame from Shift &amp; Trace
 Hold F3 Key on the Viewer to Show This Frame Only</source>
-        <translation>Clic para ocultar este fotograma al usar Desplazar y trazar
+        <translation>Clic para ocultar este fotograma al usar Desplazar y calcar
 Mantener presionada la tecla F3 para ver sólo este fotograma en el visor</translation>
     </message>
     <message>
         <source>Click to Move Shift &amp; Trace Marker</source>
-        <translation>Clic para mover aquí el marcador de Desplazar y trazar</translation>
+        <translation>Clic para mover aquí el marcador de Desplazar y calcar</translation>
+    </message>
+    <message>
+        <source>Tag: %1</source>
+        <translation>Etiqueta: %1</translation>
+    </message>
+    <message>
+        <source>Tags</source>
+        <translation>Etiquetas</translation>
+    </message>
+    <message>
+        <source>Frame %1</source>
+        <translation>Fotograma %1</translation>
     </message>
 </context>
 <context>
@@ -14092,6 +19098,13 @@ Mantener presionada la tecla F3 para ver sólo este fotograma en el visor</trans
     <message>
         <source>Customize XSheet Toolbar</source>
         <translation>Personalizar barra de herramientas de planilla</translation>
+    </message>
+</context>
+<context>
+    <name>XsheetPdfPreviewArea</name>
+    <message>
+        <source>Fit To Window</source>
+        <translation>Ajustar a la ventana</translation>
     </message>
 </context>
 <context>

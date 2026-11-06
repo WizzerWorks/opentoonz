@@ -14,6 +14,57 @@ class QXmlStreamReader;
 class QXmlStreamWriter;
 
 //=============================================================================
+// CommandItem
+//-----------------------------------------------------------------------------
+
+class CommandItem final : public QTreeWidgetItem {
+  QAction* m_action;
+
+public:
+  explicit CommandItem(QTreeWidgetItem* parent, QAction* action);
+
+  QAction* getAction() const { return m_action; }
+};
+
+//=============================================================================
+// SeparatorItem
+//-----------------------------------------------------------------------------
+
+class SeparatorItem final : public QTreeWidgetItem {
+public:
+  explicit SeparatorItem(QTreeWidgetItem* parent);
+};
+
+//=============================================================================
+// CommandListTree
+// Shared by menubar popup and custom panel editor popup
+//-----------------------------------------------------------------------------
+
+class CommandListTree final : public QTreeWidget {
+  Q_OBJECT
+
+  QString m_dropTargetString;
+
+  QTreeWidgetItem* addFolder(const QString& title, int commandType,
+                             QTreeWidgetItem* parentFolder = nullptr);
+
+public:
+  explicit CommandListTree(const QString& dropTargetString,
+                           QWidget* parent    = nullptr,
+                           bool withSeparator = true);
+
+  void searchItems(const QString& searchWord = QString());
+  void refreshTree();  // Rebuild tree with updated commands
+
+private:
+  void displayAll(QTreeWidgetItem* item);
+  void hideAll(QTreeWidgetItem* item);
+
+protected:
+  void mousePressEvent(QMouseEvent* event) override;
+};
+
+//=============================================================================
 // CommandBarTree
 //-----------------------------------------------------------------------------
 
@@ -25,33 +76,20 @@ class CommandBarTree final : public QTreeWidget {
   void saveMenuRecursive(QXmlStreamWriter& writer, QTreeWidgetItem* parentItem);
 
 public:
-  CommandBarTree(TFilePath& path, QWidget* parent = 0);
+  explicit CommandBarTree(TFilePath& path, QWidget* parent = nullptr);
+
   void saveMenuTree(TFilePath& path);
 
 protected:
   bool dropMimeData(QTreeWidgetItem* parent, int index, const QMimeData* data,
                     Qt::DropAction action) override;
+
   QStringList mimeTypes() const override;
+
   void contextMenuEvent(QContextMenuEvent* event) override;
-protected slots:
+
+private slots:
   void removeItem();
-};
-
-//=============================================================================
-// CommandBarListTree
-//-----------------------------------------------------------------------------
-
-class CommandBarListTree final : public QTreeWidget {
-  Q_OBJECT
-
-  void addFolder(const QString& title, int commandType,
-                 QTreeWidgetItem* parentFolder = 0);
-
-public:
-  CommandBarListTree(QWidget* parent = 0);
-
-protected:
-  void mousePressEvent(QMouseEvent*) override;
 };
 
 //=============================================================================
@@ -60,14 +98,17 @@ protected:
 
 class CommandBarPopup final : public DVGui::Dialog {
   Q_OBJECT
-  CommandBarListTree* m_commandListTree;
+
+  CommandListTree* m_commandListTree;
   CommandBarTree* m_menuBarTree;
   TFilePath m_path;
 
 public:
-  CommandBarPopup(bool isXsheetToolbar = false);
-protected slots:
+  explicit CommandBarPopup(bool isXsheetToolbar = false);
+
+private slots:
   void onOkPressed();
+  void onSearchTextChanged(const QString& text);
 };
 
-#endif
+#endif  // COMMANDBARPOPUP_H

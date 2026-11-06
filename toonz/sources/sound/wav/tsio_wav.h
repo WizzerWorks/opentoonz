@@ -13,7 +13,7 @@ The class TSoundTrackReaderWav reads audio files having
 class TSoundTrackReaderWav final : public TSoundTrackReader {
 public:
   TSoundTrackReaderWav(const TFilePath &fp);
-  ~TSoundTrackReaderWav() {}
+  ~TSoundTrackReaderWav() = default;
 
   /*!
 Loads the .wav audio file whose path has been specified in the constructor.
@@ -38,10 +38,10 @@ The class TSoundTrackWriterWav writes audio file having
 class TSoundTrackWriterWav final : public TSoundTrackWriter {
 public:
   TSoundTrackWriterWav(const TFilePath &fp);
-  ~TSoundTrackWriterWav() {}
+  ~TSoundTrackWriterWav() = default;
 
   /*!
-Saves the informations of the soundtrack in .wav audio file
+Saves the information of the soundtrack in .wav audio file
 whose path has been specified in the constructor.
 */
   bool save(const TSoundTrackP &) override;

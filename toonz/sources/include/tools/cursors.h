@@ -19,6 +19,14 @@ enum {
   PenCursor,
   PenLargeCursor,
   PenCrosshairCursor,
+  PenTriangleTopLeftCursor,
+  PenTriangleTopRightCursor,
+  PenTriangleBottomLeftCursor,
+  PenTriangleBottomRightCursor,
+  PenTriangleUpCursor,
+  PenTriangleDownCursor,
+  PenTriangleLeftCursor,
+  PenTriangleRightCursor,
   BenderCursor,
   CutterCursor,
   DistortCursor,
@@ -43,6 +51,7 @@ enum {
   ScaleInvCursor,
   ScaleHCursor,
   ScaleVCursor,
+  ScrubCursor,
   StrokeSelectCursor,
   TapeCursor,
   TypeInCursor,
@@ -99,6 +108,7 @@ enum {
   Ex_Precise          = 0x200000,
   Ex_Prev             = 0x400000,
   Ex_Next             = 0x800000,
+  Ex_FreePick         = 0x1000000,
 
   // This section is for cursors that have fixed text that needs to
   // be handled separately when flipping for left-handed cursors.

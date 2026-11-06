@@ -1,7 +1,7 @@
 
 
 #include "tlog.h"
-//#include "tfilepath.h"
+// #include "tfilepath.h"
 #include "tfilepath_io.h"
 #include <QDateTime>
 
@@ -18,7 +18,6 @@
 #else
 #include <syslog.h>
 #include <unistd.h>
-#include <sys/timeb.h>
 #endif
 
 #include "tthreadmessage.h"

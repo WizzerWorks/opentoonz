@@ -57,7 +57,8 @@ DVAPI void overlayCmapped(TRasterCM32P rasOut, const TRasterCM32P &rasUp,
 // keepInks=false);
 
 DVAPI void eraseColors(TRasterCM32P ras, std::vector<int> *colorIds,
-                       bool eraseInks);  // colorsId==0 ->erase ALL
+                       bool eraseInks,
+                       bool noGap = false);  // colorsId==0 ->erase ALL
 // DVAPI void  eraseColors(TRasterCM32P ras, vector<int>& colorIds, bool
 // eraseInks, bool keepColor);
 DVAPI void eraseStyleIds(TToonzImage *image, const std::vector<int> styleIds);
@@ -93,6 +94,10 @@ DVAPI void makeIcon(TRasterCM32P &rout, const TRasterCM32P &rin);
 
 DVAPI void expandPaint(const TRasterCM32P &rasCM);
 
+DVAPI void putRefImage(const TRasterCM32P &Up, const TRaster32P &Ref,
+                       int style = -1);
+
+DVAPI void eraseRefInks(const TRasterCM32P &r);
 }  // namespace TRop
 
 #endif

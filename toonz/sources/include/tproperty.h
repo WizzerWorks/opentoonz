@@ -4,6 +4,7 @@
 #define TPROPERTY_INCLUDED
 
 #include "tconvert.h"
+#include "tstringid.h"
 
 #include <cstdint>
 
@@ -68,9 +69,11 @@ public:
   class TypeError {};
   class RangeError {};
 
-  TProperty(std::string name) : m_name(name) {
-    m_qstringName = QString::fromStdString(name);
-  }
+  TProperty(std::string name):
+    m_name(name),
+    m_visible(true),
+    m_qstringName(QString::fromStdString(name))
+    { }
 
   virtual ~TProperty() {}
 
@@ -81,7 +84,8 @@ public:
   void setQStringName(const QString &str) { m_qstringName = str; }
   virtual void assignUIName(TProperty *refP);
 
-  std::string getName() const { return m_name; }
+  std::string getName() const { return m_name.str(); }
+  TStringId getNameId() const { return m_name; }
   virtual std::string getValueAsString() = 0;
 
   virtual void accept(Visitor &v) = 0;
@@ -90,14 +94,19 @@ public:
   void removeListener(Listener *listener);
   void notifyListeners() const;
 
+  // Used to pass action name
   std::string getId() const { return m_id; }
   void setId(std::string id) { m_id = id; }
 
+  bool getVisible() const { return m_visible; }
+  void setVisible(bool state) { m_visible = state; }
+
 private:
-  std::string m_name;
+  TStringId m_name;
   QString m_qstringName;
   std::string m_id;
   std::vector<Listener *> m_listeners;
+  bool m_visible;
 };
 
 //---------------------------------------------------------
@@ -113,7 +122,8 @@ public:
       , m_range(minValue, maxValue)
       , m_value(minValue)
       , m_isMaxRangeLimited(isMaxRangeLimited)
-      , m_isLinearSlider(true) {
+      , m_isLinearSlider(true)
+      , m_isSpinner(false) {
     setValue(value);
   }
 
@@ -142,11 +152,16 @@ public:
   void setNonLinearSlider() { m_isLinearSlider = false; }
   bool isLinearSlider() { return m_isLinearSlider; }
 
+  //! has meaning for int properties only
+  void setSpinner() { m_isSpinner = true; }
+  bool isSpinner() { return m_isSpinner; }
+  
 private:
   Range m_range;
   T m_value;
   bool m_isMaxRangeLimited;
   bool m_isLinearSlider;
+  bool m_isSpinner;
 };
 
 //---------------------------------------------------------
@@ -366,11 +381,14 @@ public:
     return ret;
   }
 
-  void addValue(std::wstring value, const QString &iconName = QString()) {
+  void addValueWithUIName(std::wstring value, const QString &name, const QString &iconName = QString()) {
     if (m_index == -1) m_index = 0;
     m_range.push_back(value);
-    m_items.push_back(Item(QString::fromStdWString(value), iconName));
+    m_items.push_back(Item(name, iconName));
   }
+
+  void addValue(std::wstring value, const QString &iconName = QString())
+    { addValueWithUIName(value, QString::fromStdWString(value), iconName); }
 
   void setItemUIName(std::wstring value, const QString &name) {
     int index = indexOf(value);
@@ -391,7 +409,10 @@ public:
 
   void setValue(const std::wstring &value) {
     int idx = indexOf(value);
-    if (idx < 0) throw RangeError();
+    //if (idx < 0) throw RangeError();
+    if (idx < 0)
+      idx = 0;  // Avoid exception if program's item list doesn't contain
+                //  the selected item in scene file
     m_index = idx;
   }
 
@@ -427,7 +448,7 @@ private:
 class DVAPI TPropertyGroup {
 public:
   typedef std::vector<std::pair<TProperty *, bool>> PropertyVector;
-  typedef std::map<std::string, TProperty *> PropertyTable;
+  typedef std::map<TStringId, TProperty *> PropertyTable;
 
   // exception
   class PropertyNotFoundError {};
@@ -444,10 +465,11 @@ public:
   void bind(TProperty &p);
 
   //! returns 0 if the property doesn't exist
-  TProperty *getProperty(std::string name);
-  TProperty *getProperty(int i) {
-    return (i >= (int)m_properties.size()) ? 0 : m_properties[i].first;
-  }
+  TProperty *getProperty(const TStringId &name);
+  TProperty *getProperty(const std::string &name)
+    { return getProperty(TStringId::find(name)); }
+  TProperty *getProperty(int i)
+    { return (i >= (int)m_properties.size()) ? 0 : m_properties[i].first; }
 
   void setProperties(TPropertyGroup *g);
 

@@ -255,11 +255,7 @@ static LineEdit *create(QGridLayout *layout, const QString &name, int &row,
   return ret;
 }
 
-#if QT_VERSION >= 0x050500
 BatchServersViewer::BatchServersViewer(QWidget *parent, Qt::WindowFlags flags)
-#else
-BatchServersViewer::BatchServersViewer(QWidget *parent, Qt::WFlags flags)
-#endif
     : QFrame(parent) {
   int row = 0;
 
@@ -267,7 +263,7 @@ BatchServersViewer::BatchServersViewer(QWidget *parent, Qt::WFlags flags)
   setObjectName("OnePixelMarginFrame");
 
   QGridLayout *layout = new QGridLayout();
-  layout->setMargin(15);
+  layout->setContentsMargins(15, 15, 15, 15);
   layout->setSpacing(8);
 
   layout->addWidget(new QLabel(tr("Process with:")), row, 0, Qt::AlignRight);

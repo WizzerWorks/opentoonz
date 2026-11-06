@@ -19,6 +19,9 @@
 #include <QString>
 #include <QPoint>
 
+#include "toonzqt/glwidget_for_highdpi.h"
+#include "toonzqt/imageutils.h"
+
 #undef DVAPI
 #undef DVVAR
 #ifdef TNZTOOLS_EXPORTS
@@ -57,6 +60,8 @@ class PaletteController;
 class TFxHandle;
 
 class ToolOptionsBox;
+
+class TToolViewer;
 
 class QMenu;
 class QKeyEvent;
@@ -97,6 +102,7 @@ public:
   QPointF m_mousePos;  // mouse position obtained with QMouseEvent::pos() or
                        // QTabletEvent::pos()
   bool m_isTablet;
+  bool m_isHighFrequent;
 
 public:
   TMouseEvent()
@@ -104,7 +110,8 @@ public:
       , m_modifiersMask(NO_KEY)
       , m_buttons(Qt::NoButton)
       , m_button(Qt::NoButton)
-      , m_isTablet(false) {}
+      , m_isTablet(false)
+      , m_isHighFrequent(false) {}
 
   bool isShiftPressed() const { return (m_modifiersMask & SHIFT_KEY); }
   bool isAltPressed() const { return (m_modifiersMask & ALT_KEY); }
@@ -115,6 +122,7 @@ public:
   Qt::MouseButton button() const { return m_button; }
   QPointF mousePos() const { return m_mousePos; }
   bool isTablet() const { return m_isTablet; }
+  bool isHighFrequent() const { return m_isHighFrequent; }
 
   void setModifiers(bool shiftPressed, bool altPressed, bool ctrlPressed) {
     m_modifiersMask = ModifierMask((shiftPressed << SHIFT_BITSHIFT) |
@@ -278,19 +286,37 @@ public:
     MeshImage   = 0x8,   //!< Will work on mesh images
     Splines     = 0x10,  //!< Will work on motion paths
 
-    LevelColumns = 0x20,  //!< Will work on level columns
-    MeshColumns  = 0x40,  //!< Will work on mesh columns
+    LevelColumns= 0x20,  //!< Will work on level columns
+    MeshColumns = 0x40,  //!< Will work on mesh columns
 
     EmptyTarget = 0x80,  //!< Will work on empty cells/columns
 
+    MetaImage   = 0x100, //!< Will work on meta images
+
     CommonImages = VectorImage | ToonzImage | RasterImage,
-    AllImages    = CommonImages | MeshImage,
+    AllImages    = CommonImages | MeshImage | MetaImage,
     Vectors      = VectorImage | Splines,
 
     CommonLevels = CommonImages | LevelColumns,
     MeshLevels   = MeshImage | MeshColumns,
 
     AllTargets = 0xffffffff,
+  };
+
+  enum ToolHints  //!  Misc flags related with tool
+  { HintNone                 = 0,
+    HintAssistants           = 1 << 0, //!< Draw assistants when tool active
+    HintAssistantsGuidelines = 1 << 1, //!< Draw assistant guidelines
+    HintAssistantsEnabled    = 1 << 2, //!< Mark active assistants
+    HintReplicators          = 1 << 3, //!< Draw replicators
+    HintReplicatorsPoints    = 1 << 4, //!< Draw replicated points
+    HintReplicatorsEnabled   = 1 << 5, //!< Mark active replicators
+    
+    HintAssistantsAll     = HintAssistants
+                          | HintAssistantsGuidelines
+                          | HintAssistantsEnabled,
+    HintReplicatorsAll    = HintReplicators
+                          | HintReplicatorsEnabled,
   };
 
 public:
@@ -316,8 +342,8 @@ public:
       bool toBeModified,
       int subsampling = 0);  //!< Returns the image to be edited by the tool.
 
-  static TImage *touchImage();  //!< Returns a pointer to the actual image - the
-                                //!  one of the frame that has been selected.
+  TImage *touchImage();  //!< Returns a pointer to the actual image - the
+                         //!  one of the frame that has been selected.
 
   /*! \details      This function is necessary since tools are created before
 the main
@@ -339,6 +365,7 @@ public:
 
   virtual ToolType getToolType() const = 0;
   ToolTargetType getTargetType() const { return (ToolTargetType)m_targetType; }
+  virtual unsigned int getToolHints() const;
 
   std::string getName() const { return m_name; }
 
@@ -350,11 +377,11 @@ public:
   createOptionsBox();  //!< Factory function returning a newly created
                        //!  GUI options box to be displayed for the tool
 
-  void setViewer(Viewer *viewer) {
+  void setViewer(TToolViewer *viewer) {
     m_viewer = viewer;
     onSetViewer();
   }
-  Viewer *getViewer() const { return m_viewer; }
+  TToolViewer *getViewer() const { return m_viewer; }
 
   double getPixelSize() const;
 
@@ -366,7 +393,7 @@ public:
   /*!
           Picks a region of the scene, using an OpenGL projection matrix to
           restrict drawing to a small regionaround \p p of the viewport.
-          Retuns -1 if no object's view has been changed.
+          Returns -1 if no object's view has been changed.
   */
   int pick(const TPointD &p);
   bool isPicking() const { return m_picking; }
@@ -388,7 +415,7 @@ return true if the method execution can have changed the current tool
   virtual void rightButtonDown(const TPointD &, const TMouseEvent &) {}
   virtual bool keyDown(QKeyEvent *) { return false; }
 
-  virtual void onInputText(std::wstring, std::wstring, int, int){};
+  virtual void onInputText(const std::wstring&, const std::wstring&, int, int){};
 
   virtual void onSetViewer() {}
 
@@ -419,6 +446,9 @@ return true if the method execution can have changed the current tool
 
   virtual TPropertyGroup *getProperties(int) { return 0; }
 
+  virtual bool onPropertyChanged(std::string propertyName, bool addToUndo) {
+    return onPropertyChanged(propertyName);
+  }
   /*!
           Does the tasks associated to changes in \p propertyName and returns \p
      true;
@@ -446,13 +476,15 @@ return true if the method execution can have changed the current tool
   int getFrame();        //!< Returns the actual frame in use.
   int getColumnIndex();  //!< Returns the actual column index.
 
-  TStageObjectId
-  getObjectId();  //!< Returns a pointer to the actual stage object.
+  TStageObjectId getObjectId()
+      const;  //!< Returns a pointer to the actual stage object.
 
-  void notifyImageChanged();  //!< Notifies changes on the actual image; used to
+  virtual void notifyImageChanged();  //!< Notifies changes on the actual image; used to
                               //! update
+                              //! override by vector selection tool
   //!  images on the level view.
-  void notifyImageChanged(const TFrameId &fid);  //!< Notifies changes on the
+  void notifyImageChanged(const TFrameId &fid,
+                          TXshSimpleLevel *sl= nullptr);  //!< Notifies changes on the
   //! frame \p fid; used to update
   //!  images on the level view.
 
@@ -466,8 +498,9 @@ return true if the method execution can have changed the current tool
   const TAffine &getMatrix() const { return m_matrix; }
   void setMatrix(const TAffine &matrix) { m_matrix = matrix; }
 
-  TAffine getCurrentColumnMatrix()
+  TAffine getCurrentColumnMatrix(int frame = -1)
       const;  //!< Returns the current column matrix transformation.
+              //!  if frame = -1 then it uses the current frame
               //!  \sa  TXsheet::getPlacement.
 
   TAffine getCurrentColumnParentMatrix()
@@ -480,9 +513,10 @@ return true if the method execution can have changed the current tool
           Returns the matrix transformation of the stage object with column
   index equal to \p index
           and frame as the current frame.
+          if frame = -1 then it uses the current frame
   \sa TXsheet::getPlacement.
   */
-  TAffine getColumnMatrix(int index) const;
+  TAffine getColumnMatrix(int index, int frame = -1) const;
 
   /*!
    Updates the current matrix transformation with the actual column matrix
@@ -503,7 +537,7 @@ transformation.
 
   QString updateEnabled();  //!< Sets the tool's \a enability and returns a
                             //!  reason in case the tool was disabled.
-  QString updateEnabled(int rowIndex, int columnIndex);
+  virtual QString updateEnabled(int rowIndex, int columnIndex);
 
   bool isColumnLocked(int columnIndex) const;
 
@@ -520,6 +554,9 @@ transformation.
   static const std::set<TFrameId> &getSelectedFrames() {
     return m_selectedFrames;
   }
+
+  void setCanUndo(bool on) { m_canUndo = on; }
+  bool isUndoable() const { return m_canUndo; }
 
   void tweenSelectedGuideStrokes();
   void tweenGuideStrokeToSelected();
@@ -547,12 +584,13 @@ public:
 protected:
   std::string m_name;  //!< The tool's name.
 
-  Viewer *m_viewer;  //!< Tool's current viewer.
+  TToolViewer *m_viewer;  //!< Tool's current viewer.
   TAffine m_matrix;  //!< World-to-window reference change affine.
 
   int m_targetType;  //!< The tool's image type target.
 
   bool m_enabled;  //!< Whether the tool allows user interaction.
+  bool m_canUndo = true; //!< Whether the tool allows the user to undo while the tool is selected
   bool m_active;
   bool m_picking;
 
@@ -560,8 +598,16 @@ protected:
 
   static std::set<TFrameId> m_selectedFrames;
 
-protected:
-  void bind(int targetType);
+private:
+  void bind(const std::string &name, int targetType);
+
+public:
+  inline void bind(int targetType)
+    { bind(getName(), targetType); }
+  void bind( int targetType,
+             const std::string &alias1,
+             const std::string &alias2 = std::string(),
+             const std::string &alias3 = std::string() );
 
   virtual void onSelectedFramesChanged() {}
 
@@ -571,17 +617,17 @@ protected:
 };
 
 //*****************************************************************************************
-//    TTool::Viewer  declaration
+//    TToolViewer  declaration
 //*****************************************************************************************
 
 /*!
-  \brief    The TTool::Viewer class is the abstract base class that provides an
+  \brief    The TToolViewer class is the abstract base class that provides an
   interface for
             TTool viewer widgets (it is required that such widgets support
   OpenGL).
 */
 
-class TTool::Viewer {
+class TToolViewer : public GLWidgetForHighDpi {
 protected:
   ImagePainter::VisualSettings
       m_visualSettings;  //!< Settings used by the Viewer to draw scene contents
@@ -589,10 +635,12 @@ protected:
   int guidedStrokePickMode = 0;
   int m_guidedFrontStroke  = -1;
   int m_guidedBackStroke   = -1;
+  QWidget *m_viewerWidget  = nullptr;
 
 public:
-  Viewer() {}
-  virtual ~Viewer() {}
+  TToolViewer(QWidget *widget, ImageUtils::FullScreenWidget* parent = nullptr) : 
+      m_viewerWidget(widget), GLWidgetForHighDpi(parent) {}
+  virtual ~TToolViewer() {}
 
   const ImagePainter::VisualSettings &visualSettings() const {
     return m_visualSettings;
@@ -615,6 +663,11 @@ public:
   virtual TAffine getViewMatrix() const {
     return TAffine();
   }  //!< Gets the viewer's current view affine (ie the transform from
+     //!<  starting to current <I> world view <\I>)
+
+  virtual TAffine4 get3dViewMatrix() const {
+    return TAffine4(getViewMatrix());
+  }  //!< Gets the viewer's current view affine 3d (ie the transform from
      //!<  starting to current <I> world view <\I>)
 
   //! return the column index of the drawing intersecting point \b p
@@ -671,6 +724,7 @@ public:
 
   /*-- Toolで画面の内外を判断するため --*/
   virtual TRectD getGeometry() const = 0;
+  virtual TRectD getCameraRect() const { return TRectD(); }
 
   virtual void bindFBO() {}
   virtual void releaseFBO() {}
@@ -701,6 +755,8 @@ public:
 
   void getGuidedFrameIdx(int *backIdx, int *frontIdx);
   void doPickGuideStroke(const TPointD &pos);
+
+  QWidget *viewerWidget() { return m_viewerWidget; }
 };
 
 #endif

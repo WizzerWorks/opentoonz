@@ -73,15 +73,15 @@ static unsigned char NotReady   = 1 << 6;
 
 //-----------------------------------------------------------------------------
 
-#define log
+#define log(_str)
 
-class TScannerExpection final : public TException {
+class TScannerException final : public TException {
   TString m_scannerMsg;
 
 public:
-  TScannerExpection(const std::vector<std::string> &notFatal,
+  TScannerException(const std::vector<std::string> &notFatal,
                     const std::string &fatal)
-      : TException("Scanner Expection") {
+      : TException("Scanner Exception") {
     m_scannerMsg = ::to_wstring(fatal);
     for (int i = notFatal.size(); i; i--)
       m_scannerMsg += L"\n" + ::to_wstring(notFatal[i - 1]);
@@ -254,7 +254,6 @@ throw TException("Scan area too large, select a correct paper size");
       rasBuffer = TRasterGR8P(dimlx, dimly);
       buffer    = rasBuffer->getRawData();
       break;
-      break;
 #else
       ras       = TRasterGR8P(dimlx, dimly);
       bytes     = tceil(dimlx / 8) * dimly;
@@ -412,7 +411,7 @@ fclose(myFile);*/
       (params.m_paperFeeder.m_value == 1.)) {
     if (!ESCI_command_1b('e', 1, true)) {
       std::vector<std::string> notFatal;
-      throw TScannerExpection(notFatal, "Scanner error (un)loading paper");
+      throw TScannerException(notFatal, "Scanner error (un)loading paper");
     }
     unsigned char p = 0x0C;
     bool status     = true;
@@ -460,13 +459,13 @@ void TScannerEpson::doSettings(const TScannerParameters &params,
     unsigned char brightness = 0x00;
     float bv                 = params.m_brightness.m_value;
 
-    if (bv >= 0 && bv < 43) brightness    = 0xFD;
-    if (bv >= 43 && bv < 86) brightness   = 0xFE;
-    if (bv >= 86 && bv < 128) brightness  = 0xFF;
+    if (bv >= 0 && bv < 43) brightness = 0xFD;
+    if (bv >= 43 && bv < 86) brightness = 0xFE;
+    if (bv >= 86 && bv < 128) brightness = 0xFF;
     if (bv >= 128 && bv < 171) brightness = 0x00;
     if (bv >= 171 && bv < 214) brightness = 0x01;
     if (bv >= 214 && bv < 255) brightness = 0x02;
-    if (bv == 255) brightness             = 0x03;
+    if (bv == 255) brightness = 0x03;
 
     unsigned short dpi = (unsigned short)params.m_dpi.m_value;
 
@@ -571,7 +570,7 @@ void TScannerEpson::doSettings(const TScannerParameters &params,
           (params.m_paperFeeder.m_value == 1.)) {
         unsigned char v = (params.m_paperFeeder.m_value == 1.) ? 0x01 : 0x00;
         if (!ESCI_command_1b('e', v, true))
-          throw TScannerExpection(notFatal, "Scanner error (un)loading paper");
+          throw TScannerException(notFatal, "Scanner error (un)loading paper");
         if (v) {
           unsigned char p = 0x19;
           bool status     = true;
@@ -583,7 +582,7 @@ void TScannerEpson::doSettings(const TScannerParameters &params,
     unsigned char setParamCmd[2] = {0x1C, 0x57};
     int wrote                    = send(&setParamCmd[0], 2);
     if (wrote != 2)
-      throw TScannerExpection(notFatal,
+      throw TScannerException(notFatal,
                               "Error setting scanner parameters - W -");
 
     if (!expectACK()) {
@@ -592,7 +591,7 @@ void TScannerEpson::doSettings(const TScannerParameters &params,
     }
     wrote = send(&cmd[0], 0x40);
     if (wrote != 0x40)
-      throw TScannerExpection(notFatal,
+      throw TScannerException(notFatal,
                               "Error setting scanner parameters - D -");
 
     if (!expectACK()) {
@@ -603,7 +602,7 @@ void TScannerEpson::doSettings(const TScannerParameters &params,
     break;
   }
   if (retryCount <= 0)
-    throw TScannerExpection(
+    throw TScannerException(
         notFatal, "Error setting scanner parameters, too many retries");
   log("doSettings:OK");
 }
@@ -868,7 +867,6 @@ bool TScannerEpson::ESCI_doADF(bool on) {
   bool status1        = expectACK();
   return status1;
 
-  return 1;
   if (!ESCI_command_1b('e', 0x01, true)) {
     if (on)
       throw TException("Scanner error loading paper");

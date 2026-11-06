@@ -1,9 +1,13 @@
-﻿cmake_minimum_required(VERSION 2.8.11)
+cmake_minimum_required(VERSION 3.10)
 
 set(CMAKE_BUILD_TYPE_INIT Release)
 
-project(OpenToonz)
+# Set C++17 globally 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+message(STATUS "C++ standard: ${CMAKE_CXX_STANDARD}")
 
+project(OpenToonz LANGUAGES C CXX)
 
 #-----------------------------------------------------------------------------
 # Platform Specific Defaults
@@ -81,7 +85,7 @@ endmacro()
 # values to initialize WITH_****
 option_defaults_init(
     _init_SYSTEM_LZO
-)
+  )
 
 # customize...
 if(BUILD_ENV_MSVC)
@@ -99,15 +103,38 @@ endif()
 #-----------------------------------------------------------------------------
 # Build Options
 
-option(WITH_SYSTEM_LZO "Use the system LZO library instead of 'thirdpary'" ${_init_SYSTEM_LZO})
-option(WITH_SYSTEM_SUPERLU "Use the system SuperLU library instead of 'thirdpary'" ${_init_SYSTEM_SUPERLU})
-option(WITH_STOPMOTION "Build with Stop Motion features - Requires Canon SDK" OFF)
+option(WITH_SYSTEM_LZO "Use the system LZO library instead of 'thirdparty'" ${_init_SYSTEM_LZO})
+option(WITH_SYSTEM_SUPERLU "Use the system SuperLU library instead of 'thirdparty'" ${_init_SYSTEM_SUPERLU})
+option(WITH_CANON "Build with Canon DSLR support - Requires Canon SDK" OFF)
+option(WITH_TRANSLATION "Generate translation projects as well" ON)
+option(WITH_WINTAB "(Windows only) Build with customized Qt with WinTab support. https://github.com/shun-iwasawa/qt5/releases/tag/v5.15.2_wintab" OFF)
 
 # avoid using again
 option_defaults_clear()
 
 # end option(...)
 
+#-----------------------------------------------------------------------------
+# Platform Architecture
+
+if(BUILD_ENV_APPLE)
+    if(NOT PLATFORM)
+        set(PLATFORM 64)
+    endif()
+else() # Windows and Linux case
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(PLATFORM 64)
+        set(PLATFORM2 _64)
+    elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+        set(PLATFORM 32)
+        set(PLATFORM2)
+    else()
+        message("Warning : CMAKE_SIZEOF_VOID_P = ${CMAKE_SIZEOF_VOID_P}")
+        set(PLATFORM 64)
+        set(PLATFORM2 _64)
+    endif()
+endif()
+message("PLATFORM:" ${PLATFORM})
 
 #-----------------------------------------------------------------------------
 # Third Party & System Libs
@@ -123,88 +150,104 @@ elseif(BUILD_ENV_MSVC OR BUILD_ENV_UNIXLIKE)
     set(THIRDPARTY_LIBS_HINTS ${SDKROOT})
 endif()
 
-message(STATUS "Thirdpary Library Search path:" ${THIRDPARTY_LIBS_HINTS})
+if(BUILD_ENV_MSVC)
+    # configure the third party libs (only once) to avoid manual copies
+    message(STATUS "configure the third party libs")
+    if(NOT EXISTS"${SDKROOT}/libpng-1.6.21")
+        file(COPY "${SDKROOT}/libpng-1.6.21/scripts/pnglibconf.h.prebuilt" DESTINATION "${SDKROOT}/libpng-1.6.21")
+        file(RENAME "${SDKROOT}/libpng-1.6.21/pnglibconf.h.prebuilt" "${SDKROOT}/libpng-1.6.21/pnglibconf.h")
+    endif()
+    if(NOT EXISTS "${SDKROOT}/tiff-4.0.3/libtiff/tif_config.h")
+        file(COPY_FILE "${SDKROOT}/tiff-4.0.3/libtiff/tif_config.vc.h" "${SDKROOT}/tiff-4.0.3/libtiff/tif_config.h")
+    endif()
+    if(NOT EXISTS "${SDKROOT}/tiff-4.0.3/libtiff/tiffconf.h")
+        file(COPY_FILE "${SDKROOT}/tiff-4.0.3/libtiff/tiffconf.vc.h" "${SDKROOT}/tiff-4.0.3/libtiff/tiffconf.h")
+    endif()
+endif()
+
+message(STATUS "Thirdparty Library Search path:" ${THIRDPARTY_LIBS_HINTS})
 
 if(BUILD_ENV_MSVC)
-    if(MSVC_VERSION GREATER 1800)
-        if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-            set(QT_PATH "C:/Qt/5.9.2/msvc2015" CACHE PATH "Qt instlattion directory")
-        else()
-            set(QT_PATH "C:/Qt/5.9.2/msvc2015_64" CACHE PATH "Qt instlattion directory")
+    if(NOT DEFINED QT_PATH OR NOT EXISTS ${QT_PATH})
+        set(QT_PATH "C:/Qt/5.15.2/msvc2019${PLATFORM2}" CACHE PATH "Qt installation directory")
+        if(NOT EXISTS ${QT_PATH})
+            message(FATAL_ERROR "QT_PATH not found: ${QT_PATH}. Specify QT_PATH properly.")
         endif()
-    else()
-        if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-            set(QT_PATH "C:/Qt/5.9.2/msvc2013" CACHE PATH "Qt instlattion directory")
-        else()
-            set(QT_PATH "C:/Qt/5.9.2/msvc2013_64" CACHE PATH "Qt instlattion directory")
-        endif()
-    endif()
-    if(NOT EXISTS ${QT_PATH})
-        message("Specify QT_PATH properly")
-        return()
     endif()
     set(QT_LIB_PATH ${QT_PATH})
-    set(CMAKE_PREFIX_PATH "${QT_PATH}/lib/cmake/")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4251")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4251")
+    set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${QT_PATH}/lib/cmake/")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /std:c++17 /wd4251")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17 /wd4251")
     add_definitions(
         -DVC_EXTRALEAN
         -DNOMINMAX
         -D_USE_MATH_DEFINES
-    )
+      )
 elseif(BUILD_ENV_APPLE)
-    if(NOT PLATFORM)
-        set(PLATFORM 64)
-    endif()
-    message("PLATFORM:" ${PLATFORM})
-    if(PLATFORM EQUAL 64)
-        set(QT_PATH "~/Qt5.9.2/5.9.2/clang_64/lib" CACHE PATH "Qt instlattion directory")
+    # Try to find Qt from Homebrew if not explicitly set
+    if(NOT DEFINED QT_PATH)
+        execute_process(
+            COMMAND brew --prefix qt@5
+            OUTPUT_VARIABLE HOMEBREW_QT_PREFIX
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            RESULT_VARIABLE BREW_RESULT
+          )
+        if(NOT BREW_RESULT EQUAL 0)
+            message(FATAL_ERROR "Homebrew 'qt@5' not found. Install with 'brew install qt@5' or set QT_PATH manually.")
+        endif()
+        set(QT_PATH "${HOMEBREW_QT_PREFIX}/lib" CACHE PATH "Qt installation directory (from Homebrew)")
+        message(STATUS "Auto-detected Qt path: ${QT_PATH}")
+        set(QT_LIB_PATH "${QT_PATH}")
+        list(APPEND CMAKE_PREFIX_PATH "${HOMEBREW_QT_PREFIX}/lib/cmake/Qt5")  # More precise for find_package(Qt5)
+        # Conventional usage: if the QT_PATH is explicitly set
+    else()
         set(QT_LIB_PATH "${QT_PATH}/")
-        set(CMAKE_PREFIX_PATH "${QT_LIB_PATH}cmake/")
+        list(APPEND CMAKE_PREFIX_PATH "${QT_LIB_PATH}cmake/")
+    endif()
 
-        message("CMAKE_PREFIX_PATH:" ${CMAKE_PREFIX_PATH})
-        add_definitions(
-            -DMACOSX
-            -Di386
-        )
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64 -std=c++11 -stdlib=libc++ -fno-implicit-templates")
+
+    foreach(path ${CMAKE_PREFIX_PATH})
+        message(STATUS "CMAKE_PREFIX_PATH: ${path}")
+    endforeach()
+
+    add_definitions(
+        -DMACOSX
+        -Di386
+        -D__MACOS__
+      )
+    if(PLATFORM EQUAL 64)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64 -stdlib=libc++ -fno-implicit-templates")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m64")
     elseif(PLATFORM EQUAL 32)
-        set(QT_PATH "~/Qt5.9.2/5.9.2/clang_32/lib" CACHE PATH "Qt instlattion directory")
-        set(QT_LIB_PATH "${QT_PATH}/")
-        set(CMAKE_PREFIX_PATH "${QT_LIB_PATH}cmake/")
-
-        message("CMAKE_PREFIX_PATH:" ${CMAKE_PREFIX_PATH})
-        add_definitions(
-            -DMACOSX
-            -Di386
-        )
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32 -std=c++11 -stdlib=libc++ -fno-implicit-templates -D HAS_QUICKDRAW")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32 -std=c++17 -stdlib=libc++ -fno-implicit-templates -D HAS_QUICKDRAW")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
         set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -m32")
     else()
         message(FATAL_ERROR "Invalid PLATFORM:" ${PLATFORM} ". 'PLATFORM' must be 32 or 64.")
     endif()
 elseif(BUILD_ENV_UNIXLIKE)
-    # Needed for correct Qt detection
-    cmake_minimum_required(VERSION 2.8.12)
-
-    if(CMAKE_SIZEOF_VOID_P MATCHES "8")
-        set(PLATFORM 64)
-    else()
-        set(PLATFORM 32)
-    endif()
+    # Needed for correct Qt detection (handled by top-level 3.5+)
+    # cmake_minimum_required(VERSION 2.8.12)  # Redundant and triggers <3.5 error
+    set(PRELOAD_VARIABLE "LD_LIBRARY_PATH")
     if(CMAKE_SYSTEM_NAME MATCHES "Linux")
         add_definitions(-DLINUX)
+    elseif(CMAKE_SYSTEM_NAME MATCHES "Haiku")
+        add_definitions(-DHAIKU)
+        set(PRELOAD_VARIABLE "LIBRARY_PATH")
+    elseif(CMAKE_SYSTEM_NAME MATCHES "^.*BSD$|DragonFly")
+        set(BUILD_TARGET_BSD ON)
+        add_definitions(-D_BSD_SOURCE -DFREEBSD)
+        include_directories("/usr/local/include/")
+        message(STATUS "Configuring for BSD system")
     elseif(NOT BUILD_TARGET_WIN)
         message(WARNING "Support for generic Unix (Not Apple or Linux) isn't yet working!")
     endif()
 
-    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD 17)
 
     find_package(Qt5Widgets)
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     if (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lstdc++")
     endif()
@@ -215,7 +258,7 @@ add_definitions(
     -DQT_NETWORK_LIB
     -DQT_CORE_LIB
     -DQT_SHARED
-)
+  )
 
 # Find includes in corresponding build directories
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -226,6 +269,7 @@ if(BUILD_ENV_APPLE)
     set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
     set(CMAKE_INSTALL_RPATH ${QT_LIB_PATH})
     set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+    set(CMAKE_FIND_FRAMEWORK LAST)
     list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${QT_LIB_PATH}" isSystemDir)
     if("${isSystemDir}" STREQUAL "-1")
         set(CMAKE_INSTALL_RPATH "${QT_LIB_PATH}")
@@ -234,7 +278,7 @@ endif()
 
 include_directories(
     include
-)
+  )
 
 # Find the QtWidgets library
 find_package(Qt5 REQUIRED
@@ -250,7 +294,14 @@ find_package(Qt5 REQUIRED
     LinguistTools
     Multimedia
     MultimediaWidgets
-)
+    SerialPort
+    UiTools
+  )
+
+if(NOT Qt5Core_FOUND)
+    message(FATAL_ERROR "Qt5Core not found check paths")
+endif()
+message(STATUS "Qt5 Modules: ${Qt5Core_VERSION}")
 
 set(QT_MINIMUM_VERSION 5.5.0)
 if(Qt5Core_VERSION VERSION_LESS QT_MINIMUM_VERSION)
@@ -259,32 +310,34 @@ if(Qt5Core_VERSION VERSION_LESS QT_MINIMUM_VERSION)
 endif()
 unset(QT_MINIMUM_VERSION)
 
-if(BUILD_ENV_MSVC AND NOT WITH_STOPMOTION)
+if(BUILD_ENV_MSVC)
     include_directories(
         SYSTEM
         ${SDKROOT}/glut/3.7.6/include
         ${SDKROOT}/zlib-1.2.8
-        ${SDKROOT}/LibJPEG/jpeg-9
-    )
+        #${SDKROOT}/LibJPEG/jpeg-9
+        ${SDKROOT}/libjpeg-turbo/include
+      )
     add_definitions(
         -DGLUT_NO_LIB_PRAGMA
-    )
+      )
 endif()
 
-if(BUILD_ENV_MSVC AND WITH_STOPMOTION)
-    find_package(OpenCV 4.1 REQUIRED)
-    include_directories(
-        SYSTEM
-        ${SDKROOT}/glut/3.7.6/include
-        ${SDKROOT}/zlib-1.2.8
-        ${SDKROOT}/LibJPEG/jpeg-9
-        ${SDKROOT}/canon/Header
-        ${SDKROOT}/libjpeg-turbo64/include
-        ${OpenCV_INCLUDE_DIRS}
-    )
-    add_definitions(
-        -DGLUT_NO_LIB_PRAGMA
-    )
+
+if(PLATFORM EQUAL 64)
+    if(BUILD_ENV_UNIXLIKE)
+        find_package(OpenCV REQUIRED)
+    else() # Windows and MacOS case
+        find_package(OpenCV 4.1 REQUIRED)
+    endif()
+    #include_directories(
+    #    ${SDKROOT}/libjpeg-turbo64/include
+    #)
+    if(WITH_CANON)
+        include_directories(
+            ${SDKROOT}/canon/Header
+          )
+    endif()
 endif()
 
 get_target_property(QtCore_location Qt5::Core LOCATION)
@@ -295,7 +348,7 @@ macro(_find_toonz_library OUT_LIB_LIST IN_LIB_LIST)
     set(OUTLIST "")
     foreach(arg ${IN_LIB_LIST})
         unset(COREPATH CACHE)
-        # find しても cmake が走るときにはできていないので完全なパス名を生成して返すだけ
+        # Even if you try to find, CMake might not work properly, so we just generate and return the full path
         if(BUILD_ENV_APPLE)
             set(LIBPATH "\$<TARGET_FILE:${arg}>")
         else()
@@ -312,50 +365,43 @@ set(TFARM_Location)
 set(QT_LIB)  # avoid warning
 
 if(BUILD_ENV_MSVC)
-    if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-        set(PLATFORM 32)
-        set(PLATFORM2)
-    else()
-        set(PLATFORM 64)
-        set(PLATFORM2 _64)
-    endif()
-
-    if(MSVC_VERSION GREATER 1800)
-        set(MSVC_LIB_VERSION 2015)
-    else()
-        set(MSVC_LIB_VERSION 2013)
-    endif()
+    set(MSVC_LIB_VERSION 2015)
 
     set(GLUT_LIB ${SDKROOT}/glut/3.7.6/lib/glut${PLATFORM}.lib)
     set(GL_LIB opengl32.lib)
     set(Z_LIB
-        optimized ${SDKROOT}/zlib-1.2.8/lib/zlib-1.2.8_${MSVC_LIB_VERSION}${PLATFORM2}.lib
-        debug ${SDKROOT}/zlib-1.2.8/lib/zlib-1.2.8_${MSVC_LIB_VERSION}${PLATFORM2}d.lib
-    )
-    set(JPEG_LIB ${SDKROOT}/LibJPEG/jpeg-9/lib/LibJPEG-9_${MSVC_LIB_VERSION}${PLATFORM2}.lib)
+    optimized ${SDKROOT}/zlib-1.2.8/lib/zlib-1.2.8_${MSVC_LIB_VERSION}${PLATFORM2}.lib
+    debug ${SDKROOT}/zlib-1.2.8/lib/zlib-1.2.8_${MSVC_LIB_VERSION}${PLATFORM2}d.lib
+      )
+    #set(JPEG_LIB ${SDKROOT}/LibJPEG/jpeg-9/lib/LibJPEG-9_${MSVC_LIB_VERSION}${PLATFORM2}.lib)
+    set(JPEG_LIB ${SDKROOT}/libjpeg-turbo/lib/jpeg-static_${MSVC_LIB_VERSION}${PLATFORM2}.lib)
+    set(TURBOJPEG_LIB ${SDKROOT}/libjpeg-turbo/lib/turbojpeg-static_${MSVC_LIB_VERSION}${PLATFORM2}.lib)
     set(TIFF_INCLUDE_DIR ${SDKROOT}/tiff-4.0.3/libtiff)
     set(TIFF_LIB
-        optimized ${SDKROOT}/tiff-4.0.3/lib/LibTIFF-4.0.3_${MSVC_LIB_VERSION}${PLATFORM2}.lib
-        debug  ${SDKROOT}/tiff-4.0.3/lib/LibTIFF-4.0.3_${MSVC_LIB_VERSION}${PLATFORM2}d.lib
-    )
+    optimized ${SDKROOT}/tiff-4.0.3/lib/LibTIFF-4.0.3_${MSVC_LIB_VERSION}${PLATFORM2}.lib
+    debug  ${SDKROOT}/tiff-4.0.3/lib/LibTIFF-4.0.3_${MSVC_LIB_VERSION}${PLATFORM2}d.lib
+      )
     set(PNG_LIB
-        optimized ${SDKROOT}/libpng-1.6.21/lib/libpng16_${MSVC_LIB_VERSION}${PLATFORM2}.lib
-        debug  ${SDKROOT}/libpng-1.6.21/lib/libpng16_${MSVC_LIB_VERSION}${PLATFORM2}d.lib
-    )
+    optimized ${SDKROOT}/libpng-1.6.21/lib/libpng16_${MSVC_LIB_VERSION}${PLATFORM2}.lib
+    debug  ${SDKROOT}/libpng-1.6.21/lib/libpng16_${MSVC_LIB_VERSION}${PLATFORM2}d.lib
+      )
     set(GLEW_LIB ${SDKROOT}/glew/glew-1.9.0/lib/glew${PLATFORM}.lib)
     set(LZ4_LIB ${SDKROOT}/Lz4/Lz4_131/lz4_${PLATFORM}.lib)
     set(SUPERLU_LIB ${SDKROOT}/superlu/SuperLU_${MSVC_LIB_VERSION}_${PLATFORM}.lib)
     set(OPENBLAS_LIB ${SDKROOT}/openblas/libopenblas_${PLATFORM}.lib)
     set(USB_LIB)  # unused
-    if (WITH_STOPMOTION)
-        set(CANON_LIB ${SDKROOT}/canon/library/EDSDK.lib)
-        set(TURBOJPEG_LIB ${SDKROOT}/libjpeg-turbo64/lib/turbojpeg.lib)
-    endif()
+
     if(PLATFORM EQUAL 32)
         set(QT_LIB ${SDKROOT}/quicktime/QT73SDK/Libraries/QTMLClient.lib)
     endif()
     set(MYPAINT_LIB_INCLUDE_DIRS ${SDKROOT}/libmypaint/dist/${PLATFORM}/include/libmypaint)
     set(MYPAINT_LIB_LDFLAGS ${SDKROOT}/libmypaint/dist/${PLATFORM}/libmypaint.lib)
+
+    if(PLATFORM EQUAL 64)
+        if (WITH_CANON)
+            set(CANON_LIB ${SDKROOT}/canon/library/EDSDK.lib)
+        endif()
+    endif()
 elseif(BUILD_ENV_APPLE)
     find_library(GLUT_LIB GLUT)
     find_library(GL_LIB OpenGL)
@@ -381,7 +427,11 @@ elseif(BUILD_ENV_APPLE)
     if(GLEW-NOTFOUND)
         pkg_check_modules(GLEW REQUIRED glew)
     endif()
-    set(GLEW_LIB ${GLEW_LIBRARIES})
+    if (TARGET GLEW::GLEW)
+        set(GLEW_LIB GLEW::GLEW)
+    else()
+        set(GLEW_LIB ${GLEW_LIBRARIES})
+    endif()
 
     pkg_check_modules(LZ4_LIB REQUIRED liblz4)
 
@@ -404,11 +454,22 @@ elseif(BUILD_ENV_APPLE)
     message("LZO:" ${LZO_INCLUDE_DIR})
 
     pkg_check_modules(MYPAINT_LIB REQUIRED libmypaint)
+
+    set(MYPAINT_LIB_LIBRARIES ${MYPAINT_LIB_LIBRARIES} CACHE INTERNAL "")
+    set(MYPAINT_LIB_INCLUDE_DIRS ${MYPAINT_LIB_INCLUDE_DIRS} CACHE INTERNAL "")
+
+    if(PLATFORM EQUAL 64)
+        pkg_check_modules(TURBOJPEG REQUIRED libturbojpeg)
+        find_library(TURBOJPEG_LIB turbojpeg ${TURBOJPEG_LIBRARY_DIRS})
+        message("**************** turbojpeg lib:" ${TURBOJPEG_LIB})
+
+        if (WITH_CANON)
+            set(CANON_LIB ${SDKROOT}/canon/Framework/EDSDK.framework)
+        endif()
+    endif()
+
 elseif(BUILD_ENV_UNIXLIKE)
     if(BUILD_TARGET_WIN)
-        if(PLATFORM EQUAL 32)
-            set(QT_LIB ${SDKROOT}/quicktime/QT73SDK/Libraries/QTMLClient.lib)
-        endif()
         find_library(GL_LIB opengl32)
         find_library(GLU_LIB glu32)
         find_library(GLUT_LIB NAMES glut freeglut)
@@ -419,7 +480,9 @@ elseif(BUILD_ENV_UNIXLIKE)
     endif()
     find_library(Z_LIB z)
 
-    find_package(TIFF REQUIRED)
+    if(NOT BUILD_TARGET_BSD)
+        find_package(TIFF REQUIRED)
+    endif()
     find_package(PNG REQUIRED)
     set(PNG_LIB ${PNG_LIBRARY})
     message("******* libpng:" ${PNG_LIB})
@@ -438,10 +501,15 @@ elseif(BUILD_ENV_UNIXLIKE)
     pkg_check_modules(LZMA liblzma)
     set(TIFF_LIB ${TIFF_LIBRARY} ${LZMA_LIBRARIES})
 
-    if(GLEW-NOTFOUND)
+    if(TARGET GLEW::GLEW)
+        set(GLEW_LIB GLEW::GLEW)
+    elseif(GLEW_FOUND)
+        set(GLEW_LIB ${GLEW_LIBRARIES})
+    else()
+        find_package(PkgConfig REQUIRED)
         pkg_check_modules(GLEW REQUIRED glew)
+        set(GLEW_LIB ${GLEW_LIBRARIES})
     endif()
-    set(GLEW_LIB ${GLEW_LIBRARIES})
 
     pkg_check_modules(LZ4_LIB REQUIRED liblz4)
 
@@ -461,12 +529,22 @@ elseif(BUILD_ENV_UNIXLIKE)
     find_package(LZO REQUIRED)
     message("LZO:" ${LZO_INCLUDE_DIR})
 
+    if(BUILD_TARGET_BSD OR HAIKU)
+        find_library(EXECINFO_LIBRARY execinfo)
+    endif()
+    find_library(PTHREAD_LIBRARY pthread)
+
     if(NOT BUILD_TARGET_WIN)
         pkg_check_modules(USB_LIB REQUIRED libusb-1.0)
         pkg_check_modules(FREETYPE REQUIRED freetype2)
     endif()
     # Can be 'libmypaint' or 'libmypaint-1.x'
     pkg_search_module(MYPAINT_LIB REQUIRED libmypaint libmypaint-1.3>=1.3)
+
+    if(PLATFORM EQUAL 64)
+        find_library(TURBOJPEG_LIB turbojpeg)
+        message("**************** turbojpeg lib:" ${TURBOJPEG_LIB})
+    endif()
 endif()
 
 
@@ -499,25 +577,32 @@ include_directories(
     BEFORE
     ${TIFF_INCLUDE_DIR}
     ${PNG_INCLUDE_DIRS}
-)
+  )
 
 if(BUILD_ENV_MSVC OR BUILD_ENV_APPLE)
+    # Handle CMake 3.30+/4.x: Force legacy module for prebuilt Boost (no config files)
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.30)
+        cmake_policy(SET CMP0167 OLD)  # Use FindBoost module, not config
+    endif()
+    # Set hints/ROOT for both branches
+    set(Boost_NO_BOOST_CMAKE ON)  # Explicitly disable config search
     find_path(
         BOOST_ROOT
-            include/boost
-            boost
+        include/boost
+        boost
         HINTS
+            ${BOOST_ROOT}  # From -D or env
             ${THIRDPARTY_LIBS_HINTS}
-        PATH_SUFFIXES
-            boost/boost_1_61_0/
-            boost/boost_1_60_0/
-            boost/boost_1_59_0/
-            boost/boost_1_58_0/
-            boost/boost_1_57_0/
-            boost/boost_1_56_0/
-            boost155/1.55.0_1/
-            boost/boost_1_55_0/
-    )
+            PATH_SUFFIXES
+                boost/boost_1_89_0/  # Added recent versions (e.g., Homebrew 1.89)
+                boost/boost_1_87_0/
+                boost/boost_1_86_0/
+                boost/boost_1_85_0/
+                boost/boost_1_75_0/
+                boost/boost_1_74_0/
+                boost/boost_1_73_0/
+                boost/boost_1_72_0/
+      )
     find_package(Boost 1.55 REQUIRED)
 else()
     find_package(Boost)
@@ -531,9 +616,9 @@ include_directories(
     ${SUPERLU_INCLUDE_DIR}
     ${JPEG_INCLUDE_DIR}
     ${MYPAINT_LIB_INCLUDE_DIRS}
-)
+  )
 
-if(BUILD_TARGET_WIN AND PLATFORM EQUAL 64)
+if(PLATFORM EQUAL 64)
     add_definitions(-Dx64)
 endif()
 
@@ -541,6 +626,9 @@ if(BUILD_ENV_MSVC)
     # place Toonz.exe and dlls in the same directory
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+    # use secure functions by defaualt
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1")
 elseif(BUILD_ENV_APPLE)
     # pass
 elseif(BUILD_ENV_UNIXLIKE)
@@ -563,26 +651,83 @@ if(BUILD_ENV_MSVC AND MSVC_VERSION EQUAL 1800)
     add_compile_options("/wd4819")
 endif()
 
-# generate Qt translations and messages
-set(LANGUAGES japanese italian french spanish chinese german russian korean czech)
+# =============================================================================
+# Translation compilation (.ts -> .qm) and folder renaming
+# =============================================================================
+if(WITH_TRANSLATION)
 
-function(add_translation module)
-    set(translation)
-    foreach(lang ${LANGUAGES})
-        set(name "${CMAKE_SOURCE_DIR}/translations/${lang}/${module}.ts")
-        list(APPEND translation ${name})
-        set_source_files_properties(${name} PROPERTIES
-            OUTPUT_LOCATION "${CMAKE_BINARY_DIR}/loc/${lang}"
+    # ---------------------------------------------------------------------
+    # Language data and display names
+    # ---------------------------------------------------------------------
+    set(LANG_CODES
+    japanese italian french spanish chinese german russian korean czech
+      )
+
+    set(LANG_DISPLAY_NAMES
+    "日本語" "Italiano" "Français" "Español" "中文" "Deutsch" "Русский" "한국어" "Čeština"
+      )
+
+    list(LENGTH LANG_CODES CODE_COUNT)
+    list(LENGTH LANG_DISPLAY_NAMES DISPLAY_COUNT)
+    if(NOT CODE_COUNT EQUAL DISPLAY_COUNT)
+        message(FATAL_ERROR "LANG_CODES and LANG_DISPLAY_NAMES must have the same length!")
+    endif()
+    
+    # -------------------------------------------------------------------------
+    # translate_update_** projects for lupdate (update .ts files)
+    # -------------------------------------------------------------------------
+    function(add_translation module)
+        set(translation)
+        foreach(lang ${LANG_CODES})
+            set(name "${CMAKE_SOURCE_DIR}/translations/${lang}/${module}.ts")
+            list(APPEND translation ${name})
+            set_source_files_properties(${name} PROPERTIES
+                OUTPUT_LOCATION "${CMAKE_BINARY_DIR}/loc/${lang}"
+            )
+        endforeach()
+
+        qt5_create_translation(message ${translation} ${ARGN})
+
+        add_custom_target("translate_update_${module}" DEPENDS ${message})
+        set_target_properties("translate_update_${module}" PROPERTIES
+            EXCLUDE_FROM_DEFAULT_BUILD TRUE
         )
-    endforeach()
+    endfunction()
 
-    qt5_create_translation(message ${translation} ${ARGN})
+    # ---------------------------------------------------------------------
+    # add lrelease command (compiling .ts -> .qm) to each project
+    # ---------------------------------------------------------------------
+    function(add_compile_translations_command module ts_name)
+        set(qm_files "")
+        list(LENGTH LANG_CODES NUM_LANGS)
+        math(EXPR LAST_INDEX "${NUM_LANGS}-1")
+        foreach(idx RANGE 0 ${LAST_INDEX})
+            list(GET LANG_CODES ${idx} lang)
+            list(GET LANG_DISPLAY_NAMES ${idx} lang_disp_name)
+            set(ts_file "${CMAKE_SOURCE_DIR}/translations/${lang}/${ts_name}.ts")
+            set(qm_dir  "${CMAKE_BINARY_DIR}/../../stuff/config/loc/${lang_disp_name}")
+            set(qm_file "${qm_dir}/${ts_name}.qm")
+            # Temporarily generate qm files directly under loc, then rename them to respective language folders
+            set(qm_tmp_dir  "${CMAKE_BINARY_DIR}/../../stuff/config/loc")
+            set(qm_tmp_file "${qm_tmp_dir}/${lang}_${ts_name}.qm")
 
-    add_custom_target("translation_${module}" DEPENDS ${message})
-    set_target_properties("translation_${module}" PROPERTIES
-        EXCLUDE_FROM_DEFAULT_BUILD TRUE
-    )
-endfunction()
+            # Ensure output directory exists at configure time (safe for parallel builds)
+            file(MAKE_DIRECTORY "${qm_dir}")
+
+            if(EXISTS "${ts_file}")
+                add_custom_command(
+                    TARGET "${module}" POST_BUILD 
+                    COMMAND ${Qt5_LRELEASE_EXECUTABLE} "${ts_file}" -qm "${qm_tmp_file}"
+                    COMMAND ${CMAKE_COMMAND} -E rename ${qm_tmp_file} ${qm_file}
+                    DEPENDS "${ts_file}"
+                    BYPRODUCTS "${qm_file}"
+                    COMMENT "lrelease ${lang_disp_name}/${ts_name}.qm"
+                    VERBATIM
+                  )
+            endif()
+        endforeach()
+    endfunction()
+endif()
 
 set(CMAKE_C_FLAGS "${C_WARNINGS} ${CMAKE_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CXX_WARNINGS} ${CMAKE_CXX_FLAGS}")
@@ -607,22 +752,16 @@ add_subdirectory(tcomposer)
 add_subdirectory(tconverter)
 add_subdirectory(toonzfarm)
 
+if(BUILD_TARGET_WIN)
+    add_subdirectory(toonzpreview)
+endif()
+
 if(BUILD_ENV_APPLE)
     add_subdirectory(mousedragfilter)
 endif()
 
-if((PLATFORM EQUAL 32) AND (BUILD_TARGET_WIN OR BUILD_TARGET_APPLE))
+if((PLATFORM EQUAL 32) AND ((BUILD_TARGET_WIN AND BUILD_ENV_MSVC) OR BUILD_TARGET_APPLE))
     add_subdirectory(t32bitsrv)
-endif()
-
-if(BUILD_ENV_APPLE)
-    add_custom_command(TARGET executable
-        POST_BUILD COMMAND
-        ${CMAKE_INSTALL_NAME_TOOL} -add_rpath ${CMAKE_INSTALL_RPATH}
-        $<TARGET_FILE:executable>
-    )
-    # add capability for retina displays
-    set_target_properties(OpenToonz PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/../cmake/BundleInfo.plist.in)
 endif()
 
 if(BUILD_ENV_UNIXLIKE AND NOT BUILD_TARGET_WIN)

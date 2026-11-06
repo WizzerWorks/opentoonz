@@ -28,6 +28,7 @@
 #include "toonz/tframehandle.h"
 #include "toonz/txsheethandle.h"
 #include "toonz/tstageobject.h"
+#include "toonzqt/gutil.h"
 
 #include <QApplication>
 #include <QClipboard>
@@ -382,12 +383,16 @@ int UndoDeleteSelection::m_id = 0;
 // UndoPasteSelection
 //-----------------------------------------------------------------------------
 
-class UndoPasteSelection final : public TUndo {
+class UndoPasteSelection final : public ToolUtils::TToolUndo {
   RasterSelection *m_currentSelection, m_newSelection;
 
 public:
-  UndoPasteSelection(RasterSelection *currentSelection)
-      : TUndo()
+  UndoPasteSelection(RasterSelection *currentSelection, TXshSimpleLevel *sl,
+                     const TPaletteP &oldPalette)
+      : TToolUndo(sl, currentSelection->getFrameId(),
+                  currentSelection->wasFrameCreated(),
+                  currentSelection->wasLevelCreated(), oldPalette,
+                  currentSelection->wasLevelRenumbered())
       , m_currentSelection(currentSelection)
       , m_newSelection(*currentSelection) {}
 
@@ -397,9 +402,17 @@ public:
     m_currentSelection->setFloatingSeletion(TRasterP());
     m_currentSelection->selectNone();
     m_currentSelection->notify();
+    removeLevelAndFrameIfNeeded();
+    if (m_createdFrame)
+      TTool::getApplication()->getCurrentXsheet()->notifyXsheetChanged();
+    notifyImageChanged();
   }
 
   void redo() const override {
+    insertLevelAndFrameIfNeeded();
+    if (m_createdFrame)
+      TTool::getApplication()->getCurrentXsheet()->notifyXsheetChanged();
+    notifyImageChanged();
     *m_currentSelection = m_newSelection;
     m_currentSelection->notify();
   }
@@ -413,7 +426,7 @@ public:
 // UndoPasteFloatingSelection
 //-----------------------------------------------------------------------------
 
-class UndoPasteFloatingSelection final : public TUndo {
+class UndoPasteFloatingSelection final : public ToolUtils::TToolUndo {
   static int m_id;
 
   TXshCell m_imageCell;  //!< Level/frame pair to the pasted-to image
@@ -432,8 +445,12 @@ class UndoPasteFloatingSelection final : public TUndo {
 
 public:
   UndoPasteFloatingSelection(RasterSelection *currentSelection,
-                             TPalette *oldPalette, bool noAntialiasing)
-      : TUndo()
+                             TXshSimpleLevel *sl, TPalette *oldPalette,
+                             bool noAntialiasing)
+      : TToolUndo(sl, currentSelection->getFrameId(),
+                  currentSelection->wasFrameCreated(),
+                  currentSelection->wasLevelCreated(), oldPalette,
+                  currentSelection->wasLevelRenumbered())
       , m_imageCell(currentSelection->getCurrentImageCell())
       , m_oldPalette(oldPalette ? oldPalette->clone() : 0)
       , m_strokes(currentSelection->getOriginalStrokes())
@@ -536,6 +553,10 @@ public:
     app->getPaletteController()
         ->getCurrentLevelPalette()
         ->notifyPaletteChanged();
+
+    removeLevelAndFrameIfNeeded();
+    if (m_createdFrame) app->getCurrentXsheet()->notifyXsheetChanged();
+
     if (!m_tool) return;
     m_tool->notifyImageChanged(m_frameId);
     m_tool->invalidate();
@@ -546,6 +567,11 @@ public:
     TImageP floatingImage =
         TImageCache::instance()->get(m_floatingImageId, false);
     if (!floatingImage || !image) return;
+
+    TTool::Application *app = TTool::getApplication();
+    insertLevelAndFrameIfNeeded();
+    if (m_createdFrame) app->getCurrentXsheet()->notifyXsheetChanged();
+
     TRasterP floatingRas = getRaster(floatingImage);
 
     TXshSimpleLevelP sl(m_imageCell.getSimpleLevel());
@@ -560,7 +586,6 @@ public:
     ToolUtils::updateSaveBox(sl, fid);
 
     if (m_newPalette) image->getPalette()->assign(m_newPalette->clone());
-    TTool::Application *app = TTool::getApplication();
     app->getPaletteController()
         ->getCurrentLevelPalette()
         ->notifyPaletteChanged();
@@ -796,6 +821,19 @@ TStroke getIntersectedStroke(TStroke &stroke, TRectD bbox) {
       TThickPoint p  = getIntersectionPoint(bbox, stroke.getChunk(chunkIndex),
                                            currentSegmentIndex,
                                            chunkIndex == precChunkIndex);
+
+      // exactly match the position with the edge of bbox
+      // or the pasted raster may offset by 1pixel due to truncation in
+      // ToonzImageUtils::convertWorldToRaster()
+      if (areAlmostEqual(p.x, bbox.getP00().x, 1e-6))
+        p.x = bbox.getP00().x;
+      else if (areAlmostEqual(p.x, bbox.getP11().x, 1e-6))
+        p.x = bbox.getP11().x;
+      if (areAlmostEqual(p.y, bbox.getP00().y, 1e-6))
+        p.y = bbox.getP00().y;
+      else if (areAlmostEqual(p.y, bbox.getP11().y, 1e-6))
+        p.y = bbox.getP11().y;
+
       precChunkIndex = chunkIndex;
       addPointToVector(p, outPoints, (int)outPoints.size() % 2 == 1);
       if (!isPrecPointInternal && points.size() > 0 && outPoints.size() > 0) {
@@ -866,7 +904,10 @@ RasterSelection::RasterSelection()
     , m_fid()
     , m_transformationCount(0)
     , m_isPastedSelection(false)
-    , m_noAntialiasing(false) {
+    , m_noAntialiasing(false)
+    , m_createdFrame(false)
+    , m_createdLevel(false)
+    , m_renumberedLevel(false) {
   m_strokes.clear();
   m_originalStrokes.clear();
 }
@@ -886,6 +927,9 @@ RasterSelection::RasterSelection(const RasterSelection &src)
     , m_transformationCount(src.m_transformationCount)
     , m_isPastedSelection(src.m_isPastedSelection)
     , m_noAntialiasing(src.m_noAntialiasing)
+    , m_createdFrame(src.m_createdFrame)
+    , m_createdLevel(src.m_createdLevel)
+    , m_renumberedLevel(src.m_renumberedLevel)
 
 {
   setView(src.getView());
@@ -918,7 +962,7 @@ void RasterSelection::notify() {
 
 //! Empty the selection.
 //! If the selection is floating, the floating image is pasted using the current
-//! tranformation.
+//! transformation.
 void RasterSelection::selectNone() {
   if (isFloating()) {
     pasteFloatingSelection();
@@ -935,6 +979,9 @@ void RasterSelection::selectNone() {
   m_transformationCount       = 0;
   m_isPastedSelection         = false;
   m_oldPalette                = 0;
+  m_createdFrame              = false;
+  m_createdLevel              = false;
+  m_renumberedLevel           = false;
   notify();
 }
 
@@ -1033,7 +1080,8 @@ void RasterSelection::pasteFloatingSelection() {
 
   if (m_transformationCount > 0 || m_isPastedSelection)
     TUndoManager::manager()->add(new UndoPasteFloatingSelection(
-        this, m_oldPalette.getPointer(), m_noAntialiasing));
+        this, m_currentImageCell.getSimpleLevel(), m_oldPalette.getPointer(),
+        m_noAntialiasing));
   else if (m_transformationCount == 0)
     TUndoManager::manager()->popUndo(-1, true);
 
@@ -1125,7 +1173,7 @@ void RasterSelection::cutSelection() {
 
 //-----------------------------------------------------------------------------
 
-void RasterSelection::pasteSelection(const RasterImageData *riData) {
+bool RasterSelection::pasteSelection(const RasterImageData *riData) {
   std::vector<TRectD> rect;
   double currentDpiX, currentDpiY;
   double dpiX, dpiY;
@@ -1139,18 +1187,18 @@ void RasterSelection::pasteSelection(const RasterImageData *riData) {
     if (fullColorData) {
       DVGui::error(QObject::tr(
           "The copied selection cannot be pasted in the current drawing."));
-      return;
+      return false;
     }
     riData->getData(cmRas, dpiX, dpiY, rect, m_strokes, m_originalStrokes,
                     m_affine, m_currentImage->getPalette());
-    if (!cmRas) return;
+    if (!cmRas) return false;
     m_floatingSelection = cmRas;
   } else if (TRasterImageP ri = (TRasterImageP)m_currentImage) {
     ri->getDpi(currentDpiX, currentDpiY);
     TRasterP ras;
     riData->getData(ras, dpiX, dpiY, rect, m_strokes, m_originalStrokes,
                     m_affine, ri->getPalette());
-    if (!ras) return;
+    if (!ras) return false;
     if (TRasterCM32P rasCM = ras) {
       TDimension dim = rasCM->getSize();
       TRaster32P app = TRaster32P(dim.lx, dim.ly);
@@ -1163,8 +1211,9 @@ void RasterSelection::pasteSelection(const RasterImageData *riData) {
     m_originalfloatingSelection = m_floatingSelection->clone();
   TScale sc;
   if (dpiX != 0 && dpiY != 0 && currentDpiX != 0 && currentDpiY != 0)
-    sc     = TScale(currentDpiX / dpiX, currentDpiY / dpiY);
+    sc = TScale(currentDpiX / dpiX, currentDpiY / dpiY);
   m_affine = m_affine * sc;
+  return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -1182,6 +1231,10 @@ void RasterSelection::pasteSelection() {
     return;
   }
 
+  TXshLevel *xl       = app->getCurrentLevel()->getLevel();
+  TXshSimpleLevel *sl = xl ? xl->getSimpleLevel() : nullptr;
+  int levelType       = sl ? sl->getType() : NO_XSHLEVEL;
+
   m_currentImage = image;
   m_fid          = tool->getCurrentFid();
 
@@ -1190,11 +1243,30 @@ void RasterSelection::pasteSelection() {
       dynamic_cast<const RasterImageData *>(clipboard->mimeData());
   const StrokesData *stData =
       dynamic_cast<const StrokesData *>(clipboard->mimeData());
-  if (!riData && !stData) return;
+  QImage clipImage = clipboard->image();
+  if (!riData && !stData && clipImage.height() == 0) return;
   if (isFloating()) pasteFloatingSelection();
   selectNone();
   m_isPastedSelection = true;
-  m_oldPalette        = m_currentImage->getPalette()->clone();
+  m_createdFrame      = tool->m_isFrameCreated;
+  m_createdLevel      = tool->m_isLevelCreated;
+  m_renumberedLevel   = tool->m_isLevelRenumbererd;
+
+  if (!m_currentImageCell.getSimpleLevel()) {
+    const TXshCell &imageCell = TTool::getImageCell();
+
+    TImageP image =
+        imageCell.getImage(false, 1);  // => See the onImageChanged() warning !
+
+    TToonzImageP ti  = (TToonzImageP)image;
+    TRasterImageP ri = (TRasterImageP)image;
+    if (!ti && !ri) return;
+
+    makeCurrent();
+    setCurrentImage(image, imageCell);
+  }
+  if (m_currentImage->getPalette())
+    m_oldPalette = m_currentImage->getPalette()->clone();
   if (stData) {
     if (TToonzImageP ti = m_currentImage)
       riData = stData->toToonzImageData(ti);
@@ -1214,12 +1286,53 @@ void RasterSelection::pasteSelection() {
     }
   }
 
+  if (clipImage.height() > 0 && (levelType == OVL_XSHLEVEL ||
+                                 m_currentImage->getType() == OVL_XSHLEVEL)) {
+    // An image was pasted from outside OpenToonz
+
+    // Set up variables
+    std::vector<TRectD> rects;
+    const std::vector<TStroke> strokes;
+    const std::vector<TStroke> originalStrokes;
+    TRasterImageP ri = m_currentImage;
+    TAffine aff;
+    TRasterP ras = rasterFromQImage(clipImage);
+    // center the image in the viewer
+    rects.push_back(TRectD(0.0 - clipImage.width() / 2,
+                           0.0 - clipImage.height() / 2, clipImage.width() / 2,
+                           clipImage.height() / 2));
+
+    TRectD r =
+        TRectD(0.0 - (clipImage.width() / 2), 0.0 - (clipImage.height() / 2),
+               clipImage.width() / 2, clipImage.height() / 2);
+    TRect box = getRaster(m_currentImage)->getBounds();
+    r *= convertRasterToWorld(box, m_currentImage);
+    if (!r.isEmpty()) {
+      TStroke stroke = getStrokeByRect(r);
+      if ((int)stroke.getControlPointCount() == 0) return;
+      m_strokes.push_back(stroke);
+      m_originalStrokes.push_back(stroke);
+    }
+    // pack up the data to send to the next pasteSelection
+    FullColorImageData *qimageData = new FullColorImageData();
+
+    qimageData->setData(ras, ri->getPalette(), 120.0, 120.0,
+                        ri->getRaster()->getSize(), rects, m_strokes,
+                        m_originalStrokes, aff);
+    setSelectionBbox(TRectD(0.0 - clipImage.width() / 2,
+                            0.0 - clipImage.height() / 2, clipImage.width() / 2,
+                            clipImage.height() / 2));
+
+    riData = qimageData;
+  }
+
   if (!riData) return;
-  pasteSelection(riData);
+  if (!pasteSelection(riData)) return;
 
   app->getPaletteController()->getCurrentLevelPalette()->notifyPaletteChanged();
   notify();
-  TUndoManager::manager()->add(new UndoPasteSelection(this));
+  if (m_createdFrame) tool->notifyImageChanged(m_fid);
+  TUndoManager::manager()->add(new UndoPasteSelection(this, sl, m_oldPalette));
 }
 
 //-----------------------------------------------------------------------------
@@ -1275,7 +1388,7 @@ TRectD RasterSelection::getStrokesBound(std::vector<TStroke> strokes) const {
 
 TRectD RasterSelection::getSelectionBound() const {
   if (m_strokes.size() == 0) return TRectD();
-  TRectD selectionBox            = getStrokesBound(m_strokes);
+  TRectD selectionBox = getStrokesBound(m_strokes);
   if (isFloating()) selectionBox = m_affine * selectionBox;
   return selectionBox;
 }
@@ -1290,7 +1403,7 @@ TRectD RasterSelection::getOriginalSelectionBound() const {
 //-----------------------------------------------------------------------------
 
 TRectD RasterSelection::getSelectionBbox() const {
-  TRectD rect            = m_selectionBbox;
+  TRectD rect = m_selectionBbox;
   if (isFloating()) rect = m_affine * m_selectionBbox;
   return rect;
 }

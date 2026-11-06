@@ -11,6 +11,7 @@
 #include "tw/stringtable.h"
 #include "toonzqt/functionsheet.h"
 #include "toonzqt/functionpanel.h"
+#include "toonzqt/gutil.h"
 
 // TnzLib includes
 #include "toonz/doubleparamcmd.h"
@@ -86,7 +87,7 @@ SpeedInOutSegmentPage::SpeedInOutSegmentPage(FunctionSegmentViewer *parent)
   QGridLayout *mainLayout = new QGridLayout();
   mainLayout->setHorizontalSpacing(5);
   mainLayout->setVerticalSpacing(5);
-  mainLayout->setMargin(2);
+  mainLayout->setContentsMargins(2, 2, 2, 2);
   {
     mainLayout->addWidget(new QLabel(tr("First Speed:")), 0, 0,
                           Qt::AlignRight | Qt::AlignVCenter);
@@ -375,7 +376,7 @@ EaseInOutSegmentPage::EaseInOutSegmentPage(bool isPercentage,
 
   QGridLayout *mainLayout = new QGridLayout();
   mainLayout->setSpacing(5);
-  mainLayout->setMargin(2);
+  mainLayout->setContentsMargins(2, 2, 2, 2);
   {
     mainLayout->addWidget(new QLabel(tr("Ease Out:")), 0, 0,
                           Qt::AlignRight | Qt::AlignVCenter);
@@ -495,7 +496,7 @@ FunctionExpressionSegmentPage::FunctionExpressionSegmentPage(
   //---- layout
   QVBoxLayout *mainLayout = new QVBoxLayout();
   mainLayout->setSpacing(2);
-  mainLayout->setMargin(2);
+  mainLayout->setContentsMargins(2, 2, 2, 2);
   {
     mainLayout->addSpacing(3);
     mainLayout->addWidget(new QLabel(tr("Expression:")));
@@ -629,7 +630,7 @@ m_unitFld->setText("");
 }
 
 //-----------------------------------------------------------------------------
-/*! return false if a circular reference is occured
+/*! return false if a circular reference is occurred
  */
 bool FunctionExpressionSegmentPage::getGuiValues(std::string &expressionText,
                                                  std::string &unitName) {
@@ -658,7 +659,7 @@ bool FunctionExpressionSegmentPage::getGuiValues(std::string &expressionText,
 
 FileSegmentPage::FileSegmentPage(FunctionSegmentViewer *parent)
     : FunctionSegmentPage(parent) {
-  // Force decoding the path since the file interporation
+  // Force decoding the path since the file interpolation
   // currently accepts only absolute paths.
   m_fileFld = new DVGui::FileField(this, QString(), false, false, false);
   m_fileFld->setFileMode(QFileDialog::ExistingFile);
@@ -677,14 +678,14 @@ FileSegmentPage::FileSegmentPage(FunctionSegmentViewer *parent)
   //----layout
   QVBoxLayout *mainLayout = new QVBoxLayout();
   mainLayout->setSpacing(5);
-  mainLayout->setMargin(2);
+  mainLayout->setContentsMargins(2, 2, 2, 2);
   {
     mainLayout->addWidget(new QLabel(tr("File Path:")), 0);
     mainLayout->addWidget(m_fileFld);
 
     QGridLayout *bottomLay = new QGridLayout();
     bottomLay->setSpacing(5);
-    bottomLay->setMargin(0);
+    bottomLay->setContentsMargins(0, 0, 0, 0);
     {
       bottomLay->addWidget(new QLabel(tr("Column:")), 0, 0,
                            Qt::AlignRight | Qt::AlignVCenter);
@@ -784,7 +785,7 @@ SimilarShapeSegmentPage::SimilarShapeSegmentPage(FunctionSegmentViewer *parent)
   //----layout
   QVBoxLayout *mainLayout = new QVBoxLayout();
   mainLayout->setSpacing(2);
-  mainLayout->setMargin(2);
+  mainLayout->setContentsMargins(2, 2, 2, 2);
   {
     mainLayout->addSpacing(3);
     mainLayout->addWidget(new QLabel(tr("Reference Curve:")));
@@ -947,6 +948,7 @@ FunctionSegmentViewer::FunctionSegmentViewer(QWidget *parent,
   validator->setBottom(1);
   m_fromFld->setValidator(validator);
   m_toFld->setValidator(validator);
+  m_paramNameLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
   m_stepFld->setEnabled(true);
 
@@ -954,38 +956,44 @@ FunctionSegmentViewer::FunctionSegmentViewer(QWidget *parent,
 
   m_stepFld->setText("1");
 
-  m_prevCurveButton->setFixedSize(50, 15);
-  m_nextCurveButton->setFixedSize(50, 15);
+  m_prevCurveButton->setFixedSize(70, 22);
+  m_nextCurveButton->setFixedSize(70, 22);
   m_prevCurveButton->setFocusPolicy(Qt::NoFocus);
   m_nextCurveButton->setFocusPolicy(Qt::NoFocus);
   m_prevCurveButton->setStyleSheet("padding:0px;");
   m_nextCurveButton->setStyleSheet("padding:0px;");
 
-  m_prevLinkButton->setFixedSize(15, 15);
-  m_nextLinkButton->setFixedSize(15, 15);
+  m_prevLinkButton->setFixedSize(22, 22);
+  m_nextLinkButton->setFixedSize(22, 22);
   m_prevLinkButton->setCheckable(true);
   m_nextLinkButton->setCheckable(true);
   m_prevLinkButton->setFocusPolicy(Qt::NoFocus);
   m_nextLinkButton->setFocusPolicy(Qt::NoFocus);
   m_prevLinkButton->setObjectName("FunctionSegmentViewerLinkButton");
   m_nextLinkButton->setObjectName("FunctionSegmentViewerLinkButton");
+  m_prevLinkButton->setIconSize(QSize(20, 20));
+  m_nextLinkButton->setIconSize(QSize(20, 20));
+  m_prevLinkButton->setIcon(createQIcon("segment_linked"));
+  m_nextLinkButton->setIcon(createQIcon("segment_linked"));
+  m_nextLinkButton->setToolTip(tr("Link/Unlink Handles"));
+  m_prevLinkButton->setToolTip(tr("Link/Unlink Handles"));
 
   //---- layout
 
   QVBoxLayout *mainLayout = new QVBoxLayout();
   mainLayout->setSpacing(5);
-  mainLayout->setMargin(5);
+  mainLayout->setContentsMargins(5, 5, 5, 5);
   {
     m_topbar                  = new QWidget();
     QVBoxLayout *topbarLayout = new QVBoxLayout();
     topbarLayout->setSpacing(5);
-    topbarLayout->setMargin(0);
+    topbarLayout->setContentsMargins(0, 0, 0, 0);
     {
       topbarLayout->addWidget(m_paramNameLabel);
 
       QHBoxLayout *upperLay = new QHBoxLayout();
       upperLay->setSpacing(3);
-      upperLay->setMargin(0);
+      upperLay->setContentsMargins(0, 0, 0, 0);
       {
         upperLay->addWidget(new QLabel(tr("From"), this), 0);
         upperLay->addWidget(m_fromFld, 1);
@@ -1000,7 +1008,7 @@ FunctionSegmentViewer::FunctionSegmentViewer(QWidget *parent,
 
       QHBoxLayout *bottomLay = new QHBoxLayout();
       bottomLay->setSpacing(3);
-      bottomLay->setMargin(0);
+      bottomLay->setContentsMargins(0, 0, 0, 0);
       {
         bottomLay->addWidget(typeLabel, 0);
         bottomLay->addWidget(m_typeCombo, 1);
@@ -1017,7 +1025,7 @@ FunctionSegmentViewer::FunctionSegmentViewer(QWidget *parent,
     mainLayout->addWidget(applyButton);
 
     QHBoxLayout *moveLay = new QHBoxLayout();
-    moveLay->setMargin(0);
+    moveLay->setContentsMargins(0, 0, 0, 0);
     moveLay->setSpacing(0);
     {
       moveLay->addWidget(m_prevCurveButton, 0);
@@ -1461,7 +1469,7 @@ void FunctionSegmentViewer::onPrevCurveButtonPressed() {
 
   int r0 = (int)prevKey.m_frame;
   int r1 = (int)currentKey.m_frame;
-
+  m_panel->update();
   m_sheet->getSelection()->selectSegment(m_curve, currentKeyIndex - 1,
                                          QRect(col, r0, 1, r1 - r0 + 1));
   m_sheet->updateAll();
@@ -1494,7 +1502,7 @@ void FunctionSegmentViewer::onNextCurveButtonPressed() {
 
   int r0 = (int)nextKey.m_frame;
   int r1 = (int)nextNextKey.m_frame;
-
+  m_panel->update();
   m_sheet->getSelection()->selectSegment(m_curve, currentKeyIndex + 1,
                                          QRect(col, r0, 1, r1 - r0 + 1));
   m_sheet->updateAll();

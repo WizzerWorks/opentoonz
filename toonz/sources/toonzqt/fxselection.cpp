@@ -35,7 +35,7 @@ bool canGroup(TFx *fx) {
   TOutputFx *ofx = dynamic_cast<TOutputFx *>(fx);
   return (!xfx && !ofx);
 }
-}
+}  // namespace
 
 //=========================================================
 //
@@ -156,10 +156,11 @@ bool FxSelection::isSelected(SchematicLink *link) {
 //---------------------------------------------------------
 
 void FxSelection::deleteSelection() {
-  std::list<TFxP, std::allocator<TFxP>> fxList = m_selectedFxs.toStdList();
-  TFxCommand::deleteSelection(fxList, m_selectedLinks.toStdList(),
-                              m_selectedColIndexes.toStdList(), m_xshHandle,
-                              m_fxHandle);
+  emit doDelete();
+  // std::list<TFxP, std::allocator<TFxP>> fxList = m_selectedFxs.toStdList();
+  // TFxCommand::deleteSelection(fxList, m_selectedLinks.toStdList(),
+  //                            m_selectedColIndexes.toStdList(), m_xshHandle,
+  //                            m_fxHandle);
 }
 
 //---------------------------------------------------------
@@ -210,9 +211,22 @@ void FxSelection::pasteSelection() {
             TPointD(ssv->getOldScenePos().x(), ssv->getOldScenePos().y());
     }
 
-    TFxCommand::pasteFxs(fxs.toStdList(), zeraryFxColumnSize.toStdMap(),
-                         columns.toStdList(), m_pastePosition, m_xshHandle,
-                         m_fxHandle);
+    if (!columns.isEmpty()) {
+      // make sure that the levels contained in the pasted column nodes are
+      // registered in the scene cast it may rename the level if there is
+      // another level with the same name
+      TUndoManager::manager()->beginBlock();
+      emit columnPasted(columns);
+    }
+
+    TFxCommand::pasteFxs(std::list<TFxP>(fxs.begin(), fxs.end()),
+                         zeraryFxColumnSize.toStdMap(),
+                         std::list<TXshColumnP>(columns.begin(), columns.end()),
+                         m_pastePosition, m_xshHandle, m_fxHandle);
+
+    if (!columns.isEmpty()) {
+      TUndoManager::manager()->endBlock();
+    }
 
     if (m_schematicScene) {
       selectNone();
@@ -258,12 +272,21 @@ bool FxSelection::insertPasteSelection() {
     fxsData->getFxs(fxs, zeraryFxColumnSize, columns);
     if (fxs.empty() && columns.empty()) return true;
 
-    if (!auto_.m_destruct)
-      auto_.m_destruct = true, TUndoManager::manager()->beginBlock();
+    // auto ends the undo block in the destructor.
+    if (!auto_.m_destruct) {
+      auto_.m_destruct = true;
+      TUndoManager::manager()->beginBlock();
+      // make sure that the levels contained in the pasted column nodes are
+      // registered in the scene cast it may rename the level if there is
+      // another level with the same name
+      emit columnPasted(columns);
+    }
 
-    TFxCommand::insertPasteFxs(selectedLinks[i], fxs.toStdList(),
-                               zeraryFxColumnSize.toStdMap(),
-                               columns.toStdList(), m_xshHandle, m_fxHandle);
+    TFxCommand::insertPasteFxs(
+        selectedLinks[i], std::list<TFxP>(fxs.begin(), fxs.end()),
+        zeraryFxColumnSize.toStdMap(),
+        std::list<TXshColumnP>(columns.begin(), columns.end()), m_xshHandle,
+        m_fxHandle);
   }
 
   return true;
@@ -300,13 +323,16 @@ bool FxSelection::addPasteSelection() {
     fxsData->getFxs(fxs, zeraryFxColumnSize, columns);
     if (fxs.empty() && columns.empty()) return true;
 
+    // auto ends the undo block in its destructor
     if (!auto_.m_destruct)
       auto_.m_destruct = true, TUndoManager::manager()->beginBlock();
 
     TFx *inFx = selectedFxs[i].getPointer();
-    TFxCommand::addPasteFxs(inFx, fxs.toStdList(),
-                            zeraryFxColumnSize.toStdMap(), columns.toStdList(),
-                            m_xshHandle, m_fxHandle);
+    TFxCommand::addPasteFxs(
+        inFx, std::list<TFxP>(fxs.begin(), fxs.end()),
+        zeraryFxColumnSize.toStdMap(),
+        std::list<TXshColumnP>(columns.begin(), columns.end()), m_xshHandle,
+        m_fxHandle);
   }
 
   return true;
@@ -343,13 +369,21 @@ bool FxSelection::replacePasteSelection() {
     fxsData->getFxs(fxs, zeraryFxColumnSize, columns);
     if (fxs.empty() && columns.empty()) return true;
 
-    if (!auto_.m_destruct)
+    // auto ends the undo block in its destructor
+    if (!auto_.m_destruct) {
       auto_.m_destruct = true, TUndoManager::manager()->beginBlock();
+      // make sure that the levels contained in the pasted column nodes are
+      // registered in the scene cast it may rename the level if there is
+      // another level with the same name
+      emit columnPasted(columns);
+    }
 
     TFx *inFx = m_selectedFxs[i].getPointer();
-    TFxCommand::replacePasteFxs(inFx, fxs.toStdList(),
-                                zeraryFxColumnSize.toStdMap(),
-                                columns.toStdList(), m_xshHandle, m_fxHandle);
+    TFxCommand::replacePasteFxs(
+        inFx, std::list<TFxP>(fxs.begin(), fxs.end()),
+        zeraryFxColumnSize.toStdMap(),
+        std::list<TXshColumnP>(columns.begin(), columns.end()), m_xshHandle,
+        m_fxHandle);
   }
 
   return true;
@@ -359,7 +393,8 @@ bool FxSelection::replacePasteSelection() {
 
 void FxSelection::groupSelection() {
   if (m_selectedFxs.size() <= 1) return;
-  TFxCommand::groupFxs(m_selectedFxs.toStdList(), m_xshHandle);
+  TFxCommand::groupFxs(
+      std::list<TFxP>(m_selectedFxs.begin(), m_selectedFxs.end()), m_xshHandle);
   selectNone();
   m_xshHandle->notifyXsheetChanged();
 }
@@ -377,8 +412,9 @@ void FxSelection::ungroupSelection() {
 
   TUndoManager::manager()->beginBlock();
   QSet<int>::iterator it;
-  for (it = idSet.begin(); it != idSet.end(); it++)
+  for (it = idSet.begin(); it != idSet.end(); it++) {
     TFxCommand::ungroupFxs(*it, m_xshHandle);
+  }
   TUndoManager::manager()->endBlock();
   selectNone();
   m_xshHandle->notifyXsheetChanged();
@@ -518,8 +554,8 @@ bool FxSelection::isConnected() {
     TColumnFx *cfx  = dynamic_cast<TColumnFx *>(selectedFx);
     if (!cfx && !internalFxs->containsFx(selectedFx)) return false;
     TZeraryColumnFx *zfx = dynamic_cast<TZeraryColumnFx *>(selectedFx);
-    if (zfx) selectedFx  = zfx->getZeraryFx();
-    connected            = connected && visitedFxs.contains(selectedFx);
+    if (zfx) selectedFx = zfx->getZeraryFx();
+    connected = connected && visitedFxs.contains(selectedFx);
   }
   return connected;
 }
@@ -529,14 +565,14 @@ bool FxSelection::isConnected() {
 void FxSelection::visitFx(TFx *fx, QList<TFx *> &visitedFxs) {
   if (visitedFxs.contains(fx)) return;
   TZeraryColumnFx *zfx = dynamic_cast<TZeraryColumnFx *>(fx);
-  if (zfx) fx          = zfx->getZeraryFx();
+  if (zfx) fx = zfx->getZeraryFx();
   if (!canGroup(fx)) return;
   visitedFxs.append(fx);
   int i;
   for (i = 0; i < fx->getInputPortCount(); i++) {
     TFx *inputFx              = fx->getInputPort(i)->getFx();
     TZeraryColumnFx *onputZFx = dynamic_cast<TZeraryColumnFx *>(inputFx);
-    if (onputZFx) inputFx     = onputZFx->getZeraryFx();
+    if (onputZFx) inputFx = onputZFx->getZeraryFx();
     if (!inputFx) continue;
     bool canBeGrouped = !inputFx->getAttributes()->isGrouped() ||
                         (inputFx->getAttributes()->getEditingGroupId() ==

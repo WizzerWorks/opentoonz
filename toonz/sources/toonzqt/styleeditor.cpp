@@ -10,14 +10,13 @@
 
 // TnzLib includes
 #include "toonz/txshlevel.h"
-#include "toonz/stylemanager.h"
 #include "toonz/txshlevelhandle.h"
 #include "toonz/toonzfolders.h"
 #include "toonz/cleanupcolorstyles.h"
 #include "toonz/palettecontroller.h"
 #include "toonz/imagestyles.h"
-#include "toonz/txshsimplelevel.h"  //iwsw
-#include "toonz/levelproperties.h"  //iwsw
+#include "toonz/txshsimplelevel.h"
+#include "toonz/levelproperties.h"
 #include "toonz/mypaintbrushstyle.h"
 #include "toonz/preferences.h"
 
@@ -57,6 +56,15 @@
 #include <QSplitter>
 #include <QMenu>
 #include <QOpenGLFramebufferObject>
+
+namespace {
+enum ColorSliderAppearance {
+  RelativeColoredTriangleHandle,
+  AbsoluteColoredLineHandle
+};
+}
+TEnv::IntVar StyleEditorColorSliderAppearance(
+    "StyleEditorColorSliderAppearance", RelativeColoredTriangleHandle);
 
 using namespace StyleEditorGUI;
 
@@ -159,16 +167,17 @@ ColorModel::ColorModel() { memset(m_channels, 0, sizeof m_channels); }
 void ColorModel::rgb2hsv() {
   QColor converter(m_channels[0], m_channels[1], m_channels[2]);
   m_channels[4] =
-      std::max(converter.hue(), 0);  // hue() ritorna -1 per colori acromatici
-  m_channels[5] = converter.saturation() * 100 / 255;
-  m_channels[6] = converter.value() * 100 / 255;
+      std::max(converter.hue(), 0);  // hue() returns -1 for achromatic colors
+  m_channels[5] = (int)std::round(converter.saturationF() * 100.);
+  m_channels[6] = (int)std::round(converter.valueF() * 100.);
 }
 
 //-----------------------------------------------------------------------------
 
 void ColorModel::hsv2rgb() {
-  QColor converter = QColor::fromHsv(m_channels[4], m_channels[5] * 255 / 100,
-                                     m_channels[6] * 255 / 100);
+  QColor converter =
+      QColor::fromHsvF((qreal)m_channels[4] / 360., (qreal)m_channels[5] / 100.,
+                       (qreal)m_channels[6] / 100.);
 
   m_channels[0] = converter.red();
   m_channels[1] = converter.green();
@@ -184,9 +193,9 @@ void ColorModel::setTPixel(const TPixel32 &pix) {
   m_channels[2] = color.blue();
   m_channels[3] = color.alpha();
   m_channels[4] =
-      std::max(color.hue(), 0);  // hue() ritorna -1 per colori acromatici
-  m_channels[5] = color.saturation() * 100 / 255;
-  m_channels[6] = color.value() * 100 / 255;
+      std::max(color.hue(), 0);  // hue() returns -1 for achromatic colors
+  m_channels[5] = (int)std::round(color.saturationF() * 100.);
+  m_channels[6] = (int)std::round(color.valueF() * 100.);
 }
 
 //-----------------------------------------------------------------------------
@@ -236,6 +245,8 @@ void ColorModel::setValues(ColorChannel channel, int v, int u) {
     setValue(eHue, v);
     setValue(eSaturation, u);
     break;
+  default:
+    break;
   }
 }
 
@@ -273,6 +284,8 @@ void ColorModel::getValues(ColorChannel channel, int &u, int &v) {
   case eValue:
     u = getValue(eHue);
     v = getValue(eSaturation);
+    break;
+  default:
     break;
   }
 }
@@ -470,24 +483,26 @@ QPixmap makeLinearShading(const ShadeMaker &shadeMaker, int size,
 
 QPixmap makeLinearShading(const ColorModel &color, ColorChannel channel,
                           int size, bool isVertical) {
+  bool relative =
+      ColorSlider::s_slider_appearance == RelativeColoredTriangleHandle;
   switch (channel) {
   case eRed:
-    if (isVertical)
+    if (isVertical || relative)
       return makeLinearShading(RedShadeMaker(color), size, isVertical);
     else
       return QPixmap(":Resources/grad_r.png").scaled(size, 1);
   case eGreen:
-    if (isVertical)
+    if (isVertical || relative)
       return makeLinearShading(GreenShadeMaker(color), size, isVertical);
     else
       return QPixmap(":Resources/grad_g.png").scaled(size, 1);
   case eBlue:
-    if (isVertical)
+    if (isVertical || relative)
       return makeLinearShading(BlueShadeMaker(color), size, isVertical);
     else
       return QPixmap(":Resources/grad_b.png").scaled(size, 1);
   case eAlpha:
-    if (isVertical)
+    if (isVertical || relative)
       return makeLinearShading(AlphaShadeMaker(color), size, isVertical);
     else
       return QPixmap(":Resources/grad_m.png").scaled(size, 1);
@@ -554,7 +569,7 @@ QPixmap makeSquareShading(const ColorModel &color, ColorChannel channel,
 
 HexagonalColorWheel::HexagonalColorWheel(QWidget *parent)
     : GLWidgetForHighDpi(parent)
-    , m_bgColor(128, 128, 128)  // defaul value in case this value does not set
+    , m_bgColor(128, 128, 128)  // default value in case this value does not set
                                 // in the style sheet
 {
   setObjectName("HexagonalColorWheel");
@@ -573,6 +588,41 @@ HexagonalColorWheel::~HexagonalColorWheel() {
 
 //-----------------------------------------------------------------------------
 
+void HexagonalColorWheel::updateColorCalibration() {
+  if (Preferences::instance()->isColorCalibrationEnabled()) {
+    // prevent to initialize LutCalibrator before this instance is initialized
+    // or OT may crash due to missing OpenGL context
+    if (m_firstInitialized) {
+      cueCalibrationUpdate();
+      return;
+    }
+
+    makeCurrent();
+    if (!m_lutCalibrator)
+      m_lutCalibrator = new LutCalibrator();
+    else
+      m_lutCalibrator->cleanup();
+    m_lutCalibrator->initialize();
+    connect(context(), SIGNAL(aboutToBeDestroyed()), this,
+            SLOT(onContextAboutToBeDestroyed()));
+    if (m_lutCalibrator->isValid() && !m_fbo)
+      m_fbo = new QOpenGLFramebufferObject(width(), height());
+    doneCurrent();
+  }
+  update();
+}
+
+//-----------------------------------------------------------------------------
+
+void HexagonalColorWheel::showEvent(QShowEvent *) {
+  if (m_cuedCalibrationUpdate) {
+    updateColorCalibration();
+    m_cuedCalibrationUpdate = false;
+  }
+}
+
+//-----------------------------------------------------------------------------
+
 void HexagonalColorWheel::initializeGL() {
   initializeOpenGLFunctions();
 
@@ -587,7 +637,7 @@ void HexagonalColorWheel::initializeGL() {
   glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
 
   // Without the following lines, the wheel in a floating style editor
-  // dissapears on switching the room due to context switching.
+  // disappears on switching the room due to context switching.
   if (m_firstInitialized)
     m_firstInitialized = false;
   else {
@@ -826,8 +876,9 @@ void HexagonalColorWheel::mouseReleaseEvent(QMouseEvent *event) {
 void HexagonalColorWheel::clickLeftWheel(const QPoint &pos) {
   QLineF p(m_wp[0] + m_wheelPosition, QPointF(pos));
   QLineF horizontal(0, 0, 1, 0);
-  float theta = (p.dy() < 0) ? p.angle(horizontal) : 360 - p.angle(horizontal);
-  float phi   = theta;
+  float theta =
+      (p.dy() >= 0) ? horizontal.angleTo(p) : 360 - p.angleTo(horizontal);
+  float phi = theta;
   while (phi >= 60.0f) phi -= 60.0f;
   phi -= 30.0f;
   // d is a length from center to edge of the wheel when saturation = 100
@@ -868,6 +919,8 @@ void HexagonalColorWheel::onContextAboutToBeDestroyed() {
   makeCurrent();
   m_lutCalibrator->cleanup();
   doneCurrent();
+  disconnect(context(), SIGNAL(aboutToBeDestroyed()), this,
+             SLOT(onContextAboutToBeDestroyed()));
 }
 
 //*****************************************************************************
@@ -881,7 +934,7 @@ SquaredColorWheel::SquaredColorWheel(QWidget *parent)
 
 void SquaredColorWheel::paintEvent(QPaintEvent *) {
   QPainter p(this);
-  // calcolo lo sfondo
+  // calculate the background
   int size = width();
 
   QPixmap bgPixmap = makeSquareShading(m_color, m_channel, size);
@@ -947,8 +1000,13 @@ void SquaredColorWheel::setChannel(int channel) {
 //    ColorSlider  implementation
 //*****************************************************************************
 
+// Acquire size later...
+int ColorSlider::s_chandle_size      = -1;
+int ColorSlider::s_chandle_tall      = -1;
+int ColorSlider::s_slider_appearance = -1;
+
 ColorSlider::ColorSlider(Qt::Orientation orientation, QWidget *parent)
-    : QSlider(orientation, parent), m_channel(eRed), m_color() {
+    : QAbstractSlider(parent), m_channel(eRed), m_color() {
   setFocusPolicy(Qt::NoFocus);
 
   setOrientation(orientation);
@@ -958,8 +1016,15 @@ ColorSlider::ColorSlider(Qt::Orientation orientation, QWidget *parent)
   setMinimumHeight(7);
   setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
 
-  // Attenzione: necessario per poter individuare l'oggetto nel file di
-  // definizione dello stile
+  // Get color handle size once
+  if (s_chandle_size == -1) {
+    QImage chandle      = QImage(":Resources/h_chandle_arrow.svg");
+    s_chandle_size      = chandle.width();
+    s_chandle_tall      = chandle.height();
+    s_slider_appearance = StyleEditorColorSliderAppearance;
+  }
+
+  // Warning: necessary to identify the object in the style definition file
   setObjectName("colorSlider");
 }
 
@@ -986,21 +1051,34 @@ void ColorSlider::paintEvent(QPaintEvent *event) {
   int h = height();
 
   bool isVertical = orientation() == Qt::Vertical;
+  bool isLineHandle =
+      ColorSlider::s_slider_appearance == AbsoluteColoredLineHandle;
 
-  if (!isVertical) h -= 5;
+  if (isVertical) {
+    y += s_chandle_size / 2;
+    h -= s_chandle_size;
+    w -= 3;
+  } else {
+    x += s_chandle_size / 2;
+    w -= s_chandle_size;
+    h -= 3;
+    if (isLineHandle) {
+      y += 1;
+      h -= 2;
+    }
+  }
+  if (w < 2 || h < 2) return;
 
   QPixmap bgPixmap =
       makeLinearShading(m_color, m_channel, isVertical ? h : w, isVertical);
 
   if (m_channel == eAlpha) {
-    static QPixmap checkboard(":Resources/backg.png");
-    p.drawTiledPixmap(x, y, w, h, checkboard);
+    p.drawTiledPixmap(x, y, w, h,
+                      DVGui::CommonChessboard::instance()->getPixmap());
   }
 
   if (!bgPixmap.isNull()) {
     p.drawTiledPixmap(x, y, w, h, bgPixmap);
-    p.setPen(Qt::white);
-    p.drawLine(x, y + h, x + w, y + h);
   }
 
   /*!
@@ -1008,65 +1086,60 @@ void ColorSlider::paintEvent(QPaintEvent *event) {
      In this case we draw "manually" the slider handle at correct position
   */
   if (isVertical) {
-    int pos = QStyle::sliderPositionFromValue(minimum(), maximum(), value(),
-                                              h - 9, true);
-    static QPixmap vHandlePixmap(":Resources/v_chandle.png");
-    p.drawPixmap(0, pos, vHandlePixmap);
+    static QPixmap vHandlePixmap =
+        svgToPixmap(":Resources/v_chandle_arrow.svg");
+    int pos = QStyle::sliderPositionFromValue(0, maximum(), value(), h, true);
+    p.drawPixmap(width() - s_chandle_tall, pos, vHandlePixmap);
   } else {
-    static QPixmap hHandleUpPm(":Resources/h_chandleUp.png");
-    static QPixmap hHandleDownPm(":Resources/h_chandleDown.png");
-    static QPixmap hHandleCenterPm(":Resources/h_chandleCenter.png");
-    int pos = QStyle::sliderPositionFromValue(
-        0, maximum(), value(), width() - hHandleCenterPm.width(), false);
-    p.drawPixmap(pos, 0, hHandleUpPm);
-    p.drawPixmap(pos, height() - hHandleDownPm.height(), hHandleDownPm);
-    p.drawPixmap(pos, hHandleUpPm.height(), hHandleCenterPm.width(),
-                 height() - hHandleUpPm.height() - hHandleDownPm.height(),
-                 hHandleCenterPm);
+    int pos = QStyle::sliderPositionFromValue(0, maximum(), value(), w, false);
+    if (isLineHandle) {
+      static QPixmap hHandleUpPm(":Resources/h_chandleUp.png");
+      static QPixmap hHandleDownPm(":Resources/h_chandleDown.png");
+      static QPixmap hHandleCenterPm(":Resources/h_chandleCenter.png");
+      int linePos = pos + (s_chandle_size - hHandleCenterPm.width()) / 2;
+      p.drawPixmap(linePos, 0, hHandleUpPm);
+      p.drawPixmap(linePos, height() - hHandleDownPm.height(), hHandleDownPm);
+      p.drawPixmap(linePos, hHandleUpPm.height(), hHandleCenterPm.width(),
+                   height() - hHandleUpPm.height() - hHandleDownPm.height(),
+                   hHandleCenterPm);
+    } else {
+      static QPixmap hHandlePixmap =
+          svgToPixmap(":Resources/h_chandle_arrow.svg");
+      p.drawPixmap(pos, height() - s_chandle_tall, hHandlePixmap);
+    }
   }
 };
 
 //-----------------------------------------------------------------------------
 
 void ColorSlider::mousePressEvent(QMouseEvent *event) {
-  // vogliamo che facendo click sullo slider, lontano dall'handle
-  // l'handle salti subito nella posizione giusta invece di far partire
-  // l'autorepeat.
-  //
-  // cfr. qslider.cpp:429: sembra che questo comportamento si possa ottenere
-  // anche con SH_Slider_AbsoluteSetButtons. Ma non capisco come si possa fare
-  // per definire quest hint
-  QStyleOptionSlider opt;
-  initStyleOption(&opt);
-  const QRect handleRect = style()->subControlRect(
-      QStyle::CC_Slider, &opt, QStyle::SC_SliderHandle, this);
-  if (!handleRect.contains(event->pos())) {
-    const QPoint handleCenter = handleRect.center();
-    const QRect grooveRect    = style()->subControlRect(
-        QStyle::CC_Slider, &opt, QStyle::SC_SliderGroove, this);
-    int pos, span;
-    bool upsideDown = false;
-    if (opt.orientation == Qt::Vertical) {
-      upsideDown     = true;
-      int handleSize = handleRect.height();
-      pos            = event->pos().y() - handleSize / 2;
-      span           = grooveRect.height() - handleSize;
-    } else {
-      int handleSize = QPixmap(":Resources/h_chandleCenter.png").width();
-      pos            = event->pos().x() - handleSize / 2;
-      span           = grooveRect.width() - handleSize;
-    }
-    int value = QStyle::sliderValueFromPosition(minimum(), maximum(), pos, span,
-                                                upsideDown);
-    setValue(value);
-  }
-  QSlider::mousePressEvent(event);
+  chandleMouse(event->pos().x(), event->pos().y());
 }
 
 //-----------------------------------------------------------------------------
 
 void ColorSlider::mouseReleaseEvent(QMouseEvent *event) {
   emit sliderReleased();
+}
+
+//-----------------------------------------------------------------------------
+
+void ColorSlider::mouseMoveEvent(QMouseEvent *event) {
+  chandleMouse(event->pos().x(), event->pos().y());
+}
+
+//-----------------------------------------------------------------------------
+
+void ColorSlider::chandleMouse(int mouse_x, int mouse_y) {
+  if (orientation() == Qt::Vertical) {
+    int pos  = mouse_y - s_chandle_size / 2;
+    int span = height() - s_chandle_size;
+    setValue(QStyle::sliderValueFromPosition(0, maximum(), pos, span, true));
+  } else {
+    int pos  = mouse_x - s_chandle_size / 2;
+    int span = width() - s_chandle_size;
+    setValue(QStyle::sliderValueFromPosition(0, maximum(), pos, span, false));
+  }
 }
 
 //*****************************************************************************
@@ -1170,7 +1243,7 @@ ColorSliderBar::ColorSliderBar(QWidget *parent, Qt::Orientation orientation)
     layout = new QVBoxLayout(this);
 
   layout->setSpacing(0);
-  layout->setMargin(0);
+  layout->setContentsMargins(0, 0, 0, 0);
   layout->addWidget(first, 0, Qt::AlignCenter);
   layout->addWidget(m_colorSlider, 1);
   layout->addWidget(last, 0, Qt::AlignCenter);
@@ -1219,11 +1292,14 @@ void ChannelLineEdit::focusOutEvent(QFocusEvent *e) {
 void ChannelLineEdit::paintEvent(QPaintEvent *e) {
   IntLineEdit::paintEvent(e);
 
+  /* Now that stylesheets added lineEdit focus this is likely redundant,
+   * commenting out in-case it is still required.
   if (m_isEditing) {
     QPainter p(this);
     p.setPen(Qt::yellow);
     p.drawRect(rect().adjusted(0, 0, -1, -1));
   }
+  */
 }
 
 //*****************************************************************************
@@ -1266,7 +1342,7 @@ ColorChannelControl::ColorChannelControl(ColorChannel channel, QWidget *parent)
   m_label->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
 
   m_field->setObjectName("colorSliderField");
-  m_field->setFixedWidth(fontMetrics().width('0') * 6 + 5);
+  m_field->setFixedWidth(fontMetrics().horizontalAdvance('0') * 4);
   m_field->setMinimumHeight(7);
 
   addButton->setObjectName("colorSliderAddButton");
@@ -1287,7 +1363,7 @@ ColorChannelControl::ColorChannelControl(ColorChannel channel, QWidget *parent)
   subButton->setFocusPolicy(Qt::NoFocus);
 
   QHBoxLayout *mainLayout = new QHBoxLayout(this);
-  mainLayout->setMargin(0);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
   mainLayout->setSpacing(1);
   {
     mainLayout->addWidget(m_label, 0);
@@ -1390,10 +1466,12 @@ StyleEditorPage::StyleEditorPage(QWidget *parent) : QFrame(parent) {
 
 ColorParameterSelector::ColorParameterSelector(QWidget *parent)
     : QWidget(parent)
-    , m_index(-1)
+    , m_index(0)
     , m_chipSize(21, 21)
     , m_chipOrigin(0, 1)
-    , m_chipDelta(21, 0) {}
+    , m_chipDelta(21, 0) {
+  setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
+}
 
 //-----------------------------------------------------------------------------
 
@@ -1426,6 +1504,7 @@ void ColorParameterSelector::setStyle(const TColorStyle &style) {
     clear();
     return;
   }
+  show();
   if (m_colors.size() != count) {
     m_index = 0;
     m_colors.resize(count);
@@ -1442,8 +1521,12 @@ void ColorParameterSelector::setStyle(const TColorStyle &style) {
 
 void ColorParameterSelector::clear() {
   if (m_colors.size() != 0) m_colors.clear();
-  m_index = -1;
-  update();
+  m_index = 0;
+  if (isVisible()) {
+    hide();
+    update();
+    qApp->processEvents();
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -1453,10 +1536,18 @@ void ColorParameterSelector::mousePressEvent(QMouseEvent *event) {
   int index  = pos.x() / m_chipDelta.x();
   QRect chipRect(index * m_chipDelta, m_chipSize);
   if (chipRect.contains(pos)) {
-    m_index = index;
+    if (index < m_colors.size()) m_index = index;
     emit colorParamChanged();
     update();
   }
+}
+
+//-----------------------------------------------------------------------------
+
+QSize ColorParameterSelector::sizeHint() const {
+  return QSize(m_chipOrigin.x() + (m_colors.size() - 1) * m_chipDelta.x() +
+                   m_chipSize.width(),
+               m_chipOrigin.y() + m_chipSize.height());
 }
 
 //*****************************************************************************
@@ -1514,7 +1605,7 @@ PlainColorPage::PlainColorPage(QWidget *parent)
   m_slidersContainer = new QFrame(this);
   m_vSplitter        = new QSplitter(this);
 
-  //プロパティの設定
+  // Setting properties
   // channelButtonGroup->setExclusive(true);
 
   m_wheelFrame->setObjectName("PlainColorPageParts");
@@ -1532,21 +1623,21 @@ PlainColorPage::PlainColorPage(QWidget *parent)
   // layout
   QVBoxLayout *mainLayout = new QVBoxLayout();
   mainLayout->setSpacing(0);
-  mainLayout->setMargin(0);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
   {
     QHBoxLayout *wheelLayout = new QHBoxLayout();
-    wheelLayout->setMargin(5);
+    wheelLayout->setContentsMargins(5, 5, 5, 5);
     wheelLayout->setSpacing(0);
     { wheelLayout->addWidget(m_hexagonalColorWheel); }
     m_wheelFrame->setLayout(wheelLayout);
     m_vSplitter->addWidget(m_wheelFrame);
 
     QVBoxLayout *slidersLayout = new QVBoxLayout();
-    slidersLayout->setMargin(0);
+    slidersLayout->setContentsMargins(0, 0, 0, 0);
     slidersLayout->setSpacing(0);
     {
       QVBoxLayout *hsvLayout = new QVBoxLayout();
-      hsvLayout->setMargin(4);
+      hsvLayout->setContentsMargins(4, 4, 4, 4);
       hsvLayout->setSpacing(4);
       {
         hsvLayout->addWidget(m_channelControls[eHue]);
@@ -1557,14 +1648,14 @@ PlainColorPage::PlainColorPage(QWidget *parent)
       slidersLayout->addWidget(m_hsvFrame, 3);
 
       QVBoxLayout *alphaLayout = new QVBoxLayout();
-      alphaLayout->setMargin(4);
+      alphaLayout->setContentsMargins(4, 4, 4, 4);
       alphaLayout->setSpacing(4);
       { alphaLayout->addWidget(m_channelControls[eAlpha]); }
       m_alphaFrame->setLayout(alphaLayout);
       slidersLayout->addWidget(m_alphaFrame, 1);
 
       QVBoxLayout *rgbLayout = new QVBoxLayout();
-      rgbLayout->setMargin(4);
+      rgbLayout->setContentsMargins(4, 4, 4, 4);
       rgbLayout->setSpacing(4);
       {
         rgbLayout->addWidget(m_channelControls[eRed]);
@@ -1690,6 +1781,15 @@ void PlainColorPage::setSplitterState(QByteArray state) {
 }
 
 //-----------------------------------------------------------------------------
+
+void PlainColorPage::updateColorCalibration() {
+  if (m_hexagonalColorWheel->isVisible())
+    m_hexagonalColorWheel->updateColorCalibration();
+  else
+    m_hexagonalColorWheel->cueCalibrationUpdate();
+}
+
+//-----------------------------------------------------------------------------
 /*
 void PlainColorPage::setWheelChannel(int channel)
 {
@@ -1753,26 +1853,84 @@ TFilePath StyleChooserPage::m_rootPath;
 
 //-----------------------------------------------------------------------------
 
-StyleChooserPage::StyleChooserPage(QWidget *parent)
+StyleChooserPage::StyleChooserPage(StyleEditor *styleEditor, QWidget *parent)
     : StyleEditorPage(parent)
     , m_chipOrigin(5, 3)
     , m_chipSize(25, 25)
     , m_chipPerRow(0)
-    , m_currentIndex(-1) {}
+    , m_pinsToTopDirty(false)
+    , m_styleEditor(styleEditor) {
+  //, m_currentIndex(-1) {
+
+  setObjectName("StyleChooserPage");
+
+  m_pinToTopAct = new QAction(tr("Pin To Top"), this);
+  m_pinToTopAct->setCheckable(true);
+  m_setPinsToTopAct = new QAction(tr("Set Pins To Top"), this);
+  m_clrPinsToTopAct = new QAction(tr("Clear Pins To Top"), this);
+
+  FavoritesManager *favorites = FavoritesManager::instance();
+
+  bool ret = true;
+
+  ret = ret && connect(m_pinToTopAct, SIGNAL(triggered()), this,
+                       SLOT(togglePinToTop()));
+  ret = ret && connect(m_setPinsToTopAct, SIGNAL(triggered()), this,
+                       SLOT(doSetPinsToTop()));
+  ret = ret && connect(m_clrPinsToTopAct, SIGNAL(triggered()), this,
+                       SLOT(doClrPinsToTop()));
+  ret = ret && connect(favorites, SIGNAL(pinsToTopChanged()), this,
+                       SLOT(doPinsToTopChange()));
+  assert(ret);
+  setMouseTracking(true);
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleChooserPage::setChipSize(QSize chipSize) {
+  if (chipSize.width() < 4) chipSize.setWidth(4);
+  if (chipSize.height() < 4) chipSize.setHeight(4);
+  m_chipSize = chipSize;
+  computeSize();
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleChooserPage::applyFilter() {
+  assert(m_manager);
+  m_manager->applyFilter();
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleChooserPage::applyFilter(const QString text) {
+  assert(m_manager);
+  m_manager->applyFilter(text);
+}
 
 //-----------------------------------------------------------------------------
 
 void StyleChooserPage::paintEvent(QPaintEvent *) {
-  if (loadIfNeeded()) computeSize();
+  if (loadIfNeeded() || m_pinsToTopDirty) {
+    m_pinsToTopDirty = false;
+    applyFilter();
+    computeSize();
+  }
+
+  // Get current selected style
+  TColorStyleP selectedStyle = nullptr;
+  if (m_styleEditor) selectedStyle = m_styleEditor->getEditedStyle();
 
   QPainter p(this);
   // p.setRenderHint(QPainter::SmoothPixmapTransform);
-  if (m_chipPerRow == 0 || getChipCount() == 0) return;
+
+  int maxCount = getChipCount();
+  if (m_chipPerRow == 0 || maxCount == 0) return;
 
   int w      = parentWidget()->width();
   int chipLx = m_chipSize.width(), chipLy = m_chipSize.height();
   int nX = m_chipPerRow;
-  int nY = (getChipCount() + m_chipPerRow - 1) / m_chipPerRow;
+  int nY = (maxCount + m_chipPerRow - 1) / m_chipPerRow;
   int x0 = m_chipOrigin.x();
   int y0 = m_chipOrigin.y();
   int i, j;
@@ -1782,27 +1940,43 @@ void StyleChooserPage::paintEvent(QPaintEvent *) {
     for (j = 0; j < nX; j++) {
       QRect rect(x0 + chipLx * j + 2, y0 + chipLy * i + 2, chipLx, chipLy);
 
-      drawChip(p, rect, count);
-      p.setPen(Qt::black);
-      p.drawRect(rect);
+      int chipType = drawChip(p, rect, count);
+      if (chipType == COMMONCHIP) {
+        p.setPen(m_commonChipBoxColor);
+        p.drawRect(rect);
+      } else if (chipType == PINNEDCHIP) {
+        p.setPen(m_pinnedChipBoxColor);
+        p.drawRect(rect.adjusted(0, 0, -1, -1));
+      } else {  // SOLIDCHIP
+        p.setPen(m_solidChipBoxColor);
+        p.drawRect(rect.adjusted(0, 0, -1, -1));
+      }
 
-      if (m_currentIndex == count) currentIndexRect = rect;
+      // if (m_currentIndex == count) currentIndexRect = rect;
+      if (isSameStyle(selectedStyle, count)) currentIndexRect = rect;
 
       count++;
-      if (count >= getChipCount()) break;
+      if (count >= maxCount) break;
     }
 
   if (!currentIndexRect.isEmpty()) {
     // Draw the curentIndex border
-    p.setPen(Qt::white);
+    p.setPen(m_selectedChipBoxColor);
     p.drawRect(currentIndexRect);
-    p.setPen(QColor(199, 202, 50));
+    p.setPen(m_selectedChipBox2Color);
     p.drawRect(currentIndexRect.adjusted(1, 1, -1, -1));
-    p.setPen(Qt::white);
+    p.setPen(m_selectedChipBoxColor);
     p.drawRect(currentIndexRect.adjusted(2, 2, -2, -2));
-    p.setPen(Qt::black);
+    p.setPen(m_commonChipBoxColor);
     p.drawRect(currentIndexRect.adjusted(3, 3, -3, -3));
   }
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleChooserPage::patternAdded() {
+  applyFilter();
+  computeSize();
 }
 
 //-----------------------------------------------------------------------------
@@ -1839,7 +2013,7 @@ void StyleChooserPage::mousePressEvent(QMouseEvent *event) {
   QPoint pos       = event->pos();
   int currentIndex = posToIndex(pos);
   if (currentIndex < 0) return;
-  m_currentIndex = currentIndex;
+  // m_currentIndex = currentIndex;
   onSelect(currentIndex);
 
   update();
@@ -1847,81 +2021,140 @@ void StyleChooserPage::mousePressEvent(QMouseEvent *event) {
 
 //-----------------------------------------------------------------------------
 
+void StyleChooserPage::mouseMoveEvent(QMouseEvent *event) {
+  QPoint pos       = event->pos();
+  int currentIndex = posToIndex(pos);
+  if (currentIndex >= 0 && currentIndex < getChipCount())
+    setCursor(Qt::PointingHandCursor);
+  else
+    setCursor(Qt::ArrowCursor);
+}
+
+//-----------------------------------------------------------------------------
+
 void StyleChooserPage::mouseReleaseEvent(QMouseEvent *event) {}
 
 //-----------------------------------------------------------------------------
-// TOGLIERE
+
+void StyleChooserPage::contextMenuEvent(QContextMenuEvent *event) {
+  QPoint pos       = event->pos();
+  int currentIndex = posToIndex(pos);
+  if (currentIndex < 0) return;
+
+  // Get current selected style
+  TColorStyleP selectedStyle = nullptr;
+  if (m_styleEditor) selectedStyle = m_styleEditor->getEditedStyle();
+
+  if (!selectedStyle) return;
+  std::string idname = selectedStyle->getBrushIdName();
+
+  // Blacklist "no brush" since it's always pinned/favorite
+  if (idname == "SolidColorStyle") return;
+
+  QMenu menu(this);
+
+  FavoritesManager *favorites = FavoritesManager::instance();
+
+  m_pinToTopAct->setChecked(favorites->getPinToTop(idname));
+  menu.addAction(m_pinToTopAct);
+  // menu.addSeparator();
+  // QMenu *menuvis = menu.addMenu("Visible Brushes");
+  // menuvis->addAction(m_setPinsToTopAct);
+  // menuvis->addAction(m_clrPinsToTopAct);
+  menu.exec(event->globalPos());
+}
+
+//-----------------------------------------------------------------------------
+
+bool StyleChooserPage::event(QEvent *e) {
+  // Intercept tooltip events
+  if (e->type() != QEvent::ToolTip) return StyleEditorPage::event(e);
+
+  // see StyleChooserPage::paintEvent
+  QHelpEvent *he = static_cast<QHelpEvent *>(e);
+
+  int chipIdx = posToIndex(he->pos()), chipCount = getChipCount();
+  if (chipIdx < 0 || chipIdx >= chipCount) {
+    QToolTip::hideText();
+    return false;
+  }
+
+  QString toolTip = getChipDescription(chipIdx);
+  if (toolTip.isEmpty())
+    QToolTip::hideText();
+  else
+    QToolTip::showText(he->globalPos(), toolTip);
+
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleChooserPage::togglePinToTop() {
+  // Get current selected style
+  TColorStyleP selectedStyle = nullptr;
+  if (m_styleEditor) selectedStyle = m_styleEditor->getEditedStyle();
+
+  if (!selectedStyle) return;
+  std::string idname = selectedStyle->getBrushIdName();
+
+  FavoritesManager *favorites = FavoritesManager::instance();
+
+  favorites->togglePinToTop(idname);
+  favorites->savePinsToTop();
+  favorites->emitPinsToTopChange();
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleChooserPage::doSetPinsToTop() {
+  FavoritesManager *favorites = FavoritesManager::instance();
+
+  int len = m_manager->countData();
+  for (int i = 0; i < len; i++) {
+    auto &data = m_manager->getData(i);
+    favorites->setPinToTop(data.idname, true);
+  }
+  favorites->savePinsToTop();
+  favorites->emitPinsToTopChange();
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleChooserPage::doClrPinsToTop() {
+  FavoritesManager *favorites = FavoritesManager::instance();
+
+  int len = m_manager->countData();
+  for (int i = 0; i < len; i++) {
+    auto &data = m_manager->getData(i);
+    favorites->setPinToTop(data.idname, false);
+  }
+  favorites->savePinsToTop();
+  favorites->emitPinsToTopChange();
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleChooserPage::doPinsToTopChange() {
+  if (!m_pinsToTopDirty) m_pinsToTopDirty = true;
+  update();
+}
+
+//-----------------------------------------------------------------------------
+// Remove
 void StyleChooserPage::setRootPath(const TFilePath &rootPath) {
   m_rootPath = rootPath;
 }
 
 //*****************************************************************************
-//    CustomStyleChooser  definition
+//    CustomStyleChooser  implementation
 //*****************************************************************************
 
-class CustomStyleChooserPage final : public StyleChooserPage {
-public:
-  CustomStyleChooserPage(QWidget *parent = 0) : StyleChooserPage(parent) {}
-
-  static CustomStyleManager *styleManager();
-
-  bool event(QEvent *e) override;
-
-  void showEvent(QShowEvent *) override {
-    connect(styleManager(), SIGNAL(patternAdded()), this, SLOT(computeSize()));
-    styleManager()->loadItems();
-  }
-  void hideEvent(QHideEvent *) override {
-    disconnect(styleManager(), SIGNAL(patternAdded()), this,
-               SLOT(computeSize()));
-  }
-  bool loadIfNeeded() override { return false; }  // serve?
-  /*
-if(!m_loaded) {loadItems(); m_loaded=true;return true;}
-else return false;
-}
-  */
-
-  int getChipCount() const override {
-    return styleManager()->getPatternCount();
-  }
-
-  void drawChip(QPainter &p, QRect rect, int index) override {
-    assert(0 <= index && index < getChipCount());
-    CustomStyleManager::PatternData pattern = styleManager()->getPattern(index);
-    if (pattern.m_image && !pattern.m_image->isNull())
-      p.drawImage(rect, *pattern.m_image);
-  }
-  void onSelect(int index) override;
-};
-
-//-----------------------------------------------------------------------------
-
-CustomStyleManager *CustomStyleChooserPage::styleManager() {
-  static const QString filters(
-      "*.pli *.tif *.png *.tga *.tiff *.sgi *.rgb *.pct *.pic");
-  static CustomStyleManager theManager(TFilePath("custom styles"), filters);
-  return &theManager;
-}
-
-//-----------------------------------------------------------------------------
-
-bool CustomStyleChooserPage::event(QEvent *e) {
-  // Intercept tooltip events
-  if (e->type() != QEvent::ToolTip) return StyleChooserPage::event(e);
-
-  // see StyleChooserPage::paintEvent
-  CustomStyleManager *manager = styleManager();
-  QHelpEvent *he              = static_cast<QHelpEvent *>(e);
-
-  int chipIdx = posToIndex(he->pos()), chipCount = manager->getPatternCount();
-  if (chipIdx < 0 || chipIdx >= chipCount) return false;
-
-  CustomStyleManager::PatternData pattern = manager->getPattern(chipIdx);
-  QToolTip::showText(he->globalPos(),
-                     QString::fromStdString(pattern.m_patternName));
-
-  return true;
+int CustomStyleChooserPage::drawChip(QPainter &p, QRect rect, int index) {
+  assert(0 <= index && index < getChipCount());
+  auto &data = m_manager->getData(index);
+  if (!data.image.isNull()) p.drawImage(rect, data.image);
+  return data.markPinToTop ? PINNEDCHIP : COMMONCHIP;
 }
 
 //-----------------------------------------------------------------------------
@@ -1929,12 +2162,11 @@ bool CustomStyleChooserPage::event(QEvent *e) {
 void CustomStyleChooserPage::onSelect(int index) {
   if (index < 0 || index >= getChipCount()) return;
 
-  CustomStyleManager::PatternData pattern = styleManager()->getPattern(index);
+  auto &data = m_manager->getData(index);
 
-  if (m_currentIndex < 0) return;
+  std::string name = data.name.toStdString();
 
-  std::string name = pattern.m_patternName;
-  if (pattern.m_isVector) {
+  if (data.isVector) {
     TVectorImagePatternStrokeStyle cs(name);
     emit styleSelected(cs);
   } else {
@@ -1943,82 +2175,31 @@ void CustomStyleChooserPage::onSelect(int index) {
   }
 }
 
-//*****************************************************************************
-//    VectorBrushStyleChooser  definition
-//*****************************************************************************
-
-class VectorBrushStyleChooserPage final : public StyleChooserPage {
-public:
-  VectorBrushStyleChooserPage(QWidget *parent = 0) : StyleChooserPage(parent) {
-    m_chipSize = QSize(60, 25);
-  }
-
-  static CustomStyleManager *styleManager();
-
-  bool event(QEvent *e) override;
-
-  void showEvent(QShowEvent *) override {
-    connect(styleManager(), SIGNAL(patternAdded()), this, SLOT(computeSize()));
-    styleManager()->loadItems();
-  }
-  void hideEvent(QHideEvent *) override {
-    disconnect(styleManager(), SIGNAL(patternAdded()), this,
-               SLOT(computeSize()));
-  }
-  bool loadIfNeeded() override { return false; }
-
-  int getChipCount() const override {
-    return styleManager()->getPatternCount() + 1;
-  }
-
-  void drawChip(QPainter &p, QRect rect, int index) override;
-  void onSelect(int index) override;
-};
-
 //-----------------------------------------------------------------------------
 
-CustomStyleManager *VectorBrushStyleChooserPage::styleManager() {
-  static CustomStyleManager theManager(TFilePath("vector brushes"), "*.pli",
-                                       QSize(60, 25));
-  return &theManager;
+bool CustomStyleChooserPage::isSameStyle(const TColorStyleP style, int index) {
+  return style->getBrushIdHash() == m_manager->getData(index).hash;
 }
 
 //-----------------------------------------------------------------------------
 
-bool VectorBrushStyleChooserPage::event(QEvent *e) {
-  // Intercept tooltip events
-  if (e->type() != QEvent::ToolTip) return StyleChooserPage::event(e);
-
-  // see StyleChooserPage::paintEvent
-  CustomStyleManager *manager = styleManager();
-  QHelpEvent *he              = static_cast<QHelpEvent *>(e);
-
-  int chipIdx = posToIndex(he->pos()), chipCount = getChipCount();
-  if (chipIdx < 0 || chipIdx >= chipCount) return false;
-
-  if (chipIdx > 0) {
-    CustomStyleManager::PatternData pattern = manager->getPattern(chipIdx - 1);
-    QToolTip::showText(he->globalPos(),
-                       QString::fromStdString(pattern.m_patternName));
-  } else
-    QToolTip::showText(
-        he->globalPos(),
-        QObject::tr("Plain color", "VectorBrushStyleChooserPage"));
-
-  return true;
+QString CustomStyleChooserPage::getChipDescription(int index) {
+  return m_manager->getData(index).desc;
 }
 
-//-----------------------------------------------------------------------------
+//*****************************************************************************
+//    VectorBrushStyleChooser  implementation
+//*****************************************************************************
 
-void VectorBrushStyleChooserPage::drawChip(QPainter &p, QRect rect, int index) {
+int VectorBrushStyleChooserPage::drawChip(QPainter &p, QRect rect, int index) {
   if (index == 0) {
     static QImage noSpecialStyleImage(":Resources/no_vectorbrush.png");
     p.drawImage(rect, noSpecialStyleImage);
+    return SOLIDCHIP;
   } else {
-    assert(0 <= index && index < getChipCount());
-    CustomStyleManager::PatternData pattern =
-        styleManager()->getPattern(index - 1);
-    p.drawImage(rect, *pattern.m_image);
+    auto &data = m_manager->getData(index - 1);
+    p.drawImage(rect, data.image);
+    return data.markPinToTop ? PINNEDCHIP : COMMONCHIP;
   }
 }
 
@@ -2028,393 +2209,191 @@ void VectorBrushStyleChooserPage::onSelect(int index) {
   if (index < 0 || index >= getChipCount()) return;
 
   if (index > 0) {
-    --index;
+    auto &data = m_manager->getData(index - 1);
 
-    CustomStyleManager::PatternData pattern = styleManager()->getPattern(index);
-
-    if (m_currentIndex < 0) return;
-
-    std::string name = pattern.m_patternName;
-    assert(pattern.m_isVector);
-    if (!pattern.m_isVector) return;
+    std::string name = data.name.toStdString();
+    assert(data.isVector);  // must be Vector
+    if (!data.isVector) return;
 
     TVectorBrushStyle cs(name);
     emit styleSelected(cs);
   } else {
-    TSolidColorStyle cs(TPixel32::Black);
-    emit styleSelected(cs);
+    static TSolidColorStyle noStyle(TPixel32::Black);
+    emit styleSelected(noStyle);
   }
 }
 
-//*****************************************************************************
-//    TextureStyleChooser  definition
-//*****************************************************************************
-
-struct Texture {
-  TRasterP m_raster;
-  QString m_name;
-};
-
 //-----------------------------------------------------------------------------
 
-class TextureStyleChooserPage final : public StyleChooserPage {
-  static std::vector<Texture> m_textures;
-  static bool m_loaded;
-
-public:
-  TextureStyleChooserPage(QWidget *parent = 0) : StyleChooserPage(parent) {}
-
-  bool loadIfNeeded() override {
-    if (!m_loaded) {
-      loadItems();
-      m_loaded = true;
-      return true;
-    } else
-      return false;
-  }
-
-  int getChipCount() const override { return m_textures.size(); }
-
-  static void loadTexture(const TFilePath &fp);
-  static void loadItems();
-
-  void drawChip(QPainter &p, QRect rect, int index) override {
-    assert(0 <= index && index < getChipCount());
-    p.drawImage(rect, rasterToQImage(m_textures[index].m_raster));
-  }
-
-  void onSelect(int index) override;
-
-  bool event(QEvent *e) override;
-};
-
-//-----------------------------------------------------------------------------
-
-std::vector<Texture> TextureStyleChooserPage::m_textures;
-bool TextureStyleChooserPage::m_loaded(false);
-
-//-----------------------------------------------------------------------------
-
-void TextureStyleChooserPage::loadTexture(const TFilePath &fp) {
-  if (fp == TFilePath()) {
-    TRaster32P ras(25, 25);
-    TTextureStyle::fillCustomTextureIcon(ras);
-    // ras->fill(TPixel::Blue);
-    Texture customText = {ras, QString("")};
-
-    m_textures.push_back(customText);
-    return;
-  }
-
-  TRasterP ras;
-  TImageReader::load(fp, ras);
-  if (!ras || ras->getLx() < 2 || ras->getLy() < 2) return;
-
-  TRaster32P ras32 = ras;
-  if (!ras32) return;
-
-  TDimension d(2, 2);
-  while (d.lx < 256 && d.lx * 2 <= ras32->getLx()) d.lx *= 2;
-  while (d.ly < 256 && d.ly * 2 <= ras32->getLy()) d.ly *= 2;
-
-  TRaster32P texture;
-  if (d == ras32->getSize())
-    texture = ras32;
-  else {
-    texture = TRaster32P(d);
-    TScale sc((double)texture->getLx() / ras32->getLx(),
-              (double)texture->getLy() / ras32->getLy());
-    TRop::resample(texture, ras32, sc);
-  }
-
-  Texture text = {texture, QString::fromStdWString(fp.getLevelNameW())};
-
-  m_textures.push_back(text);
+bool VectorBrushStyleChooserPage::isSameStyle(const TColorStyleP style,
+                                              int index) {
+  if (index > 0) {
+    auto &data = m_manager->getData(index - 1);
+    if (!data.isVector) return false;  // must be Vector
+    return style->getBrushIdHash() == data.hash;
+  } else
+    return style->getBrushIdHash() == TSolidColorStyle::staticBrushIdHash();
 }
 
 //-----------------------------------------------------------------------------
 
-void TextureStyleChooserPage::loadItems() {
-  m_textures.clear();
-  if (getRootPath() == TFilePath()) return;
-  TFilePath texturePath = getRootPath() + "textures";
-  TFilePathSet fps;
-  try {
-    fps = TSystem::readDirectory(texturePath);
-  } catch (...) {
-    return;
+QString VectorBrushStyleChooserPage::getChipDescription(int index) {
+  if (index > 0)
+    return m_manager->getData(index - 1).desc;
+  else
+    return QObject::tr("Plain color", "VectorBrushStyleChooserPage");
+}
+
+//*****************************************************************************
+//    TextureStyleChooser  implementation
+//*****************************************************************************
+
+int TextureStyleChooserPage::drawChip(QPainter &p, QRect rect, int index) {
+  assert(0 <= index && index < getChipCount());
+
+  if (index == 0) {
+    static QImage noStyleImage(":Resources/no_texturestyle.png");
+    p.drawImage(rect, noStyleImage);
+    return SOLIDCHIP;
+  } else {
+    auto &data = m_manager->getData(index - 1);
+    p.drawImage(rect, data.image);
+    return data.markPinToTop ? PINNEDCHIP : COMMONCHIP;
   }
-  if (fps.empty()) return;
-  int count = 0;
-  for (TFilePathSet::iterator it = fps.begin(); it != fps.end(); it++)
-    if (TFileType::getInfo(*it) == TFileType::RASTER_IMAGE) {
-      try {
-        loadTexture(*it);
-        ++count;
-      } catch (...) {
-      }
-    }
-  loadTexture(TFilePath());  // custom texture
 }
 
 //-----------------------------------------------------------------------------
 
 void TextureStyleChooserPage::onSelect(int index) {
-  assert(0 <= index && index < (int)m_textures.size());
+  assert(0 <= index && index < getChipCount());
 
-  TTextureStyle style(m_textures[index].m_raster,
-                      TFilePath(m_textures[index].m_name.toStdWString()));
-  emit styleSelected(style);
+  if (index == 0) {
+    static TSolidColorStyle noStyle(TPixel32::Black);
+    emit styleSelected(noStyle);
+  } else {
+    auto &data = m_manager->getData(index - 1);
+
+    TTextureStyle style(data.raster, TFilePath(data.name.toStdWString()));
+    emit styleSelected(style);
+  }
 }
 
 //-----------------------------------------------------------------------------
 
-bool TextureStyleChooserPage::event(QEvent *e) {
-  if (e->type() == QEvent::ToolTip) {
-    QHelpEvent *helpEvent = dynamic_cast<QHelpEvent *>(e);
-    QString toolTip;
-    QPoint pos = helpEvent->pos();
-    int index  = posToIndex(pos);
-    if (index >= 0 && index < (int)m_textures.size()) {
-      toolTip = m_textures[index].m_name;
-      QToolTip::showText(
-          helpEvent->globalPos(),
-          toolTip != QString()
-              ? toolTip
-              : QObject::tr("Custom Texture", "TextureStyleChooserPage"));
-    }
-    e->accept();
-  }
-  return StyleChooserPage::event(e);
+bool TextureStyleChooserPage::isSameStyle(const TColorStyleP style, int index) {
+  if (index > 0)
+    return style->getBrushIdHash() == m_manager->getData(index - 1).hash;
+  else
+    return style->getBrushIdHash() == TSolidColorStyle::staticBrushIdHash();
+}
+
+//-----------------------------------------------------------------------------
+
+QString TextureStyleChooserPage::getChipDescription(int index) {
+  if (index > 0)
+    return m_manager->getData(index - 1).desc;
+  else
+    return QObject::tr("Plain color", "TextureStyleChooserPage");
 }
 
 //*****************************************************************************
-//    MyPaintBrushStyleChooserPage definition
+//    MyPaintBrushStyleChooserPage  implementation
 //*****************************************************************************
 
-class MyPaintBrushStyleChooserPage final : public StyleChooserPage {
-public:
-  struct Brush {
-    TRasterP m_raster;
-    QString m_name;
-  };
-
-private:
-  static std::vector<TMyPaintBrushStyle> m_brushes;
-
-public:
-  MyPaintBrushStyleChooserPage(QWidget *parent = 0) : StyleChooserPage(parent) {
-    m_chipSize = QSize(64, 64);
-  }
-
-  bool loadIfNeeded() override {
-    static bool m_loaded = false;
-    if (!m_loaded) {
-      loadItems();
-      m_loaded = true;
-      return true;
-    } else
-      return false;
-  }
-
-  int getChipCount() const override { return m_brushes.size() + 1; }
-
-  static void loadItems();
-
-  void drawChip(QPainter &p, QRect rect, int index) override {
-    assert(0 <= index && index <= (int)m_brushes.size());
+int MyPaintBrushStyleChooserPage::drawChip(QPainter &p, QRect rect, int index) {
+  assert(0 <= index && index < getChipCount());
+  if (index == 0) {
     static QImage noStyleImage(":Resources/no_mypaintbrush.png");
-    p.drawImage(rect, index == 0
-                          ? noStyleImage
-                          : rasterToQImage(m_brushes[index - 1].getPreview()));
-  }
-
-  void onSelect(int index) override {
-    assert(0 <= index && index <= (int)m_brushes.size());
-    static TSolidColorStyle noStyle(TPixel32::Black);
-    if (index == 0) {
-      emit styleSelected(noStyle);
-    } else {
-      emit styleSelected(m_brushes[index - 1]);
-    }
-  }
-
-  bool event(QEvent *e) override {
-    static TSolidColorStyle noStyle(TPixel32::Black);
-    if (e->type() == QEvent::ToolTip) {
-      QHelpEvent *helpEvent = dynamic_cast<QHelpEvent *>(e);
-      QString toolTip;
-      QPoint pos = helpEvent->pos();
-      int index  = posToIndex(pos);
-      if (index == 0) {
-        toolTip = QObject::tr("Plain color", "MyPaintBrushStyleChooserPage");
-      } else if (index > 0 && index <= (int)m_brushes.size()) {
-        toolTip = m_brushes[index - 1].getPath().getQString();
-      }
-      QToolTip::showText(helpEvent->globalPos(), toolTip);
-      e->accept();
-    }
-    return StyleChooserPage::event(e);
-  }
-};
-
-//-----------------------------------------------------------------------------
-
-std::vector<TMyPaintBrushStyle> MyPaintBrushStyleChooserPage::m_brushes;
-
-//-----------------------------------------------------------------------------
-
-void MyPaintBrushStyleChooserPage::loadItems() {
-  m_brushes.clear();
-  std::set<TFilePath> brushFiles;
-
-  TFilePathSet dirs = TMyPaintBrushStyle::getBrushesDirs();
-  for (TFilePathSet::iterator i = dirs.begin(); i != dirs.end(); ++i) {
-    TFileStatus fs(*i);
-    if (fs.doesExist() && fs.isDirectory()) {
-      TFilePathSet files = TSystem::readDirectoryTree(*i, false, true);
-      for (TFilePathSet::iterator j = files.begin(); j != files.end(); ++j)
-        if (j->getType() == TMyPaintBrushStyle::getBrushType())
-          brushFiles.insert(*j - *i);
-    }
-  }
-
-  // reserve memory to avoid reallocation
-  m_brushes.reserve(brushFiles.size());
-  for (std::set<TFilePath>::iterator i = brushFiles.begin();
-       i != brushFiles.end(); ++i)
-    m_brushes.push_back(TMyPaintBrushStyle(*i));
-}
-
-//*****************************************************************************
-//    SpecialStyleChooser  definition
-//*****************************************************************************
-
-class SpecialStyleChooserPage final : public StyleChooserPage {
-  static std::vector<std::pair<int, QImage *>> m_customStyles;
-  static bool m_loaded;
-
-public:
-  SpecialStyleChooserPage(QWidget *parent          = 0,
-                          const TFilePath &rootDir = TFilePath())
-      : StyleChooserPage(parent) {}
-
-  bool loadIfNeeded() override {
-    if (!m_loaded) {
-      loadItems();
-      m_loaded = true;
-      return true;
-    } else
-      return false;
-  }
-  int getChipCount() const override { return m_customStyles.size(); }
-
-  void loadItems();
-
-  void drawChip(QPainter &p, QRect rect, int index) override;
-  void onSelect(int index) override;
-  bool event(QEvent *e) override;
-};
-
-//-----------------------------------------------------------------------------
-
-std::vector<std::pair<int, QImage *>> SpecialStyleChooserPage::m_customStyles;
-bool SpecialStyleChooserPage::m_loaded(false);
-
-//-----------------------------------------------------------------------------
-
-void SpecialStyleChooserPage::loadItems() {
-  std::vector<int> tags;
-  TColorStyle::getAllTags(tags);
-
-  int chipCount = 0;
-
-  for (int j = 0; j < (int)tags.size(); j++) {
-    int tagId = tags[j];
-    if (tagId == 3 ||     // solid color
-        tagId == 4 ||     // texture
-        tagId == 100 ||   // obsolete imagepattern id
-        tagId == 2000 ||  // imagepattern
-        tagId == 2800 ||  // imagepattern
-        tagId == 2001 ||  // cleanup
-        tagId == 2002 ||  // ??
-        tagId == 3000 ||  // vector brush
-        tagId == 4001     // mypaint brush
-    )
-      continue;
-
-    TColorStyle *style = TColorStyle::create(tagId);
-    if (style->isRasterStyle()) {
-      delete style;
-      continue;
-    }
-    TDimension chipSize(getChipSize().width(), getChipSize().height());
-    QImage *image = new QImage(rasterToQImage(style->getIcon(chipSize), false));
-    m_customStyles.push_back(std::make_pair(tagId, image));
-    delete style;
+    p.drawImage(rect, noStyleImage);
+    return SOLIDCHIP;
+  } else {
+    auto &data = m_manager->getData(index - 1);
+    p.drawImage(rect, data.image);
+    return data.markPinToTop ? PINNEDCHIP : COMMONCHIP;
   }
 }
 
 //-----------------------------------------------------------------------------
 
-void SpecialStyleChooserPage::drawChip(QPainter &p, QRect rect, int index) {
+void MyPaintBrushStyleChooserPage::onSelect(int index) {
+  assert(0 <= index && index < getChipCount());
+  if (index == 0) {
+    static TSolidColorStyle noStyle(TPixel32::Black);
+    emit styleSelected(noStyle);
+  } else {
+    --index;
+    emit styleSelected(getBrush(index));
+  }
+}
+
+//-----------------------------------------------------------------------------
+
+bool MyPaintBrushStyleChooserPage::isSameStyle(const TColorStyleP style,
+                                               int index) {
+  if (index > 0)
+    return style->getBrushIdHash() == getBrush(index - 1).getBrushIdHash();
+  else
+    return style->getBrushIdHash() == TSolidColorStyle::staticBrushIdHash();
+}
+
+//-----------------------------------------------------------------------------
+
+QString MyPaintBrushStyleChooserPage::getChipDescription(int index) {
+  if (index > 0)
+    return m_manager->getData(index - 1).desc;
+  else
+    return QObject::tr("Plain color", "MyPaintBrushStyleChooserPage");
+}
+
+//*****************************************************************************
+//    SpecialStyleChooser  implementation
+//*****************************************************************************
+
+int SpecialStyleChooserPage::drawChip(QPainter &p, QRect rect, int index) {
   if (index == 0) {
     static QImage noSpecialStyleImage(":Resources/no_specialstyle.png");
     p.drawImage(rect, noSpecialStyleImage);
+    return SOLIDCHIP;
   } else {
-    int j = index - 1;
-    if (0 <= j && j < (int)m_customStyles.size())
-      p.drawImage(rect, *m_customStyles[j].second);
-    else
-      p.fillRect(rect, QBrush(QColor(255, 0, 0)));
+    auto &data = m_manager->getData(index - 1);
+    p.drawImage(rect, data.image);
+    return data.markPinToTop ? PINNEDCHIP : COMMONCHIP;
   }
 }
 
 //-----------------------------------------------------------------------------
 
 void SpecialStyleChooserPage::onSelect(int index) {
-  assert(0 <= index && index < (int)m_customStyles.size());
+  assert(0 <= index && index < getChipCount());
   TColorStyle *cs = 0;
-  if (m_currentIndex < 0) return;
+  // if (m_currentIndex < 0) return;
   if (index == 0)
     cs = new TSolidColorStyle(TPixel32::Black);
   else {
-    int j = index - 1;
-    assert(0 <= j && j < (int)m_customStyles.size());
-    int tagId = m_customStyles[j].first;
-    cs        = TColorStyle::create(tagId);
+    auto &data = m_manager->getData(index - 1);
+
+    cs = TColorStyle::create(data.tagId);
   }
+
   emit styleSelected(*cs);
 }
 
 //-----------------------------------------------------------------------------
 
-bool SpecialStyleChooserPage::event(QEvent *e) {
-  if (e->type() == QEvent::ToolTip) {
-    QHelpEvent *helpEvent = dynamic_cast<QHelpEvent *>(e);
-    QString toolTip;
-    QPoint pos = helpEvent->pos();
-    int index  = posToIndex(pos);
-    if (index == 0)
-      toolTip = QObject::tr("Plain color", "SpecialStyleChooserPage");
-    else {
-      int j = index - 1;
-      if (0 <= j && j < (int)m_customStyles.size()) {
-        int tagId       = m_customStyles[j].first;
-        TColorStyle *cs = TColorStyle::create(tagId);
-        if (cs) {
-          toolTip = cs->getDescription();
-          delete cs;
-        }
-      }
-    }
-    if (toolTip != "")
-      QToolTip::showText(helpEvent->globalPos(), toolTip);
-    else
-      QToolTip::hideText();
-    e->accept();
-  }
-  return StyleChooserPage::event(e);
+bool SpecialStyleChooserPage::isSameStyle(const TColorStyleP style, int index) {
+  if (index > 0)
+    return style->getBrushIdHash() == m_manager->getData(index - 1).hash;
+  else
+    return style->getBrushIdHash() == TSolidColorStyle::staticBrushIdHash();
+}
+
+//-----------------------------------------------------------------------------
+
+QString SpecialStyleChooserPage::getChipDescription(int index) {
+  if (index > 0)
+    return m_manager->getData(index - 1).desc;
+  else
+    return QObject::tr("Plain color", "SpecialStyleChooserPage");
 }
 
 //=============================================================================
@@ -2428,7 +2407,7 @@ SettingBox::SettingBox(QWidget *parent, int index)
 {
         QHBoxLayout* hLayout = new QHBoxLayout(this);
         hLayout->setSpacing(5);
-        hLayout->setMargin(0);
+        hLayout->setContentsMargins(0, 0, 0, 0);
         hLayout->addSpacing(10);
         m_name = new QLabel(this);
         m_name->setFixedSize(82,20);
@@ -2528,7 +2507,7 @@ SettingsPage::SettingsPage(QWidget *parent)
   setWidget(paramsContainer);
 
   QVBoxLayout *paramsContainerLayout = new QVBoxLayout(this);
-  paramsContainerLayout->setMargin(10);
+  paramsContainerLayout->setContentsMargins(10, 10, 10, 10);
   paramsContainerLayout->setSpacing(10);
   paramsContainer->setLayout(paramsContainerLayout);
 
@@ -2543,7 +2522,7 @@ SettingsPage::SettingsPage(QWidget *parent)
 
   // Prepare the style parameters layout
   m_paramsLayout = new QGridLayout;
-  m_paramsLayout->setMargin(0);
+  m_paramsLayout->setContentsMargins(0, 0, 0, 0);
   m_paramsLayout->setVerticalSpacing(8);
   m_paramsLayout->setHorizontalSpacing(5);
   paramsContainerLayout->addLayout(m_paramsLayout);
@@ -2688,6 +2667,7 @@ void SettingsPage::setStyle(const TColorStyleP &editedStyle) {
         QPushButton *pushButton = new QPushButton;
         pushButton->setToolTip(tr("Reset to default"));
         pushButton->setIcon(createQIcon("delete"));
+        pushButton->setFixedSize(24, 24);
         m_paramsLayout->addWidget(pushButton, p, 2);
         ret = QObject::connect(pushButton, SIGNAL(clicked(bool)), this,
                                SLOT(onValueReset())) &&
@@ -2899,9 +2879,10 @@ StyleEditor::StyleEditor(PaletteController *paletteController, QWidget *parent)
     , m_enabledFirstAndLastTab(false)
     , m_oldStyle(0)
     , m_parent(parent)
+    , m_hexColorNamesEditor(0)
     , m_editedStyle(0) {
   setFocusPolicy(Qt::NoFocus);
-  // TOGLIERE
+  // Remove
   TFilePath libraryPath = ToonzFolder::getLibraryFolder();
   setRootPath(libraryPath);
 
@@ -2917,11 +2898,11 @@ StyleEditor::StyleEditor(PaletteController *paletteController, QWidget *parent)
   m_colorParameterSelector = new ColorParameterSelector(this);
 
   m_plainColorPage          = new PlainColorPage(0);
-  m_textureStylePage        = new TextureStyleChooserPage(0);
-  m_specialStylePage        = new SpecialStyleChooserPage(0);
-  m_customStylePage         = new CustomStyleChooserPage(0);
-  m_vectorBrushesStylePage  = new VectorBrushStyleChooserPage(0);
-  m_mypaintBrushesStylePage = new MyPaintBrushStyleChooserPage(0);
+  m_textureStylePage        = new TextureStyleChooserPage(this, 0);
+  m_specialStylePage        = new SpecialStyleChooserPage(this, 0);
+  m_customStylePage         = new CustomStyleChooserPage(this, 0);
+  m_vectorBrushesStylePage  = new VectorBrushStyleChooserPage(this, 0);
+  m_mypaintBrushesStylePage = new MyPaintBrushStyleChooserPage(this, 0);
   m_settingsPage            = new SettingsPage(0);
 
   QWidget *emptyPage = new StyleEditorPage(0);
@@ -2929,13 +2910,17 @@ StyleEditor::StyleEditor(PaletteController *paletteController, QWidget *parent)
   // For the plainColorPage and the settingsPage
   // I create a "fake" QScrollArea (without ScrollingBar
   // in order to use the styleSheet to stylish its background
-  QScrollArea *plainArea   = makeChooserPageWithoutScrollBar(m_plainColorPage);
-  QScrollArea *textureArea = makeChooserPage(m_textureStylePage);
-  QScrollArea *mypaintBrushesArea = makeChooserPage(m_mypaintBrushesStylePage);
+  QScrollArea *plainArea = makeChooserPageWithoutScrollBar(m_plainColorPage);
+  QScrollArea *textureArea =
+      makeChooserPageWithoutScrollBar(createTexturePage());
+  QScrollArea *mypaintBrushesArea =
+      makeChooserPageWithoutScrollBar(createMyPaintPage());
   QScrollArea *settingsArea = makeChooserPageWithoutScrollBar(m_settingsPage);
   QScrollArea *vectorOutsideArea =
       makeChooserPageWithoutScrollBar(createVectorPage());
+  textureArea->setMinimumWidth(50);
   vectorOutsideArea->setMinimumWidth(50);
+  mypaintBrushesArea->setMinimumWidth(50);
 
   m_styleChooser = new QStackedWidget(this);
   m_styleChooser->addWidget(plainArea);
@@ -2947,62 +2932,15 @@ StyleEditor::StyleEditor(PaletteController *paletteController, QWidget *parent)
   m_styleChooser->setFocusPolicy(Qt::NoFocus);
 
   QFrame *bottomWidget = createBottomWidget();
-
-  m_toolBar = new QToolBar(this);
-  m_toolBar->setMovable(false);
-  m_toolBar->setMaximumHeight(22);
-  m_toolBar->addWidget(m_colorParameterSelector);
-
-  m_colorParameterSelector->setMinimumWidth(200);
-  m_colorParameterSelector->setFixedHeight(22);
-
-  QMenu *menu   = new QMenu();
-  m_wheelAction = new QAction(tr("Wheel"), this);
-  m_hsvAction   = new QAction(tr("HSV"), this);
-  m_alphaAction = new QAction(tr("Alpha"), this);
-  m_rgbAction   = new QAction(tr("RGB"), this);
-
-  m_wheelAction->setCheckable(true);
-  m_hsvAction->setCheckable(true);
-  m_alphaAction->setCheckable(true);
-  m_rgbAction->setCheckable(true);
-  m_wheelAction->setChecked(true);
-  m_hsvAction->setChecked(true);
-  m_alphaAction->setChecked(true);
-  m_rgbAction->setChecked(true);
-  menu->addAction(m_wheelAction);
-  menu->addAction(m_hsvAction);
-  menu->addAction(m_alphaAction);
-  menu->addAction(m_rgbAction);
-
-  QToolButton *toolButton = new QToolButton(this);
-  toolButton->setIcon(createQIcon("options"));
-  toolButton->setFixedSize(22, 22);
-  toolButton->setMenu(menu);
-  toolButton->setPopupMode(QToolButton::InstantPopup);
-  toolButton->setToolTip(tr("Show or hide parts of the Color Page."));
-  QToolBar *displayToolbar = new QToolBar(this);
-  m_toggleOrientationAction =
-      displayToolbar->addAction(QIcon(":Resources/orientation_h.svg"), "");
-  m_toggleOrientationAction->setToolTip(
-      tr("Toggle orientation of the Color Page."));
-  QWidget *toggleOrientationButton =
-      displayToolbar->widgetForAction(m_toggleOrientationAction);
-  toggleOrientationButton->setFixedSize(22, 22);
-  toggleOrientationButton->setFocusPolicy(Qt::NoFocus);
-  displayToolbar->addWidget(toolButton);
-  displayToolbar->setMaximumHeight(22);
-  displayToolbar->setIconSize(QSize(18, 18));
-
   /* ------- layout ------- */
   QGridLayout *mainLayout = new QGridLayout;
-  mainLayout->setMargin(0);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
   mainLayout->setSpacing(0);
   {
     QHBoxLayout *hLayout = new QHBoxLayout;
-    hLayout->setMargin(0);
+    hLayout->setContentsMargins(0, 0, 0, 0);
     {
-      hLayout->addSpacing(4);
+      hLayout->addSpacing(0);
       hLayout->addWidget(m_styleBar);
       hLayout->addStretch();
     }
@@ -3011,8 +2949,8 @@ StyleEditor::StyleEditor(PaletteController *paletteController, QWidget *parent)
     mainLayout->addWidget(m_tabBarContainer, 0, 0, 1, 2);
     mainLayout->addWidget(m_styleChooser, 1, 0, 1, 2);
     mainLayout->addWidget(bottomWidget, 2, 0, 1, 2);
-    mainLayout->addWidget(m_toolBar, 3, 0);
-    mainLayout->addWidget(displayToolbar, 3, 1);
+    // mainLayout->addWidget(m_toolBar, 3, 0);
+    // mainLayout->addWidget(displayToolbar, 3, 1);
   }
   mainLayout->setColumnStretch(0, 1);
   mainLayout->setRowStretch(1, 1);
@@ -3022,7 +2960,7 @@ StyleEditor::StyleEditor(PaletteController *paletteController, QWidget *parent)
 
   bool ret = true;
   ret      = ret && connect(m_styleBar, SIGNAL(currentChanged(int)), this,
-                       SLOT(setPage(int)));
+                            SLOT(setPage(int)));
   ret = ret && connect(m_colorParameterSelector, SIGNAL(colorParamChanged()),
                        this, SLOT(onColorParamChanged()));
   ret = ret &&
@@ -3045,19 +2983,6 @@ StyleEditor::StyleEditor(PaletteController *paletteController, QWidget *parent)
   ret = ret && connect(m_plainColorPage,
                        SIGNAL(colorChanged(const ColorModel &, bool)), this,
                        SLOT(onColorChanged(const ColorModel &, bool)));
-
-  ret = ret && connect(m_wheelAction, SIGNAL(toggled(bool)),
-                       m_plainColorPage->m_wheelFrame, SLOT(setVisible(bool)));
-  ret = ret && connect(m_hsvAction, SIGNAL(toggled(bool)),
-                       m_plainColorPage->m_hsvFrame, SLOT(setVisible(bool)));
-  ret = ret && connect(m_alphaAction, SIGNAL(toggled(bool)),
-                       m_plainColorPage->m_alphaFrame, SLOT(setVisible(bool)));
-  ret = ret && connect(m_rgbAction, SIGNAL(toggled(bool)),
-                       m_plainColorPage->m_rgbFrame, SLOT(setVisible(bool)));
-  ret = ret && connect(m_toggleOrientationAction, SIGNAL(triggered()),
-                       m_plainColorPage, SLOT(toggleOrientation()));
-  ret = ret && connect(m_toggleOrientationAction, SIGNAL(triggered()), this,
-                       SLOT(updateOrientationButton()));
   assert(ret);
   /* ------- initial conditions ------- */
   enable(false, false, false);
@@ -3083,13 +3008,14 @@ void StyleEditor::setPaletteHandle(TPaletteHandle* paletteHandle)
 QFrame *StyleEditor::createBottomWidget() {
   QFrame *bottomWidget = new QFrame(this);
   m_autoButton         = new QPushButton(tr("Auto"));
-  m_oldColor           = new DVGui::StyleSample(this, 42, 20);
-  m_newColor           = new DVGui::StyleSample(this, 42, 20);
+  m_oldColor           = new DVGui::StyleSample(this, 42, 24);
+  m_newColor           = new DVGui::StyleSample(this, 42, 24);
   m_applyButton        = new QPushButton(tr("Apply"));
 
   bottomWidget->setFrameStyle(QFrame::StyledPanel);
   bottomWidget->setObjectName("bottomWidget");
   bottomWidget->setContentsMargins(0, 0, 0, 0);
+  bottomWidget->setMinimumHeight(60);
   m_applyButton->setToolTip(tr("Apply changes to current style"));
   m_applyButton->setDisabled(m_paletteController->isColorAutoApplyEnabled());
   m_applyButton->setFocusPolicy(Qt::NoFocus);
@@ -3102,42 +3028,159 @@ QFrame *StyleEditor::createBottomWidget() {
   m_oldColor->setToolTip(tr("Return To Previous Style"));
   m_oldColor->enableClick(true);
   m_oldColor->setEnable(false);
+  m_oldColor->setSystemChessboard(true);
+  m_oldColor->setCloneStyle(true);
   m_newColor->setToolTip(tr("Current Style"));
+  m_newColor->enableClick(true);
   m_newColor->setEnable(false);
+  m_newColor->setSystemChessboard(true);
+
+  m_hexLineEdit = new DVGui::HexLineEdit("", this);
+  m_hexLineEdit->setObjectName("HexLineEdit");
+  m_hexLineEdit->setFixedWidth(75);
+
+  m_toolBar = new QToolBar(this);
+  m_toolBar->setMovable(false);
+  m_toolBar->setMaximumHeight(22);
+  QMenu *menu    = new QMenu();
+  m_wheelAction  = new QAction(tr("Wheel"), this);
+  m_hsvAction    = new QAction(tr("HSV"), this);
+  m_alphaAction  = new QAction(tr("Alpha"), this);
+  m_rgbAction    = new QAction(tr("RGB"), this);
+  m_hexAction    = new QAction(tr("Hex"), this);
+  m_searchAction = new QAction(tr("Search"), this);
+
+  m_wheelAction->setCheckable(true);
+  m_hsvAction->setCheckable(true);
+  m_alphaAction->setCheckable(true);
+  m_rgbAction->setCheckable(true);
+  m_hexAction->setCheckable(true);
+  m_searchAction->setCheckable(true);
+  m_wheelAction->setChecked(true);
+  m_hsvAction->setChecked(true);
+  m_alphaAction->setChecked(true);
+  m_rgbAction->setChecked(true);
+  m_hexAction->setChecked(false);
+  m_searchAction->setChecked(false);
+  menu->addAction(m_wheelAction);
+  menu->addAction(m_hsvAction);
+  menu->addAction(m_alphaAction);
+  menu->addAction(m_rgbAction);
+  menu->addAction(m_hexAction);
+  menu->addAction(m_searchAction);
+
+  m_sliderAppearanceAG = new QActionGroup(this);
+  QAction *relColorAct =
+      new QAction(tr("Relative colored + Triangle handle"), this);
+  QAction *absColorAct =
+      new QAction(tr("Absolute colored + Line handle"), this);
+  relColorAct->setData(RelativeColoredTriangleHandle);
+  absColorAct->setData(AbsoluteColoredLineHandle);
+  relColorAct->setCheckable(true);
+  absColorAct->setCheckable(true);
+  if (StyleEditorColorSliderAppearance == RelativeColoredTriangleHandle)
+    relColorAct->setChecked(true);
+  else
+    absColorAct->setChecked(true);
+  m_sliderAppearanceAG->addAction(relColorAct);
+  m_sliderAppearanceAG->addAction(absColorAct);
+  m_sliderAppearanceAG->setExclusive(true);
+  menu->addSeparator();
+  QMenu *appearanceSubMenu = menu->addMenu(tr("Slider Appearance"));
+  appearanceSubMenu->addAction(relColorAct);
+  appearanceSubMenu->addAction(absColorAct);
+
+  m_toggleOrientationAction =
+      new QAction(createQIcon("orientation_h"), tr("Toggle Orientation"), this);
+  menu->addAction(m_toggleOrientationAction);
+
+  m_hexEditorAction = new QAction(tr("Hex Color Names..."), this);
+  menu->addAction(m_hexEditorAction);
+
+  QToolButton *toolButton = new QToolButton(this);
+  toolButton->setIcon(createQIcon("menu"));
+  toolButton->setFixedSize(22, 22);
+  toolButton->setMenu(menu);
+  toolButton->setPopupMode(QToolButton::InstantPopup);
+  toolButton->setToolTip(tr("Show or hide parts of the Color Page."));
+  // QToolBar* displayToolbar = new QToolBar(this);
+  m_toolBar->addWidget(toolButton);
+  m_toolBar->setMaximumHeight(22);
+  m_toolBar->setIconSize(QSize(16, 16));
 
   /* ------ layout ------ */
-  QVBoxLayout *mainLayout = new QVBoxLayout;
-  mainLayout->setMargin(2);
-  mainLayout->setSpacing(1);
+  QHBoxLayout *mainLayout = new QHBoxLayout;
+  mainLayout->setContentsMargins(2, 2, 2, 2);
+  mainLayout->setSpacing(0);
   {
-    QHBoxLayout *hLayout = new QHBoxLayout;
-    hLayout->setMargin(0);
-    hLayout->setSpacing(0);
-    {
-      hLayout->addWidget(m_autoButton);
-      hLayout->addWidget(m_applyButton);
-      hLayout->addSpacing(2);
-      hLayout->addWidget(m_newColor, 1);
-      hLayout->addWidget(m_oldColor, 1);
-    }
-    mainLayout->addLayout(hLayout);
+    mainLayout->addWidget(m_autoButton);
+    mainLayout->addSpacing(4);
+    mainLayout->addWidget(m_applyButton);
+    mainLayout->addSpacing(4);
 
-    // QHBoxLayout *buttonsLayout = new QHBoxLayout;
-    // buttonsLayout->setMargin(0);
-    // buttonsLayout->setSpacing(5);
-    //{ buttonsLayout->addWidget(m_applyButton); }
-    // mainLayout->addLayout(buttonsLayout);
+    QVBoxLayout *colorLay = new QVBoxLayout();
+    colorLay->setContentsMargins(0, 0, 0, 0);
+    colorLay->setSpacing(2);
+    {
+      QHBoxLayout *chipLay = new QHBoxLayout();
+      chipLay->setContentsMargins(0, 0, 0, 0);
+      chipLay->setSpacing(0);
+      {
+        chipLay->addWidget(m_newColor, 1);
+        chipLay->addWidget(m_oldColor, 1);
+      }
+      colorLay->addLayout(chipLay, 1);
+
+      colorLay->addWidget(m_colorParameterSelector, 0);
+    }
+    mainLayout->addLayout(colorLay, 1);
+    mainLayout->addSpacing(4);
+
+    QVBoxLayout *hexLay = new QVBoxLayout();
+    hexLay->setContentsMargins(0, 0, 0, 0);
+    hexLay->setSpacing(2);
+    {
+      hexLay->addWidget(m_hexLineEdit);
+      hexLay->addWidget(m_toolBar, 0, Qt::AlignBottom | Qt::AlignRight);
+    }
+    mainLayout->addLayout(hexLay, 0);
   }
   bottomWidget->setLayout(mainLayout);
 
   /* ------ signal-slot connections ------ */
   bool ret = true;
   ret      = ret && connect(m_applyButton, SIGNAL(clicked()), this,
-                       SLOT(applyButtonClicked()));
+                            SLOT(applyButtonClicked()));
   ret      = ret && connect(m_autoButton, SIGNAL(toggled(bool)), this,
-                       SLOT(autoCheckChanged(bool)));
-  ret = ret && connect(m_oldColor, SIGNAL(clicked(const TColorStyle &)), this,
-                       SLOT(onOldStyleClicked(const TColorStyle &)));
+                            SLOT(autoCheckChanged(bool)));
+  ret      = ret &&
+        connect(m_oldColor, SIGNAL(clicked()), this, SLOT(onOldStyleClicked()));
+  ret = ret &&
+        connect(m_newColor, SIGNAL(clicked()), this, SLOT(onNewStyleClicked()));
+  ret = ret && connect(m_wheelAction, SIGNAL(toggled(bool)),
+                       m_plainColorPage->m_wheelFrame, SLOT(setVisible(bool)));
+  ret = ret && connect(m_hsvAction, SIGNAL(toggled(bool)),
+                       m_plainColorPage->m_hsvFrame, SLOT(setVisible(bool)));
+  ret = ret && connect(m_alphaAction, SIGNAL(toggled(bool)),
+                       m_plainColorPage->m_alphaFrame, SLOT(setVisible(bool)));
+  ret = ret && connect(m_rgbAction, SIGNAL(toggled(bool)),
+                       m_plainColorPage->m_rgbFrame, SLOT(setVisible(bool)));
+  ret = ret && connect(m_hexAction, SIGNAL(toggled(bool)), m_hexLineEdit,
+                       SLOT(setVisible(bool)));
+  ret = ret && connect(m_searchAction, SIGNAL(toggled(bool)), this,
+                       SLOT(onSearchVisible(bool)));
+  ret = ret && connect(m_hexLineEdit, SIGNAL(editingFinished()), this,
+                       SLOT(onHexChanged()));
+  ret = ret && connect(m_hexEditorAction, SIGNAL(triggered()), this,
+                       SLOT(onHexEditor()));
+  ret = ret && connect(m_toggleOrientationAction, SIGNAL(triggered()),
+                       m_plainColorPage, SLOT(toggleOrientation()));
+  ret = ret && connect(m_toggleOrientationAction, SIGNAL(triggered()), this,
+                       SLOT(updateOrientationButton()));
+  ret = ret && connect(m_sliderAppearanceAG, SIGNAL(triggered(QAction *)), this,
+                       SLOT(onSliderAppearanceSelected(QAction *)));
+  ret = ret && connect(menu, SIGNAL(aboutToShow()), this,
+                       SLOT(onPopupMenuAboutToShow()));
   assert(ret);
 
   return bottomWidget;
@@ -3145,13 +3188,75 @@ QFrame *StyleEditor::createBottomWidget() {
 
 //-----------------------------------------------------------------------------
 
+QFrame *StyleEditor::createTexturePage() {
+  QFrame *outsideFrame = new QFrame();
+  outsideFrame->setMinimumWidth(50);
+
+  m_textureSearchFrame = new QFrame();
+  m_textureSearchText  = new QLineEdit();
+  m_textureSearchClear = new QPushButton(tr("Clear Search"));
+  m_textureSearchClear->setDisabled(true);
+  m_textureSearchClear->setSizePolicy(QSizePolicy::Minimum,
+                                      QSizePolicy::Preferred);
+
+  /* ------ layout ------ */
+  QVBoxLayout *outsideLayout = new QVBoxLayout();
+  outsideLayout->setContentsMargins(0, 0, 0, 0);
+  outsideLayout->setSpacing(0);
+  outsideLayout->setSizeConstraint(QLayout::SetNoConstraint);
+  {
+    QVBoxLayout *insideLayout = new QVBoxLayout();
+    insideLayout->setContentsMargins(0, 0, 0, 0);
+    insideLayout->setSpacing(0);
+    insideLayout->setSizeConstraint(QLayout::SetNoConstraint);
+    { insideLayout->addWidget(m_textureStylePage); }
+
+    QFrame *insideFrame = new QFrame();
+    insideFrame->setMinimumWidth(50);
+    insideFrame->setLayout(insideLayout);
+    m_textureArea = makeChooserPage(insideFrame);
+    m_textureArea->setMinimumWidth(50);
+    outsideLayout->addWidget(m_textureArea);
+
+    QHBoxLayout *searchLayout = new QHBoxLayout();
+    searchLayout->setContentsMargins(2, 2, 2, 2);
+    searchLayout->setSpacing(0);
+    searchLayout->setSizeConstraint(QLayout::SetNoConstraint);
+    {
+      searchLayout->addWidget(m_textureSearchText);
+      searchLayout->addWidget(m_textureSearchClear);
+    }
+    m_textureSearchFrame->setLayout(searchLayout);
+    outsideLayout->addWidget(m_textureSearchFrame);
+  }
+  outsideFrame->setLayout(outsideLayout);
+
+  /* ------ signal-slot connections ------ */
+  bool ret = true;
+  ret =
+      ret && connect(m_textureSearchText, SIGNAL(textChanged(const QString &)),
+                     this, SLOT(onTextureSearch(const QString &)));
+  ret = ret && connect(m_textureSearchClear, SIGNAL(clicked()), this,
+                       SLOT(onTextureClearSearch()));
+  return outsideFrame;
+}
+
+//-----------------------------------------------------------------------------
+
 QFrame *StyleEditor::createVectorPage() {
-  QFrame *vectorOutsideFrame = new QFrame(this);
+  QFrame *vectorOutsideFrame = new QFrame();
   vectorOutsideFrame->setMinimumWidth(50);
 
-  QPushButton *specialButton     = new QPushButton(tr("Generated"), this);
-  QPushButton *customButton      = new QPushButton(tr("Trail"), this);
-  QPushButton *vectorBrushButton = new QPushButton(tr("Vector Brush"), this);
+  QPushButton *specialButton     = new QPushButton(tr("Generated"));
+  QPushButton *customButton      = new QPushButton(tr("Trail"));
+  QPushButton *vectorBrushButton = new QPushButton(tr("Vector Brush"));
+
+  m_vectorsSearchFrame = new QFrame();
+  m_vectorsSearchText  = new QLineEdit();
+  m_vectorsSearchClear = new QPushButton(tr("Clear Search"));
+  m_vectorsSearchClear->setDisabled(true);
+  m_vectorsSearchClear->setSizePolicy(QSizePolicy::Minimum,
+                                      QSizePolicy::Preferred);
 
   specialButton->setCheckable(true);
   customButton->setCheckable(true);
@@ -3162,7 +3267,7 @@ QFrame *StyleEditor::createVectorPage() {
 
   /* ------ layout ------ */
   QVBoxLayout *vectorOutsideLayout = new QVBoxLayout();
-  vectorOutsideLayout->setMargin(0);
+  vectorOutsideLayout->setContentsMargins(0, 0, 0, 0);
   vectorOutsideLayout->setSpacing(0);
   vectorOutsideLayout->setSizeConstraint(QLayout::SetNoConstraint);
   {
@@ -3176,7 +3281,7 @@ QFrame *StyleEditor::createVectorPage() {
     vectorOutsideLayout->addLayout(vectorButtonLayout);
 
     QVBoxLayout *vectorLayout = new QVBoxLayout();
-    vectorLayout->setMargin(0);
+    vectorLayout->setContentsMargins(0, 0, 0, 0);
     vectorLayout->setSpacing(0);
     vectorLayout->setSizeConstraint(QLayout::SetNoConstraint);
     {
@@ -3184,25 +3289,147 @@ QFrame *StyleEditor::createVectorPage() {
       vectorLayout->addWidget(m_customStylePage);
       vectorLayout->addWidget(m_vectorBrushesStylePage);
     }
-    QFrame *vectorFrame = new QFrame(this);
+    QFrame *vectorFrame = new QFrame();
     vectorFrame->setMinimumWidth(50);
     vectorFrame->setLayout(vectorLayout);
-    m_vectorArea = makeChooserPage(vectorFrame);
-    m_vectorArea->setMinimumWidth(50);
-    vectorOutsideLayout->addWidget(m_vectorArea);
+    m_vectorsArea = makeChooserPage(vectorFrame);
+    m_vectorsArea->setMinimumWidth(50);
+    vectorOutsideLayout->addWidget(m_vectorsArea);
+
+    QHBoxLayout *searchLayout = new QHBoxLayout();
+    searchLayout->setContentsMargins(2, 2, 2, 2);
+    searchLayout->setSpacing(0);
+    searchLayout->setSizeConstraint(QLayout::SetNoConstraint);
+    {
+      searchLayout->addWidget(m_vectorsSearchText);
+      searchLayout->addWidget(m_vectorsSearchClear);
+    }
+    m_vectorsSearchFrame->setLayout(searchLayout);
+    vectorOutsideLayout->addWidget(m_vectorsSearchFrame);
   }
   vectorOutsideFrame->setLayout(vectorOutsideLayout);
 
   /* ------ signal-slot connections ------ */
   bool ret = true;
   ret      = ret && connect(specialButton, SIGNAL(toggled(bool)), this,
-                       SLOT(onSpecialButtonToggled(bool)));
+                            SLOT(onSpecialButtonToggled(bool)));
   ret      = ret && connect(customButton, SIGNAL(toggled(bool)), this,
-                       SLOT(onCustomButtonToggled(bool)));
+                            SLOT(onCustomButtonToggled(bool)));
   ret      = ret && connect(vectorBrushButton, SIGNAL(toggled(bool)), this,
-                       SLOT(onVectorBrushButtonToggled(bool)));
+                            SLOT(onVectorBrushButtonToggled(bool)));
+  ret =
+      ret && connect(m_vectorsSearchText, SIGNAL(textChanged(const QString &)),
+                     this, SLOT(onVectorsSearch(const QString &)));
+  ret = ret && connect(m_vectorsSearchClear, SIGNAL(clicked()), this,
+                       SLOT(onVectorsClearSearch()));
+
   assert(ret);
   return vectorOutsideFrame;
+}
+
+//-----------------------------------------------------------------------------
+
+QFrame *StyleEditor::createMyPaintPage() {
+  QFrame *outsideFrame = new QFrame();
+  outsideFrame->setMinimumWidth(50);
+
+  m_mypaintSearchFrame = new QFrame();
+  m_mypaintSearchText  = new QLineEdit();
+  m_mypaintSearchClear = new QPushButton(tr("Clear Search"));
+  m_mypaintSearchClear->setDisabled(true);
+  m_mypaintSearchClear->setSizePolicy(QSizePolicy::Minimum,
+                                      QSizePolicy::Preferred);
+
+  /* ------ layout ------ */
+  QVBoxLayout *outsideLayout = new QVBoxLayout();
+  outsideLayout->setContentsMargins(0, 0, 0, 0);
+  outsideLayout->setSpacing(0);
+  outsideLayout->setSizeConstraint(QLayout::SetNoConstraint);
+  {
+    QVBoxLayout *insideLayout = new QVBoxLayout();
+    insideLayout->setContentsMargins(0, 0, 0, 0);
+    insideLayout->setSpacing(0);
+    insideLayout->setSizeConstraint(QLayout::SetNoConstraint);
+    { insideLayout->addWidget(m_mypaintBrushesStylePage); }
+    QFrame *insideFrame = new QFrame();
+    insideFrame->setMinimumWidth(50);
+    insideFrame->setLayout(insideLayout);
+    m_mypaintArea = makeChooserPage(insideFrame);
+    m_mypaintArea->setMinimumWidth(50);
+    outsideLayout->addWidget(m_mypaintArea);
+
+    QHBoxLayout *searchLayout = new QHBoxLayout();
+    searchLayout->setContentsMargins(2, 2, 2, 2);
+    searchLayout->setSpacing(0);
+    searchLayout->setSizeConstraint(QLayout::SetNoConstraint);
+    {
+      searchLayout->addWidget(m_mypaintSearchText);
+      searchLayout->addWidget(m_mypaintSearchClear);
+    }
+    m_mypaintSearchFrame->setLayout(searchLayout);
+    outsideLayout->addWidget(m_mypaintSearchFrame);
+  }
+  outsideFrame->setLayout(outsideLayout);
+
+  /* ------ signal-slot connections ------ */
+  bool ret = true;
+  ret =
+      ret && connect(m_mypaintSearchText, SIGNAL(textChanged(const QString &)),
+                     this, SLOT(onMyPaintSearch(const QString &)));
+  ret = ret && connect(m_mypaintSearchClear, SIGNAL(clicked()), this,
+                       SLOT(onMyPaintClearSearch()));
+
+  assert(ret);
+  return outsideFrame;
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleEditor::onTextureSearch(const QString &search) {
+  m_textureSearchClear->setDisabled(search.isEmpty());
+  m_textureStylePage->applyFilter(search);
+  m_textureStylePage->computeSize();
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleEditor::onTextureClearSearch() {
+  m_textureSearchText->setText("");
+  m_textureSearchText->setFocus();
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleEditor::onVectorsSearch(const QString &search) {
+  m_vectorsSearchClear->setDisabled(search.isEmpty());
+  m_specialStylePage->applyFilter(search);
+  m_customStylePage->applyFilter(search);
+  m_vectorBrushesStylePage->applyFilter(search);
+  m_specialStylePage->computeSize();
+  m_customStylePage->computeSize();
+  m_vectorBrushesStylePage->computeSize();
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleEditor::onVectorsClearSearch() {
+  m_vectorsSearchText->setText("");
+  m_vectorsSearchText->setFocus();
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleEditor::onMyPaintSearch(const QString &search) {
+  m_mypaintSearchClear->setDisabled(search.isEmpty());
+  m_mypaintBrushesStylePage->applyFilter(search);
+  m_mypaintBrushesStylePage->computeSize();
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleEditor::onMyPaintClearSearch() {
+  m_mypaintSearchText->setText("");
+  m_mypaintSearchText->setFocus();
 }
 
 //-----------------------------------------------------------------------------
@@ -3235,11 +3462,13 @@ void StyleEditor::showEvent(QShowEvent *) {
   onStyleSwitched();
   bool ret = true;
   ret      = ret && connect(m_paletteHandle, SIGNAL(colorStyleSwitched()),
-                       SLOT(onStyleSwitched()));
+                            SLOT(onStyleSwitched()));
   ret      = ret && connect(m_paletteHandle, SIGNAL(colorStyleChanged(bool)),
-                       SLOT(onStyleChanged(bool)));
+                            SLOT(onStyleChanged(bool)));
   ret      = ret && connect(m_paletteHandle, SIGNAL(paletteSwitched()), this,
-                       SLOT(onStyleSwitched()));
+                            SLOT(onStyleSwitched()));
+  ret = ret && connect(m_paletteController, SIGNAL(checkPaletteLock()), this,
+                       SLOT(checkPaletteLock()));
   if (m_cleanupPaletteHandle)
     ret =
         ret && connect(m_cleanupPaletteHandle, SIGNAL(colorStyleChanged(bool)),
@@ -3254,6 +3483,8 @@ void StyleEditor::showEvent(QShowEvent *) {
   m_plainColorPage->m_hsvFrame->setVisible(m_hsvAction->isChecked());
   m_plainColorPage->m_alphaFrame->setVisible(m_alphaAction->isChecked());
   m_plainColorPage->m_rgbFrame->setVisible(m_rgbAction->isChecked());
+  m_hexLineEdit->setVisible(m_hexAction->isChecked());
+  onSearchVisible(m_searchAction->isChecked());
   updateOrientationButton();
   assert(ret);
 }
@@ -3270,10 +3501,21 @@ void StyleEditor::hideEvent(QHideEvent *) {
 
 void StyleEditor::updateOrientationButton() {
   if (m_plainColorPage->getIsVertical()) {
-    m_toggleOrientationAction->setIcon(QIcon(":Resources/orientation_h.svg"));
+    m_toggleOrientationAction->setIcon(createQIcon("orientation_h"));
   } else {
-    m_toggleOrientationAction->setIcon(QIcon(":Resources/orientation_v.svg"));
+    m_toggleOrientationAction->setIcon(createQIcon("orientation_v"));
   }
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleEditor::updateStylePages() {
+  // Refresh all pages
+  m_textureStylePage->update();
+  m_specialStylePage->update();
+  m_customStylePage->update();
+  m_vectorBrushesStylePage->update();
+  m_mypaintBrushesStylePage->update();
 }
 
 //-----------------------------------------------------------------------------
@@ -3306,11 +3548,11 @@ void StyleEditor::onStyleSwitched() {
     QString statusText;
     // palette type
     if (isCleanUpPalette)
-      statusText = tr("[CLEANUP]  ");
+      statusText = tr("Cleanup ");
     else if (palette->getGlobalName() != L"")
-      statusText = tr("[STUDIO]  ");
+      statusText = tr("Studio ");
     else
-      statusText = tr("[LEVEL]  ");
+      statusText = tr("Level ");
 
     // palette name
     statusText += tr("Palette") + " : " +
@@ -3330,6 +3572,8 @@ void StyleEditor::onStyleSwitched() {
     m_parent->setWindowTitle(tr("Style Editor - No Valid Style Selected"));
   }
   enable(!isStyleNull && isValidIndex, isColorInField, isCleanUpPalette);
+
+  updateStylePages();
 }
 
 //-----------------------------------------------------------------------------
@@ -3342,6 +3586,10 @@ void StyleEditor::onStyleChanged(bool isDragging) {
   assert(0 <= styleIndex && styleIndex < palette->getStyleCount());
 
   setEditedStyleToStyle(palette->getStyle(styleIndex));
+
+  // ADD NULL CHECK
+  if (!m_oldStyle || !m_editedStyle) return;
+
   if (!isDragging) {
     setOldStyleToStyle(
         m_editedStyle
@@ -3350,9 +3598,13 @@ void StyleEditor::onStyleChanged(bool isDragging) {
   m_plainColorPage->setColor(*m_editedStyle, getColorParam());
   m_colorParameterSelector->setStyle(*m_editedStyle);
   m_settingsPage->setStyle(m_editedStyle);
-  m_newColor->setStyle(*m_editedStyle);
+  m_newColor->setStyle(*m_editedStyle, getColorParam());
   m_oldColor->setStyle(
-      *m_oldStyle);  // This line is needed for proper undo behavior
+      *m_oldStyle,
+      getColorParam());  // This line is needed for proper undo behavior
+  m_hexLineEdit->setStyle(*m_editedStyle, getColorParam());
+
+  updateStylePages();
 }
 
 //-----------------------------------------------------------------------
@@ -3364,7 +3616,7 @@ void StyleEditor::onCleanupStyleChanged(bool isDragging) {
 }
 
 //-----------------------------------------------------------------------------
-// TOGLIERE
+// Remove
 void StyleEditor::setRootPath(const TFilePath &rootPath) {
   m_textureStylePage->setRootPath(rootPath);
 }
@@ -3373,16 +3625,22 @@ void StyleEditor::setRootPath(const TFilePath &rootPath) {
 
 void StyleEditor::copyEditedStyleToPalette(bool isDragging) {
   TPalette *palette = getPalette();
-  assert(palette);
+  if (!palette) return;
 
   int styleIndex = getStyleIndex();
-  assert(0 <= styleIndex && styleIndex < palette->getStyleCount());
+  if (styleIndex < 0 || styleIndex >= palette->getStyleCount()) return;
 
+  // CRITICAL NULL CHECKS
+  if (!m_oldStyle || !m_editedStyle) {
+    return;
+  }
+
+  // Safe to proceed with comparison
   if (!(*m_oldStyle == *m_editedStyle) &&
       (!isDragging || m_paletteController->isColorAutoApplyEnabled()) &&
       m_editedStyle->getGlobalName() != L"" &&
       m_editedStyle->getOriginalName() != L"") {
-    // If the adited style is linked to the studio palette, then activate the
+    // If the edited style is linked to the studio palette, then activate the
     // edited flag
     m_editedStyle->setIsEditedFlag(true);
   }
@@ -3402,8 +3660,8 @@ void StyleEditor::copyEditedStyleToPalette(bool isDragging) {
     setOldStyleToStyle(m_editedStyle.getPointer());
 
     // In case the frame is a keyframe, update it
-    if (palette->isKeyframe(styleIndex, palette->getFrame()))  // here
-      palette->setKeyframe(styleIndex, palette->getFrame());   //
+    if (palette->isKeyframe(styleIndex, palette->getFrame()))
+      palette->setKeyframe(styleIndex, palette->getFrame());
 
     palette->setDirtyFlag(true);
   }
@@ -3442,15 +3700,16 @@ void StyleEditor::onColorChanged(const ColorModel &color, bool isDragging) {
       TSolidColorStyle *style = new TSolidColorStyle(tColor);
       style->assignNames(m_editedStyle.getPointer());
 
-      setEditedStyleToStyle(style);  // CLONES the argument
+      setEditedStyleToStyle(style);
 
       delete style;
     }
 
-    m_newColor->setStyle(*m_editedStyle);
+    m_newColor->setStyle(*m_editedStyle, getColorParam());
     m_colorParameterSelector->setStyle(*m_editedStyle);
-
-    if (m_autoButton->isChecked()) {
+    m_hexLineEdit->setStyle(*m_editedStyle, getColorParam());
+    // Auto Button should be disabled with locked palette
+    if (m_autoButton->isEnabled() && m_autoButton->isChecked()) {
       copyEditedStyleToPalette(isDragging);
     }
   }
@@ -3470,6 +3729,7 @@ void StyleEditor::enable(bool enabled, bool enabledOnlyFirstTab,
     m_applyButton->setDisabled(!enabled || m_autoButton->isChecked());
     m_oldColor->setEnable(enabled);
     m_newColor->setEnable(enabled);
+    m_hexLineEdit->setEnabled(enabled);
     if (enabled == false) {
       m_oldColor->setColor(TPixel32::Transparent);
       m_newColor->setColor(TPixel32::Transparent);
@@ -3482,7 +3742,6 @@ void StyleEditor::enable(bool enabled, bool enabledOnlyFirstTab,
     // when the palette is locked
     if (palette->isLocked()) {
       m_applyButton->setEnabled(false);
-      m_autoButton->setChecked(false);
       m_autoButton->setEnabled(false);
     } else  // when the palette is unlocked
     {
@@ -3491,13 +3750,28 @@ void StyleEditor::enable(bool enabled, bool enabledOnlyFirstTab,
     }
   }
 }
+//-----------------------------------------------------------------------------
+
+void StyleEditor::checkPaletteLock() {
+  if (getPalette() && getPalette()->isLocked()) {
+    m_applyButton->setEnabled(false);
+    m_autoButton->setEnabled(false);
+  } else {
+    m_applyButton->setDisabled(m_autoButton->isChecked());
+    m_autoButton->setEnabled(true);
+  }
+}
 
 //-----------------------------------------------------------------------------
 
-void StyleEditor::onOldStyleClicked(const TColorStyle &) {
+void StyleEditor::onOldStyleClicked() {
   if (!m_enabled) return;
   selectStyle(*(m_oldColor->getStyle()));
 }
+
+//-----------------------------------------------------------------------------
+
+void StyleEditor::onNewStyleClicked() { applyButtonClicked(); }
 
 //-----------------------------------------------------------------------------
 
@@ -3507,11 +3781,11 @@ void StyleEditor::setPage(int index) {
     return;
   }
 
-  // Se sono nel caso first and last page enable e index == 1 la pagina che
-  // voglio settare e' l'ultima!
+  // If I'm in the case where both first and last page are enabled and index ==
+  // 1, the page I want to set is the last one!
   if (index == 1)
     index = m_styleChooser->count() -
-            2;  // 2 perche' alla fine c'e' una pagina vuota
+            2;  // 2 because at the end there is a blank page.
   m_styleChooser->setCurrentIndex(index);
 }
 
@@ -3572,13 +3846,12 @@ bool StyleEditor::setStyle(TColorStyle *currentStyle) {
   if (currentStyle) {
     m_colorParameterSelector->setStyle(*currentStyle);
     m_plainColorPage->setColor(*currentStyle, getColorParam());
-    m_oldColor->setStyle(*currentStyle);
-    m_newColor->setStyle(*currentStyle);
-
+    m_oldColor->setStyle(*currentStyle, getColorParam());
+    m_newColor->setStyle(*currentStyle, getColorParam());
+    m_hexLineEdit->setStyle(*m_editedStyle, getColorParam());
     setOldStyleToStyle(currentStyle);
   }
-
-  // Va fatto anche se non c'e' lo style perche' svuota la pagina
+  // It must be done even if there is no style, because it clears the page
   m_settingsPage->setStyle(m_editedStyle);
 
   return isStyleNull;
@@ -3612,17 +3885,19 @@ void StyleEditor::selectStyle(const TColorStyle &newStyle) {
   setOldStyleToStyle(palette->getStyle(styleIndex));
   setEditedStyleToStyle(&newStyle);
 
-  m_editedStyle->assignNames(
+  // ADD NULL CHECK
+  if (!m_oldStyle || !m_editedStyle) return;
+
+ m_editedStyle->assignNames(
       m_oldStyle.getPointer());  // Copy original name stored in the palette
 
   // For convenience's sake, copy the main color from the old color, if both
   // have one
-  if (m_oldStyle && m_oldStyle->hasMainColor() && m_editedStyle &&
-      m_editedStyle->hasMainColor())
+  if (m_oldStyle->hasMainColor() && m_editedStyle->hasMainColor())
     m_editedStyle->setMainColor(m_oldStyle->getMainColor());
 
   if (m_autoButton->isChecked()) {
-    // If the adited style is linked to the studio palette, then activate the
+    // If the edited style is linked to the studio palette, then activate the
     // edited flag
     if (m_editedStyle->getGlobalName() != L"" &&
         m_editedStyle->getOriginalName() != L"")
@@ -3639,10 +3914,11 @@ void StyleEditor::selectStyle(const TColorStyle &newStyle) {
   }
 
   // Update editor widgets
-  m_newColor->setStyle(*m_editedStyle);
-  m_plainColorPage->setColor(*m_editedStyle, getColorParam());
   m_colorParameterSelector->setStyle(*m_editedStyle);
+  m_newColor->setStyle(*m_editedStyle, getColorParam());
+  m_plainColorPage->setColor(*m_editedStyle, getColorParam());
   m_settingsPage->setStyle(m_editedStyle);
+  m_hexLineEdit->setStyle(*m_editedStyle, getColorParam());
 }
 
 //-----------------------------------------------------------------------------
@@ -3654,13 +3930,22 @@ void StyleEditor::onColorParamChanged() {
   int styleIndex = getStyleIndex();
   if (styleIndex < 0 || palette->getStyleCount() <= styleIndex) return;
 
+  // ADD NULL CHECK
+  if (!m_oldStyle || !m_editedStyle) return;
+
+  if (*m_oldStyle != *m_editedStyle) applyButtonClicked();
+
   m_paletteHandle->setStyleParamIndex(getColorParam());
 
   if (TColorStyle *currentStyle = palette->getStyle(styleIndex)) {
     setEditedStyleToStyle(currentStyle);
 
+    m_colorParameterSelector->setStyle(*m_editedStyle);
+    m_newColor->setStyle(*m_editedStyle, getColorParam());
+    m_oldColor->setStyle(*m_editedStyle, getColorParam());
     m_plainColorPage->setColor(*m_editedStyle, getColorParam());
     m_settingsPage->setStyle(m_editedStyle);
+    m_hexLineEdit->setStyle(*m_editedStyle, getColorParam());
   }
 }
 
@@ -3675,15 +3960,44 @@ void StyleEditor::onParamStyleChanged(bool isDragging) {
 
   if (m_autoButton->isChecked()) copyEditedStyleToPalette(isDragging);
 
-  m_editedStyle->invalidateIcon();       // Refresh the new color icon
-  m_newColor->setStyle(*m_editedStyle);  //
+  m_editedStyle->invalidateIcon();  // Refresh the new color icon
+  m_newColor->setStyle(*m_editedStyle, getColorParam());
+  m_hexLineEdit->setStyle(*m_editedStyle, getColorParam());
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleEditor::onHexChanged() {
+  if (m_hexLineEdit->fromText(m_hexLineEdit->text())) {
+    ColorModel cm;
+    cm.setTPixel(m_hexLineEdit->getColor());
+    onColorChanged(cm, false);
+    m_hexLineEdit->selectAll();
+  }
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleEditor::onHexEditor() {
+  if (!m_hexColorNamesEditor) {
+    m_hexColorNamesEditor = new DVGui::HexColorNamesEditor(this);
+  }
+  m_hexColorNamesEditor->show();
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleEditor::onSearchVisible(bool on) {
+  m_textureSearchFrame->setVisible(on);
+  m_vectorsSearchFrame->setVisible(on);
+  m_mypaintSearchFrame->setVisible(on);
 }
 
 //-----------------------------------------------------------------------------
 
 void StyleEditor::onSpecialButtonToggled(bool on) {
   m_specialStylePage->setVisible(on);
-  m_vectorArea->widget()->resize(m_vectorArea->widget()->sizeHint());
+  m_vectorsArea->widget()->resize(m_vectorsArea->widget()->sizeHint());
   qApp->processEvents();
 }
 
@@ -3691,7 +4005,7 @@ void StyleEditor::onSpecialButtonToggled(bool on) {
 
 void StyleEditor::onCustomButtonToggled(bool on) {
   m_customStylePage->setVisible(on);
-  m_vectorArea->widget()->resize(m_vectorArea->widget()->sizeHint());
+  m_vectorsArea->widget()->resize(m_vectorsArea->widget()->sizeHint());
   qApp->processEvents();
 }
 
@@ -3699,7 +4013,7 @@ void StyleEditor::onCustomButtonToggled(bool on) {
 
 void StyleEditor::onVectorBrushButtonToggled(bool on) {
   m_vectorBrushesStylePage->setVisible(on);
-  m_vectorArea->widget()->resize(m_vectorArea->widget()->sizeHint());
+  m_vectorsArea->widget()->resize(m_vectorsArea->widget()->sizeHint());
   qApp->processEvents();
 }
 
@@ -3712,6 +4026,8 @@ void StyleEditor::save(QSettings &settings) const {
   if (m_hsvAction->isChecked()) visibleParts |= 0x02;
   if (m_alphaAction->isChecked()) visibleParts |= 0x04;
   if (m_rgbAction->isChecked()) visibleParts |= 0x08;
+  if (m_hexAction->isChecked()) visibleParts |= 0x10;
+  if (m_searchAction->isChecked()) visibleParts |= 0x20;
   settings.setValue("visibleParts", visibleParts);
   settings.setValue("splitterState", m_plainColorPage->getSplitterState());
 }
@@ -3741,8 +4057,46 @@ void StyleEditor::load(QSettings &settings) {
       m_rgbAction->setChecked(true);
     else
       m_rgbAction->setChecked(false);
+    if (visiblePartsInt & 0x10)
+      m_hexAction->setChecked(true);
+    else
+      m_hexAction->setChecked(false);
+    if (visiblePartsInt & 0x20)
+      m_searchAction->setChecked(true);
+    else
+      m_searchAction->setChecked(false);
   }
   QVariant splitterState = settings.value("splitterState");
   if (splitterState.canConvert(QVariant::ByteArray))
     m_plainColorPage->setSplitterState(splitterState.toByteArray());
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleEditor::updateColorCalibration() {
+  m_plainColorPage->updateColorCalibration();
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleEditor::onSliderAppearanceSelected(QAction *action) {
+  bool ok          = true;
+  int appearanceId = action->data().toInt(&ok);
+  if (!ok) return;
+  if (appearanceId == StyleEditorColorSliderAppearance) return;
+  StyleEditorColorSliderAppearance = appearanceId;
+  ColorSlider::s_slider_appearance = appearanceId;
+  m_plainColorPage->update();
+}
+
+//-----------------------------------------------------------------------------
+
+void StyleEditor::onPopupMenuAboutToShow() {
+  // sync radio button state to the current user env settings
+  for (auto action : m_sliderAppearanceAG->actions()) {
+    bool ok          = true;
+    int appearanceId = action->data().toInt(&ok);
+    if (ok && appearanceId == StyleEditorColorSliderAppearance)
+      action->setChecked(true);
+  }
 }

@@ -176,8 +176,6 @@ public:
 class VectorTapeTool final : public TTool {
   Q_DECLARE_TR_FUNCTIONS(VectorTapeTool)
 
-  bool m_draw;
-
   bool m_secondPoint;
   int m_strokeIndex1, m_strokeIndex2;
   double m_w1, m_w2, m_pixelSize;
@@ -202,7 +200,6 @@ public:
       , m_w1(-1.0)
       , m_w2(-1.0)
       , m_pixelSize(1)
-      , m_draw(false)
       , m_smooth("Smooth", false)  // W_ToolOptions_Smooth
       , m_joinStrokes("JoinStrokes", false)
       , m_mode("Mode")
@@ -239,14 +236,14 @@ public:
   //-----------------------------------------------------------------------------
 
   bool onPropertyChanged(std::string propertyName) override {
-    TapeMode                 = ::to_string(m_mode.getValue());
-    TapeSmooth               = (int)(m_smooth.getValue());
-    std::wstring s           = m_type.getValue();
+    TapeMode       = ::to_string(m_mode.getValue());
+    TapeSmooth     = (int)(m_smooth.getValue());
+    std::wstring s = m_type.getValue();
     if (!s.empty()) TapeType = ::to_string(s);
-    TapeJoinStrokes          = (int)(m_joinStrokes.getValue());
-    AutocloseFactor          = (double)(m_autocloseFactor.getValue());
-    m_selectionRect          = TRectD();
-    m_startRect              = TPointD();
+    TapeJoinStrokes = (int)(m_joinStrokes.getValue());
+    AutocloseFactor = (double)(m_autocloseFactor.getValue());
+    m_selectionRect = TRectD();
+    m_startRect     = TPointD();
 
     if (propertyName == "Distance" &&
         (ToonzCheck::instance()->getChecks() & ToonzCheck::eAutoclose))
@@ -276,7 +273,6 @@ public:
 
   void draw() override {
     TVectorImageP vi(getImage(false));
-    if (!m_draw) return;
     if (!vi) return;
 
     // TAffine viewMatrix = getViewer()->getViewMatrix();
@@ -324,10 +320,6 @@ public:
   void mouseMove(const TPointD &pos, const TMouseEvent &) override {
     TVectorImageP vi(getImage(false));
     if (!vi) return;
-
-    // BUTTA e rimetti (Dava problemi con la penna)
-    if (!m_draw) return;  // Questa riga potrebbe non essere messa
-    // m_draw=true;   //Perche'??? Non basta dargli true in onEnter??
 
     if (m_type.getValue() == RECT) return;
 
@@ -418,7 +410,9 @@ public:
     m_strokeIndex2 = -1;
 
     for (i = 0; i < strokeNumber; i++) {
-      if (!vi->sameGroup(m_strokeIndex1, i)) continue;
+      if (!vi->sameGroup(m_strokeIndex1, i) &&
+          (vi->isStrokeGrouped(m_strokeIndex1) || vi->isStrokeGrouped(i)))
+        continue;
       stroke = vi->getStroke(i);
       if (m_mode.getValue() != POINT2POINT) {
         if (stroke->getNearestW(pos, outW, distance2) &&
@@ -600,7 +594,7 @@ public:
       closingPoint.first--;
   }
 
-//-------------------------------------------------------------------------------------
+  //-------------------------------------------------------------------------------------
 
 #define p2p 1
 #define p2l 2
@@ -717,8 +711,9 @@ public:
     std::vector<TFilledRegionInf> *fillInformation =
         new std::vector<TFilledRegionInf>;
     ImageUtils::getFillingInformationOverlappingArea(
-        vi, *fillInformation, vi->getStroke(m_strokeIndex1)->getBBox() +
-                                  vi->getStroke(m_strokeIndex2)->getBBox());
+        vi, *fillInformation,
+        vi->getStroke(m_strokeIndex1)->getBBox() +
+            vi->getStroke(m_strokeIndex2)->getBBox());
 
     doTape(vi, fillInformation, m_joinStrokes.getValue());
 
@@ -733,14 +728,8 @@ public:
 
   void onEnter() override {
     //      getApplication()->editImage();
-    m_draw          = true;
     m_selectionRect = TRectD();
     m_startRect     = TPointD();
-  }
-
-  void onLeave() override {
-    m_draw = false;
-    // m_strokeIndex1=-1;
   }
 
   void onActivate() override {
@@ -759,7 +748,7 @@ public:
   }
 
   int getCursorId() const override {
-    int ret                            = ToolCursor::TapeCursor;
+    int ret = ToolCursor::TapeCursor;
     if (m_type.getValue() == RECT) ret = ret | ToolCursor::Ex_Rectangle;
     if (ToonzCheck::instance()->getChecks() & ToonzCheck::eBlackBg)
       ret = ret | ToolCursor::Ex_Negate;

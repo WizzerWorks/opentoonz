@@ -3,15 +3,14 @@
 #include "trop.h"
 #include "tfxparam.h"
 #include "tofflinegl.h"
-//#include "tstroke.h"
-//#include "drawutil.h"
+// #include "tstroke.h"
+// #include "drawutil.h"
 #include "tstopwatch.h"
-//#include "tpalette.h"
-//#include "tvectorrenderdata.h"
+// #include "tpalette.h"
+// #include "tvectorrenderdata.h"
 #include "tsystem.h"
 #include "timagecache.h"
 #include "tconvert.h"
-#include "tflash.h"
 
 #include "trasterimage.h"
 
@@ -27,6 +26,9 @@
 #include "trenderer.h"
 
 #include <sstream>
+
+#include <QPointF>
+#include <QMatrix4x4>
 
 /*-----------------------------------------------------------------*/
 
@@ -136,6 +138,9 @@ void Particles_Engine::fill_value_struct(struct particles_values &myvalues,
       m_parent->pick_color_for_every_frame_val->getValue();
   myvalues.perspective_distribution_val =
       m_parent->perspective_distribution_val->getValue();
+  myvalues.motion_blur_val = m_parent->motion_blur_val->getValue();
+  myvalues.motion_blur_gamma_adjust_val =
+      m_parent->motion_blur_gamma_adjust_val->getValue(frame);
 }
 
 /*-----------------------------------------------------------------*/
@@ -161,17 +166,33 @@ void Particles_Engine::fill_range_struct(struct particles_values &values,
 }
 
 bool Particles_Engine::port_is_used(int i, struct particles_values &values) {
+  return port_is_used_for_value(i, values) ||
+         port_is_used_for_gradient(i, values);
+}
+
+// Returns true if the pixel value of control image is used.
+// Such image will be computed in 8bpc.
+bool Particles_Engine::port_is_used_for_value(int i,
+                                              struct particles_values &values) {
   return values.fincol_ctrl_val == i || values.foutcol_ctrl_val == i ||
          values.friction_ctrl_val == i || values.gencol_ctrl_val == i ||
-         values.gravity_ctrl_val == i || values.opacity_ctrl_val == i ||
-         values.rot_ctrl_val == i || values.scale_ctrl_val == i ||
-         values.scalestep_ctrl_val == i || values.source_ctrl_val == i ||
-         values.speed_ctrl_val == i || values.speeda_ctrl_val == i ||
+         values.opacity_ctrl_val == i || values.rot_ctrl_val == i ||
+         values.scale_ctrl_val == i || values.scalestep_ctrl_val == i ||
+         values.source_ctrl_val == i || values.speed_ctrl_val == i ||
+         (values.speeda_ctrl_val == i && !values.speeda_use_gradient_val) ||
          values.lifetime_ctrl_val == i || values.randomx_ctrl_val == i ||
          values.randomy_ctrl_val == i;
 }
+
+// Returns true if the gradient of control image is used.
+// Such image will be computed in 16bpc to get smooth result.
+bool Particles_Engine::port_is_used_for_gradient(
+    int i, struct particles_values &values) {
+  return values.gravity_ctrl_val == i ||
+         (values.speeda_ctrl_val == i && values.speeda_use_gradient_val);
+}
 /*-----------------------------------------------------------------*/
-/*-- Startフレームからカレントフレームまで順番に回す関数 --*/
+/*-- Function to iterate sequentially from Start frame to Current frame --*/
 void Particles_Engine::roll_particles(
     TTile *tile, std::map<int, TTile *> porttiles, const TRenderSettings &ri,
     std::list<Particle> &myParticles, struct particles_values &values, float cx,
@@ -180,7 +201,7 @@ void Particles_Engine::roll_particles(
   particles_ranges ranges;
   int i, newparticles;
   float xgravity, ygravity, windx, windy;
-  /*-- 風の強さ／重力の強さをX,Y成分に分ける --*/
+  /*-- Separate wind strength/gravity strength into X,Y components --*/
   windx    = values.windint_val * sin(values.windangle_val);
   windy    = values.windint_val * cos(values.windangle_val);
   xgravity = values.gravity_val * sin(values.g_angle_val);
@@ -190,23 +211,21 @@ void Particles_Engine::roll_particles(
 
   std::vector<std::vector<TPointD>> myregions;
 
-  /*-- [1〜255]
-   * そのIndexに対応するアルファ値を持つピクセルのインデックス値を保存。 [0]
-   * 使用せず --*/
+  /*-- [1~255] Store index values of pixels with corresponding alpha values at
+   * that index. [0] not used --*/
   std::vector<std::vector<int>> myHistogram;
-  /*--
-   * アルファ値255から下がっていき、ピクセル数×重み又はアルファ値を次々足した値を格納
-   * --*/
+  /*-- Store cumulative value of pixel count � weight or alpha value going down
+   * from alpha 255 --*/
   std::vector<float> myWeight;
 
   std::map<int, TTile *>::iterator it = porttiles.find(values.source_ctrl_val);
-  /*-- Perspective
-   * DistributionがONのとき、Sizeに刺さったControlImageが粒子の発生分布を決める
-   * --*/
+  /*-- When Perspective Distribution is ON, ControlImage connected to Size
+     determines particle generation distribution. If Control is connected to
+     Source, it is used as mask --*/
   std::map<int, TTile *>::iterator sizeIt =
       porttiles.find(values.scale_ctrl_val);
   if (values.perspective_distribution_val && (sizeIt != porttiles.end())) {
-    /*-- ソース画像にコントロールが付いていた場合、そのアルファ値をマスクに使う
+    /*-- If there is control attached to source image, use its alpha as mask
      * --*/
     if (values.source_ctrl_val && (it != porttiles.end()))
       fill_regions_with_size_map(myregions, myHistogram, sizeIt->second,
@@ -214,32 +233,33 @@ void Particles_Engine::roll_particles(
     else
       fill_regions_with_size_map(myregions, myHistogram, sizeIt->second, 0,
                                  values.bright_thres_val);
-    /*- パーティクルを作る前に myregion内の候補数を合計する--*/
+    /*- Count candidate points in myregion before creating particles --*/
     if ((int)myHistogram.size() == 256) {
       for (int m = 255; m >= 0; m--) {
-        /*-- 明度からサイズ サイズから重みを出す --*/
+        /*-- Get weight from brightness to size, size to weight --*/
         float scale =
             values.scale_val.first + ranges.scale_range * (float)m / 255.0f;
         float weight = 1.0f / (scale * scale);
 
         float tmpSum = weight * (float)myHistogram[m].size();
         int index    = 255 - m;
-        if (index > 0) /*-- これまでの合計に追加する --*/
+        if (index > 0) /*-- Add to previous total --*/
           tmpSum += myWeight[index - 1];
         myWeight.push_back(tmpSum);
       }
     }
   } else {
-    /*- ソース画像にコントロールが付いていた場合 -*/
+    /*- If there is control attached to source image -*/
     if (values.source_ctrl_val && (it != porttiles.end()))
-      /*-- 入力画像のアルファ値に比例して発生濃度を変える --*/
+      /*-- Vary generation density proportional to alpha value of input image
+       * --*/
       fill_regions(1, myregions, it->second, values.multi_source_val,
                    values.bright_thres_val, values.source_gradation_val,
                    myHistogram);
 
-    /*- パーティクルを作る前に myregion内の候補数を合計する--*/
-    /*-- myWeight
-     * の中には、アルファ255から0まで、各アルファ値×ポイント数を足しこんでいったものが格納される。--*/
+    /*- Count candidate points in myregion before creating particles --*/
+    /*-- myWeight stores cumulative sum of each alpha value � point count from
+     * alpha 255 to 0 --*/
     if ((int)myHistogram.size() == 256) {
       for (int m = 255; m > 0; m--) {
         float tmpSum = (float)(m * (int)myHistogram[m].size());
@@ -250,14 +270,15 @@ void Particles_Engine::roll_particles(
     }
   }
 
-  /*- birth rate を格納 -*/
+  /*- Store birth rate -*/
   newparticles = (int)values.maxnum_val;
   if (myParticles.empty() && newparticles)  // Initial creation
   {
-    /*- 新たに作るパーティクルの数だけ繰り返す -*/
+    /*- Repeat for number of new particles to create -*/
     for (i = 0; i < newparticles; i++) {
-      int seed  = (int)((std::numeric_limits<int>::max)() *
-                       values.random_val->getFloat());
+      int seed = static_cast<int>(
+          static_cast<double>(std::numeric_limits<int>::max()) *
+          values.random_val->getFloat());
       int level = (int)(values.random_val->getFloat() * level_n);
 
       int lifetime = 0;
@@ -292,8 +313,9 @@ void Particles_Engine::roll_particles(
     switch (values.toplayer_val) {
     case ParticlesFx::TOP_YOUNGER:
       for (i = 0; i < newparticles; i++) {
-        int seed  = (int)((std::numeric_limits<int>::max)() *
-                         values.random_val->getFloat());
+        int seed = static_cast<int>(
+            static_cast<double>(std::numeric_limits<int>::max()) *
+            values.random_val->getFloat());
         int level = (int)(values.random_val->getFloat() * level_n);
 
         int lifetime = 0;
@@ -318,11 +340,11 @@ void Particles_Engine::roll_particles(
       for (i = 0; i < newparticles; i++) {
         double tmp = values.random_val->getFloat() * myParticles.size();
         std::list<Particle>::iterator it = myParticles.begin();
-        for (int j = 0; j < tmp; j++, it++)
-          ;
+        std::advance(it, static_cast<int>(tmp));
         {
-          int seed     = (int)((std::numeric_limits<int>::max)() *
-                           values.random_val->getFloat());
+          int seed = static_cast<int>(
+              static_cast<double>(std::numeric_limits<int>::max()) *
+              values.random_val->getFloat());
           int level    = (int)(values.random_val->getFloat() * level_n);
           int lifetime = 0;
 
@@ -345,8 +367,9 @@ void Particles_Engine::roll_particles(
 
     default:
       for (i = 0; i < newparticles; i++) {
-        int seed     = (int)((std::numeric_limits<int>::max)() *
-                         values.random_val->getFloat());
+        int seed = static_cast<int>(
+            static_cast<double>(std::numeric_limits<int>::max()) *
+            values.random_val->getFloat());
         int level    = (int)(values.random_val->getFloat() * level_n);
         int lifetime = 0;
 
@@ -396,7 +419,6 @@ void Particles_Engine::normalize_values(struct particles_values &values,
   (values.opacity_val.second)      = (values.opacity_val.second) * 0.01;
   (values.trailopacity_val.first)  = (values.trailopacity_val.first) * 0.01;
   (values.trailopacity_val.second) = (values.trailopacity_val.second) * 0.01;
-  (values.mblur_val)               = (values.mblur_val) * 0.01;
   (values.friction_val)            = -(values.friction_val) * 0.01;
   (values.windangle_val)           = (values.windangle_val) * M_PI_180;
   (values.g_angle_val)             = (values.g_angle_val + 180) * M_PI_180;
@@ -411,7 +433,7 @@ void Particles_Engine::normalize_values(struct particles_values &values,
 /*-----------------------------------------------------------------*/
 
 void Particles_Engine::render_particles(
-    TFlash *flash, TTile *tile, std::vector<TRasterFxPort *> part_ports,
+    TTile *tile, std::vector<TRasterFxPort *> part_ports,
     const TRenderSettings &ri, TDimension &p_size, TPointD &p_offset,
     std::map<int, TRasterFxPort *> ctrl_ports, std::vector<TLevelP> partLevel,
     float dpi, int curr_frame, int shrink, double startx, double starty,
@@ -430,12 +452,12 @@ void Particles_Engine::render_particles(
         (renderer && renderer.isPrecomputingEnabled()) ? true : false;
   }
 
-  memset(&values, 0, sizeof(values));
-  /*- 現在のフレームでの各種パラメータを得る -*/
+  // memset(&values, 0, sizeof(values));
+  /*- Get various parameters for current frame -*/
   fill_value_struct(values, m_frame);
-  /*- 不透明度の範囲（透明〜不透明を 0〜1 に正規化）-*/
+  /*- Opacity range (normalize transparent~opaque to 0~1) -*/
   opacity_range = (values.opacity_val.second - values.opacity_val.first) * 0.01;
-  /*- 開始フレーム -*/
+  /*- Start frame -*/
   startframe = (int)values.startpos_val;
   if (values.unit_val == ParticlesFx::UNIT_SMALL_INCH)
     dpicorr_shrinked = dpicorr / shrink;
@@ -466,19 +488,21 @@ void Particles_Engine::render_particles(
     myRandom       = particlesData->m_random;
     totalparticles = particlesData->m_totalParticles;
   }
-  /*- スタートからカレントフレームまでループ -*/
+  /*- Loop from start to current frame -*/
   for (frame = startframe - 1; frame <= curr_frame; ++frame) {
     int dist_frame = curr_frame - frame;
     /*-
-     * ループ内の現在のフレームでのパラメータを取得。スタートが負ならフレーム=0のときの値を格納
+     * Get parameters for current frame within loop. If start is negative, store
+     * values for frame=0
      * -*/
     fill_value_struct(values, frame < 0 ? 0 : frame * values.step_val);
-    /*- パラメータの正規化 -*/
+    /*- Parameter normalization -*/
     normalize_values(values, ri);
-    /*- maxnum_valは"birth_rate"のパラメータ -*/
+    /*- maxnum_val is the "birth_rate" parameter -*/
     intpart = (int)values.maxnum_val;
     /*-
-     * /birth_rateが小数だったとき、各フレームの小数部分を足しこんだ結果の整数部分をintpartに渡す。
+     * When birth_rate is decimal, pass integer part resulting from accumulating
+     * decimal parts of each frame to intpart.
      * -*/
     fractpart = fractpart + values.maxnum_val - intpart;
     if ((int)fractpart) {
@@ -489,64 +513,128 @@ void Particles_Engine::render_particles(
     std::map<int, TTile *> porttiles;
 
     // Perform the roll
-    /*- RenderSettingsを複製して現在のフレームの計算用にする -*/
+    /*- Duplicate RenderSettings for current frame calculation -*/
     TRenderSettings riAux(ri);
-    riAux.m_affine = TAffine();
-    riAux.m_bpp    = 32;
+    riAux.m_affine           = TAffine();
+    riAux.m_bpp              = 32;
+    riAux.m_linearColorSpace = false;
+    // control image using its gradient is computed in 64bpc
+    TRenderSettings riAux64(riAux);
+    riAux64.m_bpp = 64;
 
     int r_frame;  // Useful in case of negative roll frames
     if (frame < 0)
       r_frame = 0;
     else
       r_frame = frame;
-    /*- 出力画像のバウンディングボックス -*/
+    /*- Bounding box of output image -*/
     TRectD outTileBBox(tile->m_pos, TDimensionD(tile->getRaster()->getLx(),
                                                 tile->getRaster()->getLy()));
-    /*- Controlに刺さっている各ポートについて -*/
+
+    // enlarge bounding box for control images with infinite bbox in case the
+    // source region is larger than output tile
+    TRectD bboxForInifiniteSource = ri.m_affine.inv() * outTileBBox;
+    TRectD sourceBbox;
+    if (values.source_ctrl_val &&
+        ctrl_ports.at(values.source_ctrl_val)->isConnected()) {
+      (*(ctrl_ports.at(values.source_ctrl_val)))
+          ->getBBox(r_frame, sourceBbox, riAux);
+    }
+    if (sourceBbox.isEmpty() || sourceBbox == TConsts::infiniteRectD) {
+      sourceBbox = TRectD(values.x_pos_val - values.length_val * 0.5,
+                          values.y_pos_val - values.height_val * 0.5,
+                          values.x_pos_val + values.length_val * 0.5,
+                          values.y_pos_val + values.height_val * 0.5);
+    }
+    bboxForInifiniteSource += sourceBbox;
+
+    /*- For each port connected to Control -*/
     for (std::map<int, TRasterFxPort *>::iterator it = ctrl_ports.begin();
          it != ctrl_ports.end(); ++it) {
       TTile *tmp;
-      /*- ポートが接続されていて、Fx内で実際に使用されていたら -*/
+      /*- If port is connected and actually used within Fx -*/
       if ((it->second)->isConnected() && port_is_used(it->first, values)) {
         TRectD bbox;
         (*(it->second))->getBBox(r_frame, bbox, riAux);
-        /*- 素材が存在する場合、portTilesにコントロール画像タイルを格納 -*/
+        /*- If material exists, store control image tile in portTiles -*/
         if (!bbox.isEmpty()) {
           if (bbox == TConsts::infiniteRectD)  // There could be an infinite
                                                // bbox - deal with it
-            bbox = ri.m_affine.inv() * outTileBBox;
+            bbox = bboxForInifiniteSource;
 
           if (frame <= pcFrame) {
             // This frame will not actually be rolled. However, it was
             // dryComputed - so, declare the same here.
             (*it->second)->dryCompute(bbox, r_frame, riAux);
           } else {
-            tmp = new TTile;
+            // control image is used its gradient
+            if (port_is_used_for_gradient(it->first, values)) {
+              tmp = new TTile;
 
-            if (isPrecomputingEnabled)
-              (*it->second)
-                  ->allocateAndCompute(*tmp, bbox.getP00(),
-                                       convert(bbox).getSize(), 0, r_frame,
-                                       riAux);
-            else {
-              std::string alias =
-                  "CTRL: " + (*(it->second))->getAlias(r_frame, riAux);
-              TRasterImageP rimg = TImageCache::instance()->get(alias, false);
+              if (isPrecomputingEnabled)
+                (*it->second)
+                    ->allocateAndCompute(*tmp, bbox.getP00(),
+                                         convert(bbox).getSize(), 0, r_frame,
+                                         riAux64);
+              else {
+                std::string alias =
+                    "CTRL64: " + (*(it->second))->getAlias(r_frame, riAux64);
+                TRasterImageP rimg = TImageCache::instance()->get(alias, false);
 
-              if (rimg) {
+                if (rimg) {
+                  tmp->m_pos = bbox.getP00();
+                  tmp->setRaster(rimg->getRaster());
+                } else {
+                  (*it->second)
+                      ->allocateAndCompute(*tmp, bbox.getP00(),
+                                           convert(bbox).getSize(), 0, r_frame,
+                                           riAux64);
+
+                  addRenderCache(alias, TRasterImageP(tmp->getRaster()));
+                }
+              }
+
+              porttiles[it->first + Ctrl_64_Offset] = tmp;
+
+              // in case the control image is also used for non-gradient
+              if (port_is_used_for_value(it->first, values)) {
+                TRaster32P tileRas(tmp->getRaster()->getSize());
+                TRop::convert(tileRas, tmp->getRaster());
+                tmp        = new TTile;
                 tmp->m_pos = bbox.getP00();
-                tmp->setRaster(rimg->getRaster());
-              } else {
+                tmp->setRaster(tileRas);
+                porttiles[it->first] = tmp;
+              }
+            }
+            // control images used only for non-gradient
+            else {
+              tmp = new TTile;
+
+              if (isPrecomputingEnabled)
                 (*it->second)
                     ->allocateAndCompute(*tmp, bbox.getP00(),
                                          convert(bbox).getSize(), 0, r_frame,
                                          riAux);
+              else {
+                std::string alias =
+                    "CTRL: " + (*(it->second))->getAlias(r_frame, riAux);
+                TRasterImageP rimg = TImageCache::instance()->get(alias, false);
 
-                addRenderCache(alias, TRasterImageP(tmp->getRaster()));
+                if (rimg) {
+                  tmp->m_pos = bbox.getP00();
+                  tmp->setRaster(rimg->getRaster());
+                } else {
+                  (*it->second)
+                      ->allocateAndCompute(*tmp, bbox.getP00(),
+                                           convert(bbox).getSize(), 0, r_frame,
+                                           riAux);
+
+                  addRenderCache(alias, TRasterImageP(tmp->getRaster()));
+                }
               }
-            }
 
-            porttiles[it->first] = tmp;
+              porttiles[it->first] = tmp;
+            }
           }
         }
       }
@@ -603,9 +691,9 @@ void Particles_Engine::render_particles(
               part.lifetime <=
                   part.genlifetime)  // This last... shouldn't always be?
           {
-            do_render(flash, &part, tile, part_ports, porttiles, ri, p_size,
-                      p_offset, last_frame[part.level], partLevel, values,
-                      opacity_range, dist_frame, partScales);
+            do_render(&part, tile, part_ports, porttiles, ri, p_size, p_offset,
+                      last_frame[part.level], partLevel, values, opacity_range,
+                      dist_frame, partScales);
           }
         }
       } else {
@@ -615,9 +703,9 @@ void Particles_Engine::render_particles(
           if (dist_frame <= part.trail && part.scale && part.lifetime > 0 &&
               part.lifetime <= part.genlifetime)  // Same here..?
           {
-            do_render(flash, &part, tile, part_ports, porttiles, ri, p_size,
-                      p_offset, last_frame[part.level], partLevel, values,
-                      opacity_range, dist_frame, partScales);
+            do_render(&part, tile, part_ports, porttiles, ri, p_size, p_offset,
+                      last_frame[part.level], partLevel, values, opacity_range,
+                      dist_frame, partScales);
           }
         }
       }
@@ -629,13 +717,13 @@ void Particles_Engine::render_particles(
 }
 
 //-----------------------------------------------------------------
-/*- render_particles から呼ばれる。粒子の数だけ繰り返し -*/
+/*- Called from render_particles. Repeat for each particle -*/
 void Particles_Engine::do_render(
-    TFlash *flash, Particle *part, TTile *tile,
-    std::vector<TRasterFxPort *> part_ports, std::map<int, TTile *> porttiles,
-    const TRenderSettings &ri, TDimension &p_size, TPointD &p_offset,
-    int lastframe, std::vector<TLevelP> partLevel,
-    struct particles_values &values, double opacity_range, int dist_frame,
+    Particle *part, TTile *tile, std::vector<TRasterFxPort *> part_ports,
+    std::map<int, TTile *> porttiles, const TRenderSettings &ri,
+    TDimension &p_size, TPointD &p_offset, int lastframe,
+    std::vector<TLevelP> partLevel, struct particles_values &values,
+    double opacity_range, int dist_frame,
     std::map<std::pair<int, int>, double> &partScales) {
   // Retrieve the particle frame - that is, the *column frame* from which we are
   // picking
@@ -674,150 +762,505 @@ void Particles_Engine::do_render(
 
     (*part_ports[part->level])->getBBox(ndx, bbox, riIdentity);
 
-    // A particle's bbox MUST be finite. Gradients and such which have an
-    // infinite bbox
-    // are just NOT rendered.
-
-    // NOTE: No fx returns half-planes or similar (ie if any coordinate is
-    // either
-    // (std::numeric_limits<double>::max)() or its opposite, then the rect IS
-    // THE infiniteRectD)
-    if (bbox.isEmpty() || bbox == TConsts::infiniteRectD) return;
+    // Now sources with infinite bounding box are retrieved with the output tile
+    // size. This is especially for levels deformed by plastic mesh which must
+    // have some finite bbox but return infinite bbox because "it's hard work to
+    // calculate". (see PlasticDeformerFx::doGetBBox() and the issue
+    // opentoonz#1330) NOTE: No fx returns half-planes or similar (ie if any
+    // coordinate is either (std::numeric_limits<double>::max)() or its
+    // opposite, then the rect IS THE infiniteRectD)
+    if (bbox.isEmpty())
+      return;
+    else if (bbox == TConsts::infiniteRectD)
+      bbox *= TRectD(tile->m_pos, TDimensionD(tile->getRaster()->getLx(),
+                                              tile->getRaster()->getLy()));
   }
 
   // Now, these are the particle rendering specifications
-  bbox            = bbox.enlarge(3);
-  standardRefBBox = bbox;
-  riNew.m_affine  = TScale(partScale);
-  bbox            = riNew.m_affine * bbox;
-  /*- 縮小済みのParticleのサイズ -*/
+  bbox                     = bbox.enlarge(3);
+  standardRefBBox          = bbox;
+  riNew.m_affine           = TScale(partScale);
+  bbox                     = riNew.m_affine * bbox;
+  riNew.m_linearColorSpace = false;
+  /*- Size of scaled down Particle -*/
   partResolution = TDimensionD(tceil(bbox.getLx()), tceil(bbox.getLy()));
 
-  if (flash) {
-    if (!partLevel[part->level]->frame(ndx)) {
-      if (part_ports[0]->isConnected()) {
-        TTile auxTile;
-        TRaster32P tmp;
-        tmp = TRaster32P(p_size);
-        (*part_ports[0])
-            ->allocateAndCompute(auxTile, p_offset, p_size, tmp, ndx, ri);
-        partLevel[part->level]->setFrame(ndx,
-                                         TRasterImageP(auxTile.getRaster()));
-      }
-    }
+  TRasterP ras;
 
-    flash->pushMatrix();
-
-    const TAffine aff;
-
-    flash->multMatrix(scaleM * aff.place(0, 0, part->x, part->y));
-
-    // if(curr_opacity!=1.0 || part->gencol.fadecol || part->fincol.fadecol ||
-    // part->foutcol.fadecol)
-    {
-      TColorFader cf(TPixel32::Red, .5);
-      flash->draw(partLevel[part->level]->frame(ndx), &cf);
-    }
-    // flash->draw(partLevel->frame(ndx), 0);
-
-    flash->popMatrix();
+  std::string alias;
+  TRasterImageP rimg;
+  rimg = partLevel[part->level]->frame(ndx);
+  if (rimg) {
+    ras = rimg->getRaster();
   } else {
-    TRasterP ras;
-
-    std::string alias;
-    TRasterImageP rimg;
-    if (rimg = partLevel[part->level]->frame(ndx)) {
+    alias = "PART: " + (*part_ports[part->level])->getAlias(ndx, riNew);
+    rimg  = TImageCache::instance()->get(alias, false);
+    if (rimg) {
       ras = rimg->getRaster();
-    } else {
-      alias = "PART: " + (*part_ports[part->level])->getAlias(ndx, riNew);
-      if (rimg = TImageCache::instance()->get(alias, false)) {
-        ras = rimg->getRaster();
 
-        // Check that the raster resolution is sufficient for our purposes
-        if (ras->getLx() < partResolution.lx ||
-            ras->getLy() < partResolution.ly)
-          ras = 0;
-        else
-          partResolution = TDimensionD(ras->getLx(), ras->getLy());
-      }
+      // Check that the raster resolution is sufficient for our purposes
+      if (ras->getLx() < partResolution.lx || ras->getLy() < partResolution.ly)
+        ras = 0;
+      else
+        partResolution = TDimensionD(ras->getLx(), ras->getLy());
     }
-
-    // We are interested in making the relation between scale and (integer)
-    // resolution
-    // bijective - since we shall cache by using resolution as a partial
-    // identification parameter.
-    // Therefore, we find the current bbox Lx and take a unique scale out of it.
-    partScale      = partResolution.lx / standardRefBBox.getLx();
-    riNew.m_affine = TScale(partScale);
-    bbox           = riNew.m_affine * standardRefBBox;
-
-    // If no image was retrieved from the cache (or it was not scaled enough),
-    // calculate it
-    if (!ras) {
-      TTile auxTile;
-      (*part_ports[part->level])
-          ->allocateAndCompute(auxTile, bbox.getP00(),
-                               TDimension(partResolution.lx, partResolution.ly),
-                               tile->getRaster(), ndx, riNew);
-      ras = auxTile.getRaster();
-
-      // For now, we'll just use 32 bit particles
-      TRaster32P rcachepart;
-      rcachepart = ras;
-      if (!rcachepart) {
-        rcachepart = TRaster32P(ras->getSize());
-        TRop::convert(rcachepart, ras);
-      }
-      ras = rcachepart;
-
-      // Finally, cache the particle
-      addRenderCache(alias, TRasterImageP(ras));
-    }
-
-    if (!ras) return;  // At this point, it should never happen anyway...
-
-    // Deal with particle colors/opacity
-    TRaster32P rfinalpart;
-    double curr_opacity =
-        part->set_Opacity(porttiles, values, opacity_range, dist_frame);
-    if (curr_opacity != 1.0 || part->gencol.fadecol || part->fincol.fadecol ||
-        part->foutcol.fadecol) {
-      /*- 毎フレーム現在位置のピクセル色を参照 -*/
-      if (values.pick_color_for_every_frame_val && values.gencol_ctrl_val &&
-          (porttiles.find(values.gencol_ctrl_val) != porttiles.end()))
-        part->get_image_reference(porttiles[values.gencol_ctrl_val], values,
-                                  part->gencol.col);
-
-      rfinalpart = ras->clone();
-      part->modify_colors_and_opacity(values, curr_opacity, dist_frame,
-                                      rfinalpart);
-    } else
-      rfinalpart = ras;
-
-    // Now, let's build the particle transform before it is overed on the output
-    // tile
-
-    // First, complete the transform by adding the rotational and scale
-    // components from
-    // Particles parameters
-    M = ri.m_affine * M * TScale(1.0 / partScale);
-
-    // Then, retrieve the particle position in current reference.
-    TPointD pos(part->x, part->y);
-    pos = ri.m_affine * pos;
-
-    // Finally, add the translational component to the particle
-    // NOTE: p_offset is added to account for the particle relative position
-    // inside its level's bbox
-    M = TTranslation(pos - tile->m_pos) * M * TTranslation(bbox.getP00());
-
-    if (TRaster32P myras32 = tile->getRaster())
-      TRop::over(tileRas, rfinalpart, M);
-    else if (TRaster64P myras64 = tile->getRaster())
-      TRop::over(tileRas, rfinalpart, M);
-    else
-      throw TException("ParticlesFx: unsupported Pixel Type");
   }
+
+  // We are interested in making the relation between scale and (integer)
+  // resolution
+  // bijective - since we shall cache by using resolution as a partial
+  // identification parameter.
+  // Therefore, we find the current bbox Lx and take a unique scale out of it.
+  partScale      = partResolution.lx / standardRefBBox.getLx();
+  riNew.m_affine = TScale(partScale);
+  bbox           = riNew.m_affine * standardRefBBox;
+
+  // If no image was retrieved from the cache (or it was not scaled enough),
+  // calculate it
+  if (!ras) {
+    TTile auxTile;
+    (*part_ports[part->level])
+        ->allocateAndCompute(auxTile, bbox.getP00(),
+                             TDimension(partResolution.lx, partResolution.ly),
+                             tile->getRaster(), ndx, riNew);
+    ras = auxTile.getRaster();
+
+    // For now, we'll just use 32 bit particles
+    TRaster32P rcachepart;
+    rcachepart = ras;
+    if (!rcachepart) {
+      rcachepart = TRaster32P(ras->getSize());
+      TRop::convert(rcachepart, ras);
+    }
+    ras = rcachepart;
+
+    // Finally, cache the particle
+    addRenderCache(alias, TRasterImageP(ras));
+  }
+
+  if (!ras) return;  // At this point, it should never happen anyway...
+
+  // Deal with particle colors/opacity
+  TRaster32P rfinalpart;
+  double curr_opacity =
+      part->set_Opacity(porttiles, values, opacity_range, dist_frame);
+  if (curr_opacity != 1.0 || part->gencol.fadecol || part->fincol.fadecol ||
+      part->foutcol.fadecol) {
+    /*- Reference pixel color at current position every frame -*/
+    if (values.pick_color_for_every_frame_val && values.gencol_ctrl_val &&
+        (porttiles.find(values.gencol_ctrl_val) != porttiles.end()))
+      part->get_image_reference(porttiles[values.gencol_ctrl_val], values,
+                                part->gencol.col);
+
+    rfinalpart = ras->clone();
+    part->modify_colors_and_opacity(values, curr_opacity, dist_frame,
+                                    rfinalpart);
+  } else
+    rfinalpart = ras;
+
+  // Now, let's build the particle transform before it is overed on the output
+  // tile
+
+  // First, complete the transform by adding the rotational and scale
+  // components from
+  // Particles parameters
+  M = ri.m_affine * M * TScale(1.0 / partScale);
+
+  // render with motion blur
+  if (values.motion_blur_val) {
+    if (do_render_motion_blur(part, tile, tileRas, rfinalpart, M, bbox,
+                              values.trailopacity_val,
+                              values.motion_blur_gamma_adjust_val, ri))
+      return;
+  }
+
+  // Then, retrieve the particle position in current reference.
+  TPointD pos(part->x, part->y);
+  pos = ri.m_affine * pos;
+
+  // Finally, add the translational component to the particle
+  // NOTE: p_offset is added to account for the particle relative position
+  // inside its level's bbox
+  M = TTranslation(pos - tile->m_pos) * M * TTranslation(bbox.getP00());
+
+  if (TRaster32P myras32 = tile->getRaster())
+    TRop::over(tileRas, rfinalpart, M);
+  else if (TRaster64P myras64 = tile->getRaster())
+    TRop::over(tileRas, rfinalpart, M);
+  else
+    throw TException("ParticlesFx: unsupported Pixel Type");
+}
+
+/*-----------------------------------------------------------------*/
+
+bool Particles_Engine::do_render_motion_blur(
+    Particle *part, TTile *tile, TRasterP tileRas, TRaster32P rfinalpart,
+    TAffine &M, const TRectD &bbox, const DoublePair &trailOpacity,
+    const double gamma_adjust, const TRenderSettings &ri) {
+  QList<TPointD> points;
+  QList<double> lengths;
+
+  // do not render new-born particles as it has no trace
+  if (part->genlifetime - part->lifetime == 0) return true;
+
+  double gamma = gamma_adjust + ri.m_colorSpaceGamma;
+
+  TRectD partBBoxD =
+      M * TTranslation(bbox.getP00()) * convert(rfinalpart->getBounds());
+  partBBoxD = partBBoxD.enlarge(1.0);
+
+  TRect partBBox = convert(partBBoxD);
+
+  TRaster32P partRas(partBBox.getSize());
+  TRop::over(
+      partRas, rfinalpart,
+      TTranslation(-partBBoxD.getP00()) * M * TTranslation(bbox.getP00()));
+
+  // create trace vertices list
+  // render straight trace in the first 4 frames
+  if (part->genlifetime - part->lifetime < 3) {
+    TPointD p0(part->x, part->y);
+    TPointD p1(part->oldx[0], part->oldy[0]);
+    p0 = ri.m_affine * p0;
+    p1 = ri.m_affine * p1;
+    points.append(TPointD(0, 0));
+    points.append(p1 - p0);
+  }
+  // Cubic spline interpolation
+  else {
+    // divide into 8 lines (= 9 segments)
+    int pointAmount = 9;
+    TPointD keyP[4] = {TPointD(part->x, part->y),
+                       TPointD(part->oldx[0], part->oldy[0]),
+                       TPointD(part->oldx[1], part->oldy[1]),
+                       TPointD(part->oldx[2], part->oldy[2])};
+    for (int i = 0; i < 4; i++) {
+      keyP[i] = ri.m_affine * keyP[i];
+      if (i > 0) {
+        keyP[i] -= keyP[0];
+      }
+    }
+    keyP[0] = TPointD(0, 0);
+
+    double u[4];
+    u[0] = 0.;
+    u[1] = u[0] + norm(keyP[1] - keyP[0]);
+    u[2] = u[1] + norm(keyP[2] - keyP[1]);
+    u[3] = u[2] + norm(keyP[3] - keyP[2]);
+
+    QMatrix4x4 mat(u[0] * u[0] * u[0], u[0] * u[0], u[0], 1.,
+                   u[1] * u[1] * u[1], u[1] * u[1], u[1], 1.,
+                   u[2] * u[2] * u[2], u[2] * u[2], u[2], 1.,
+                   u[3] * u[3] * u[3], u[3] * u[3], u[3], 1.);
+
+    bool ok;
+    mat = mat.inverted(&ok);
+    if (!ok) return false;
+
+    QPointF coeff[4];
+    for (int i = 0; i < 4; i++) {
+      coeff[i] = mat(i, 0) * QPointF(keyP[0].x, keyP[0].y) +
+                 mat(i, 1) * QPointF(keyP[1].x, keyP[1].y) +
+                 mat(i, 2) * QPointF(keyP[2].x, keyP[2].y) +
+                 mat(i, 3) * QPointF(keyP[3].x, keyP[3].y);
+    }
+
+    for (int p = 0; p <= pointAmount; p++) {
+      double ratio = (double)p / (double)pointAmount;
+      double cur_u = u[0] * ratio + u[1] * (1 - ratio);
+
+      points.append(TPointD(
+          cur_u * cur_u * cur_u * coeff[0].x() + cur_u * cur_u * coeff[1].x() +
+              cur_u * coeff[2].x() + coeff[3].x(),
+          cur_u * cur_u * cur_u * coeff[0].y() + cur_u * cur_u * coeff[1].y() +
+              cur_u * coeff[2].y() + coeff[3].y()));
+    }
+  }
+
+  // compute lengths
+  for (int p = 0; p < points.size() - 1; p++) {
+    TPointD vec = points[p + 1] - points[p];
+    lengths.append(norm(vec));
+  }
+
+  /* Get upper, lower, left and right margin */
+  double minX = 0.0;
+  double maxX = 0.0;
+  double minY = 0.0;
+  double maxY = 0.0;
+  for (int p = 0; p < points.size(); p++) {
+    if (points.at(p).x > maxX) maxX = points.at(p).x;
+    if (points.at(p).x < minX) minX = points.at(p).x;
+    if (points.at(p).y > maxY) maxY = points.at(p).y;
+    if (points.at(p).y < minY) minY = points.at(p).y;
+  }
+  int marginLeft   = (int)std::ceil(std::abs(minX));
+  int marginRight  = (int)std::ceil(std::abs(maxX));
+  int marginTop    = (int)std::ceil(std::abs(maxY));
+  int marginBottom = (int)std::ceil(std::abs(minY));
+  if (marginLeft == 0 && marginRight == 0 && marginTop == 0 &&
+      marginBottom == 0)
+    return false;
+
+  // end opacity is computed so that the trace will be connected smoothly in the
+  // trail
+  float end_opacity =
+      trailOpacity.second +
+      (trailOpacity.first - trailOpacity.second) / std::max(1, part->trail);
+
+  // create the blur filter
+  TDimensionI filterDim(marginLeft + marginRight + 1,
+                        marginTop + marginBottom + 1);
+  TRasterGR8P filter_ras(sizeof(float) * filterDim.lx, filterDim.ly);
+  filter_ras->lock();
+  float *filter_p = (float *)filter_ras->getRawData();
+  /* Variable for adding filter value*/
+  float fil_val_sum = 0.0f;
+  /* The current filter position to be looped in the 'for' statement */
+  float *current_fil_p = filter_p;
+  /* For each coordinate in the filter */
+  for (int fily = 0; fily < filterDim.ly; fily++) {
+    for (int filx = 0; filx < filterDim.lx; filx++, current_fil_p++) {
+      /* Get filter coordinates */
+      TPointD pos(static_cast<float>(filx - marginLeft),
+                  static_cast<float>(fily - marginBottom));
+      /* Value to be updated */
+      float nearestDist2         = 100.0f;
+      int nearestIndex           = -1;
+      float nearestFramePosRatio = 0.0f;
+
+      /* Find the nearest point for each pair of sample points */
+      for (int v = 0; v < points.count() - 1; v++) {
+        TPointD p0 = points[v];
+        TPointD p1 = points[v + 1];
+
+        /* If it is not within the range, continue */
+        if (pos.x < std::min(p0.x, p1.x) - 1.0f ||
+            pos.x > std::max(p0.x, p1.x) + 1.0f ||
+            pos.y < std::min(p0.y, p1.y) - 1.0f ||
+            pos.y > std::max(p0.y, p1.y) + 1.0f)
+          continue;
+
+        /* Since it is within the range, obtain the distance between the line
+         * segment and the point. */
+        /* Calculate the inner product of 'p0'->sampling point and 'p0'->'p1' */
+        TPointD vec_p0_sample(static_cast<float>(pos.x - p0.x),
+                              static_cast<float>(pos.y - p0.y));
+        TPointD vec_p0_p1(static_cast<float>(p1.x - p0.x),
+                          static_cast<float>(p1.y - p0.y));
+        float dot =
+            vec_p0_sample.x * vec_p0_p1.x + vec_p0_sample.y * vec_p0_p1.y;
+        /* Calculate the square of distance */
+        float dist2;
+        float framePosRatio;
+        /* If it is before 'p0' */
+        if (dot <= 0.0f) {
+          dist2 = vec_p0_sample.x * vec_p0_sample.x +
+                  vec_p0_sample.y * vec_p0_sample.y;
+          framePosRatio = 0.0f;
+        } else {
+          /* Calculate the square of the length of the trajectory vector */
+          float length2 = lengths[v] * lengths[v];
+
+          /* If it is between 'p0' and 'p1'
+           * If the trajectory at p is a point,
+           * 'length2' becomes 0, so it will never fall into this condition.
+           * So, there should not be worry of becoming ZeroDivide. */
+          if (dot < length2) {
+            float p0_sample_dist2 = vec_p0_sample.x * vec_p0_sample.x +
+                                    vec_p0_sample.y * vec_p0_sample.y;
+            dist2         = p0_sample_dist2 - dot * dot / length2;
+            framePosRatio = dot / length2;
+          }
+          /* If it is before 'p1' */
+          else {
+            TPointD vec_p1_sample = pos - p1;
+            dist2                 = vec_p1_sample.x * vec_p1_sample.x +
+                    vec_p1_sample.y * vec_p1_sample.y;
+            framePosRatio = 1.0f;
+          }
+        }
+        /* If the distance is farther than (? 2 + 1) / 2, continue
+         * Because it is a comparison with dist2, the value is squared */
+        if (dist2 > 1.4571f) continue;
+
+        /* Update if distance is closer */
+        if (dist2 < nearestDist2) {
+          nearestDist2         = dist2;
+          nearestIndex         = v;
+          nearestFramePosRatio = framePosRatio;
+        }
+      }
+
+      /* If neighborhood vector of the current pixel can not be found,
+       * set the filter value to 0 and return */
+      if (nearestIndex == -1) {
+        *current_fil_p = 0.0f;
+        continue;
+      }
+
+      /* Count how many subpixels (16 * 16) of the current pixel
+       * are in the range 0.5 from the neighborhood vector.
+       */
+      int count   = 0;
+      TPointD np0 = points[nearestIndex];
+      TPointD np1 = points[nearestIndex + 1];
+      for (int yy = 0; yy < 16; yy++) {
+        /* Y coordinate of the subpixel */
+        float subPosY = pos.y + ((float)yy - 7.5f) / 16.0f;
+        for (int xx = 0; xx < 16; xx++) {
+          /* X coordinate of the subpixel */
+          float subPosX = pos.x + ((float)xx - 7.5f) / 16.0f;
+
+          TPointD vec_np0_sub = TPointD(subPosX, subPosY) - np0;
+          TPointD vec_np0_np1 = np1 - np0;
+          float dot =
+              vec_np0_sub.x * vec_np0_np1.x + vec_np0_sub.y * vec_np0_np1.y;
+          /* Calculate the square of the distance */
+          float dist2;
+          /* If it is before 'p0' */
+          if (dot <= 0.0f)
+            dist2 =
+                vec_np0_sub.x * vec_np0_sub.x + vec_np0_sub.y * vec_np0_sub.y;
+          else {
+            /* Compute the square of the length of the trajectory vector */
+            float length2 = lengths[nearestIndex] * lengths[nearestIndex];
+            /* If it is between 'p0' and 'p1' */
+            if (dot < length2) {
+              float np0_sub_dist2 =
+                  vec_np0_sub.x * vec_np0_sub.x + vec_np0_sub.y * vec_np0_sub.y;
+              dist2 = np0_sub_dist2 - dot * dot / length2;
+            }
+            /* if it is before 'p1' */
+            else {
+              TPointD vec_np1_sub = TPointD(subPosX, subPosY) - np1;
+              dist2 =
+                  vec_np1_sub.x * vec_np1_sub.x + vec_np1_sub.y * vec_np1_sub.y;
+            }
+          }
+          /* Increment count if squared distance is less than 0.25 */
+          if (dist2 <= 0.25f) count++;
+        }
+      }
+      /* 'safeguard' - If the count is 0, set the field value to 0 and return.
+       */
+      if (count == 0) {
+        *current_fil_p = 0.0f;
+        continue;
+      }
+
+      /* Count is 256 at a maximum */
+      float countRatio = (float)count / 256.0f;
+
+      /* The brightness of the filter value is inversely proportional
+       * to the area of ??the line of width 1 made by the vector.
+       *
+       * Since there are semicircular caps with radius 0.5
+       * before and after the vector, it will never be 0-divide
+       * even if the length of vector is 0.
+       */
+
+      /* Area of the neighborhood vector when width = 1 */
+      float vecMenseki = 0.25f * 3.14159265f + lengths[nearestIndex];
+
+      float opacity = 1.0f;
+      if (end_opacity < 1.0f) {
+        float ratio = ((float)nearestIndex + nearestFramePosRatio) /
+                      (float)(points.size() - 1);
+        opacity = ratio + end_opacity * (1.f - ratio);
+      }
+      /* Store field value */
+      *current_fil_p = opacity * countRatio / vecMenseki;
+      fil_val_sum += *current_fil_p;
+    }
+  }
+
+  /* Normalization */
+  current_fil_p = filter_p;
+  for (int f = 0; f < filterDim.lx * filterDim.ly; f++, current_fil_p++) {
+    *current_fil_p /= fil_val_sum;
+  }
+
+  // apply the filter
+  TDimension blurredSize =
+      partRas->getSize() +
+      TDimension(marginLeft + marginRight, marginTop + marginBottom);
+  float4 *blurred_p;
+  TRasterGR8P blurred_ras(sizeof(float4) * blurredSize.lx, blurredSize.ly);
+  blurred_ras->lock();
+  blurred_ras->clear();
+  blurred_p = (float4 *)blurred_ras->getRawData();
+  // for each texture pixels,
+  // distribute to all pixels in the filter
+  for (int ty = 0; ty < partRas->getLy(); ty++) {
+    TPixel32 *t_p = partRas->pixels(ty);
+    for (int tx = 0; tx < partRas->getLx(); tx++, t_p++) {
+      if (t_p->m == 0) continue;
+
+      float4 tex = {(float)t_p->r / (float)(TPixel32::maxChannelValue),
+                    (float)t_p->g / (float)(TPixel32::maxChannelValue),
+                    (float)t_p->b / (float)(TPixel32::maxChannelValue),
+                    (float)t_p->m / (float)(TPixel32::maxChannelValue)};
+      if (gamma > 1.f) {
+        tex.x = std::pow(tex.x / tex.w, gamma) * tex.w;
+        tex.y = std::pow(tex.y / tex.w, gamma) * tex.w;
+        tex.z = std::pow(tex.z / tex.w, gamma) * tex.w;
+      }
+
+      current_fil_p = filter_p;
+      for (int outy = ty; outy < ty + filterDim.ly; outy++) {
+        for (int outx = tx; outx < tx + filterDim.lx; outx++, current_fil_p++) {
+          if (*current_fil_p == 0.f) continue;
+          int outIndex = outy * blurredSize.lx + outx;
+          blurred_p[outIndex].x += *current_fil_p * tex.x;
+          blurred_p[outIndex].y += *current_fil_p * tex.y;
+          blurred_p[outIndex].z += *current_fil_p * tex.z;
+          blurred_p[outIndex].w += *current_fil_p * tex.w;
+        }
+      }
+    }
+  }
+
+  filter_ras->unlock();
+
+  float4 *b_p = blurred_p;
+  TRaster32P blurred(blurredSize);
+  for (int by = 0; by < blurredSize.ly; by++) {
+    TPixel32 *b_ras_p = blurred->pixels(by);
+    for (int bx = 0; bx < blurredSize.lx; bx++, b_ras_p++, b_p++) {
+      if (gamma > 1.f && (*b_p).w > 0.f) {
+        (*b_p).x = std::pow((*b_p).x / (*b_p).w, 1.f / gamma) * (*b_p).w;
+        (*b_p).y = std::pow((*b_p).y / (*b_p).w, 1.f / gamma) * (*b_p).w;
+        (*b_p).z = std::pow((*b_p).z / (*b_p).w, 1.f / gamma) * (*b_p).w;
+      }
+
+      b_ras_p->r = (TPixel32::Channel)std::round(
+          (*b_p).x * (float)(TPixel32::maxChannelValue));
+      b_ras_p->g = (TPixel32::Channel)std::round(
+          (*b_p).y * (float)(TPixel32::maxChannelValue));
+      b_ras_p->b = (TPixel32::Channel)std::round(
+          (*b_p).z * (float)(TPixel32::maxChannelValue));
+      b_ras_p->m = (TPixel32::Channel)std::round(
+          (*b_p).w * (float)(TPixel32::maxChannelValue));
+    }
+  }
+
+  blurred_ras->unlock();
+
+  // composite particle
+  TPointD pos(part->x, part->y);
+  pos = ri.m_affine * pos;
+  M   = TTranslation(pos - tile->m_pos) *
+      TTranslation(-TPointD(marginLeft, marginBottom) + partBBoxD.getP00());
+
+  if (TRaster32P myras32 = tileRas)
+    TRop::over(tileRas, blurred, M);
+  else if (TRaster64P myras64 = tileRas)
+    TRop::over(tileRas, blurred, M);
+  else
+    throw TException("ParticlesFx: unsupported Pixel Type");
+
+  return true;
 }
 
 /*-----------------------------------------------------------------*/
@@ -846,7 +1289,7 @@ void Particles_Engine::fill_array(TTile *ctrl1, int &regioncount,
         if (myarray[i - 1]) myarray[i] = myarray[i - 1];
       }
     }
-    *pix++;
+    pix++;
   }
 
   for (j = 1; j < ly; j++) {
@@ -957,7 +1400,7 @@ void Particles_Engine::normalize_array(
 }
 
 /*-----------------------------------------------------------------*/
-/*- multiがONのときのSource画像（ctrl1）の領域を分析 -*/
+/*- Analyze source image (ctrl1) regions when multi is ON -*/
 void Particles_Engine::fill_subregions(
     int cont_index, std::vector<std::vector<TPointD>> &myregions, TTile *ctrl1,
     int thres) {
@@ -980,13 +1423,13 @@ void Particles_Engine::fill_subregions(
 }
 
 /*-----------------------------------------------------------------*/
-/*- 入力画像のアルファ値に比例して発生濃度を変える。各Pointにウェイトを持たせる
- * -*/
+/*- Vary emission density proportional to alpha value of input image. Give
+ * weight to each Point -*/
 void Particles_Engine::fill_single_region(
     std::vector<std::vector<TPointD>> &myregions, TTile *ctrl1, int threshold,
     bool do_source_gradation, std::vector<std::vector<int>> &myHistogram) {
   TRaster32P raster32 = ctrl1->getRaster();
-  assert(raster32);  // per ora gestisco solo i Raster32
+  assert(raster32);  // for now only handle Raster32
                      //  int lx=raster32->getLx();
                      //  int ly=raster32->getLy();
   int j;
@@ -996,7 +1439,7 @@ void Particles_Engine::fill_single_region(
   int icc = 0;
   raster32->lock();
 
-  if (!do_source_gradation) /*- 2階調の場合 -*/
+  if (!do_source_gradation) /*- Two-tone case -*/
   {
     for (j = 0; j < raster32->getLy(); j++) {
       TPixel32 *pix    = raster32->pixels(j);
@@ -1017,7 +1460,7 @@ void Particles_Engine::fill_single_region(
           //           int a=0;
         }
         i++;
-        *pix++;
+        pix++;
       }
     }
   } else {
@@ -1030,8 +1473,8 @@ void Particles_Engine::fill_single_region(
       int i            = 0;
       while (pix < endPix) {
         cc++;
-        /*-- アルファの濃度に比例してパーティクルを発生させるための、
-                シンプルな方法。そのピクセルのアルファ値の数だけ「立候補」させる。
+        /*-- Simple method to generate particles proportional to alpha density:
+                "nominate" as many times as the alpha value of that pixel.
         --*/
         if (pix->m > 0) {
           icc++;
@@ -1040,14 +1483,14 @@ void Particles_Engine::fill_single_region(
           tmp.x = i;
           tmp += ctrl1->m_pos;
 
-          /*- Histogramの登録 -*/
+          /*- Histogram registration -*/
           myHistogram[(int)pix->m].push_back((int)myregions[0].size());
-          /*-  各Pointにウェイトを持たせる -*/
+          /*- Give weight to each Point -*/
           myregions[0].push_back(tmp);
         } else {
         }
         i++;
-        *pix++;
+        pix++;
       }
     }
   }
@@ -1057,7 +1500,8 @@ void Particles_Engine::fill_single_region(
 
 /*-----------------------------------------------------------------*/
 /*-
- * 入力画像のアルファ値に比例して発生濃度を変える。Histogramを格納しながら領域を登録
+ * Vary emission density proportional to alpha value of input image. Register
+ * regions while storing Histogram
  * -*/
 void Particles_Engine::fill_regions(
     int frame, std::vector<std::vector<TPointD>> &myregions, TTile *ctrl1,
@@ -1080,9 +1524,9 @@ void Particles_Engine::fill_regions(
 }
 
 //----------------------------------------------------------------
-/*-- Perspective
-DistributionがONのとき、Sizeに刺さったControlImageが粒子の発生分布を決める。
-        そのとき、SourceのControlが刺さっている場合は、マスクとして用いられる
+/*-- When Perspective Distribution is ON, ControlImage connected to Size
+determines particle generation distribution. When Control is connected to
+Source, it is used as mask
 --*/
 
 void Particles_Engine::fill_regions_with_size_map(
@@ -1126,12 +1570,14 @@ void Particles_Engine::fill_regions_with_size_map(
         sourcePix = 0;
 
       /*-
-       * Source画像があって、ピクセルがバウンディング外またはアルファが０なら抜かす。
+       * If source image exists and pixel is outside bounding or alpha is 0,
+       * skip.
        * -*/
       if (sourceRas && (!sourcePix || sourcePix->m <= thres)) {
       }
       /*-
-         明度に比例してパーティクルを発生させる。そのピクセルのアルファ値の数だけ「立候補」させる。-*/
+          Generate particles proportional to brightness. "Nominate" as many
+         times as the alpha value of that pixel.*/
       else {
         TPointD tmp;
         tmp.y = j;
@@ -1140,10 +1586,10 @@ void Particles_Engine::fill_regions_with_size_map(
 
         int val = (int)TPixelGR8::from(*pix).value;
 
-        /*- Histogramの登録 -*/
+        /*- Histogram registration -*/
         myHistogram[val].push_back((int)myregions[0].size());
 
-        /*- 各Pointにウェイトを持たせる -*/
+        /*- Give weight to each Point -*/
         myregions[0].push_back(tmp);
       }
 

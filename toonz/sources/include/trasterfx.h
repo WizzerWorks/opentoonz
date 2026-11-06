@@ -29,7 +29,6 @@
 
 //  Forward declarations
 
-class TFlash;
 class TPalette;
 
 //===================================================================
@@ -39,7 +38,7 @@ class TPalette;
 //******************************************************************************
 
 /*!
-  \brief    Data class containing the relevant additional informations needed in
+  \brief    Data class containing the relevant additional information needed in
             a render process.
 
   \details  This class stores most of the data required by Toonz and single fxs
@@ -56,7 +55,7 @@ class TPalette;
   render
             on the default reference.
 
-  \sa       TRasterFx::compute() for further informations.
+  \sa       TRasterFx::compute() for further information.
 */
 
 class DVAPI TRenderSettings {
@@ -118,8 +117,11 @@ public:
               //! data
   //!  must be accompanied by a tile of the suitable type. \sa
   //!  TRasterFx::compute().
-  int m_maxTileSize;  //!< Maximum size (in MegaBytes) of a tile cachable during
-                      //! a render process.
+
+  bool m_linearColorSpace;  // compute in linear color space (gamma 2.2)
+
+  int m_maxTileSize;  //!< Maximum size (in MegaBytes) of a tile cacheable
+                      //! during a render process.
   //!  Used by the predictive cache manager to subdivide an fx calculation into
   //!  tiles. \sa TRasterFx::compute().
   int m_shrinkX,  //!< Required horizontal shrink. \warning Obsolete, do not
@@ -147,9 +149,14 @@ public:
   bool m_applyShrinkToViewer;  //!< Whether shrink must be considered.   \note
                                //! Should be moved to TOutputProperties.
 
-  /*-- カメラサイズ --*/
+  // when this flag is true, TLevelColumnFx::doGetBBox returns full image sized
+  // box instead of the bounding box. It takes effect only for Toonz Raster /
+  // Raster levels. Currently used only in Tile Fx Iwa. (see iwa_tilefx.cpp)
+  bool m_getFullSizeBBox;
+
+  /*-- camera size --*/
   TRectD m_cameraBox;
-  /*-- 途中でPreview計算がキャンセルされたときのフラグ --*/
+  /*-- Flag when Preview calculation is canceled during the process --*/
   int *m_isCanceled;
 
   // pointer to QOffscreenSurface which is created on
@@ -157,6 +164,8 @@ public:
   // for offscreen rendering to be done in non-GUI thread.
   // For now it is used only in the plasticDeformerFx.
   std::shared_ptr<QOffscreenSurface> m_offScreenSurface;
+
+  double m_colorSpaceGamma;
 
 public:
   TRenderSettings();
@@ -244,8 +253,6 @@ public:
 
   virtual void compute(TTile &tile, double frame, const TRenderSettings &info);
 
-  virtual void compute(TFlash &flash, int frame);
-
   void allocateAndCompute(TTile &tile, const TPointD &pos,
                           const TDimension &size, TRasterP templateRas,
                           double frame, const TRenderSettings &info);
@@ -270,6 +277,13 @@ public:
   // cache interna all'effetto
   void enableCache(bool on);
   bool isCacheEnabled() const;
+
+  void enableComputeInFloat(bool on);
+  bool canComputeInFloat() const;
+  virtual bool toBeComputedInLinearColorSpace(bool settingsIsLinear,
+                                              bool tileIsLinear) const {
+    return false;
+  }
 
   // resituisce una stringa che identifica univocamente il sottoalbero
   // avente come radice l'effetto
@@ -341,7 +355,6 @@ public:
 
   void doCompute(TTile &tile, double frame,
                  const TRenderSettings &info) override;
-  void compute(TFlash &flash, int frame) override;
 
   bool doGetBBox(double frame, TRectD &bbox,
                  const TRenderSettings &info) override;
@@ -354,6 +367,9 @@ public:
   void transform(double frame, int port, const TRectD &rectOnOutput,
                  const TRenderSettings &infoOnOutput, TRectD &rectOnInput,
                  TRenderSettings &infoOnInput) override;
+
+  bool toBeComputedInLinearColorSpace(bool settingsIsLinear,
+                                      bool tileIsLinear) const override;
 };
 
 //-------------------------------------------------------------------
@@ -406,8 +422,6 @@ public:
     return true;
   }
 
-  void compute(TFlash &flash, int frame) override;
-
   TAffine getPlacement(double frame) override { return m_aff; }
   TAffine getParentPlacement(double frame) override { return TAffine(); }
 
@@ -417,6 +431,9 @@ public:
   }
   bool isDpiAffine() const { return m_isDpiAffine; }
   std::string getPluginId() const override { return std::string(); }
+
+  void doDryCompute(TRectD &rect, double frame,
+                    const TRenderSettings &info) override;
 
 protected:
   TRasterFxPort m_port;
@@ -428,6 +445,25 @@ private:
   // not implemented
   NaAffineFx(const NaAffineFx &);
   NaAffineFx &operator=(const NaAffineFx &);
+};
+
+//**********************************************************************************************
+//    LevelColumnAffineFxRenderData  declaration
+//   this data will keep the level column dpi affine for an fx which need to be
+//   applied to the full sampled image (see Iwa_SmootherFx)
+//**********************************************************************************************
+
+class DVAPI LevelColumnAffineFxRenderData final : public TRasterFxRenderData {
+public:
+  TAffine m_aff;
+  bool m_isSet;
+
+public:
+  LevelColumnAffineFxRenderData() : m_isSet(false) {}
+
+  bool operator==(const TRasterFxRenderData &data) const override;
+  std::string toString() const override { return ""; }
+  float typeIndex() const override { return 1.f; }
 };
 
 //******************************************************************************

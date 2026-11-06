@@ -32,7 +32,6 @@ class TRegionProp;
 class TRegionOutline;
 class TTessellator;
 class TColorFunction;
-class TFlash;
 class TVectorImage;
 
 //=================================================
@@ -42,7 +41,7 @@ class TVectorImage;
 //**********************************************************************************
 
 /*!
-  Base classs for stroke color styles.
+  Base class for stroke color styles.
 */
 
 class DVAPI TSimpleStrokeStyle : public TColorStyle {
@@ -117,14 +116,14 @@ public:
   virtual void drawRegion(const TColorFunction *cf, const bool antiAliasing,
                           TRegionOutline &outline) const = 0;
 
-  virtual void drawRegion(TFlash &, const TRegion *) const {};
   virtual void drawStroke(const TColorFunction *cf, TStrokeOutline *outline,
                           const TStroke *stroke) const = 0;
-
-  void drawStroke(TFlash &flash, const TStroke *stroke) const override {
-    TColorStyle::drawStroke(flash, stroke);
-  }
-  virtual void setFill(TFlash &) const {};
+  // draw aliased stroke. currently reimplemented by TSolidColorStyle only
+  virtual void drawAliasedStroke(const TColorFunction *cf,
+                                 TStrokeOutline *outline,
+                                 const TStroke *stroke) const {
+    drawStroke(cf, outline, stroke);
+  };
 
 protected:
   // Not assignable
@@ -157,6 +156,8 @@ public:
   TColorStyle *clone() const override;
 
   QString getDescription() const override;
+  std::string getBrushIdName() const override;
+  static std::size_t staticBrushIdHash();
 
   bool hasMainColor() const override { return true; }
   TPixel32 getMainColor() const override { return m_color; }
@@ -164,12 +165,18 @@ public:
 
   void drawRegion(const TColorFunction *cf, const bool antiAliasing,
                   TRegionOutline &outline) const override;
-  void drawRegion(TFlash &flash, const TRegion *r) const override;
+
+  void doDrawStroke(const TColorFunction *cf, TStrokeOutline *outline,
+                    const TStroke *s, bool antialias) const;
 
   void drawStroke(const TColorFunction *cf, TStrokeOutline *outline,
-                  const TStroke *s) const override;
-
-  void setFill(TFlash &flash) const override;
+                  const TStroke *s) const override {
+    doDrawStroke(cf, outline, s, true);
+  }
+  void drawAliasedStroke(const TColorFunction *cf, TStrokeOutline *outline,
+                         const TStroke *s) const override {
+    doDrawStroke(cf, outline, s, false);
+  }
 
   int getTagId() const override;
 
@@ -198,13 +205,13 @@ public:
   TColorStyle *clone() const override;
 
   QString getDescription() const override;
+  std::string getBrushIdName() const override;
 
   TPixel32 getColor() const { return m_color; }
   USHORT getStipple() const { return m_stipple; }
 
   void drawStroke(const TColorFunction *cf,
                   const TStroke *stroke) const override;
-  void drawStroke(TFlash &flash, const TStroke *s) const override;
 
   bool hasMainColor() const override { return true; }
   TPixel32 getMainColor() const override { return m_color; }
@@ -258,15 +265,14 @@ public:
   void drawStroke(const TVectorRenderData &rd,
                   const std::vector<TAffine> &positions,
                   const TStroke *stroke) const;
-  void drawStroke(TFlash &flash, const TStroke *stroke) const override;
 
   void invalidate(){};
 
   TColorStyle *clone() const override;
+  TColorStyle *clone(std::string brushIdName) const override;
 
-  QString getDescription() const override {
-    return "TRasterImagePatternStrokeStyle";
-  }
+  QString getDescription() const override;
+  std::string getBrushIdName() const override;
 
   bool hasMainColor() const override { return false; }
   TPixel32 getMainColor() const override { return TPixel32::Black; }
@@ -294,6 +300,8 @@ public:
   void getParamRange(int index, double &min, double &max) const override;
   double getParamValue(TColorStyle::double_tag, int index) const override;
   void setParamValue(int index, double value) override;
+
+  TRectD getStrokeBBox(const TStroke *stroke) const override;
 
 protected:
   void makeIcon(const TDimension &d) override;
@@ -335,15 +343,14 @@ public:
   void drawStroke(const TVectorRenderData &rd,
                   const std::vector<TAffine> &positions,
                   const TStroke *stroke) const;
-  void drawStroke(TFlash &flash, const TStroke *stroke) const override;
 
   void invalidate(){};
 
   TColorStyle *clone() const override;
+  TColorStyle *clone(std::string brushIdName) const override;
 
-  QString getDescription() const override {
-    return "TVectorImagePatternStrokeStyle";
-  }
+  QString getDescription() const override;
+  std::string getBrushIdName() const override;
 
   bool hasMainColor() const override { return false; }
   TPixel32 getMainColor() const override { return TPixel32::Black; }
@@ -373,6 +380,8 @@ public:
   void setParamValue(int index, double value) override;
 
   static void clearGlDisplayLists();
+
+  TRectD getStrokeBBox(const TStroke *stroke) const override;
 
 protected:
   void makeIcon(const TDimension &d) override;

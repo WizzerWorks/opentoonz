@@ -16,9 +16,12 @@
 #include "saveloadqsettings.h"
 #include "toonzqt/spreadsheetviewer.h"
 #include "orientation.h"
+#include "xshbreadcrumbs.h"
 #include <boost/optional.hpp>
+#include "tenv.h"
 
 using boost::optional;
+extern TEnv::IntVar FrameDisplayStyleInXsheetRowArea;
 
 #define XSHEET_FONT_PX_SIZE 12
 #define H_ADJUST 2
@@ -40,7 +43,8 @@ enum TXshButtonType {
   CAMSTAND_TRANSP_XSHBUTTON,
   LOCK_ON_XSHBUTTON,
   LOCK_OFF_XSHBUTTON,
-  CONFIG_XSHBUTTON
+  CONFIG_XSHBUTTON,
+  UNIFIED_TRANSP_XSHBUTTON
 };
 
 namespace XsheetGUI {
@@ -111,6 +115,10 @@ const QColor MeshColumnColor(200, 130, 255);
 const QColor MeshColumnBorderColor(105, 70, 135);
 const QColor SelectedMeshColumnColor(216, 180, 245);
 
+const QColor MetaColumnColor(200, 130, 255);
+const QColor MetaColumnBorderColor(105, 70, 135);
+const QColor SelectedMetaColumnColor(216, 180, 245);
+
 // Empty column
 const QColor EmptyColumnColor(124, 124, 124);
 // Occupied column
@@ -153,7 +161,7 @@ const QColor TimelineConfigButtonBgColor(255, 255, 255, 0);
 const QColor RowAreaBGColor(164, 164, 164);
 const QColor CurrentFrameBGColor(210, 210, 210);
 
-}  // namespace XsheetGUI;
+}  // namespace XsheetGUI
 
 //=============================================================================
 // XsheetScrollArea
@@ -163,11 +171,7 @@ class XsheetScrollArea final : public QScrollArea {
   Q_OBJECT
 
 public:
-#if QT_VERSION >= 0x050500
-  XsheetScrollArea(QWidget *parent = 0, Qt::WindowFlags flags = 0)
-#else
-  XsheetScrollArea(QWidget *parent = 0, Qt::WFlags flags = 0)
-#endif
+  XsheetScrollArea(QWidget *parent = 0, Qt::WindowFlags flags = Qt::WindowFlags())
       : QScrollArea(parent) {
     setObjectName("xsheetScrollArea");
     setFrameStyle(QFrame::StyledPanel);
@@ -191,10 +195,12 @@ class XsheetViewer final : public QFrame, public SaveLoadQSettings {
 
   QColor m_lightLightBgColor;
   QColor m_lightBgColor;
-  QColor m_bgColor;  // row area backgroound
+  QColor m_bgColor;  // row area background
   QColor m_darkBgColor;
   QColor m_lightLineColor;  // horizontal lines (146,144,146)
   QColor m_darkLineColor;
+  QColor m_columnIconLineColor;
+  QColor m_timelineIconLineColor;
 
   Q_PROPERTY(QColor LightLightBGColor READ getLightLightBGColor WRITE
                  setLightLightBGColor)
@@ -204,45 +210,93 @@ class XsheetViewer final : public QFrame, public SaveLoadQSettings {
   Q_PROPERTY(
       QColor LightLineColor READ getLightLineColor WRITE setLightLineColor)
   Q_PROPERTY(QColor DarkLineColor READ getDarkLineColor WRITE setDarkLineColor)
+  Q_PROPERTY(QColor ColumnIconLineColor READ getColumnIconLineColor WRITE
+                 setColumnIconLineColor)
+  Q_PROPERTY(QColor TimelineIconLineColor READ getTimelineIconLineColor WRITE
+                 setTimelineIconLineColor)
 
   // Row
-  QColor m_currentRowBgColor;      // current frame / column (210,210,210)
-  QColor m_markerLineColor;        // marker lines (0, 255, 246)
-  QColor m_verticalLineColor;      // vertical lines
-  QColor m_verticalLineHeadColor;  // vertical lines in column head
-  QColor m_textColor;              // text color (black)
-  QColor m_previewFrameTextColor;  // frame number in preview range (blue)
+  QColor m_currentRowBgColor;        // current frame / column (210,210,210)
+  QColor m_markerLineColor;          // marker lines (0, 255, 246)
+  QColor m_secMarkerLineColor;       // second marker lines
+  QColor m_selectedMarkerLineColor;  // marker lines in selected cells
+  QColor m_verticalLineColor;        // vertical lines
+  QColor m_verticalLineHeadColor;    // vertical lines in column head
+  QColor m_textColor;                // text color (black)
+  QColor m_errorTextColor;           // error text color (red, probably)
+  QColor m_selectedTextColor;        // text color for the selected cells
+  QColor m_frameTextColor;           // text color for frame numbers
+  QColor m_keyframeLineColor;        // color of keyframe lines
+  QColor m_currentFrameTextColor;    // text color for the current frame row
+  QColor m_previewFrameTextColor;    // frame number in preview range (blue)
   QColor m_onionSkinAreaBgColor;
+  QColor m_frameRangeMarkerLineColor;  // timeline frame markers
+  QColor m_currentTimeIndicatorColor;  // current time indicator
   Q_PROPERTY(QColor CurrentRowBgColor READ getCurrentRowBgColor WRITE
                  setCurrentRowBgColor)
   Q_PROPERTY(
       QColor MarkerLineColor READ getMarkerLineColor WRITE setMarkerLineColor)
+  Q_PROPERTY(QColor SecMarkerLineColor READ getSecMarkerLineColor WRITE
+                 setSecMarkerLineColor)
+  Q_PROPERTY(QColor SelectedMarkerLineColor READ getSelectedMarkerLineColor
+                 WRITE setSelectedMarkerLineColor)
   Q_PROPERTY(QColor VerticalLineColor READ getVerticalLineColor WRITE
                  setVerticalLineColor)
   Q_PROPERTY(QColor VerticalLineHeadColor READ getVerticalLineHeadColor WRITE
                  setVerticalLineHeadColor)
   Q_PROPERTY(QColor TextColor READ getTextColor WRITE setTextColor)
+  Q_PROPERTY(
+      QColor ErrorTextColor READ getErrorTextColor WRITE setErrorTextColor)
+  Q_PROPERTY(QColor CurrentFrameTextColor READ getCurrentFrameTextColor WRITE
+                 setCurrentFrameTextColor)
+  Q_PROPERTY(QColor SelectedTextColor READ getSelectedTextColor WRITE
+                 setSelectedTextColor)
+  Q_PROPERTY(QColor FrameTextColor READ getFrameTextColor WRITE
+                 setFrameTextColor)
+  Q_PROPERTY(QColor KeyframeLineColor READ getKeyframeLineColor WRITE
+                 setKeyframeLineColor)
   Q_PROPERTY(QColor PreviewFrameTextColor READ getPreviewFrameTextColor WRITE
                  setPreviewFrameTextColor)
   Q_PROPERTY(QColor OnionSkinAreaBgColor READ getOnionSkinAreaBgColor WRITE
                  setOnionSkinAreaBgColor)
+  Q_PROPERTY(QColor FrameRangeMarkerLineColor READ getFrameRangeMarkerLineColor
+                 WRITE setFrameRangeMarkerLineColor)
+  Q_PROPERTY(QColor CurrentTimeIndicatorColor READ getCurrentTimeIndicatorColor
+                 WRITE setCurrentTimeIndicatorColor)
   // Column
-  QColor m_emptyColumnHeadColor;     // empty column header (200,200,200)
-  QColor m_selectedColumnTextColor;  // selected column text (red)
+  QColor m_columnTextColor;
+  Q_PROPERTY(QColor ColumnTextColor READ getColumnTextColor WRITE
+                 setColumnTextColor)
+  QColor m_highlightColumnTextColor;
+  Q_PROPERTY(QColor HighlightColumnTextColor READ
+                 getHighlightColumnTextColor WRITE
+                 setHighlightColumnTextColor)
+  QColor m_emptyColumnHeadColor;  // empty column header (200,200,200)
   Q_PROPERTY(QColor EmptyColumnHeadColor READ getEmptyColumnHeadColor WRITE
                  setEmptyColumnHeadColor)
-  Q_PROPERTY(QColor SelectedColumnTextColor READ getSelectedColumnTextColor
-                 WRITE setSelectedColumnTextColor)
+
   // Cell
   QColor m_emptyCellColor;          // empty cell (124,124,124)
   QColor m_notEmptyColumnColor;     // occupied column (164,164,164)
   QColor m_selectedEmptyCellColor;  // selected empty cell (210,210,210)
+  QColor m_levelEndColor;           // end level cross
   Q_PROPERTY(
       QColor EmptyCellColor READ getEmptyCellColor WRITE setEmptyCellColor)
   Q_PROPERTY(QColor NotEmptyColumnColor READ getNotEmptyColumnColor WRITE
                  setNotEmptyColumnColor)
   Q_PROPERTY(QColor SelectedEmptyCellColor READ getSelectedEmptyCellColor WRITE
                  setSelectedEmptyCellColor)
+  Q_PROPERTY(QColor LevelEndColor READ getLevelEndColor WRITE setLevelEndColor)
+
+  // Cell focus
+  QColor m_cellFocusColor;
+  Q_PROPERTY(
+      QColor CellFocusColor READ getCellFocusColor WRITE setCellFocusColor)
+
+  // Play range
+  QColor m_playRangeColor;
+  Q_PROPERTY(
+      QColor PlayRangeColor READ getPlayRangeColor WRITE setPlayRangeColor)
 
   // TZP column
   QColor m_levelColumnColor;          //(127,219,127)
@@ -328,6 +382,12 @@ class XsheetViewer final : public QFrame, public SaveLoadQSettings {
                  setMeshColumnBorderColor)
   Q_PROPERTY(QColor SelectedMeshColumnColor READ getSelectedMeshColumnColor
                  WRITE setSelectedMeshColumnColor)
+  // Table color
+  QColor m_tableColor;
+  Q_PROPERTY(QColor TableColor READ getTableColor WRITE setTableColor)
+  // Peg node
+  QColor m_pegColor;
+  Q_PROPERTY(QColor PegColor READ getPegColor WRITE setPegColor)
   // SoundText column
   QColor m_soundTextColumnColor;
   QColor m_soundTextColumnBorderColor;
@@ -351,6 +411,16 @@ class XsheetViewer final : public QFrame, public SaveLoadQSettings {
   Q_PROPERTY(QColor SelectedSoundColumnColor MEMBER m_selectedSoundColumnColor)
   Q_PROPERTY(QColor SoundColumnHlColor MEMBER m_soundColumnHlColor)
   Q_PROPERTY(QColor SoundColumnTrackColor MEMBER m_soundColumnTrackColor)
+  // Meta column
+  QColor m_metaColumnColor;
+  QColor m_metaColumnBorderColor;
+  QColor m_selectedMetaColumnColor;
+  Q_PROPERTY(
+      QColor MetaColumnColor READ getMetaColumnColor WRITE setMetaColumnColor)
+  Q_PROPERTY(QColor MetaColumnBorderColor READ getMetaColumnBorderColor WRITE
+                 setMetaColumnBorderColor)
+  Q_PROPERTY(QColor SelectedMetaColumnColor READ getSelectedMetaColumnColor
+                 WRITE setSelectedMetaColumnColor)
 
   // for making the column head lighter (255,255,255,50);
   QColor m_columnHeadPastelizer;
@@ -360,6 +430,14 @@ class XsheetViewer final : public QFrame, public SaveLoadQSettings {
   QColor m_selectedColumnHead;
   Q_PROPERTY(QColor SelectedColumnHead READ getSelectedColumnHead WRITE
                  setSelectedColumnHead)
+
+  // For folded column
+  QColor m_foldedColumnBGColor;
+  QColor m_foldedColumnLineColor;
+  Q_PROPERTY(QColor FoldedColumnBGColor READ getFoldedColumnBGColor WRITE
+                 setFoldedColumnBGColor)
+  Q_PROPERTY(QColor FoldedColumnLineColor READ getFoldedColumnLineColor WRITE
+                 setFoldedColumnLineColor)
 
   // Xsheet Column name/Drag bar colors
   QColor m_xsheetColumnNameBgColor;
@@ -387,145 +465,153 @@ class XsheetViewer final : public QFrame, public SaveLoadQSettings {
 
   // Xsheet Preview Button
   QColor m_xsheetPreviewButtonBgOnColor;
-  QImage m_xsheetPreviewButtonOnImage;
+  QString m_xsheetPreviewButtonOnImage;
   QColor m_xsheetPreviewButtonBgOffColor;
-  QImage m_xsheetPreviewButtonOffImage;
+  QString m_xsheetPreviewButtonOffImage;
+  QString m_xsheetUnifiedButtonTranspImage;
   Q_PROPERTY(
       QColor XsheetPreviewButtonBgOnColor READ getXsheetPreviewButtonBgOnColor
           WRITE setXsheetPreviewButtonBgOnColor)
   Q_PROPERTY(
-      QImage XsheetPreviewButtonOnImage READ getXsheetPreviewButtonOnImage WRITE
+      QString XsheetPreviewButtonOnImage READ getXsheetPreviewButtonOnImage WRITE
           setXsheetPreviewButtonOnImage)
   Q_PROPERTY(
       QColor XsheetPreviewButtonBgOffColor READ getXsheetPreviewButtonBgOffColor
           WRITE setXsheetPreviewButtonBgOffColor)
   Q_PROPERTY(
-      QImage XsheetPreviewButtonOffImage READ getXsheetPreviewButtonOffImage
+      QString XsheetPreviewButtonOffImage READ getXsheetPreviewButtonOffImage
           WRITE setXsheetPreviewButtonOffImage)
+  Q_PROPERTY(QString XsheetUnifiedButtonTranspImage READ
+                 getXsheetUnifiedButtonTranspImage WRITE
+                     setXsheetUnifiedButtonTranspImage)
   // Xsheet Camstand Button
   QColor m_xsheetCamstandButtonBgOnColor;
-  QImage m_xsheetCamstandButtonOnImage;
-  QImage m_xsheetCamstandButtonTranspImage;
+  QString m_xsheetCamstandButtonOnImage;
+  QString m_xsheetCamstandButtonTranspImage;
   QColor m_xsheetCamstandButtonBgOffColor;
-  QImage m_xsheetCamstandButtonOffImage;
+  QString m_xsheetCamstandButtonOffImage;
   Q_PROPERTY(
       QColor XsheetCamstandButtonBgOnColor READ getXsheetCamstandButtonBgOnColor
           WRITE setXsheetCamstandButtonBgOnColor)
   Q_PROPERTY(
-      QImage XsheetCamstandButtonOnImage READ getXsheetCamstandButtonOnImage
+      QString XsheetCamstandButtonOnImage READ getXsheetCamstandButtonOnImage
           WRITE setXsheetCamstandButtonOnImage)
-  Q_PROPERTY(QImage XsheetCamstandButtonTranspImage READ
+  Q_PROPERTY(QString XsheetCamstandButtonTranspImage READ
                  getXsheetCamstandButtonTranspImage WRITE
                      setXsheetCamstandButtonTranspImage)
   Q_PROPERTY(QColor XsheetCamstandButtonBgOffColor READ
                  getXsheetCamstandButtonBgOffColor WRITE
                      setXsheetCamstandButtonBgOffColor)
   Q_PROPERTY(
-      QImage XsheetCamstandButtonOffImage READ getXsheetCamstandButtonOffImage
+      QString XsheetCamstandButtonOffImage READ getXsheetCamstandButtonOffImage
           WRITE setXsheetCamstandButtonOffImage)
   // Xsheet Lock Button
   QColor m_xsheetLockButtonBgOnColor;
-  QImage m_xsheetLockButtonOnImage;
+  QString m_xsheetLockButtonOnImage;
   QColor m_xsheetLockButtonBgOffColor;
-  QImage m_xsheetLockButtonOffImage;
+  QString m_xsheetLockButtonOffImage;
   Q_PROPERTY(QColor XsheetLockButtonBgOnColor READ getXsheetLockButtonBgOnColor
                  WRITE setXsheetLockButtonBgOnColor)
-  Q_PROPERTY(QImage XsheetLockButtonOnImage READ getXsheetLockButtonOnImage
+  Q_PROPERTY(QString XsheetLockButtonOnImage READ getXsheetLockButtonOnImage
                  WRITE setXsheetLockButtonOnImage)
   Q_PROPERTY(
       QColor XsheetLockButtonBgOffColor READ getXsheetLockButtonBgOffColor WRITE
           setXsheetLockButtonBgOffColor)
-  Q_PROPERTY(QImage XsheetLockButtonOffImage READ getXsheetLockButtonOffImage
+  Q_PROPERTY(QString XsheetLockButtonOffImage READ getXsheetLockButtonOffImage
                  WRITE setXsheetLockButtonOffImage)
   // Xsheet Config Button
   QColor m_xsheetConfigButtonBgColor;
-  QImage m_xsheetConfigButtonImage;
+  QString m_xsheetConfigButtonImage;
   Q_PROPERTY(QColor XsheetConfigButtonBgColor READ getXsheetConfigButtonBgColor
                  WRITE setXsheetConfigButtonBgColor)
-  Q_PROPERTY(QImage XsheetConfigButtonImage READ getXsheetConfigButtonImage
+  Q_PROPERTY(QString XsheetConfigButtonImage READ getXsheetConfigButtonImage
                  WRITE setXsheetConfigButtonImage)
   // Timeline Preview Button
   QColor m_timelinePreviewButtonBgOnColor;
-  QImage m_timelinePreviewButtonOnImage;
+  QString m_timelinePreviewButtonOnImage;
   QColor m_timelinePreviewButtonBgOffColor;
-  QImage m_timelinePreviewButtonOffImage;
+  QString m_timelinePreviewButtonOffImage;
+  QString m_timelineUnifiedButtonTranspImage;
   Q_PROPERTY(QColor TimelinePreviewButtonBgOnColor READ
                  getTimelinePreviewButtonBgOnColor WRITE
                      setTimelinePreviewButtonBgOnColor)
   Q_PROPERTY(
-      QImage TimelinePreviewButtonOnImage READ getTimelinePreviewButtonOnImage
+      QString TimelinePreviewButtonOnImage READ getTimelinePreviewButtonOnImage
           WRITE setTimelinePreviewButtonOnImage)
   Q_PROPERTY(QColor TimelinePreviewButtonBgOffColor READ
                  getTimelinePreviewButtonBgOffColor WRITE
                      setTimelinePreviewButtonBgOffColor)
   Q_PROPERTY(
-      QImage TimelinePreviewButtonOffImage READ getTimelinePreviewButtonOffImage
+      QString TimelinePreviewButtonOffImage READ getTimelinePreviewButtonOffImage
           WRITE setTimelinePreviewButtonOffImage)
+  Q_PROPERTY(QString TimelineUnifiedButtonTranspImage READ
+                 getTimelineUnifiedButtonTranspImage WRITE
+                     setTimelineUnifiedButtonTranspImage)
   // Timeline Camstand Button
   QColor m_timelineCamstandButtonBgOnColor;
-  QImage m_timelineCamstandButtonOnImage;
-  QImage m_timelineCamstandButtonTranspImage;
+  QString m_timelineCamstandButtonOnImage;
+  QString m_timelineCamstandButtonTranspImage;
   QColor m_timelineCamstandButtonBgOffColor;
-  QImage m_timelineCamstandButtonOffImage;
+  QString m_timelineCamstandButtonOffImage;
   Q_PROPERTY(QColor TimelineCamstandButtonBgOnColor READ
                  getTimelineCamstandButtonBgOnColor WRITE
                      setTimelineCamstandButtonBgOnColor)
   Q_PROPERTY(
-      QImage TimelineCamstandButtonOnImage READ getTimelineCamstandButtonOnImage
+      QString TimelineCamstandButtonOnImage READ getTimelineCamstandButtonOnImage
           WRITE setTimelineCamstandButtonOnImage)
-  Q_PROPERTY(QImage TimelineCamstandButtonTranspImage READ
+  Q_PROPERTY(QString TimelineCamstandButtonTranspImage READ
                  getTimelineCamstandButtonTranspImage WRITE
                      setTimelineCamstandButtonTranspImage)
   Q_PROPERTY(QColor TimelineCamstandButtonBgOffColor READ
                  getTimelineCamstandButtonBgOffColor WRITE
                      setTimelineCamstandButtonBgOffColor)
-  Q_PROPERTY(QImage TimelineCamstandButtonOffImage READ
+  Q_PROPERTY(QString TimelineCamstandButtonOffImage READ
                  getTimelineCamstandButtonOffImage WRITE
                      setTimelineCamstandButtonOffImage)
   // Timeline Lock Button
   QColor m_timelineLockButtonBgOnColor;
-  QImage m_timelineLockButtonOnImage;
+  QString m_timelineLockButtonOnImage;
   QColor m_timelineLockButtonBgOffColor;
-  QImage m_timelineLockButtonOffImage;
+  QString m_timelineLockButtonOffImage;
   Q_PROPERTY(
       QColor TimelineLockButtonBgOnColor READ getTimelineLockButtonBgOnColor
           WRITE setTimelineLockButtonBgOnColor)
-  Q_PROPERTY(QImage TimelineLockButtonOnImage READ getTimelineLockButtonOnImage
+  Q_PROPERTY(QString TimelineLockButtonOnImage READ getTimelineLockButtonOnImage
                  WRITE setTimelineLockButtonOnImage)
   Q_PROPERTY(
       QColor TimelineLockButtonBgOffColor READ getTimelineLockButtonBgOffColor
           WRITE setTimelineLockButtonBgOffColor)
   Q_PROPERTY(
-      QImage TimelineLockButtonOffImage READ getTimelineLockButtonOffImage WRITE
+      QString TimelineLockButtonOffImage READ getTimelineLockButtonOffImage WRITE
           setTimelineLockButtonOffImage)
   // Timeline Config Button
   QColor m_timelineConfigButtonBgColor;
-  QImage m_timelineConfigButtonImage;
+  QString m_timelineConfigButtonImage;
   Q_PROPERTY(
       QColor TimelineConfigButtonBgColor READ getTimelineConfigButtonBgColor
           WRITE setTimelineConfigButtonBgColor)
-  Q_PROPERTY(QImage TimelineConfigButtonImage READ getTimelineConfigButtonImage
+  Q_PROPERTY(QString TimelineConfigButtonImage READ getTimelineConfigButtonImage
                  WRITE setTimelineConfigButtonImage)
   // Layer Header icons
-  QImage m_layerHeaderPreviewImage;
-  QImage m_layerHeaderPreviewOverImage;
-  QImage m_layerHeaderCamstandImage;
-  QImage m_layerHeaderCamstandOverImage;
-  QImage m_layerHeaderLockImage;
-  QImage m_layerHeaderLockOverImage;
-  Q_PROPERTY(QImage LayerHeaderPreviewImage READ getLayerHeaderPreviewImage
+  QString m_layerHeaderPreviewImage;
+  QString m_layerHeaderPreviewOverImage;
+  QString m_layerHeaderCamstandImage;
+  QString m_layerHeaderCamstandOverImage;
+  QString m_layerHeaderLockImage;
+  QString m_layerHeaderLockOverImage;
+  Q_PROPERTY(QString LayerHeaderPreviewImage READ getLayerHeaderPreviewImage
                  WRITE setLayerHeaderPreviewImage)
   Q_PROPERTY(
-      QImage LayerHeaderPreviewOverImage READ getLayerHeaderPreviewOverImage
+      QString LayerHeaderPreviewOverImage READ getLayerHeaderPreviewOverImage
           WRITE setLayerHeaderPreviewOverImage)
-  Q_PROPERTY(QImage LayerHeaderCamstandImage READ getLayerHeaderCamstandImage
+  Q_PROPERTY(QString LayerHeaderCamstandImage READ getLayerHeaderCamstandImage
                  WRITE setLayerHeaderCamstandImage)
   Q_PROPERTY(
-      QImage LayerHeaderCamstandOverImage READ getLayerHeaderCamstandOverImage
+      QString LayerHeaderCamstandOverImage READ getLayerHeaderCamstandOverImage
           WRITE setLayerHeaderCamstandOverImage)
-  Q_PROPERTY(QImage LayerHeaderLockImage READ getLayerHeaderLockImage WRITE
+  Q_PROPERTY(QString LayerHeaderLockImage READ getLayerHeaderLockImage WRITE
                  setLayerHeaderLockImage)
-  Q_PROPERTY(QImage LayerHeaderLockOverImage READ getLayerHeaderLockOverImage
+  Q_PROPERTY(QString LayerHeaderLockOverImage READ getLayerHeaderLockOverImage
                  WRITE setLayerHeaderLockOverImage)
 
   XsheetScrollArea *m_cellScrollArea;
@@ -533,12 +619,15 @@ class XsheetViewer final : public QFrame, public SaveLoadQSettings {
   XsheetScrollArea *m_rowScrollArea;
   XsheetScrollArea *m_noteScrollArea;
   XsheetScrollArea *m_toolbarScrollArea;
+  XsheetScrollArea *m_breadcrumbScrollArea;
 
   XsheetGUI::ColumnArea *m_columnArea;
   XsheetGUI::RowArea *m_rowArea;
   XsheetGUI::CellArea *m_cellArea;
   XsheetGUI::NoteArea *m_noteArea;
   XsheetGUI::XSheetToolbar *m_toolbar;
+  XsheetGUI::BreadcrumbArea *m_breadcrumbArea;
+  
   LayerFooterPanel *m_layerFooterPanel;
 
   Spreadsheet::FrameScroller m_frameScroller;
@@ -590,11 +679,7 @@ private:
   }
 
 public:
-#if QT_VERSION >= 0x050500
-  XsheetViewer(QWidget *parent = 0, Qt::WindowFlags flags = 0);
-#else
-  XsheetViewer(QWidget *parent = 0, Qt::WFlags flags = 0);
-#endif
+  XsheetViewer(QWidget *parent = 0, Qt::WindowFlags flags = Qt::WindowFlags());
   ~XsheetViewer();
 
   TColumnSelection *getColumnSelection() const { return m_columnSelection; }
@@ -644,6 +729,7 @@ public:
   void setCurrentRow(int row);
 
   void scroll(QPoint delta);
+  int getColumnScrollValue();
 
   void setAutoPanSpeed(const QPoint &speed);
   void setAutoPanSpeed(const QRect &widgetBounds, const QPoint &mousePos);
@@ -717,6 +803,27 @@ public:
   void setDarkLineColor(const QColor &color) { m_darkLineColor = color; }
   QColor getDarkLineColor() const { return m_darkLineColor; }
 
+  QColor getColumnIconLineColor() const { return m_columnIconLineColor; }
+  void setColumnIconLineColor(const QColor &color) {
+    m_columnIconLineColor = color;
+  }
+  QColor getTimelineIconLineColor() const { return m_timelineIconLineColor; }
+  void setTimelineIconLineColor(const QColor &color) {
+    m_timelineIconLineColor = color;
+  }
+  QColor getFrameRangeMarkerLineColor() const {
+    return m_frameRangeMarkerLineColor;
+  }
+  void setFrameRangeMarkerLineColor(const QColor &color) {
+    m_frameRangeMarkerLineColor = color;
+  }
+  QColor getCurrentTimeIndicatorColor() const {
+    return m_currentTimeIndicatorColor;
+  }
+  void setCurrentTimeIndicatorColor(const QColor &color) {
+    m_currentTimeIndicatorColor = color;
+  }
+
   // Row
   void setCurrentRowBgColor(const QColor &color) {
     m_currentRowBgColor = color;
@@ -724,6 +831,16 @@ public:
   QColor getCurrentRowBgColor() const { return m_currentRowBgColor; }
   void setMarkerLineColor(const QColor &color) { m_markerLineColor = color; }
   QColor getMarkerLineColor() const { return m_markerLineColor; }
+  void setSecMarkerLineColor(const QColor &color) {
+    m_secMarkerLineColor = color;
+  }
+  QColor getSecMarkerLineColor() const { return m_secMarkerLineColor; }
+  void setSelectedMarkerLineColor(const QColor &color) {
+    m_selectedMarkerLineColor = color;
+  }
+  QColor getSelectedMarkerLineColor() const {
+    return m_selectedMarkerLineColor;
+  }
   void setVerticalLineColor(const QColor &color) {
     m_verticalLineColor = color;
   }
@@ -734,6 +851,24 @@ public:
   QColor getVerticalLineHeadColor() const { return m_verticalLineHeadColor; }
   void setTextColor(const QColor &color) { m_textColor = color; }
   QColor getTextColor() const { return m_textColor; }
+  void setErrorTextColor(const QColor &color) { m_errorTextColor = color; }
+  QColor getErrorTextColor() const { return m_errorTextColor; }
+  void setSelectedTextColor(const QColor &color) {
+    m_selectedTextColor = color;
+  }
+  QColor getSelectedTextColor() const { return m_selectedTextColor; }
+  void setFrameTextColor(const QColor &color) {
+    m_frameTextColor = color;
+  }
+  QColor getFrameTextColor() const { return m_frameTextColor; }
+  void setCurrentFrameTextColor(const QColor &color) {
+    m_currentFrameTextColor = color;
+  }
+  QColor getKeyframeLineColor() const { return m_keyframeLineColor; }
+  void setKeyframeLineColor(const QColor &color) {
+    m_keyframeLineColor = color;
+  }
+  QColor getCurrentFrameTextColor() const { return m_currentFrameTextColor; }
   void setPreviewFrameTextColor(const QColor &color) {
     m_previewFrameTextColor = color;
   }
@@ -744,13 +879,24 @@ public:
   QColor getOnionSkinAreaBgColor() const { return m_onionSkinAreaBgColor; }
 
   // Column
+  void setColumnTextColor(const QColor &color) {
+    m_columnTextColor = color;
+  }
+  QColor getColumnTextColor() const {
+    return m_columnTextColor;
+  }
+  void setHighlightColumnTextColor(const QColor &color) {
+    m_highlightColumnTextColor = color;
+  }
+  QColor getHighlightColumnTextColor() const {
+    return m_highlightColumnTextColor;
+  }
   void setEmptyColumnHeadColor(const QColor &color) {
     m_emptyColumnHeadColor = color;
   }
   QColor getEmptyColumnHeadColor() const { return m_emptyColumnHeadColor; }
-  void setSelectedColumnTextColor(const QColor &color) {
-    m_selectedColumnTextColor = color;
-  }
+
+  // specified by preferences
   QColor getSelectedColumnTextColor() const;
 
   // Cell
@@ -764,6 +910,16 @@ public:
     m_selectedEmptyCellColor = color;
   }
   QColor getSelectedEmptyCellColor() const { return m_selectedEmptyCellColor; }
+  void setLevelEndColor(const QColor &color) { m_levelEndColor = color; }
+  QColor getLevelEndColor() const { return m_levelEndColor; }
+
+  // Cell focus
+  void setCellFocusColor(const QColor &color) { m_cellFocusColor = color; }
+  QColor getCellFocusColor() const { return m_cellFocusColor; }
+
+  // Play range
+  QColor getPlayRangeColor() const { return m_playRangeColor; }
+  void setPlayRangeColor(const QColor &color) { m_playRangeColor = color; }
 
   // TZP column
   void setLevelColumnColor(const QColor &color) { m_levelColumnColor = color; }
@@ -883,6 +1039,12 @@ public:
   QColor getSelectedMeshColumnColor() const {
     return m_selectedMeshColumnColor;
   }
+  // Table node
+  void setTableColor(const QColor &color) { m_tableColor = color; }
+  QColor getTableColor() const { return m_tableColor; }
+  // Peg node
+  void setPegColor(const QColor &color) { m_pegColor = color; }
+  QColor getPegColor() const { return m_pegColor; }
   // SoundText column
   void setSoundTextColumnColor(const QColor &color) {
     m_soundTextColumnColor = color;
@@ -912,12 +1074,34 @@ public:
     m_selectedColumnHead = color;
   }
   QColor getSelectedColumnHead() const { return m_selectedColumnHead; }
+  // Meta column
+  void setMetaColumnColor(const QColor &color) { m_metaColumnColor = color; }
+  void setMetaColumnBorderColor(const QColor &color) {
+    m_metaColumnBorderColor = color;
+  }
+  void setSelectedMetaColumnColor(const QColor &color) {
+    m_selectedMetaColumnColor = color;
+  }
+  QColor getMetaColumnColor() const { return m_metaColumnColor; }
+  QColor getMetaColumnBorderColor() const { return m_metaColumnBorderColor; }
+  QColor getSelectedMetaColumnColor() const {
+    return m_selectedMetaColumnColor;
+  }
 
   void getCellTypeAndColors(int &ltype, QColor &cellColor, QColor &sideColor,
                             const TXshCell &cell, bool isSelected = false);
   void getColumnColor(QColor &color, QColor &sidecolor, int index,
                       TXsheet *xsh);
 
+  // For folded column
+  QColor getFoldedColumnBGColor() const { return m_foldedColumnBGColor; }
+  QColor getFoldedColumnLineColor() const { return m_foldedColumnLineColor; }
+  void setFoldedColumnBGColor(const QColor &color) {
+    m_foldedColumnBGColor = color;
+  }
+  void setFoldedColumnLineColor(const QColor &color) {
+    m_foldedColumnLineColor = color;
+  }
   // Xsheet Column Name/Drag Bar
   void setXsheetColumnNameBgColor(const QColor &color) {
     m_xsheetColumnNameBgColor = color;
@@ -957,227 +1141,239 @@ public:
   void setXsheetPreviewButtonBgOnColor(const QColor &color) {
     m_xsheetPreviewButtonBgOnColor = color;
   }
-  void setXsheetPreviewButtonOnImage(const QImage &image) {
-    m_xsheetPreviewButtonOnImage = image;
+  void setXsheetPreviewButtonOnImage(const QString &svgFilePath) {
+    m_xsheetPreviewButtonOnImage = svgFilePath;
   }
   void setXsheetPreviewButtonBgOffColor(const QColor &color) {
     m_xsheetPreviewButtonBgOffColor = color;
   }
-  void setXsheetPreviewButtonOffImage(const QImage &image) {
-    m_xsheetPreviewButtonOffImage = image;
+  void setXsheetPreviewButtonOffImage(const QString &svgFilePath) {
+    m_xsheetPreviewButtonOffImage = svgFilePath;
+  }
+  void setXsheetUnifiedButtonTranspImage(const QString &svgFilePath) {
+    m_xsheetUnifiedButtonTranspImage = svgFilePath;
   }
   QColor getXsheetPreviewButtonBgOnColor() const {
     return m_xsheetPreviewButtonBgOnColor;
   }
-  QImage getXsheetPreviewButtonOnImage() const {
+  QString getXsheetPreviewButtonOnImage() const {
     return m_xsheetPreviewButtonOnImage;
   }
   QColor getXsheetPreviewButtonBgOffColor() const {
     return m_xsheetPreviewButtonBgOffColor;
   }
-  QImage getXsheetPreviewButtonOffImage() const {
+  QString getXsheetPreviewButtonOffImage() const {
     return m_xsheetPreviewButtonOffImage;
+  }
+  QString getXsheetUnifiedButtonTranspImage() const {
+    return m_xsheetUnifiedButtonTranspImage;
   }
   // Xsheet Camstand Button
   void setXsheetCamstandButtonBgOnColor(const QColor &color) {
     m_xsheetCamstandButtonBgOnColor = color;
   }
-  void setXsheetCamstandButtonOnImage(const QImage &image) {
-    m_xsheetCamstandButtonOnImage = image;
+  void setXsheetCamstandButtonOnImage(const QString &svgFilePath) {
+    m_xsheetCamstandButtonOnImage = svgFilePath;
   }
-  void setXsheetCamstandButtonTranspImage(const QImage &image) {
-    m_xsheetCamstandButtonTranspImage = image;
+  void setXsheetCamstandButtonTranspImage(const QString &svgFilePath) {
+    m_xsheetCamstandButtonTranspImage = svgFilePath;
   }
   void setXsheetCamstandButtonBgOffColor(const QColor &color) {
     m_xsheetCamstandButtonBgOffColor = color;
   }
-  void setXsheetCamstandButtonOffImage(const QImage &image) {
-    m_xsheetCamstandButtonOffImage = image;
+  void setXsheetCamstandButtonOffImage(const QString &svgFilePath) {
+    m_xsheetCamstandButtonOffImage = svgFilePath;
   }
   QColor getXsheetCamstandButtonBgOnColor() const {
     return m_xsheetCamstandButtonBgOnColor;
   }
-  QImage getXsheetCamstandButtonOnImage() const {
+  QString getXsheetCamstandButtonOnImage() const {
     return m_xsheetCamstandButtonOnImage;
   }
-  QImage getXsheetCamstandButtonTranspImage() const {
+  QString getXsheetCamstandButtonTranspImage() const {
     return m_xsheetCamstandButtonTranspImage;
   }
   QColor getXsheetCamstandButtonBgOffColor() const {
     return m_xsheetCamstandButtonBgOffColor;
   }
-  QImage getXsheetCamstandButtonOffImage() const {
+  QString getXsheetCamstandButtonOffImage() const {
     return m_xsheetCamstandButtonOffImage;
   }
   // XsheetLock Button
   void setXsheetLockButtonBgOnColor(const QColor &color) {
     m_xsheetLockButtonBgOnColor = color;
   }
-  void setXsheetLockButtonOnImage(const QImage &image) {
-    m_xsheetLockButtonOnImage = image;
+  void setXsheetLockButtonOnImage(const QString &svgFilePath) {
+    m_xsheetLockButtonOnImage = svgFilePath;
   }
   void setXsheetLockButtonBgOffColor(const QColor &color) {
     m_xsheetLockButtonBgOffColor = color;
   }
-  void setXsheetLockButtonOffImage(const QImage &image) {
-    m_xsheetLockButtonOffImage = image;
+  void setXsheetLockButtonOffImage(const QString &svgFilePath) {
+    m_xsheetLockButtonOffImage = svgFilePath;
   }
   QColor getXsheetLockButtonBgOnColor() const {
     return m_xsheetLockButtonBgOnColor;
   }
-  QImage getXsheetLockButtonOnImage() const {
+  QString getXsheetLockButtonOnImage() const {
     return m_xsheetLockButtonOnImage;
   }
   QColor getXsheetLockButtonBgOffColor() const {
     return m_xsheetLockButtonBgOffColor;
   }
-  QImage getXsheetLockButtonOffImage() const {
+  QString getXsheetLockButtonOffImage() const {
     return m_xsheetLockButtonOffImage;
   }
   // Xsheet Config Button
   void setXsheetConfigButtonBgColor(const QColor &color) {
     m_xsheetConfigButtonBgColor = color;
   }
-  void setXsheetConfigButtonImage(const QImage &image) {
-    m_xsheetConfigButtonImage = image;
+  void setXsheetConfigButtonImage(const QString &svgFilePath) {
+    m_xsheetConfigButtonImage = svgFilePath;
   }
   QColor getXsheetConfigButtonBgColor() const {
     return m_xsheetConfigButtonBgColor;
   }
-  QImage getXsheetConfigButtonImage() const {
+  QString getXsheetConfigButtonImage() const {
     return m_xsheetConfigButtonImage;
   }
   // Timeline Preview Button
   void setTimelinePreviewButtonBgOnColor(const QColor &color) {
     m_timelinePreviewButtonBgOnColor = color;
   }
-  void setTimelinePreviewButtonOnImage(const QImage &image) {
-    m_timelinePreviewButtonOnImage = image;
+  void setTimelinePreviewButtonOnImage(const QString &svgFilePath) {
+    m_timelinePreviewButtonOnImage = svgFilePath;
   }
   void setTimelinePreviewButtonBgOffColor(const QColor &color) {
     m_timelinePreviewButtonBgOffColor = color;
   }
-  void setTimelinePreviewButtonOffImage(const QImage &image) {
-    m_timelinePreviewButtonOffImage = image;
+  void setTimelinePreviewButtonOffImage(const QString &svgFilePath) {
+    m_timelinePreviewButtonOffImage = svgFilePath;
+  }
+  void setTimelineUnifiedButtonTranspImage(const QString &svgFilePath) {
+    m_timelineUnifiedButtonTranspImage = svgFilePath;
   }
   QColor getTimelinePreviewButtonBgOnColor() const {
     return m_timelinePreviewButtonBgOnColor;
   }
-  QImage getTimelinePreviewButtonOnImage() const {
+  QString getTimelinePreviewButtonOnImage() const {
     return m_timelinePreviewButtonOnImage;
   }
   QColor getTimelinePreviewButtonBgOffColor() const {
     return m_timelinePreviewButtonBgOffColor;
   }
-  QImage getTimelinePreviewButtonOffImage() const {
+  QString getTimelinePreviewButtonOffImage() const {
     return m_timelinePreviewButtonOffImage;
+  }
+  QString getTimelineUnifiedButtonTranspImage() const {
+    return m_timelineUnifiedButtonTranspImage;
   }
   // Timeline Camstand Button
   void setTimelineCamstandButtonBgOnColor(const QColor &color) {
     m_timelineCamstandButtonBgOnColor = color;
   }
-  void setTimelineCamstandButtonOnImage(const QImage &image) {
-    m_timelineCamstandButtonOnImage = image;
+  void setTimelineCamstandButtonOnImage(const QString &svgFilePath) {
+    m_timelineCamstandButtonOnImage = svgFilePath;
   }
-  void setTimelineCamstandButtonTranspImage(const QImage &image) {
-    m_timelineCamstandButtonTranspImage = image;
+  void setTimelineCamstandButtonTranspImage(const QString &svgFilePath) {
+    m_timelineCamstandButtonTranspImage = svgFilePath;
   }
   void setTimelineCamstandButtonBgOffColor(const QColor &color) {
     m_timelineCamstandButtonBgOffColor = color;
   }
-  void setTimelineCamstandButtonOffImage(const QImage &image) {
-    m_timelineCamstandButtonOffImage = image;
+  void setTimelineCamstandButtonOffImage(const QString &svgFilePath) {
+    m_timelineCamstandButtonOffImage = svgFilePath;
   }
   QColor getTimelineCamstandButtonBgOnColor() const {
     return m_timelineCamstandButtonBgOnColor;
   }
-  QImage getTimelineCamstandButtonOnImage() const {
+  QString getTimelineCamstandButtonOnImage() const {
     return m_timelineCamstandButtonOnImage;
   }
-  QImage getTimelineCamstandButtonTranspImage() const {
+  QString getTimelineCamstandButtonTranspImage() const {
     return m_timelineCamstandButtonTranspImage;
   }
   QColor getTimelineCamstandButtonBgOffColor() const {
     return m_timelineCamstandButtonBgOffColor;
   }
-  QImage getTimelineCamstandButtonOffImage() const {
+  QString getTimelineCamstandButtonOffImage() const {
     return m_timelineCamstandButtonOffImage;
   }
   // Timeline Lock Button
   void setTimelineLockButtonBgOnColor(const QColor &color) {
     m_timelineLockButtonBgOnColor = color;
   }
-  void setTimelineLockButtonOnImage(const QImage &image) {
-    m_timelineLockButtonOnImage = image;
+  void setTimelineLockButtonOnImage(const QString &svgFilePath) {
+    m_timelineLockButtonOnImage = svgFilePath;
   }
   void setTimelineLockButtonBgOffColor(const QColor &color) {
     m_timelineLockButtonBgOffColor = color;
   }
-  void setTimelineLockButtonOffImage(const QImage &image) {
-    m_timelineLockButtonOffImage = image;
+  void setTimelineLockButtonOffImage(const QString &svgFilePath) {
+    m_timelineLockButtonOffImage = svgFilePath;
   }
   QColor getTimelineLockButtonBgOnColor() const {
     return m_timelineLockButtonBgOnColor;
   }
-  QImage getTimelineLockButtonOnImage() const {
+  QString getTimelineLockButtonOnImage() const {
     return m_timelineLockButtonOnImage;
   }
   QColor getTimelineLockButtonBgOffColor() const {
     return m_timelineLockButtonBgOffColor;
   }
-  QImage getTimelineLockButtonOffImage() const {
+  QString getTimelineLockButtonOffImage() const {
     return m_timelineLockButtonOffImage;
   }
   // Timeline Config Button
   void setTimelineConfigButtonBgColor(const QColor &color) {
     m_timelineConfigButtonBgColor = color;
   }
-  void setTimelineConfigButtonImage(const QImage &image) {
-    m_timelineConfigButtonImage = image;
+  void setTimelineConfigButtonImage(const QString &svgFilePath) {
+    m_timelineConfigButtonImage = svgFilePath;
   }
   QColor getTimelineConfigButtonBgColor() const {
     return m_timelineConfigButtonBgColor;
   }
-  QImage getTimelineConfigButtonImage() const {
+  QString getTimelineConfigButtonImage() const {
     return m_timelineConfigButtonImage;
   }
   // Layer Header icons
-  void setLayerHeaderPreviewImage(const QImage &image) {
-    m_layerHeaderPreviewImage = image;
+  void setLayerHeaderPreviewImage(const QString &svgFilePath) {
+    m_layerHeaderPreviewImage = svgFilePath;
   }
-  void setLayerHeaderPreviewOverImage(const QImage &image) {
-    m_layerHeaderPreviewOverImage = image;
+  void setLayerHeaderPreviewOverImage(const QString &svgFilePath) {
+    m_layerHeaderPreviewOverImage = svgFilePath;
   }
-  void setLayerHeaderCamstandImage(const QImage &image) {
-    m_layerHeaderCamstandImage = image;
+  void setLayerHeaderCamstandImage(const QString &svgFilePath) {
+    m_layerHeaderCamstandImage = svgFilePath;
   }
-  void setLayerHeaderCamstandOverImage(const QImage &image) {
-    m_layerHeaderCamstandOverImage = image;
+  void setLayerHeaderCamstandOverImage(const QString &svgFilePath) {
+    m_layerHeaderCamstandOverImage = svgFilePath;
   }
-  void setLayerHeaderLockImage(const QImage &image) {
-    m_layerHeaderLockImage = image;
+  void setLayerHeaderLockImage(const QString &svgFilePath) {
+    m_layerHeaderLockImage = svgFilePath;
   }
-  void setLayerHeaderLockOverImage(const QImage &image) {
-    m_layerHeaderLockOverImage = image;
+  void setLayerHeaderLockOverImage(const QString &svgFilePath) {
+    m_layerHeaderLockOverImage = svgFilePath;
   }
-  QImage getLayerHeaderPreviewImage() const {
+  QString getLayerHeaderPreviewImage() const {
     return m_layerHeaderPreviewImage;
   }
-  QImage getLayerHeaderPreviewOverImage() const {
+  QString getLayerHeaderPreviewOverImage() const {
     return m_layerHeaderPreviewOverImage;
   }
-  QImage getLayerHeaderCamstandImage() const {
+  QString getLayerHeaderCamstandImage() const {
     return m_layerHeaderCamstandImage;
   }
-  QImage getLayerHeaderCamstandOverImage() const {
+  QString getLayerHeaderCamstandOverImage() const {
     return m_layerHeaderCamstandOverImage;
   }
-  QImage getLayerHeaderLockImage() const { return m_layerHeaderLockImage; }
-  QImage getLayerHeaderLockOverImage() const {
+  QString getLayerHeaderLockImage() const { return m_layerHeaderLockImage; }
+  QString getLayerHeaderLockOverImage() const {
     return m_layerHeaderLockOverImage;
   }
 
-  void getButton(int &btype, QColor &bgColor, QImage &iconImage,
+  void getButton(const int &btype, QColor &bgColor, QString &svgIconPath,
                  bool isTimeline = false);
 
   // convert the last one digit of the frame number to alphabet
@@ -1192,6 +1388,9 @@ public:
   virtual void load(QSettings &settings) override;
 
   QString getXsheetLayout() const { return m_xsheetLayout; }
+  // returns a list of frame amount per page displayable in the current size
+  QList<int> availableFramesPerPage();
+  void zoomToFramesPerPage(int frames);
 
 protected:
   void scrollToColumn(int col);
@@ -1241,12 +1440,12 @@ public slots:
   void resetXsheetNotes();
 
   void onOrientationChanged(const Orientation *newOrientation);
-  void onPrepareToScrollOffset(const QPoint &offset);
-  void onZoomScrollAdjust(QPoint &offset, bool toZoom);
+  void onPrepareToScrollOffset(const QPointF &offset);
+  void onZoomScrollAdjust(QPointF &offset, bool toZoom);
 
   void setFrameZoomFactor(int f) { m_frameZoomFactor = f; }
   int getFrameZoomFactor() const;
-  int getFrameZoomAdjustment();
+  QPoint getFrameZoomAdjustment();
 
   void zoomOnFrame(int frame, int factor);
 };

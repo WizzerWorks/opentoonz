@@ -23,9 +23,6 @@
 #include <map>
 #include <vector>
 
-using std::map;
-using std::vector;
-
 // Defines timeline direction: top to bottom;  left to right.
 // old (vertical timeline) = new (universal)    = old (kept)
 //                x        =   layer axis       =   column
@@ -38,7 +35,8 @@ class DVAPI NumberRange {
   NumberRange() : _from(0), _to(0) {}
 
 public:
-  NumberRange(int from, int to) : _from(min(from, to)), _to(max(from, to)) {}
+  NumberRange(int from, int to)
+      : _from(std::min(from, to)), _to(std::max(from, to)) {}
 
   int from() const { return _from; }
   int to() const { return _to; }
@@ -69,6 +67,7 @@ enum class PredefinedRect {
   BEGIN_EXTENDER,           //! top / left extender
   KEYFRAME_AREA,            //! part of cell dedicated to key frames
   DRAG_AREA,                //! draggable side bar
+  CELL_MARK_AREA,           //! cell mark
   SOUND_TRACK,              //! area dedicated to waveform display
   PREVIEW_TRACK,            //! sound preview area
   BEGIN_SOUND_EDIT,         //! top sound resize
@@ -94,6 +93,9 @@ enum class PredefinedRect {
   PREVIEW_LAYER_AREA,  //! clickable area larger than preview icon, containing
                        //! it
   PREVIEW_LAYER,
+  UNIFIEDVIEW_LAYER_AREA,  //! used when unifying the preview and the camstand
+                           //! toggles
+  UNIFIEDVIEW_LAYER,
   LOCK_AREA,          //! clickable area larger than lock icon, containing it
   LOCK,               //! the lock icon itself
   CAMERA_LOCK_AREA,   //! lock area for the camera column
@@ -118,10 +120,11 @@ enum class PredefinedRect {
   FILTER_COLOR,        //! where to show layer's filter color
   CONFIG_AREA,  //! clickable area larger than the config icon, containing it
   CONFIG,       //! the config icon itself
-  CAMERA_CONFIG_AREA,  //! config area for the camera column
-  CAMERA_CONFIG,       //! the config icon for camera column
-  FRAME_MARKER_AREA,   //! Cell's frame indicator
-  FRAME_INDICATOR,     //! Row # indicator
+  CAMERA_CONFIG_AREA,        //! config area for the camera column
+  CAMERA_CONFIG,             //! the config icon for camera column
+  FRAME_MARKER_AREA,         //! Cell's frame indicator
+  CAMERA_FRAME_MARKER_AREA,  //! Cell's frame indicator for camera column
+  FRAME_INDICATOR,           //! Row # indicator
   ZOOM_SLIDER_AREA,
   ZOOM_SLIDER,
   ZOOM_IN_AREA,
@@ -135,14 +138,16 @@ enum class PredefinedRect {
   PANEL_EYE,
   PANEL_PREVIEW_LAYER,
   PANEL_LOCK,
-  PANEL_LAYER_NAME
+  PANEL_LAYER_NAME,
+  NAVIGATION_TAG_AREA
 };
 enum class PredefinedLine {
   LOCKED,              //! dotted vertical line when cell is locked
   SEE_MARKER_THROUGH,  //! horizontal marker visible through drag handle
   CONTINUE_LEVEL,      //! level with the same name represented by vertical line
   CONTINUE_LEVEL_WITH_NAME,  //! adjusted when level name is on each marker
-  EXTENDER_LINE              //! see grid through extender handle
+  EXTENDER_LINE,             //! see grid through extender handle
+  CURRENT_TIME_INDICATOR     // current time indicator
 };
 enum class PredefinedDimension {
   LAYER,                 //! width of a layer column / height of layer row
@@ -153,7 +158,10 @@ enum class PredefinedDimension {
   ONION_TURN,            //! onion handle turn in degrees
   QBOXLAYOUT_DIRECTION,  //! direction of QBoxLayout
   CENTER_ALIGN,          //! horizontal / vertical align
-  CAMERA_LAYER           //! width of a camera column / height of camera row
+  CAMERA_LAYER,          //! width of a camera column / height of camera row
+  SCALE_THRESHOLD,       //! scale threshold to simplify the view
+  FRAME_AREA_EXPANSION   //! expansion of the frame area if it can have extra
+                         //! space
 };
 enum class PredefinedPath {
   DRAG_HANDLE_CORNER,   //! triangle corner at drag sidebar
@@ -164,12 +172,13 @@ enum class PredefinedPath {
   VOLUME_SLIDER_TRACK,  //! slider track
   VOLUME_SLIDER_HEAD,   //! slider head
   TIME_INDICATOR_HEAD,  //! current time indicator head
-  FRAME_MARKER_DIAMOND
+  FRAME_MARKER_DIAMOND,
+  NAVIGATION_TAG
 };
 enum class PredefinedPoint {
   KEY_HIDDEN,  //! move extender handle that much if key icons are disabled
-  EXTENDER_XY_RADIUS,        //! x and y radius for rounded rectangle
-  VOLUME_DIVISIONS_TOP_LEFT  //! where to draw volume slider
+  EXTENDER_XY_RADIUS,         //! x and y radius for rounded rectangle
+  VOLUME_DIVISIONS_TOP_LEFT,  //! where to draw volume slider
 };
 enum class PredefinedRange {
   HEADER_FRAME,  //! size of of column header height(v) / row header width(h)
@@ -199,27 +208,28 @@ enum class PredefinedFlag {
   THUMBNAIL_AREA_BORDER,
   THUMBNAIL_AREA_VISIBLE,
   CAMERA_ICON_VISIBLE,
-  VOLUME_AREA_VERTICAL
+  VOLUME_AREA_VERTICAL,
+  NOTE_AREA_IN_POPUP
 };
 
 // Knows everything about geometry of a particular orientation.
 class DVAPI Orientation {
 protected:
-  map<PredefinedRect, QRect> _rects;
-  map<PredefinedLine, QLine> _lines;
-  map<PredefinedDimension, int> _dimensions;
-  map<PredefinedPath, QPainterPath> _paths;
-  map<PredefinedPoint, QPoint> _points;
-  map<PredefinedRange, NumberRange> _ranges;
-  map<PredefinedFlag, bool> _flags;
+  std::map<PredefinedRect, QRect> _rects;
+  std::map<PredefinedLine, QLine> _lines;
+  std::map<PredefinedDimension, int> _dimensions;
+  std::map<PredefinedPath, QPainterPath> _paths;
+  std::map<PredefinedPoint, QPoint> _points;
+  std::map<PredefinedRange, NumberRange> _ranges;
+  std::map<PredefinedFlag, bool> _flags;
 
 public:
   virtual CellPosition xyToPosition(const QPoint &xy,
-                                    const ColumnFan *fan) const          = 0;
+                                    const ColumnFan *fan) const           = 0;
   virtual QPoint positionToXY(const CellPosition &position,
-                              const ColumnFan *fan) const                = 0;
-  virtual CellPositionRatio xyToPositionRatio(const QPoint &xy) const    = 0;
-  virtual QPoint positionRatioToXY(const CellPositionRatio &ratio) const = 0;
+                              const ColumnFan *fan) const                 = 0;
+  virtual CellPositionRatio xyToPositionRatio(const QPointF &xy) const    = 0;
+  virtual QPointF positionRatioToXY(const CellPositionRatio &ratio) const = 0;
 
   virtual int colToLayerAxis(int layer, const ColumnFan *fan) const = 0;
   virtual int rowToFrameAxis(int frame) const                       = 0;
@@ -270,6 +280,8 @@ public:
   virtual int cellHeight() const     = 0;
   virtual int foldedCellSize() const = 0;
 
+  virtual ~Orientation() {}
+
 protected:
   void addRect(PredefinedRect which, const QRect &rect);
   void addLine(PredefinedLine which, const QLine &line);
@@ -283,7 +295,7 @@ protected:
 // Enumerates all orientations available in the system as global const objects.
 class DVAPI Orientations {
   const Orientation *_topToBottom, *_leftToRight;
-  vector<const Orientation *> _all;
+  std::vector<const Orientation *> _all;
 
   Orientations();
 
@@ -297,7 +309,7 @@ public:
   static const Orientation *topToBottom();
   static const Orientation *leftToRight();
 
-  static const vector<const Orientation *> &all();
+  static const std::vector<const Orientation *> &all();
 
   static const Orientation *byName(const QString &name);
 };

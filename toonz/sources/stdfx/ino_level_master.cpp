@@ -4,8 +4,9 @@
 #include "tparamset.h"
 
 #include "ino_common.h"
+#include "globalcontrollablefx.h"
 //------------------------------------------------------------
-class ino_level_master final : public TStandardRasterFx {
+class ino_level_master final : public GlobalControllableFx {
   FX_PLUGIN_DECLARATION(ino_level_master)
   TRasterFxPort m_input;
   TRasterFxPort m_refer;
@@ -54,6 +55,8 @@ public:
     this->m_ref_mode->addItem(3, "Alpha");
     this->m_ref_mode->addItem(4, "Luminance");
     this->m_ref_mode->addItem(-1, "Nothing");
+
+    enableComputeInFloat(true);
   }
   bool doGetBBox(double frame, TRectD &bBox,
                  const TRenderSettings &info) override {
@@ -82,7 +85,8 @@ void ino_level_master::doCompute(TTile &tile, double frame,
   }
 
   /* ------ サポートしていないPixelタイプはエラーを投げる --- */
-  if (!((TRaster32P)tile.getRaster()) && !((TRaster64P)tile.getRaster())) {
+  if (!((TRaster32P)tile.getRaster()) && !((TRaster64P)tile.getRaster()) &&
+      !((TRasterFP)tile.getRaster())) {
     throw TRopException("unsupported input pixel type");
   }
 
@@ -135,10 +139,12 @@ void ino_level_master::doCompute(TTile &tile, double frame,
   /* ------ fx処理 ------------------------------------------ */
   try {
     TRasterP in_ras = tile.getRaster();
-    TRasterGR8P in_gr8(in_ras->getLy(),
-                       in_ras->getLx() * ino::channels() *
-                           ((TRaster64P)in_ras ? sizeof(unsigned short)
-                                               : sizeof(unsigned char)));
+    TRasterGR8P in_gr8(
+        in_ras->getLy(),
+        in_ras->getLx() * ino::channels() *
+            ((TRaster64P)in_ras   ? sizeof(unsigned short)
+             : (TRaster32P)in_ras ? sizeof(unsigned char)
+                                  : sizeof(float)));  // TRasterFP case
 
     in_ras->lock();
     if (refer_tile.getRaster() != nullptr) {
@@ -175,7 +181,7 @@ void ino_level_master::doCompute(TTile &tile, double frame,
         true  // clamp_sw
         ,
         alp_rend_sw, anti_alias_sw  // --> add_blend_sw, default is true
-        );
+    );
 
     ino::arr_to_ras(in_gr8->getRawData(), ino::channels(), in_ras, 0);
 

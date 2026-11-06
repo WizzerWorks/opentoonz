@@ -38,7 +38,11 @@ private:
     assert(!m_sortedKeys.empty());
     typename std::vector<ColorKey>::const_iterator b;
     b = std::lower_bound(m_sortedKeys.begin(), m_sortedKeys.end(),
-                         ColorKey(s, T()));
+                         ColorKey(s, T()),
+                         [](const ColorKey &a, const ColorKey &b) {
+                           return a.first < b.first;
+                         });  // compare only key positions
+
     if (b == m_sortedKeys.end())
       return m_sortedKeys.rbegin()->second;
     else if (b == m_sortedKeys.begin() || areAlmostEqual(b->first, s))
@@ -177,10 +181,12 @@ DVAPI TSpectrumT<TPixel64> convert(const TSpectrumT<TPixel32> &s);
 #ifdef _WIN32
 template class DVAPI TSpectrumT<TPixel32>;
 template class DVAPI TSpectrumT<TPixel64>;
+template class DVAPI TSpectrumT<TPixelF>;
 #endif
 
 typedef TSpectrumT<TPixel32> TSpectrum;
 typedef TSpectrumT<TPixel64> TSpectrum64;
+typedef TSpectrumT<TPixelF> TSpectrumF;
 
 #ifdef _MSC_VER
 #pragma warning(default : 4251)

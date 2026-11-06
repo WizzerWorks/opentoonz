@@ -186,7 +186,7 @@ void SpectrumBar::paintEvent(QPaintEvent *e) {
 }
 
 //-----------------------------------------------------------------------------
-/*! Manage mouse press event. Search exsisting key near click position, if
+/*! Manage mouse press event. Search existing key near click position, if
                 there is set it as current key; otherwise add a new key in click
    position.
 */
@@ -329,7 +329,7 @@ SpectrumField::SpectrumField(QWidget *parent, TPixel32 color)
   setFixedHeight(60);
 
   QVBoxLayout *layout = new QVBoxLayout();
-  layout->setMargin(m_margin);
+  layout->setContentsMargins(m_margin, m_margin, m_margin, m_margin);
   layout->setSpacing(m_spacing);
 
   m_spectrumbar = new SpectrumBar(this, color);

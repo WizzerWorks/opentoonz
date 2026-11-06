@@ -3,9 +3,6 @@
 #define _CRT_SECURE_NO_WARNINGS (1)   // Warning treated as errors
 #define _CRT_SECURE_NO_DEPRECATE (1)  // use of fopen deprecated
 
-// Tnz includes (-.-')
-#include "../toonz/tapp.h"
-
 // TFarmController includes
 #include "tfarmcontroller.h"
 
@@ -29,6 +26,11 @@
 #include "toonz/multimediarenderer.h"
 #include "toutputproperties.h"
 #include "toonz/imagestyles.h"
+#include "tproperty.h"
+#include "toonz/levelset.h"
+#include "toonz/txshsimplelevel.h"
+#include "toonz/levelproperties.h"
+#include "toonz/filepathproperties.h"
 
 // TnzSound includes
 #include "tnzsound.h"
@@ -36,7 +38,6 @@
 // TnzImage includes
 #include "timage_io.h"
 #include "tnzimage.h"
-#include "tflash.h"
 
 #ifdef _WIN32
 #include "avicodecrestrictions.h"
@@ -47,7 +48,7 @@
 #include "tunit.h"
 #include "tenv.h"
 #include "tpassivecachemanager.h"
-//#include "tcacheresourcepool.h"
+// #include "tcacheresourcepool.h"
 
 // TnzCore includes
 #include "tsystem.h"
@@ -73,6 +74,12 @@
 #include <QApplication>
 #include <QWaitCondition>
 #include <QMessageBox>
+
+#ifdef _WIN32
+#ifndef x64
+#include <float.h>
+#endif
+#endif
 
 //==================================================================================
 
@@ -220,6 +227,35 @@ void tcomposerRunOutOfContMemHandler(unsigned long size) {
   TImageCache::instance()->clear(true);
   exit(2);
 }
+
+// Check if the scene saved with the previous version AND the premultiply option
+// is set to PNG level setting
+void UnsetPremultiplyOptionsInPngLevels(ToonzScene *scene) {
+  if (scene->getVersionNumber() <
+      VersionNumber(71, 1)) {  // V1.4 = 71.0 , V1.5 = 71.1
+    QStringList modifiedPNGLevelNames;
+    std::vector<TXshLevel *> levels;
+    scene->getLevelSet()->listLevels(levels);
+    for (auto level : levels) {
+      if (!level || !level->getSimpleLevel()) continue;
+      TFilePath path = level->getPath();
+      if (path.isEmpty() || path.getType() != "png") continue;
+      if (level->getSimpleLevel()->getProperties()->doPremultiply()) {
+        level->getSimpleLevel()->getProperties()->setDoPremultiply(false);
+        modifiedPNGLevelNames.append(QString::fromStdWString(level->getName()));
+      }
+    }
+    if (!modifiedPNGLevelNames.isEmpty()) {
+      std::string msg =
+          "The Premultiply options in the following levels are disabled, since "
+          "PNG files are premultiplied on loading in the current version:" +
+          modifiedPNGLevelNames.join(", ").toStdString();
+      cout << msg << endl;
+      m_userLog->info(msg);
+    }
+  }
+}
+
 }  // namespace
 
 //==============================================================================================
@@ -635,7 +671,7 @@ int main(int argc, char *argv[]) {
 
   // Set the app's locale for numeric stuff to standard C. This is important for
   // atof() and similar
-  // calls that are locale-dependant.
+  // calls that are locale-dependent.
   setlocale(LC_NUMERIC, "C");
 
   // Install run out of contiguous memory callback
@@ -657,6 +693,7 @@ int main(int argc, char *argv[]) {
   // questo definisce la registry root e inizializza TEnv
   TEnv::setRootVarName(rootVarName);
   TEnv::setSystemVarPrefix(systemVarPrefix);
+  TEnv::setApplicationFileName(argv[0]);
 
   QCoreApplication::setOrganizationName("OpenToonz");
   QCoreApplication::setOrganizationDomain("");
@@ -759,7 +796,7 @@ int main(int argc, char *argv[]) {
     loadShaderInterfaces(ToonzFolder::getLibraryFolder() +
                          TFilePath("shaders"));
 
-    //#endif
+    // #endif
 
     //---------------------------------------------------------
 
@@ -774,10 +811,9 @@ int main(int argc, char *argv[]) {
     msg = "Loading " + srcFilePath.getName();
     cout << endl << msg << endl;
     m_userLog->info(msg);
-    TProjectManager *pm = TProjectManager::instance();
     // pm->enableTabMode(true);
 
-    TProjectP project = pm->loadSceneProject(srcFilePath);
+    auto project = TProjectManager::instance()->loadSceneProject(srcFilePath);
     if (!project) {
       msg = "Couldn't find the project";  //+ project->getName().getName();
       cerr << msg << endl;
@@ -789,9 +825,15 @@ int main(int argc, char *argv[]) {
     m_userLog->info(msg);
     // pm->setCurrentProject(project, false); // false => temporaneamente
 
+    // update TFilePath condition on loading the current project
+    FilePathProperties *fpProp = project->getFilePathProperties();
+    TFilePath::setFilePathProperties(fpProp->useStandard(),
+                                     fpProp->acceptNonAlphabetSuffix(),
+                                     fpProp->letterCountForSuffix());
+
     Sw1.start();
 
-    if (!TSystem::doesExistFileOrLevel(srcFilePath)) return false;
+    if (!TSystem::doesExistFileOrLevel(srcFilePath)) return -2;
     ToonzScene *scene = new ToonzScene();
 
     TImageStyle::setCurrentScene(scene);
@@ -812,6 +854,10 @@ int main(int argc, char *argv[]) {
       m_userLog->error(msg);
       // return false;
     }
+
+    // Check if the scene saved with the previous version AND the premultiply
+    // option is set to PNG level setting
+    UnsetPremultiplyOptionsInPngLevels(scene);
 
     msg = "scene loaded";
     cout << "scene loaded" << endl;
@@ -884,13 +930,10 @@ int main(int argc, char *argv[]) {
     const int threadCounts[3] = {1, procCount / 2, procCount};
     if (nthreads.isSelected()) {
       QString threadCountStr = QString::fromStdString(nthreads.getValue());
-      threadCount            = (threadCountStr == "single")
-                        ? threadCounts[0]
-                        : (threadCountStr == "half")
-                              ? threadCounts[1]
-                              : (threadCountStr == "all")
-                                    ? threadCounts[2]
-                                    : threadCountStr.toInt();
+      threadCount            = (threadCountStr == "single") ? threadCounts[0]
+                               : (threadCountStr == "half") ? threadCounts[1]
+                               : (threadCountStr == "all")  ? threadCounts[2]
+                                                           : threadCountStr.toInt();
 
       if (threadCount <= 0) {
         cout << "Qualifier 'nthreads': bad input" << endl;
@@ -910,15 +953,11 @@ int main(int argc, char *argv[]) {
         TOutputProperties::MediumVal, TOutputProperties::SmallVal};
     if (tileSize.isSelected()) {
       QString tileSizeStr = QString::fromStdString(tileSize.getValue());
-      maxTileSize         = (tileSizeStr == "none")
-                        ? maxTileSizes[0]
-                        : (tileSizeStr == "large")
-                              ? maxTileSizes[1]
-                              : (tileSizeStr == "medium")
-                                    ? maxTileSizes[2]
-                                    : (tileSizeStr == "small")
-                                          ? maxTileSizes[3]
-                                          : tileSizeStr.toInt();
+      maxTileSize         = (tileSizeStr == "none")     ? maxTileSizes[0]
+                            : (tileSizeStr == "large")  ? maxTileSizes[1]
+                            : (tileSizeStr == "medium") ? maxTileSizes[2]
+                            : (tileSizeStr == "small")  ? maxTileSizes[3]
+                                                        : tileSizeStr.toInt();
 
       if (maxTileSize <= 0) {
         cout << "Qualifier 'maxtilesize': bad input" << endl;

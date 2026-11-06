@@ -107,7 +107,7 @@ private:
 
 \par Rationale
 
-  The crucial reason behind the existance of this class lies in the
+  The crucial reason behind the existence of this class lies in the
   necessity to cache PlasticDeformer instances to achieve real-time speed in
   the processing of part of its algorithms.
   \n\n
@@ -149,7 +149,7 @@ deform-related
   Cached data is uniquely associated with pairs of meshImage and deformed
 skeletons,
   meaning that the same meshImage can be deformed by multiple skeletons, and
-viceversa.
+vice versa.
   \n\n
   A deformer data request needs an affine transform in input, which is intended
 to

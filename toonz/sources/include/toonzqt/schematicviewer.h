@@ -5,6 +5,7 @@
 
 // TnzLib includes
 #include "toonz/tstageobjectid.h"
+#include "toonz/txshcolumn.h"
 
 // TnzBase includes
 #include "tfx.h"
@@ -54,6 +55,9 @@ class QToolButton;
 class QAction;
 class QTouchEvent;
 class QGestureEvent;
+class FxSelection;
+class StageObjectSelection;
+class SnapTargetItem;
 
 //====================================================
 namespace {
@@ -69,6 +73,8 @@ enum CursorMode { Select, Zoom, Hand };
 class DVAPI SchematicScene : public QGraphicsScene {
   Q_OBJECT
 
+  QPointF m_mousePos, m_clickedPos;
+
 public:
   SchematicScene(QWidget *parent);
   ~SchematicScene();
@@ -79,21 +85,35 @@ public:
   virtual void reorderScene() = 0;
   virtual void updateScene()  = 0;
 
+  QPointF mousePos() { return m_mousePos; }
+  void setMousePos(QPointF pos) { m_mousePos = pos; }
+  virtual void updateSnapTarget(QGraphicsItem *item){};
+  QPointF clickedPos() { return m_clickedPos; }
+  void setClickedPos(QPointF pos) { m_clickedPos = pos; }
+  void computeSnap(SchematicNode *node, QPointF &delta, bool enable);
+
 protected:
   QList<SchematicLink *> m_highlightedLinks;
   enum GridDimension { eLarge, eSmall };
+  QList<SnapTargetItem *> m_snapTargets;
+
+  static int snapVInterval;
+  static int snapHSpacing;
 
 protected:
   //! Returns \b true if no nodes intersects \b rect.
   bool isAnEmptyZone(const QRectF &rect);
   //! Returns a vector containing all nodes which had their bounding rects
-  //! conatined in \b node bounding
+  //! contained in \b node bounding
   //! rect enlarged of 10.
   QVector<SchematicNode *> getPlacedNode(SchematicNode *node);
 
   void showEvent(QShowEvent *se);
   void hideEvent(QHideEvent *se);
 
+  void addSnapTarget(const QPointF &pos, const QRectF &rect,
+                     const QPointF &theOtherEndPos, const QPointF &endPos);
+  void clearSnapTargets();
 protected slots:
 
   virtual void onSelectionSwitched(TSelection *, TSelection *) {}
@@ -150,9 +170,9 @@ protected:
   void showEvent(QShowEvent *se) override;
   void enterEvent(QEvent *e) override;
   void leaveEvent(QEvent *e) override;
-  void mouseDoubleClickEvent(QMouseEvent *event);
+  void mouseDoubleClickEvent(QMouseEvent *event) override;
 
-  void tabletEvent(QTabletEvent *e);
+  void tabletEvent(QTabletEvent *e) override;
   void touchEvent(QTouchEvent *e, int type);
   void gestureEvent(QGestureEvent *e);
 
@@ -192,9 +212,36 @@ class DVAPI SchematicViewer final : public QWidget {
   QColor m_textColor;  // text color (black)
   Q_PROPERTY(QColor TextColor READ getTextColor WRITE setTextColor)
 
+  QColor m_passThroughTextColor;  // text outside of the node rect
+  Q_PROPERTY(QColor PassThroughTextColor READ getPassThroughTextColor WRITE
+                 setPassThroughTextColor)
+
   QColor m_verticalLineColor;
   Q_PROPERTY(QColor VerticalLineColor READ getVerticalLineColor WRITE
                  setVerticalLineColor)
+
+  QColor m_linkColor;  // link color
+  Q_PROPERTY(QColor LinkColor READ getLinkColor WRITE setLinkColor)
+
+  QColor m_selectedLinkColor;  // selected link color
+  Q_PROPERTY(QColor SelectedLinkColor READ getSelectedLinkColor WRITE
+                 setSelectedLinkColor)
+
+  // Selected Node Border Color
+  QColor m_selectedBorderColor;
+  Q_PROPERTY(QColor SelectedBorderColor READ getSelectedBorderColor WRITE
+                 setSelectedBorderColor)
+
+  // Motion Path Link Color
+  QColor m_motionPathLinkColor;
+  Q_PROPERTY(QColor MotionPathLinkColor READ getMotionPathLinkColor WRITE
+                 setMotionPathLinkColor)
+
+  // Motion Path Selected Link Color
+  QColor m_motionPathSelectedLinkColor;
+  Q_PROPERTY(
+      QColor MotionPathSelectedLinkColor READ getMotionPathSelectedLinkColor
+          WRITE setMotionPathSelectedLinkColor)
 
   // TZP column
   QColor m_levelColumnColor;  //(127,219,127)
@@ -229,6 +276,11 @@ class DVAPI SchematicViewer final : public QWidget {
   QColor m_meshColumnColor;
   Q_PROPERTY(
       QColor MeshColumnColor READ getMeshColumnColor WRITE setMeshColumnColor)
+
+  // Meta column
+  QColor m_metaColumnColor;
+  Q_PROPERTY(
+      QColor MetaColumnColor READ getMetaColumnColor WRITE setMetaColumnColor)
 
   // Reference column
   QColor m_referenceColumnColor;
@@ -267,6 +319,11 @@ class DVAPI SchematicViewer final : public QWidget {
   // Xsheet node
   QColor m_xsheetColor;
   Q_PROPERTY(QColor XsheetColor READ getXsheetColor WRITE setXsheetColor)
+
+  // Pass Through node
+  QColor m_passThroughColor;
+  Q_PROPERTY(QColor PassThroughColor READ getPassThroughColor WRITE
+                 setPassThroughColor)
 
   // Fx nodes
   QColor m_normalFx;
@@ -338,10 +395,45 @@ public:
   void setTextColor(const QColor &color) { m_textColor = color; }
   QColor getTextColor() const { return m_textColor; }
 
+  void setPassThroughTextColor(const QColor &color) {
+    m_passThroughTextColor = color;
+  }
+  QColor getPassThroughTextColor() const { return m_passThroughTextColor; }
+
   void setVerticalLineColor(const QColor &color) {
     m_verticalLineColor = color;
   }
   QColor getVerticalLineColor() const { return m_verticalLineColor; }
+
+  // Link Color
+  void setLinkColor(const QColor &color) { m_linkColor = color; }
+  QColor getLinkColor() const { return m_linkColor; }
+
+  // Selected Link Color
+  void setSelectedLinkColor(const QColor &color) {
+    m_selectedLinkColor = color;
+  }
+  QColor getSelectedLinkColor() const { return m_selectedLinkColor; }
+
+  // Selected Node Border Color
+  void setSelectedBorderColor(const QColor &color) {
+    m_selectedBorderColor = color;
+  }
+  QColor getSelectedBorderColor() const { return m_selectedBorderColor; }
+
+  // Motion Path Link Color
+  void setMotionPathLinkColor(const QColor &color) {
+    m_motionPathLinkColor = color;
+  }
+  QColor getMotionPathLinkColor() const { return m_motionPathLinkColor; }
+
+  // Motion Path Selected Link Color
+  void setMotionPathSelectedLinkColor(const QColor &color) {
+    m_motionPathSelectedLinkColor = color;
+  }
+  QColor getMotionPathSelectedLinkColor() const {
+    return m_motionPathSelectedLinkColor;
+  }
 
   // TZP column
   void setLevelColumnColor(const QColor &color) { m_levelColumnColor = color; }
@@ -376,6 +468,10 @@ public:
   // Mesh column
   void setMeshColumnColor(const QColor &color) { m_meshColumnColor = color; }
   QColor getMeshColumnColor() const { return m_meshColumnColor; }
+
+  // Meta column
+  void setMetaColumnColor(const QColor &color) { m_metaColumnColor = color; }
+  QColor getMetaColumnColor() const { return m_metaColumnColor; }
 
   // Reference column
   QColor getReferenceColumnColor() const { return m_referenceColumnColor; }
@@ -415,6 +511,10 @@ public:
   // Xsheet node
   void setXsheetColor(const QColor &color) { m_xsheetColor = color; }
   QColor getXsheetColor() const { return m_xsheetColor; }
+
+  // Pass Through node
+  void setPassThroughColor(const QColor &color) { m_passThroughColor = color; }
+  QColor getPassThroughColor() const { return m_passThroughColor; }
 
   // Fx nodes
   QColor getNormalFxColor() const { return m_normalFx; }
@@ -511,6 +611,10 @@ signals:
   void doExplodeChild(QList<TStageObjectId>);
   void editObject();
 
+  void doDeleteFxs(const FxSelection *);
+  void doDeleteStageObjects(const StageObjectSelection *);
+
+  void columnPasted(const QList<TXshColumnP> &);
 protected slots:
 
   void onSceneChanged();
@@ -521,6 +625,9 @@ protected slots:
   void selectModeEnabled();
   void zoomModeEnabled();
   void handModeEnabled();
+
+  void deleteFxs();
+  void deleteStageObjects();
 
 private:
   SchematicSceneViewer *m_viewer;

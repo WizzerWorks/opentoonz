@@ -16,6 +16,8 @@
 #include "toonz/tframehandle.h"
 #include "toonz/tcolumnhandle.h"
 #include "toonz/preferences.h"
+#include "toonz/txshsimplelevel.h"
+#include "toonz/txshlevelhandle.h"
 
 #include <QApplication>
 
@@ -50,20 +52,35 @@ public:
   NextDrawingCommand() : MenuItemHandler(MI_NextDrawing) {}
 
   void execute() override {
-    TXsheet *xsh = TApp::instance()->getCurrentXsheet()->getXsheet();
+    auto app = TApp::instance();
 
-    int row = TApp::instance()->getCurrentFrame()->getFrame();
-    int col = TApp::instance()->getCurrentColumn()->getColumnIndex();
+    if (app->getCurrentFrame()->isEditingScene()) {
+      TXsheet *xsh = app->getCurrentXsheet()->getXsheet();
 
-    const TXshCell &cell = xsh->getCell(row, col);
+      int row = app->getCurrentFrame()->getFrame();
+      int col = app->getCurrentColumn()->getColumnIndex();
 
-    int frameCount = xsh->getFrameCount();
-    while (row < frameCount) {
-      row++;
-      if (xsh->getCell(row, col).isEmpty()) continue;
-      if (xsh->getCell(row, col) != cell) {
-        TApp::instance()->getCurrentFrame()->setFrame(row);
-        break;
+      const TXshCell &cell = xsh->getCell(row, col);
+      int frameCount       = xsh->getFrameCount();
+      while (row < frameCount) {
+        row++;
+        if (xsh->getCell(row, col).isEmpty()) continue;
+        if (xsh->getCell(row, col) != cell) {
+          TApp::instance()->getCurrentFrame()->setFrame(row);
+          break;
+        }
+      }
+    } else {
+      TXshSimpleLevel *sl = app->getCurrentLevel()->getSimpleLevel();
+      if (!sl) return;
+
+      TFrameId currentFid = app->getCurrentFrame()->getFid();
+      int currentIndex    = sl->fid2index(currentFid);
+      int frameCount      = sl->getFrameCount();
+      int i               = currentIndex + 1;
+      if (i < frameCount) {
+        TFrameId fid = sl->getFrameId(i);
+        if (fid != TFrameId()) app->getCurrentFrame()->setFid(fid);
       }
     }
   }
@@ -76,28 +93,43 @@ public:
   PrevDrawingCommand() : MenuItemHandler(MI_PrevDrawing) {}
 
   void execute() override {
-    TXsheet *xsh = TApp::instance()->getCurrentXsheet()->getXsheet();
+    auto app = TApp::instance();
 
-    int row = TApp::instance()->getCurrentFrame()->getFrame();
-    int col = TApp::instance()->getCurrentColumn()->getColumnIndex();
+    if (app->getCurrentFrame()->isEditingScene()) {
+      TXsheet *xsh = TApp::instance()->getCurrentXsheet()->getXsheet();
 
-    TXshCell cell = xsh->getCell(row, col);
+      int row = TApp::instance()->getCurrentFrame()->getFrame();
+      int col = TApp::instance()->getCurrentColumn()->getColumnIndex();
 
-    // Get *last* cell in previous uniform cell block
-    while (row >= 0) {
-      row--;
-      if (xsh->getCell(row, col).isEmpty()) continue;
-      if (xsh->getCell(row, col) != cell) {
-        cell = xsh->getCell(row, col);
-        break;
+      TXshCell cell = xsh->getCell(row, col);
+
+      // Get *last* cell in previous uniform cell block
+      while (row >= 0) {
+        row--;
+        if (xsh->getCell(row, col).isEmpty()) continue;
+        if (xsh->getCell(row, col) != cell) {
+          cell = xsh->getCell(row, col);
+          break;
+        }
       }
-    }
 
-    if (row >= 0) {
-      cell = xsh->getCell(row, col);
-      // Get *first* cell in current uniform cell block
-      while (row > 0 && xsh->getCell(row - 1, col) == cell) --row;
-      TApp::instance()->getCurrentFrame()->setFrame(row);
+      if (row >= 0) {
+        cell = xsh->getCell(row, col);
+        // Get *first* cell in current uniform cell block
+        while (row > 0 && xsh->getCell(row - 1, col) == cell) --row;
+        TApp::instance()->getCurrentFrame()->setFrame(row);
+      }
+    } else {
+      TXshSimpleLevel *sl = app->getCurrentLevel()->getSimpleLevel();
+      if (!sl) return;
+
+      TFrameId currentFid = app->getCurrentFrame()->getFid();
+      int currentIndex    = sl->fid2index(currentFid);
+      int i               = currentIndex - 1;
+      if (i >= 0) {
+        TFrameId fid = sl->getFrameId(i);
+        if (fid != TFrameId()) app->getCurrentFrame()->setFid(fid);
+      }
     }
   }
 };
@@ -137,13 +169,15 @@ public:
   ShortPlayCommand() : MenuItemHandler(MI_ShortPlay) {}
 
   void execute() override {
-    int row = TApp::instance()->getCurrentFrame()->getFrame();
+    int currentFrame        = TApp::instance()->getCurrentFrame()->getFrame();
     int shortPlayFrameCount = Preferences::instance()->getShortPlayFrameCount();
-    int count =
+    int frameCount =
         TApp::instance()->getCurrentXsheet()->getXsheet()->getFrameCount();
-    int newFrame = std::max(
-      0, count - shortPlayFrameCount);
-    TApp::instance()->getCurrentFrame()->setFrame(newFrame);
+    int stopFrame  = std::min(currentFrame, frameCount);
+    int startFrame = std::max(0, stopFrame - shortPlayFrameCount);
+    FlipConsole::getCurrent()->setStopAt(stopFrame + 1);
+
+    TApp::instance()->getCurrentFrame()->setFrame(startFrame);
     CommandManager::instance()->execute(MI_Play);
   }
 };
@@ -159,7 +193,7 @@ public:
                                  "FunctionEditor", "FxSettings",
                                  "ComboViewer",    "SceneViewer"};
 
-    QWidget *panel    = QApplication::focusWidget();
+    QWidget *panel = QApplication::focusWidget();
     if (!panel) panel = TApp::instance()->getActiveViewer();
     while (panel) {
       QString pane = panel->objectName();
@@ -188,7 +222,7 @@ public:
                                  "FunctionEditor", "FxSettings",
                                  "ComboViewer",    "SceneViewer"};
 
-    QWidget *panel    = QApplication::focusWidget();
+    QWidget *panel = QApplication::focusWidget();
     if (!panel) panel = TApp::instance()->getActiveViewer();
     while (panel) {
       QString pane = panel->objectName();
@@ -227,7 +261,9 @@ VcrCommand playCommand(MI_Play, FlipConsole::ePlay),
     greenChannelGComman(MI_GreenChannelGreyscale, FlipConsole::eGGreen),
     blueChannelGCommand(MI_BlueChannelGreyscale, FlipConsole::eGBlue),
 
-    compareCommand(MI_CompareToSnapshot, FlipConsole::eCompare);
+    compareCommand(MI_CompareToSnapshot, FlipConsole::eCompare),
+    blankFramesCommand(MI_ToggleBlankFrames, FlipConsole::eBlankFrames),
+    histogramCommand(MI_Histogram, FlipConsole::eHisto);
 
 NextDrawingCommand nextDrawingCommand;
 PrevDrawingCommand prevDrawingCommand;

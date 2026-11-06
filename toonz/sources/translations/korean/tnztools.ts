@@ -12,11 +12,11 @@
         <translation>이동:</translation>
     </message>
     <message>
-        <source>E/W:</source>
+        <source>X:</source>
         <translation></translation>
     </message>
     <message>
-        <source>N/S:</source>
+        <source>Y:</source>
         <translation></translation>
     </message>
     <message>
@@ -79,112 +79,128 @@
         <source>Pick:</source>
         <translation>선택:</translation>
     </message>
+    <message>
+        <source>Flip Object Horizontally</source>
+        <translation>물체를 수평으로 뒤집기</translation>
+    </message>
+    <message>
+        <source>Flip Object Vertically</source>
+        <translation>물체를 수직으로 뒤집기</translation>
+    </message>
+    <message>
+        <source>Rotate Object Left</source>
+        <translation>물체를 왼쪽으로 회전</translation>
+    </message>
+    <message>
+        <source>Rotate Object Right</source>
+        <translation>물체를 오른쪽으로 회전</translation>
+    </message>
 </context>
 <context>
     <name>BrushTool</name>
     <message>
         <source>Size</source>
-        <translation>크기</translation>
+        <translation type="vanished">크기</translation>
     </message>
     <message>
         <source>Accuracy:</source>
-        <translation>정확도:</translation>
+        <translation type="vanished">정확도:</translation>
     </message>
     <message>
         <source>Smooth:</source>
-        <translation>부드러운:</translation>
+        <translation type="vanished">부드러운:</translation>
     </message>
     <message>
         <source>Preset:</source>
-        <translation>사전설정:</translation>
+        <translation type="vanished">사전설정:</translation>
     </message>
     <message>
         <source>&lt;custom&gt;</source>
-        <translation>&lt;사용자 정의&gt;</translation>
+        <translation type="vanished">&lt;사용자 정의&gt;</translation>
     </message>
     <message>
         <source>Break</source>
-        <translation>분리</translation>
+        <translation type="vanished">분리</translation>
     </message>
     <message>
         <source>Pressure</source>
-        <translation>압력</translation>
+        <translation type="vanished">압력</translation>
     </message>
     <message>
         <source>Cap</source>
-        <translation>캡</translation>
+        <translation type="vanished">캡</translation>
     </message>
     <message>
         <source>Join</source>
-        <translation>결합</translation>
+        <translation type="vanished">결합</translation>
     </message>
     <message>
         <source>Miter:</source>
-        <translation>마이터:</translation>
+        <translation type="vanished">마이터:</translation>
     </message>
     <message>
         <source>Range:</source>
-        <translation>범위:</translation>
+        <translation type="vanished">범위:</translation>
     </message>
     <message>
         <source>Snap</source>
-        <translation>스냅</translation>
+        <translation type="vanished">스냅</translation>
     </message>
     <message>
         <source>Off</source>
-        <translation>끄기</translation>
+        <translation type="vanished">끄기</translation>
     </message>
     <message>
         <source>Linear</source>
-        <translation>선형</translation>
+        <translation type="vanished">선형</translation>
     </message>
     <message>
         <source>In</source>
-        <translation>가속</translation>
+        <translation type="vanished">가속</translation>
     </message>
     <message>
         <source>Out</source>
-        <translation>감속</translation>
+        <translation type="vanished">감속</translation>
     </message>
     <message>
         <source>In&amp;Out</source>
-        <translation>가속&amp;감속</translation>
+        <translation type="vanished">가속&amp;감속</translation>
     </message>
     <message>
         <source>Low</source>
-        <translation>낮은</translation>
+        <translation type="vanished">낮은</translation>
     </message>
     <message>
         <source>Med</source>
-        <translation>중간</translation>
+        <translation type="vanished">중간</translation>
     </message>
     <message>
         <source>High</source>
-        <translation>높은</translation>
+        <translation type="vanished">높은</translation>
     </message>
     <message>
         <source>Butt cap</source>
-        <translation>버트 캡</translation>
+        <translation type="vanished">버트 캡</translation>
     </message>
     <message>
         <source>Round cap</source>
-        <translation>라운드 캡</translation>
+        <translation type="vanished">라운드 캡</translation>
     </message>
     <message>
         <source>Projecting cap</source>
-        <translation>돌출선 끝</translation>
+        <translation type="vanished">돌출선 끝</translation>
     </message>
     <message>
         <source>Miter join</source>
-        <translation>마이터 결합</translation>
+        <translation type="vanished">마이터 결합</translation>
     </message>
     <message>
         <source>Round join</source>
-        <translation>라운드 결합</translation>
+        <translation type="vanished">라운드 결합</translation>
     </message>
     <message>
         <source>Bevel join</source>
-        <translation>베벨 결합</translation>
+        <translation type="vanished">베벨 결합</translation>
     </message>
 </context>
 <context>
@@ -208,6 +224,34 @@
         <source>Auto Select Drawing</source>
         <translation>자동 그리기 선택</translation>
     </message>
+    <message>
+        <source>Snap</source>
+        <translation>스냅</translation>
+    </message>
+    <message>
+        <source>Type:</source>
+        <translation>유형:</translation>
+    </message>
+    <message>
+        <source>Rectangular</source>
+        <translation>직사각형</translation>
+    </message>
+    <message>
+        <source>Freehand</source>
+        <translation>올가미</translation>
+    </message>
+    <message>
+        <source>Low</source>
+        <translation>낮은</translation>
+    </message>
+    <message>
+        <source>Med</source>
+        <translation>중간</translation>
+    </message>
+    <message>
+        <source>High</source>
+        <translation>높은</translation>
+    </message>
 </context>
 <context>
     <name>ControlPointSelection</name>
@@ -225,6 +269,21 @@
     <message>
         <source>current</source>
         <translation>현재</translation>
+    </message>
+</context>
+<context>
+    <name>EditAssistantsTool</name>
+    <message>
+        <source>&lt;choose to create&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Assistant Type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Order</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -262,19 +321,19 @@
         <translation>글로벌 키</translation>
     </message>
     <message>
-        <source>Lock Center E/W</source>
+        <source>Lock Center X</source>
         <translation>중심점 좌우 잠금</translation>
     </message>
     <message>
-        <source>Lock Center N/S</source>
+        <source>Lock Center Y</source>
         <translation>중심점 위아래 잠금</translation>
     </message>
     <message>
-        <source>Lock Position E/W</source>
+        <source>Lock Position X</source>
         <translation>위치 좌우 잠금</translation>
     </message>
     <message>
-        <source>Lock Position N/S</source>
+        <source>Lock Position Y</source>
         <translation>위치 위아래 잠금</translation>
     </message>
     <message>
@@ -302,7 +361,7 @@
         <translation>잠금 확대/축소(전체)</translation>
     </message>
     <message>
-        <source>E/W and N/S Positions</source>
+        <source>X and Y Positions</source>
         <translation>좌우/상하 위치</translation>
     </message>
     <message>
@@ -390,7 +449,7 @@
     </message>
     <message>
         <source>Polyline</source>
-        <translation>다각형</translation>
+        <translation>폴리선</translation>
     </message>
     <message>
         <source>Hardness:</source>
@@ -415,6 +474,26 @@
     <message>
         <source>Pencil Mode</source>
         <translation>연필 모드</translation>
+    </message>
+    <message>
+        <source>Segment</source>
+        <translation>세그먼트</translation>
+    </message>
+    <message>
+        <source>Linear</source>
+        <translation>선형</translation>
+    </message>
+    <message>
+        <source>Ease In</source>
+        <translation>가속</translation>
+    </message>
+    <message>
+        <source>Ease Out</source>
+        <translation>감속</translation>
+    </message>
+    <message>
+        <source>Ease In/Out</source>
+        <translation>가속/감속</translation>
     </message>
 </context>
 <context>
@@ -441,11 +520,11 @@
     </message>
     <message>
         <source>Polyline</source>
-        <translation>다각형</translation>
+        <translation>폴리선</translation>
     </message>
     <message>
         <source>Selective</source>
-        <translation>선택</translation>
+        <translation type="vanished">선택</translation>
     </message>
     <message>
         <source>Mode:</source>
@@ -483,6 +562,30 @@
         <source>Autopaint Lines</source>
         <translation>자동 색칠</translation>
     </message>
+    <message>
+        <source>Pick+Freehand</source>
+        <translation>선택+자유형</translation>
+    </message>
+    <message>
+        <source>Empty Only</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close Gap</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Refer Fill</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Gap Close Distance:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Extend Fill</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>FingerTool</name>
@@ -493,6 +596,18 @@
     <message>
         <source>Invert</source>
         <translation>반전</translation>
+    </message>
+    <message>
+        <source>Mode:</source>
+        <translation type="unfinished">모드:</translation>
+    </message>
+    <message>
+        <source>Pick</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Empty Only</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -529,6 +644,10 @@
         <source>&lt;custom&gt;</source>
         <translation>&lt;사용자 정의&gt;</translation>
     </message>
+    <message>
+        <source>Assistants</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>FullColorEraserTool</name>
@@ -562,7 +681,7 @@
     </message>
     <message>
         <source>Polyline</source>
-        <translation>다각형</translation>
+        <translation>올가미</translation>
     </message>
     <message>
         <source>Invert</source>
@@ -571,6 +690,10 @@
     <message>
         <source>Frame Range</source>
         <translation>프레임 범위</translation>
+    </message>
+    <message>
+        <source>MultiArc</source>
+        <translation type="unfinished">멀티아크</translation>
     </message>
 </context>
 <context>
@@ -626,6 +749,22 @@
     <message>
         <source>Selective</source>
         <translation>선택</translation>
+    </message>
+    <message>
+        <source>Lock Alpha</source>
+        <translation>잠금 알파</translation>
+    </message>
+    <message>
+        <source>Empty Only</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Pick</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Paint by Filling</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -703,7 +842,7 @@
     </message>
     <message>
         <source>Vertex Name:</source>
-        <translation>꼭지점 이름</translation>
+        <translation>꼭지점 이름:</translation>
     </message>
     <message>
         <source>Allow Stretching</source>
@@ -833,7 +972,7 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>Polyline</source>
-        <translation>다각형</translation>
+        <translation>폴리선</translation>
     </message>
     <message>
         <source>Arc</source>
@@ -873,7 +1012,7 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>Selective</source>
-        <translation>선택</translation>
+        <translation type="vanished">선택</translation>
     </message>
     <message>
         <source>Pencil Mode</source>
@@ -930,6 +1069,30 @@ Do you want to proceed?</source>
     <message>
         <source>High</source>
         <translation>높은</translation>
+    </message>
+    <message>
+        <source>MultiArc</source>
+        <translation>멀티아크</translation>
+    </message>
+    <message>
+        <source>Smooth</source>
+        <translation>부드러운</translation>
+    </message>
+    <message>
+        <source>Rotate</source>
+        <translation>회전</translation>
+    </message>
+    <message>
+        <source>Empty Only</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation type="unfinished">크기</translation>
+    </message>
+    <message>
+        <source>Opacity</source>
+        <translation type="unfinished">불투명도</translation>
     </message>
 </context>
 <context>
@@ -1023,7 +1186,7 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>The current column is locked.</source>
-        <translation>현재 열이 잠겨 있다</translation>
+        <translation>현재 열이 잠겨 있다.</translation>
     </message>
     <message>
         <source>The current column is hidden.</source>
@@ -1059,23 +1222,23 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>The current tool cannot be used on a Vector Level.</source>
-        <translation>현재 툴은 벡터 레벨에서 사용할 수 없음.</translation>
+        <translation type="vanished">현재 툴은 벡터 레벨에서 사용할 수 없음.</translation>
     </message>
     <message>
         <source>The current tool cannot be used on a Toonz Level.</source>
-        <translation>현재 툴은 툰즈레벨에서 사용할 수 없음.</translation>
+        <translation type="vanished">현재 툴은 툰즈레벨에서 사용할 수 없음.</translation>
     </message>
     <message>
         <source>The current tool cannot be used on a Raster Level.</source>
-        <translation>현재 도구는 래스터 레벨에서 사용할 수 없음.</translation>
+        <translation type="vanished">현재 도구는 래스터 레벨에서 사용할 수 없음.</translation>
     </message>
     <message>
         <source>The current tool cannot be used on a Mesh Level.</source>
-        <translation>현재 도구는 메쉬 레벨에서 사용할 수 없음.</translation>
+        <translation type="vanished">현재 도구는 메쉬 레벨에서 사용할 수 없음.</translation>
     </message>
     <message>
         <source>The current tool cannot be used on a mesh-deformed level</source>
-        <translation>현재 도구는 메쉬 변형 레벨에 사용할 수 없음.</translation>
+        <translation>현재 도구는 메쉬 변형 레벨에 사용할 수 없음</translation>
     </message>
     <message>
         <source>The current frame is locked: any editing is forbidden.</source>
@@ -1129,6 +1292,38 @@ Do you want to proceed?</source>
         <source>The selection cannot be moved. It is not editable.</source>
         <translation>선택을 이동할 수 없습니다. 편집 할 수 없습니다.</translation>
     </message>
+    <message>
+        <source>Snap At Intersection</source>
+        <translation>교차점에서 스냅</translation>
+    </message>
+    <message>
+        <source>Sort Vector Strokes With Palette Order Level : %1 Frame : %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sort Vector Strokes With Palette Order Level : %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The current tool cannot be used on: </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>, </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>You can use this tool on empty cell in Xsheet/Timeline.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>You can use this tool with: </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Or just choose an empty cell in Xsheet/Timeline.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>RGBPickerTool</name>
@@ -1150,7 +1345,7 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>Polyline</source>
-        <translation>다각형</translation>
+        <translation>폴리선</translation>
     </message>
     <message>
         <source>Passive Pick</source>
@@ -1172,7 +1367,7 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>No Antialiasing</source>
-        <translation>앤티 앨리어싱 없음.</translation>
+        <translation>앤티 앨리어싱 없음</translation>
     </message>
 </context>
 <context>
@@ -1199,7 +1394,7 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>Polyline</source>
-        <translation>다각형</translation>
+        <translation>폴리선</translation>
     </message>
     <message>
         <source>Distance:</source>
@@ -1221,12 +1416,28 @@ Do you want to proceed?</source>
         <source>Angle:</source>
         <translation>각도:</translation>
     </message>
+    <message>
+        <source>Ignore AutoPaint Inks</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>RotateTool</name>
     <message>
         <source>Rotate On Camera Center</source>
         <translation>카메라 중심점을 회전(기준)</translation>
+    </message>
+    <message>
+        <source>Rotate by Step</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Step Angle:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Rotate Left/Right Angle:</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1307,11 +1518,11 @@ Do you want to proceed?</source>
         <translation>회전</translation>
     </message>
     <message>
-        <source>E/W:</source>
+        <source>X:</source>
         <translation></translation>
     </message>
     <message>
-        <source>N/S:</source>
+        <source>Y:</source>
         <translation></translation>
     </message>
     <message>
@@ -1325,6 +1536,22 @@ Do you want to proceed?</source>
     <message>
         <source>Thickness</source>
         <translation>굵기</translation>
+    </message>
+    <message>
+        <source>Flip Selection Horizontally</source>
+        <translation>선택영역을 가로로 뒤집기</translation>
+    </message>
+    <message>
+        <source>Flip Selection Vertically</source>
+        <translation>선택영역을 수직으로 뒤집기</translation>
+    </message>
+    <message>
+        <source>Rotate Selection Left</source>
+        <translation>선택영역을 왼쪽으로 회전</translation>
+    </message>
+    <message>
+        <source>Rotate Selection Right</source>
+        <translation>선택영역을 오른쪽으로 회전</translation>
     </message>
 </context>
 <context>
@@ -1396,7 +1623,7 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>Palette must have more than one palette to be organized.</source>
-        <translation>팔레트는 둘 이상의 팔레트를 구성해야함.</translation>
+        <translation type="vanished">팔레트는 둘 이상의 팔레트를 구성해야함.</translation>
     </message>
     <message>
         <source>Mode:</source>
@@ -1422,13 +1649,327 @@ Do you want to proceed?</source>
         <source>Organize Palette</source>
         <translation>팔레트 정리</translation>
     </message>
+    <message>
+        <source>No available palette.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Palette to be organized must have more than one page.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>StylePickerToolOptionsBox</name>
     <message>
         <source>With this option being activated, the picked style will be
 moved to the end of the first page of the palette.</source>
-        <translation>이 옵션이 활성화되면 선택한 스타일이 팔레트의 첫 페이지 끝으로 이동한다.</translation>
+        <translation type="vanished">이 옵션이 활성화되면 선택한 스타일이 팔레트의 첫 페이지 끝으로 이동한다.</translation>
+    </message>
+    <message>
+        <source>With this option being activated, the picked style will replace
+the current style in current level.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>With this option being activated, the picked style will be
+moved to the end of the current style&apos;s page of the palette.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TAssistant</name>
+    <message>
+        <source>Magnetism</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TAssistantBase</name>
+    <message>
+        <source>Enabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TAssistantEllipse</name>
+    <message>
+        <source>Fish Eye</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Circle</source>
+        <translation type="unfinished">원형</translation>
+    </message>
+    <message>
+        <source>Grid</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Depth Grid</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Flip Grids</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Ellipse</source>
+        <translation type="unfinished">타원형</translation>
+    </message>
+    <message>
+        <source>Restrict A</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Restrict B</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Repeat</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Perspective</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Depth</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TAssistantPerspective</name>
+    <message>
+        <source>Perspective</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Parallel X</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Parallel Y</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Parallel Z</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Grid XY</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Grid YZ</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Grid ZX</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show Box</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TAssistantVanishingPoint</name>
+    <message>
+        <source>Vanishing Point</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Pass Through</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Grid</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Perspective</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Line</source>
+        <translation type="unfinished">직선</translation>
+    </message>
+    <message>
+        <source>Restrict A</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Restrict B</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Parallel</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TReplicator</name>
+    <message>
+        <source>Skip First Tracks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Skip Last Tracks</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TReplicatorAffine</name>
+    <message>
+        <source>Replicator Affine</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fix Scale</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fix Aspect</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fix Angle</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fix Skew</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Count</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Inv. Count</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Pressure</source>
+        <translation type="unfinished">압력</translation>
+    </message>
+</context>
+<context>
+    <name>TReplicatorGrid</name>
+    <message>
+        <source>Replicator Grid</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fix Angle</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fix Skew</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mirror A</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mirror B</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Count A</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Inv. Count A</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Count B</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Inv. Count B</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TReplicatorJitter</name>
+    <message>
+        <source>Jitter</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Period</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Amplitude</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fix First Point</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fix Last Point</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TReplicatorMirror</name>
+    <message>
+        <source>Replicator Mirror</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Discrete Angle</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Pressure</source>
+        <translation type="unfinished">압력</translation>
+    </message>
+</context>
+<context>
+    <name>TReplicatorStar</name>
+    <message>
+        <source>Replicator Star</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Discrete Angle</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mirror</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Count</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TTool</name>
+    <message>
+        <source>Toonz Vector Level</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Toonz Raster Level</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Raster Level</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mesh Level</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Assistants Level</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1476,6 +2017,141 @@ moved to the end of the first page of the palette.</source>
     <message>
         <source>Pressure</source>
         <translation>압력</translation>
+    </message>
+    <message>
+        <source>Lock Alpha</source>
+        <translation>잠금 알파</translation>
+    </message>
+    <message>
+        <source>Assistants</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>ToonzVectorBrushTool</name>
+    <message>
+        <source>Size</source>
+        <translation>크기</translation>
+    </message>
+    <message>
+        <source>Accuracy:</source>
+        <translation>정확도:</translation>
+    </message>
+    <message>
+        <source>Smooth:</source>
+        <translation>부드러운:</translation>
+    </message>
+    <message>
+        <source>Preset:</source>
+        <translation>사전설정:</translation>
+    </message>
+    <message>
+        <source>&lt;custom&gt;</source>
+        <translation>&lt;사용자 정의&gt;</translation>
+    </message>
+    <message>
+        <source>Break</source>
+        <translation>분리</translation>
+    </message>
+    <message>
+        <source>Pressure</source>
+        <translation>압력</translation>
+    </message>
+    <message>
+        <source>Cap</source>
+        <translation>캡</translation>
+    </message>
+    <message>
+        <source>Join</source>
+        <translation>결합</translation>
+    </message>
+    <message>
+        <source>Miter:</source>
+        <translation>마이터:</translation>
+    </message>
+    <message>
+        <source>Range:</source>
+        <translation>범위:</translation>
+    </message>
+    <message>
+        <source>Snap</source>
+        <translation>스냅</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>끄기</translation>
+    </message>
+    <message>
+        <source>Linear</source>
+        <translation>선형</translation>
+    </message>
+    <message>
+        <source>In</source>
+        <translation>가속</translation>
+    </message>
+    <message>
+        <source>Out</source>
+        <translation>감속</translation>
+    </message>
+    <message>
+        <source>In&amp;Out</source>
+        <translation>가속&amp;감속</translation>
+    </message>
+    <message>
+        <source>Low</source>
+        <translation>낮은</translation>
+    </message>
+    <message>
+        <source>Med</source>
+        <translation>중간</translation>
+    </message>
+    <message>
+        <source>High</source>
+        <translation>높은</translation>
+    </message>
+    <message>
+        <source>Butt cap</source>
+        <translation>버트 캡</translation>
+    </message>
+    <message>
+        <source>Round cap</source>
+        <translation>라운드 캡</translation>
+    </message>
+    <message>
+        <source>Projecting cap</source>
+        <translation>돌출선 끝</translation>
+    </message>
+    <message>
+        <source>Miter join</source>
+        <translation>마이터 결합</translation>
+    </message>
+    <message>
+        <source>Round join</source>
+        <translation>라운드 결합</translation>
+    </message>
+    <message>
+        <source>Bevel join</source>
+        <translation>베벨 결합</translation>
+    </message>
+    <message>
+        <source>Draw Order:</source>
+        <translation type="unfinished">그리기 순서:</translation>
+    </message>
+    <message>
+        <source>Over All</source>
+        <translation type="unfinished">맨 위</translation>
+    </message>
+    <message>
+        <source>Under All</source>
+        <translation type="unfinished">맨 아래</translation>
+    </message>
+    <message>
+        <source>Palette Order</source>
+        <translation type="unfinished">팔레트 순서</translation>
+    </message>
+    <message>
+        <source>Assistants</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1597,6 +2273,10 @@ moved to the end of the first page of the palette.</source>
     <message>
         <source>Miter:</source>
         <translation>마이터:</translation>
+    </message>
+    <message>
+        <source>Include Intersection</source>
+        <translation>인터페이스 포함</translation>
     </message>
 </context>
 <context>

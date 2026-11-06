@@ -13,6 +13,8 @@
 		<control>endCurve</control>
 		<control>traceResolution</control>
 		<control>hardness</control>
+		<control>gamma</control>
+		<control>gammaAdjust</control>
 		<control>zanzoMode</control>
 		<control>premultiType</control>
   	</vbox>

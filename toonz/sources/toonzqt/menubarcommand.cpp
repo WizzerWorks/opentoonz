@@ -1,7 +1,7 @@
 
 
 #include "toonzqt/menubarcommand.h"
-//#include "menubarcommandids.h"
+// #include "menubarcommandids.h"
 #include "toonzqt/dvdialog.h"
 #include "toonzqt/gutil.h"
 #include "toonz/toonzfolders.h"
@@ -111,8 +111,8 @@ void CommandManager::setShortcut(CommandId id, QAction *action,
 //---------------------------------------------------------
 
 void CommandManager::define(CommandId id, CommandType type,
-                            std::string defaultShortcutString,
-                            QAction *qaction) {
+                            std::string defaultShortcutString, QAction *qaction,
+                            const char *iconSVGName) {
   assert(type != UndefinedCommandType);
   assert(qaction != 0);
   assert(m_qactionTable.count(qaction) == 0);
@@ -124,10 +124,12 @@ void CommandManager::define(CommandId id, CommandType type,
   node->m_type    = type;
   node->m_qaction = qaction;
   node->m_qaction->setEnabled(
-      node->m_enabled &&
-          (!!node->m_handler || node->m_qaction->actionGroup() != 0) ||
+      (node->m_enabled &&
+       (node->m_handler || node->m_qaction->actionGroup() != 0)) ||
       node->m_type == MiscCommandType ||
-      node->m_type == ToolModifierCommandType);
+      node->m_type == ToolModifierCommandType ||
+      node->m_type == CellMarkCommandType);
+  node->m_iconSVGName = iconSVGName;
 
   m_qactionTable[qaction] = node;
   qaction->setShortcutContext(Qt::ApplicationShortcut);
@@ -357,7 +359,7 @@ QAction *CommandManager::createAction(CommandId id, QObject *parent,
   if (!refAction) return 0;
   QString text = refAction->text();
   if (node->m_onText != "" && node->m_offText != "")
-    text          = state ? node->m_onText : node->m_offText;
+    text = state ? node->m_onText : node->m_offText;
   QAction *action = new QAction(text, parent);
   action->setShortcut(refAction->shortcut());
   return action;
@@ -385,40 +387,86 @@ std::string CommandManager::getIdFromAction(QAction *action) {
 }
 
 //---------------------------------------------------------
+
+const char *CommandManager::getIconSVGName(CommandId id) {
+  Node *node = getNode(id, false);
+  if (node) return node->m_iconSVGName;
+  return "";
+}
+
+void CommandManager::enlargeIcon(CommandId id, const QSize dstSize) {
+  QAction *action = getAction(id, false);
+  if (!action) return;
+
+  const char *iconSVGName = getIconSVGName(id);
+  if (strcmp(iconSVGName, "") == 0) return;
+
+  QIcon icon = action->icon();
+
+  for (QList<QSize> sizes = icon.availableSizes(); !sizes.isEmpty();
+       sizes.removeFirst()) {
+    if (sizes.first().width() > dstSize.width() &&
+        sizes.first().height() > dstSize.height())
+      return;
+  }
+
+  action->setIcon(icon);
+}
+
+//---------------------------------------------------------
 // load user defined shortcuts
 
+// In menubarcommand.cpp
 void CommandManager::loadShortcuts() {
+  // Load shortcuts file
   TFilePath fp = ToonzFolder::getMyModuleDir() + TFilePath("shortcuts.ini");
+
   if (!TFileStatus(fp).doesExist()) {
-    // if user shortcut file does not exist, then try to load from template
     TFilePath tmplFp =
         ToonzFolder::getTemplateModuleDir() + TFilePath("shortcuts.ini");
-    if (TFileStatus(tmplFp).doesExist()) TSystem::copyFile(fp, tmplFp);
-    // if neither settings exist, do nothing and return
-    else
+    if (TFileStatus(tmplFp).doesExist()) {
+      TSystem::copyFile(fp, tmplFp);
+    } else {
       return;
+    }
   }
 
   QSettings settings(toQString(fp), QSettings::IniFormat);
   settings.beginGroup("shortcuts");
   QStringList ids = settings.allKeys();
+
   for (int i = 0; i < ids.size(); i++) {
     std::string id   = ids.at(i).toStdString();
     QString shortcut = settings.value(ids.at(i), "").toString();
-    QAction *action  = getAction(&id[0], false);
+
+    QAction *action = getAction(&id[0], false);
+
+    // Process non-reserved shortcuts
     if (action) {
       QString oldShortcut = action->shortcut().toString();
-      if (oldShortcut == shortcut) continue;
-      if (!oldShortcut.isEmpty())
+
+      if (oldShortcut == shortcut) {
+        continue;
+      }
+
+      // Remove old shortcut mapping
+      if (!oldShortcut.isEmpty()) {
         m_shortcutTable.erase(oldShortcut.toStdString());
+      }
+
+      // Set new shortcut
       if (!shortcut.isEmpty()) {
         QAction *other = getActionFromShortcut(shortcut.toStdString());
-        if (other) other->setShortcut(QKeySequence());
+        if (other) {
+          other->setShortcut(QKeySequence());
+        }
         m_shortcutTable[shortcut.toStdString()] = getNode(&id[0]);
       }
+
       action->setShortcut(QKeySequence(shortcut));
     }
   }
+
   settings.endGroup();
 }
 
@@ -482,8 +530,10 @@ void DVAction::onTriggered() { CommandManager::instance()->execute(this); }
                 is helpful to use \b m_triggeredActionIndex to distingue action.
 */
 DVMenuAction::DVMenuAction(const QString &text, QWidget *parent,
-                           QList<QString> actions)
-    : QMenu(text, parent), m_triggeredActionIndex(-1) {
+                           QList<QString> actions, bool isForRecentFiles)
+    : QMenu(text, parent)
+    , m_triggeredActionIndex(-1)
+    , m_isForRecentFiles(isForRecentFiles) {
   int i;
   for (i = 0; i < actions.size(); i++) addAction(actions.at(i));
   connect(this, SIGNAL(triggered(QAction *)), this,
@@ -519,24 +569,31 @@ void DVMenuAction::setActions(QList<QString> actions) {
 
 namespace {
 QString changeStringNumber(QString str, int index) {
-  QString newStr     = str;
-  int n              = 3;
+  QString newStr = str;
+  int n          = 3;
   if (index >= 10) n = 4;
   QString number;
   newStr.replace(0, n, number.number(index + 1) + QString(". "));
   return newStr;
 }
-}
+}  // namespace
 
 //-----------------------------------------------------------------------------
 
 void DVMenuAction::onTriggered(QAction *action) {
-  QVariant data                              = action->data();
+  QVariant data = action->data();
   if (data.isValid()) m_triggeredActionIndex = data.toInt();
   CommandManager::instance()->execute(action, menuAction());
+
+  // simply execute the menu item and return
+  if (!m_isForRecentFiles) {
+    m_triggeredActionIndex = -1;
+    return;
+  }
+
   int oldIndex = m_triggeredActionIndex;
   if (m_triggeredActionIndex != -1) m_triggeredActionIndex = -1;
-  QString str                                              = data.toString();
+  QString str = data.toString();
   QAction *tableAction =
       CommandManager::instance()->getAction(str.toStdString().c_str());
   if (tableAction || oldIndex == 0) return;

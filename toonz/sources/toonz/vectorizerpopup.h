@@ -41,7 +41,7 @@ class IntField;
 class MeasuredDoubleLineEdit;
 class ColorField;
 class CheckBox;
-}
+}  // namespace DVGui
 
 //====================================================
 
@@ -88,11 +88,7 @@ class VectorizerPopup final : public DVGui::Dialog {
   Q_OBJECT
 
 public:
-#if QT_VERSION >= 0x050500
   VectorizerPopup(QWidget *parent = 0, Qt::WindowFlags flags = Qt::Tool);
-#else
-  VectorizerPopup(QWidget *parent = 0, Qt::WFlags flags = Qt::Tool);
-#endif
 
   bool apply();  //!< The main vectorization method - prepares input
                  //!  configuration and runs the vectorization thread.
@@ -141,6 +137,8 @@ private:
 
   DVGui::CheckBox *m_cPaintFill;
 
+  DVGui::CheckBox *m_cAlignBoundaryStrokesDirection;
+
   DVGui::Separator *m_cNaaSourceSeparator;
 
   DVGui::CheckBox *m_cNaaSource;
@@ -155,6 +153,8 @@ private:
 
   QLabel *m_oPaintFillLabel;
   DVGui::CheckBox *m_oPaintFill;
+
+  DVGui::CheckBox *m_oAlignBoundaryStrokesDirection;
 
   DVGui::Separator *m_oCornersSeparator;
 
@@ -320,7 +320,7 @@ private:
   TXshSimpleLevelP m_level;  //!< Input level to vectorize (only one level at a
                              //! time is dealt here).
   VectorizerParameters m_params;  //!< Vectorizer options to be applied
-
+  
   TXshSimpleLevelP m_vLevel;     //!< Output vectorized level
   std::vector<TFrameId> m_fids;  //!< Frame ids of the input \b m_level
 

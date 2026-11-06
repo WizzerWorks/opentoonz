@@ -9,6 +9,7 @@
 
 #include <QPair>
 #include <QString>
+#include <QMap>
 
 #undef DVAPI
 #undef DVVAR
@@ -40,7 +41,7 @@ class TFx;
    \b TXshCellColumn, \b TXshSoundColumn and TXshPaletteColumn.
 
    The class contains all features about a generic xsheet column and gives
-   all methods to access to these informations.
+   all methods to access to these information.
 
    The createEmpty() static method creates an new empty column.
 
@@ -68,19 +69,8 @@ class DVAPI TXshColumn : public TColumnHeader, public TPersist {
   UCHAR m_opacity;
 
 public:
-  enum FilterColor {
-    FilterNone = 0,
-    FilterRed,
-    FilterGreen,
-    FilterBlue,
-    FilterDarkYellow,
-    FilterDarkCyan,
-    FilterDarkMagenta,
-    FilterAmount
-  };
-
 private:
-  FilterColor m_filterColorId;
+  int m_colorFilterId;
 
 protected:
   enum {
@@ -113,7 +103,8 @@ Constructs a TXshColumn with default value.
       , m_xsheet(0)
       , m_colorTag(0)
       , m_opacity(255)
-      , m_filterColorId(FilterNone) {}
+      , m_colorFilterId(0)  // None
+  {}
 
   enum ColumnType {
     eLevelType = 0,
@@ -128,6 +119,9 @@ Constructs a TXshColumn with default value.
 
   //! Returns the column type used to store levels of the specified type.
   static ColumnType toColumnType(int levelType);
+
+  //! Returns true if the column can be parent of another.
+  bool canBeParent() const;
 
   //! Creates an empty TXshColumn of the specified column type.
   static TXshColumn *createEmpty(int colType);
@@ -260,12 +254,8 @@ Set column color tag to \b colorTag.
     m_colorTag = colorTag;
   }  // Usato solo in tabkids
 
-  FilterColor getFilterColorId() const { return m_filterColorId; }
-  void setFilterColorId(FilterColor id) { m_filterColorId = id; }
-  TPixel32 getFilterColor();
-  static QPair<QString, TPixel32> getFilterInfo(FilterColor key);
-  static void initColorFilters();
-
+  int getColorFilterId() const { return m_colorFilterId; }
+  void setColorFilterId(int id) { m_colorFilterId = id; }
   void resetColumnProperties();
 };
 
@@ -303,6 +293,9 @@ class DVAPI TXshCellColumn : public TXshColumn {
 protected:
   std::vector<TXshCell> m_cells;
   int m_first;
+
+  // cell marks information key:frame value:id
+  QMap<int, int> m_cellMarkIds;
 
 public:
   /*!
@@ -398,6 +391,13 @@ last row with not empty cell of same level.
   bool getLevelRange(int row, int &r0, int &r1) const override;
 
   // virtual void updateIcon() = 0;
+
+  void saveCellMarks(TOStream &os);
+  bool loadCellMarks(std::string tagName, TIStream &is);
+  void setCellMark(int frame, int id);
+  int getCellMark(int frame) const;
+  QMap<int, int> getCellMarks() const;
+  void clearCellMarks();
 };
 
 #endif

@@ -394,7 +394,7 @@ QPair<TDoubleParam *, int> FunctionSelection::getSelectedKeyframe(
     if (index < count) {
       TDoubleParam *curve          = m_selectedKeyframes[i].first;
       QSet<int>::const_iterator it = m_selectedKeyframes[i].second.begin();
-      it += index;
+      std::advance(it, index);
       return QPair<TDoubleParam *, int>(curve, *it);
     }
     index -= count;
@@ -707,6 +707,17 @@ int FunctionSelection::getCommonSegmentType(bool inclusive) {
     }
   }
   return type;
+}
+
+QList<int> FunctionSelection::getSelectedKeyIndices(TDoubleParam *curve) {
+  for (auto selectedParam : m_selectedKeyframes) {
+    if (curve == selectedParam.first) {
+      QList<int> ret = selectedParam.second.values();
+      std::sort(ret.begin(), ret.end());
+      return ret;
+    }
+  }
+  return QList<int>();
 }
 
 //=============================================================================

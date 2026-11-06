@@ -70,12 +70,15 @@ void organizeGraphs(SkeletonList *skeleton, VectorizerCoreGlobals &g) {
     // Discriminate between graphs, two-endpoint single sequences, and circular
     // ones
     bool has1DegreePoint = 0;
-    for (i = 0; i < currGraph.getNodesCount(); ++i)
-      if (currGraph.getNode(i).degree() != 2)
-        if (currGraph.getNode(i).degree() == 1)
+    for (i = 0; i < currGraph.getNodesCount(); ++i) {
+      if (currGraph.getNode(i).degree() != 2) {
+        if (currGraph.getNode(i).degree() == 1) {
           has1DegreePoint = 1;
-        else
+        } else {
           goto _graph;
+	}
+      }
+    }
 
     if (has1DegreePoint)
       goto _two_endpoint;
@@ -775,7 +778,7 @@ bool JunctionArea::calculateReconstruction() {
 
 // EXPLANATION: We have to insure that connecting entering sequences to the
 // new junction point happens *smoothly*. In order to do this, wh withdraw
-// entering sequences along the enterin road, until the angle given by the
+// entering sequences along the entering road, until the angle given by the
 // connecting line and the entering direction is small.
 // However, sequence pull back can be done only under some constraints:
 //  * we have to remain inside a road axis

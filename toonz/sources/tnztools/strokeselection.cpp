@@ -30,8 +30,6 @@
 #include "toonz/toonzscene.h"
 #include "toonz/sceneproperties.h"
 #include "toonz/tframehandle.h"
-#include "toonz/txsheethandle.h"
-#include "toonz/tstageobject.h"
 
 // TnzCore includes
 #include "tthreadmessage.h"
@@ -265,11 +263,11 @@ public:
 class RemoveEndpointsUndo final : public TUndo {
   TXshSimpleLevelP m_level;
   TFrameId m_frameId;
-  std::vector<std::pair<int, TStroke *>> m_strokes;
+  std::vector<UndoVectorData> m_strokes;
 
 public:
   RemoveEndpointsUndo(TXshSimpleLevel *level, const TFrameId &frameId,
-                      std::vector<std::pair<int, TStroke *>> strokes)
+                      std::vector<UndoVectorData> strokes)
       : m_level(level)
       , m_frameId(frameId)
       , m_strokes(strokes)
@@ -278,16 +276,16 @@ public:
 
   ~RemoveEndpointsUndo() {
     int i;
-    for (i = 0; i < (int)m_strokes.size(); i++) delete m_strokes[i].second;
+    for (i = 0; i < (int)m_strokes.size(); i++) delete m_strokes[i].oldStroke;
   }
 
   void undo() const override {
     TVectorImageP vi = m_level->getFrame(m_frameId, true);
     int i;
     for (i = 0; i < (int)m_strokes.size(); i++) {
-      TStroke *newS = new TStroke(*(m_strokes[i].second));
-      newS->setId(m_strokes[i].second->getId());
-      vi->restoreEndpoints(m_strokes[i].first, newS);
+      TStroke *newS = new TStroke(*(m_strokes[i].oldStroke));
+      newS->setId(m_strokes[i].oldStroke->getId());
+      vi->restoreEndpoints(m_strokes[i].index, newS, m_strokes[i].offset);
     }
     StrokeSelection *selection = dynamic_cast<StrokeSelection *>(
         TTool::getApplication()->getCurrentSelection()->getSelection());
@@ -300,7 +298,7 @@ public:
     int i;
     TVectorImageP vi = m_level->getFrame(m_frameId, true);
     for (i = 0; i < (int)m_strokes.size(); i++) {
-      TStroke *s = vi->removeEndpoints(m_strokes[i].first);
+      TStroke *s = vi->removeEndpoints(m_strokes[i].index);
       delete s;
       // assert(s==m_strokes[i].second);
     }
@@ -355,6 +353,47 @@ public:
   int getSize() const override { return sizeof(*this); }
 };
 
+class OrderStrokesUndo : public TUndo {
+protected:
+  TXshSimpleLevelP m_level;
+  TFrameId m_frameId;
+  std::vector<int> m_oldIndexes;
+  std::vector<int> m_newIndexes;
+
+public:
+  OrderStrokesUndo(TXshSimpleLevelP level, TFrameId frameId,
+                   std::vector<int> oldIndexes, std::vector<int> newIndexes)
+      : m_level(level)
+      , m_frameId(frameId)
+      , m_oldIndexes(oldIndexes)
+      , m_newIndexes(newIndexes) {}
+
+  ~OrderStrokesUndo() {}
+
+  QString getHistoryString() {
+    return QObject::tr(
+               "Sort Vector Strokes With Palette Order Level : %1 Frame : %2")
+        .arg(QString::fromStdWString(m_level->getName()))
+        .arg(m_frameId.getNumber());
+  }
+
+  void undo() const override {
+    TVectorImageP vi = m_level->getFrame(m_frameId, true);
+    if (!vi) return;
+    vi->reOrderStrokes(m_newIndexes, m_oldIndexes);
+    TTool::getApplication()->getCurrentTool()->getTool()->notifyImageChanged();
+  }
+
+  void redo() const override {
+    TVectorImageP vi = m_level->getFrame(m_frameId, true);
+    if (!vi) return;
+    vi->reOrderStrokes(m_oldIndexes, m_newIndexes);
+    TTool::getApplication()->getCurrentTool()->getTool()->notifyImageChanged();
+  }
+
+  int getSize() const override { return sizeof(*this); }
+};
+
 //=============================================================================
 // CutStrokesUndo
 //-----------------------------------------------------------------------------
@@ -374,6 +413,24 @@ public:
     cutStrokesWithoutUndo(image, indexes);
   }
 };
+
+// With palette Order
+void sortStylesIds(QVector<int> &styles, TPaletteP palette) {
+  if (!palette) return;
+  QVector<int> tmpStyles = styles;
+  styles.clear();
+  for (int p = 0; p < palette->getPageCount(); p++) {
+    TPalette::Page *page = palette->getPage(p);
+    for (int s = 0; s < page->getStyleCount(); s++) {
+      int tmpId = page->getStyleId(s);
+      if (tmpStyles.indexOf(tmpId, 0) != -1) {
+        styles.append(tmpId);
+      }
+      if (tmpStyles.count() == styles.count()) return;
+    }
+  }
+  assert(false);
+}
 
 }  // namespace
 
@@ -451,13 +508,19 @@ void StrokeSelection::removeEndpoints() {
     return;
   }
 
-  std::vector<std::pair<int, TStroke *>> undoData;
+  std::vector<UndoVectorData> undoData;
 
   m_vi->findRegions();
-  set<int>::iterator it = m_indexes.begin();
-  for (; it != m_indexes.end(); ++it) {
-    TStroke *s = m_vi->removeEndpoints(*it);
-    if (s) undoData.push_back(std::pair<int, TStroke *>(*it, s));
+  for (auto const &e : m_indexes) {
+    double offset;
+    TStroke *s = m_vi->removeEndpoints(e, &offset);
+    UndoVectorData undoStroke;
+
+    undoStroke.index   = e;
+    undoStroke.oldStroke = s;
+    undoStroke.offset    = offset;
+
+    if (s) undoData.push_back(undoStroke);
   }
   TTool *tool = TTool::getApplication()->getCurrentTool()->getTool();
   TXshSimpleLevel *level =
@@ -465,6 +528,73 @@ void StrokeSelection::removeEndpoints() {
   if (!undoData.empty())
     TUndoManager::manager()->add(
         new RemoveEndpointsUndo(level, tool->getCurrentFid(), undoData));
+
+  m_updateSelectionBBox = true;
+  tool->notifyImageChanged();
+  m_updateSelectionBBox = false;
+}
+
+//=============================================================================
+//
+// sortWithPaletteOrder
+//
+//-----------------------------------------------------------------------------
+
+void StrokeSelection::sortWithPaletteOrder() {
+  if (!m_vi) return;
+  if (m_indexes.empty()) return;
+
+  if (!isEditable()) {
+    DVGui::error(
+        QObject::tr("The selection cannot be updated. It is not editable."));
+    return;
+  }
+  
+  TPalette *palette = m_vi->getPalette();
+  TTool *tool       = TTool::getApplication()->getCurrentTool()->getTool();
+
+  QHash<int, int> originalIndexToStyle;
+  std::set<int> styles;
+  std::vector<int> oldOrder;
+  for (auto index : m_indexes) {
+    TStroke *stroke = m_vi->getStroke(index);
+    if (m_vi->isStrokeGrouped(index)) continue; 
+    oldOrder.push_back(index);
+    int styleId     = stroke->getStyle();
+    styles.insert(stroke->getStyle());
+    originalIndexToStyle.insert(index, styleId);
+  }
+  if (originalIndexToStyle.empty()) return;
+  // Sort Styles
+  QVector<int> styleOrder = QVector<int>(styles.begin(), styles.end());
+  sortStylesIds(styleOrder, palette);
+  // Build map from style to it's order
+  QHash<int, int> styleIndexMap;
+  for (int i = 0; i < styleOrder.size(); ++i) {
+    styleIndexMap[styleOrder[i]] = i;
+  }
+  // Sort indexes by palette order
+  std::vector<int> newOrder = oldOrder;
+  std::stable_sort(newOrder.begin(), newOrder.end(), [&](int a, int b) {
+    return styleIndexMap.value(originalIndexToStyle[a], -1) >
+           styleIndexMap.value(originalIndexToStyle[b], -1);
+  });
+  // Remove don't need indexes
+  std::vector<int> oldIndexes, newIndexes;
+  for (int i = 0; i < oldOrder.size(); i++) {
+    if (oldOrder[i] != newOrder[i]) {
+      oldIndexes.push_back(newOrder[i]);
+      newIndexes.push_back(oldOrder[i]);
+    }
+  }
+  // Do reorder
+  if (oldIndexes.empty()) return;
+  m_vi->reOrderStrokes(oldIndexes, newIndexes);
+
+  TXshSimpleLevel *level =
+          TTool::getApplication()->getCurrentLevel()->getSimpleLevel();
+  TUndoManager::manager()->add(new OrderStrokesUndo(
+      level, tool->getCurrentFid(), oldIndexes, newIndexes));
 
   m_updateSelectionBBox = true;
   tool->notifyImageChanged();
@@ -489,6 +619,9 @@ void StrokeSelection::selectAll() {
   StrokeSelection *selection = dynamic_cast<StrokeSelection *>(
       TTool::getApplication()->getCurrentSelection()->getSelection());
   if (selection) selection->notifyView();
+  TTool::getApplication()
+      ->getCurrentTool()
+      ->notifyToolChanged();  // Refreshes toolbar values
 }
 
 //=============================================================================
@@ -668,6 +801,7 @@ void StrokeSelection::enableCommands() {
   enableCommand(m_groupCommand.get(), MI_ExitGroup, &TGroupCommand::exitGroup);
 
   enableCommand(this, MI_RemoveEndpoints, &StrokeSelection::removeEndpoints);
+  enableCommand(this, MI_SortWithPaletteOrder, &StrokeSelection::sortWithPaletteOrder);
   enableCommand(this, MI_SelectAll, &StrokeSelection::selectAll);
 }
 

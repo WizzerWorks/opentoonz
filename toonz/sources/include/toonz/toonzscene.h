@@ -3,6 +3,8 @@
 #ifndef TOONZSCENE_H
 #define TOONZSCENE_H
 
+#include <memory>
+
 // TnzCore includes
 #include "tfilepath.h"
 #include "traster.h"
@@ -51,11 +53,11 @@ public:
             scene referring to the project. I would expect a
             \a project to own its scenes, not the other way around...         */
 
-  TProject *getProject()
-      const;  //!< Returns a pointer to the project holding a scene instance.
-  void setProject(TProject *);  //!< Associates a scene to a project.
+  std::shared_ptr<TProject> getProject() const;  //!< Returns a pointer to the project holding a scene instance.
+  void setProject(std::shared_ptr<TProject>);  //!< Associates a scene to a project.
 
-  void setScenePath(const TFilePath &p);  //!< Sets the scene's file path.
+  void setScenePath(const TFilePath &p, 
+      bool changeToTitled = true);  //!< Sets the scene's file path.
   TFilePath getScenePath() const {
     return m_scenePath;
   }  //!< Returns the scene's file path.
@@ -71,10 +73,11 @@ public:
             once a proper path is specified by the user.                      */
 
   void setUntitled();  //!< Marks the scene as explicitly untitled.
+  void setTitled(); //Marks scene as titled after being saved
   bool isUntitled()
       const;  //!< Returns whether the scene path is empty, or the scene
               //!  is explicitly untitled.  \sa  Member function setUntitled().
-
+  
   TXsheet *getXsheet()
       const;  //!< Returns a pointer to the scene's \a current xsheet.
   TXsheet *getTopXsheet() const;  //!< Returns the \a topmost xsheet in the
@@ -112,15 +115,15 @@ public:
 
   /*! \return   The \a coded path to be used for import. */
 
-  TFilePath getImportedLevelPath(const TFilePath path)
-      const;  //!< Builds the path to be used during a level import
-              //!< operation.
+  TFilePath getImportedLevelPath(
+      const TFilePath path) const;  //!< Builds the path to be used during a
+                                    //!< level import operation.
 
-  /*! \details  If convertion is required, a new level file will be created
+  /*! \details  If conversion is required, a new level file will be created
           and \p levelPath will be substituted with its new path.
 
 \return   Whether the level doesn't need to be converted or
-          the convertion succeeded.                                           */
+          the conversion succeeded.                                           */
 
   bool convertLevelIfNeeded(TFilePath &levelPath);  //!< Checks if the given
                                                     //! levelPath is a file path
@@ -169,7 +172,7 @@ Return scene frame count.
   int getFrameCount() const;
 
   /*!
-Returs frame count stored in the scene header.
+Returns frame count stored in the scene header.
 Quicker than load(fp); getFrameCount()
 */
   int loadFrameCount(const TFilePath &fp);
@@ -250,7 +253,7 @@ If \b scene is in +scenes/name.tnz return name,
   //! gets the contentHistory. possibly creates a new one (if createIfNeeded)
   TContentHistory *getContentHistory(bool createIfNeeded = false);
 
-  // shifts camera offet, returning old value; usend for steroscophy
+  // shifts camera offset, returning old value; usend for steroscophy
   double shiftCameraX(double val);
 
   void setVersionNumber(VersionNumber version) { m_versionNumber = version; }
@@ -259,23 +262,37 @@ If \b scene is in +scenes/name.tnz return name,
   // if the path is codable with $scenefolder alias, replace it and return true
   bool codeFilePathWithSceneFolder(TFilePath &path) const;
 
+  bool isLoading() { return m_isLoading; }
+  void setIsLoading(bool isLoading) { m_isLoading = isLoading; }
+
 private:
   TFilePath m_scenePath;  //!< Full path to the scene file (.tnz).
 
-  ChildStack *m_childStack;  //!< Xsheet hierachy.
+  ChildStack *m_childStack;  //!< Xsheet hierarchy.
   TSceneProperties *m_properties;
   TLevelSet *m_levelSet;
-  TProject *m_project;
+  std::shared_ptr<TProject> m_project;
   TContentHistory *m_contentHistory;
-  bool m_isUntitled;  //!< Whether the scene is untitled.
-                      //!  \sa  The setUntitled() member function.
-  VersionNumber m_versionNumber;
+  bool m_isUntitled;              //!< Whether the scene is untitled.
+                                  //!  \sa  The setUntitled() member function.
+  bool m_standAlone;			  //!< Whether the scene is stand-alone 
+                                  //(not in a project folder with scenes.xml inside).
+
+  VersionNumber m_versionNumber;  // last saved scene file version. Note that
+                                  // currently it is not match with OT version.
+                                  // TODO: Revise VersionNumber with OT version
+
+  bool m_isLoading;  // Set to true while loading the scene. Currently this flag
+                     // is used when loading PSD levels, for defining whether to
+                     // convert a layerId in the path to the layer name. See
+                     // TXshSimpleLevel::load().
 
 private:
   // noncopyable
   ToonzScene(const ToonzScene &);
   ToonzScene &operator=(const ToonzScene &);
 
+public:
   // if the option is set in the preferences,
   // remove the scene numbers("c####_") from the file name
   std::wstring getLevelNameWithoutSceneNumber(std::wstring orgName);

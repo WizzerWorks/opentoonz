@@ -14,6 +14,9 @@
 #include "tstroke.h"
 #include "tregion.h"
 
+// TnzQt includes
+#include "toonzqt/selectioncommandids.h"
+
 // Qt includes
 #include <QSet>
 
@@ -150,10 +153,10 @@ public:
   VectorDeformTool(VectorSelectionTool *tool);
   ~VectorDeformTool();
 
-  void applyTransform(FourPoints bbox) override;
+  void applyTransform(FourPoints bbox, bool onFastDragging = false) override;
   void addTransformUndo() override;
 
-  /*! Trasform whole level and add undo. */
+  /*! Transform whole level and add undo. */
   void transformWholeLevel();
   bool isFlip();
 
@@ -225,8 +228,8 @@ class VectorScaleTool final : public VectorDeformTool {
 public:
   VectorScaleTool(VectorSelectionTool *tool, ScaleType type);
 
-  TPointD transform(int index,
-                    TPointD newPos) override;  //!< Returns scale value.
+  TPointD transform(int index, TPointD newPos, bool onFastDragging = false)
+      override;  //!< Returns scale value.
 
   void leftButtonDown(const TPointD &pos, const TMouseEvent &e) override;
   void leftButtonDrag(const TPointD &pos, const TMouseEvent &e) override;
@@ -240,7 +243,7 @@ class VectorChangeThicknessTool final : public DragTool {
   TPointD m_curPos, m_firstPos;
   std::map<int, std::vector<double>> m_strokesThickness;
   double m_thicknessChange;
-
+  bool m_isIncrementalMode;// Or Fixed Mode
   std::unique_ptr<UndoChangeStrokes> m_undo;
 
 public:
@@ -251,6 +254,8 @@ public:
   void setThicknessChange(double value) { m_thicknessChange = value; }
 
   void changeImageThickness(TVectorImage &vi, double newThickness);
+  void setImageThickness(TVectorImage &vi, double newThickness);
+
   void addUndo();
 
   void leftButtonDown(const TPointD &pos, const TMouseEvent &e) override;
@@ -304,6 +309,7 @@ public:
   bool isSelectionEmpty() override;
 
   void computeBBox() override;
+  void notifyImageChanged() override;
 
   TPropertyGroup *getProperties(int targetType) override;
 
@@ -312,7 +318,7 @@ public:
   void setResetCenter(bool update) { m_resetCenter = update; }
   bool canResetCenter() { return m_resetCenter; }
 
-  bool isSelectionEditable() { return m_strokeSelection.isEditable(); }
+  bool isSelectionEditable() override { return m_strokeSelection.isEditable(); }
 
 protected:
   void onActivate() override;
@@ -348,16 +354,23 @@ private:
   public:
     AttachedLevelSelection(StrokeSelection &strokeSelection)
         : m_strokeSelection(strokeSelection) {}
-
+    
+    // Commands
     void selectNone() override {
       LevelSelection::selectNone(), m_strokeSelection.selectNone();
     }
-    void enableCommands() override { m_strokeSelection.enableCommands(); }
+    void enableCommands() override {
+      m_strokeSelection.enableCommands();
+      enableCommand(this, MI_SortWithPaletteOrder,
+                    &AttachedLevelSelection::sortWithPaletteOrder);
+    };
+    void sortWithPaletteOrder();
   };
 
 private:
   TEnumProperty m_selectionTarget;  //!< Selected target content (strokes, whole
                                     //! image, styles...).
+  TBoolProperty m_includeIntersection;
   TBoolProperty m_constantThickness;
 
   StrokeSelection m_strokeSelection;        //!< Standard selection of a set of
@@ -384,7 +397,7 @@ private:
   void doOnActivate() override;
   void doOnDeactivate() override;
 
-  void selectRegionVectorImage();
+  void selectRegionVectorImage(bool includeIntersect);
 
   void updateTranslation() override;
 

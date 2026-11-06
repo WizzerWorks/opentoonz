@@ -1,4 +1,4 @@
-set(VERSION 1.4)
+set(VERSION 1.8)
 
 set(MOC_HEADERS
     addfilmstripframespopup.h
@@ -10,10 +10,10 @@ set(MOC_HEADERS
     batches.h
     batchserversviewer.h
     binarizepopup.h
+    fillholespopup.h
     boardsettingspopup.h
     brightnessandcontrastpopup.h
     cachefxcommand.h
-    cameracapturelevelcontrol.h
     camerasettingspopup.h
     canvassizepopup.h
     castviewer.h
@@ -30,11 +30,13 @@ set(MOC_HEADERS
     commandbar.h
     commandbarpopup.h
     convertpopup.h
+    crashhandler.h
     duplicatepopup.h
     dvdirtreeview.h
     dvitemview.h
     dvwidgets.h
     exportlevelpopup.h
+    exportalllevelspopup.h
     exportpanel.h
     exportscenepopup.h
     filebrowser.h
@@ -56,6 +58,7 @@ set(MOC_HEADERS
     levelsettingspopup.h
     linesfadepopup.h
     lipsyncpopup.h
+    autolipsyncpopup.h
     loadfolderpopup.h
     locatorpopup.h
     magpiefileimportpopup.h
@@ -65,11 +68,11 @@ set(MOC_HEADERS
     menubarpopup.h
     meshifypopup.h
     messagepanel.h
+    ocaio.h
     onionskinmaskgui.h
     outputsettingspopup.h
     overwritepopup.h
     pane.h
-    penciltestpopup.h
     pltgizmopopup.h
     preferencespopup.h
     previewer.h
@@ -82,10 +85,13 @@ set(MOC_HEADERS
     ruler.h
     savepresetpopup.h
     scanpopup.h
+    scenebrowser.h
     scenesettingspopup.h
     sceneviewer.h
     sceneviewercontextmenu.h
     scriptconsolepanel.h
+    brushpresetpanel.h
+    toolpropertiespanel.h
     separatecolorspopup.h
     separatecolorsswatch.h
     shortcutpopup.h
@@ -108,10 +114,11 @@ set(MOC_HEADERS
     toolbar.h
     tpanels.h
     trackerpopup.h
-	vectorguideddrawingpane.h
+    vectorguideddrawingpane.h
     vectorizerpopup.h
     vectorizerswatch.h
     versioncontrol.h
+    versioncontrolxmlwriter.h
     versioncontroltimeline.h
     versioncontrolwidget.h
     viewerpane.h
@@ -121,15 +128,40 @@ set(MOC_HEADERS
     xshnoteviewer.h
     xshrowviewer.h
     xshtoolbar.h
-	xdtsimportpopup.h
+    xdtsimportpopup.h
+    expressionreferencemanager.h
+    tooloptionsshortcutinvoker.h
+    exportxsheetpdf.h
+    custompanelmanager.h
+    toolpresetcommandmanager.h
+    custompaneleditorpopup.h
+    convertfolderpopup.h
+    exportcameratrackpopup.h
 )
 
-if(WITH_STOPMOTION)
-set(MOC_HEADERS
-    ${MOC_HEADERS}
-    ../stopmotion/stopmotion.h
-    ../stopmotion/stopmotioncontroller.h
-)
+if(PLATFORM EQUAL 64)
+    set(MOC_HEADERS
+        ${MOC_HEADERS}
+        ../stopmotion/stopmotion.h
+        ../stopmotion/stopmotioncontroller.h
+        ../stopmotion/webcam.h
+        ../stopmotion/jpgconverter.h
+        ../stopmotion/canon.h
+        ../stopmotion/stopmotionserial.h
+        ../stopmotion/stopmotionlight.h
+        cameracapturelevelcontrol.h
+        penciltestpopup.h
+        navtageditorpopup.h
+        xshbreadcrumbs.h
+    )
+else()
+    set(MOC_HEADERS
+        ${MOC_HEADERS}
+        cameracapturelevelcontrol_qt.h
+        penciltestpopup_qt.h
+        navtageditorpopup.h
+        xshbreadcrumbs.h
+    )
 endif()
 
 set(HEADERS
@@ -154,9 +186,6 @@ set(HEADERS
     keyframemover.h
     keyframeselection.h
     kis_tablet_support_win8.h
-    linetestcapturepane.h
-    linetestpane.h
-    linetestviewer.h
     menubarcommandids.h
     moviegenerator.h
     scanlist.h
@@ -176,12 +205,15 @@ set(HEADERS
     ../include/orientation.h
     ../include/saveloadqsettings.h
     xdtsio.h
+    sxfio.h
+    levelcommand.h
 # Tracker file
     ObjectTracker.h
     dummyprocessor.h
     metnum.h
     processor.h
     predict3d.h
+    tvpjson_io.h
 )
 
 set(SOURCES
@@ -209,6 +241,7 @@ set(SOURCES
     batchserversviewer.cpp
     castviewer.cpp
     exportlevelpopup.cpp
+    exportalllevelspopup.cpp
     exportscenepopup.cpp
     colormodelviewer.cpp
     exportpanel.cpp
@@ -241,6 +274,7 @@ set(SOURCES
     addfilmstripframespopup.cpp
     camerasettingspopup.cpp
     convertpopup.cpp
+    crashhandler.cpp
     duplicatepopup.cpp
     dvdirtreeview.cpp
     filebrowserpopup.cpp
@@ -252,10 +286,8 @@ set(SOURCES
     layerheaderpanel.cpp
     levelcreatepopup.cpp
     levelsettingspopup.cpp
-    linetestcapturepane.cpp
-    linetestpane.cpp
-    linetestviewer.cpp
     lipsyncpopup.cpp
+    autolipsyncpopup.cpp
     magpiefileimportpopup.cpp
     outputsettingspopup.cpp
     overwritepopup.cpp
@@ -267,9 +299,13 @@ set(SOURCES
     runscriptcommand.cpp
     savepresetpopup.cpp
     scanpopup.cpp
+    scenebrowser.cpp
+    scenebrowserversioncontrol.cpp
     sceneviewercontextmenu.cpp
     scenesettingspopup.cpp
     scriptconsolepanel.cpp
+    brushpresetpanel.cpp
+    toolpropertiespanel.cpp
     shortcutpopup.cpp
     soundtrackexport.cpp
     startuppopup.cpp
@@ -279,10 +315,12 @@ set(SOURCES
     trackerpopup.cpp
     vectorguideddrawingpane.cpp
     vectorizerpopup.cpp
+    rasterizecommand.cpp
     vectorizerswatch.cpp
     versioncontrol.cpp
     versioncontroltimeline.cpp
     versioncontrolxmlreader.cpp
+    versioncontrolxmlwriter.cpp
     versioncontrolwidget.cpp
     viewerpopup.cpp
     cellselectioncommand.cpp
@@ -290,6 +328,7 @@ set(SOURCES
     filmstripcommand.cpp
     iocommand.cpp
     levelcommand.cpp
+    viewercommand.cpp
     print.cpp
     subscenecommand.cpp
     svncleanupdialog.cpp
@@ -329,6 +368,7 @@ set(SOURCES
     adjustlevelspopup.cpp
     adjustthicknesspopup.cpp
     binarizepopup.cpp
+    fillholespopup.cpp
     brightnessandcontrastpopup.cpp
     linesfadepopup.cpp
     rendercommand.cpp
@@ -340,19 +380,28 @@ set(SOURCES
     comboviewerpane.cpp
     historypane.cpp
     cleanupsettingspane.cpp
-    penciltestpopup.cpp
     audiorecordingpopup.cpp
     locatorpopup.cpp
     styleshortcutswitchablepanel.cpp
-	cameracapturelevelcontrol.cpp
-	reframepopup.cpp
-	autoinputcellnumberpopup.cpp
-	colormodelbehaviorpopup.cpp
-	boardsettingspopup.cpp
-	separatecolorsswatch.cpp
-	separatecolorspopup.cpp
+    reframepopup.cpp
+    autoinputcellnumberpopup.cpp
+    colormodelbehaviorpopup.cpp
+    boardsettingspopup.cpp
+    separatecolorsswatch.cpp
+    separatecolorspopup.cpp
     xdtsio.cpp
-	xdtsimportpopup.cpp
+    sxfio.cpp
+    ocaio.cpp
+    xdtsimportpopup.cpp
+    expressionreferencemanager.cpp
+    tooloptionsshortcutinvoker.cpp
+    tvpjson_io.cpp
+    exportxsheetpdf.cpp
+    custompanelmanager.cpp
+    toolpresetcommandmanager.cpp
+    custompaneleditorpopup.cpp
+    convertfolderpopup.cpp
+    exportcameratrackpopup.cpp
 # Tracker file
     dummyprocessor.cpp
     metnum.cpp
@@ -360,15 +409,31 @@ set(SOURCES
     predict3d.cpp
 )
 
-if(WITH_STOPMOTION)
-set(SOURCES
-    ${SOURCES}
-    ../stopmotion/stopmotion.cpp
-    ../stopmotion/stopmotioncontroller.cpp
-)
+if(PLATFORM EQUAL 64)
+    set(SOURCES
+        ${SOURCES}
+        ../stopmotion/stopmotion.cpp
+        ../stopmotion/stopmotioncontroller.cpp
+        ../stopmotion/webcam.cpp
+        ../stopmotion/jpgconverter.cpp
+        ../stopmotion/canon.cpp
+        ../stopmotion/stopmotionserial.cpp
+        ../stopmotion/stopmotionlight.cpp
+        cameracapturelevelcontrol.cpp
+        penciltestpopup.cpp
+        navtageditorpopup.cpp
+        xshbreadcrumbs.cpp
+    )
+else()
+    set(SOURCES
+        ${SOURCES}
+        cameracapturelevelcontrol_qt.cpp
+        penciltestpopup_qt.cpp
+        navtageditorpopup.cpp
+        xshbreadcrumbs.cpp
+    )
 endif()
 
-add_translation(toonz ${HEADERS} ${SOURCES})
 
 set(OBJCSOURCES filebrowsermodel.cpp)
 
@@ -394,6 +459,7 @@ else()
     set(MACOSX_BUNDLE_ICON_FILE "OpenToonz.icns")
     set_source_files_properties(OpenToonz.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
     add_executable(OpenToonz MACOSX_BUNDLE OpenToonz.icns ${HEADERS} ${SOURCES} ${OBJCSOURCES} ${RESOURCES})
+    add_dependencies(OpenToonz tnzcore tnzbase toonzlib colorfx tnzext image sound toonzqt tnztools tnzstdfx tfarm)
     #add_definitions(
     #    -DTNZBASE_EXPORTS
     #    -DTPARAM_EXPORTS
@@ -402,6 +468,11 @@ else()
     #    -DTAPPTOOLS_EXPORTS
     #    -DTTEST_EXPORTS
     #)
+endif()
+
+if(WITH_TRANSLATION)
+    add_translation(toonz ${HEADERS} ${SOURCES})
+    add_compile_translations_command(OpenToonz toonz)
 endif()
 
 if(BUILD_TARGET_WIN)
@@ -420,18 +491,23 @@ message("Bin: " ${CMAKE_CURRENT_BINARY_DIR})
 include_directories(
     ../../sources/toonzfarm/include
     ../../sources/toonzqt
+    ../../sources/stopmotion
 )
 
-if (WITH_STOPMOTION)
-include_directories(../../sources/stopmotion)
-    add_definitions(-DWITH_STOPMOTION)
+if (WITH_CANON)
+    add_definitions(-DWITH_CANON)
+endif()
+
+if (WITH_WINTAB AND BUILD_TARGET_WIN AND (PLATFORM EQUAL 64))
+    add_definitions(-DWITH_WINTAB)
 endif()
 
 if(BUILD_ENV_APPLE)
     include_directories(../../sources/mousedragfilter)
+    if(PLATFORM EQUAL 64)
+        include_directories(${TURBOJPEG_INCLUDE_DIRS})
+    endif()
 endif()
-
-
 
 if(BUILD_TARGET_WIN)
     if(PLATFORM EQUAL 32)
@@ -442,19 +518,22 @@ if(BUILD_TARGET_WIN)
     endif()
 endif()
 
-if(BUILD_ENV_MSVC AND WITH_STOPMOTION)
+if(BUILD_ENV_MSVC)
+    set(EXTRA_LIBS)
+    if(CMAKE_CXX_FLAGS_DEBUG)
+        target_compile_options(OpenToonz PRIVATE /EHsc) # Enable C++ Exceptions in Debug Mode.
+    endif()
+    if(PLATFORM EQUAL 64)
+        set(EXTRA_LIBS ${EXTRA_LIBS} Qt5::SerialPort ${TURBOJPEG_LIB} ${OpenCV_LIBS})
+        if(WITH_CANON)
+            set(EXTRA_LIBS ${EXTRA_LIBS} ${CANON_LIB})
+        endif()
+    endif()
     target_link_libraries(OpenToonz
         Qt5::WinMain Qt5::Core Qt5::Gui Qt5::Network Qt5::OpenGL Qt5::Svg Qt5::Xml
-        Qt5::Script Qt5::Widgets Qt5::PrintSupport Qt5::Multimedia
-        ${GL_LIB} ${GLUT_LIB} 
-        ${CANON_LIB} ${TURBOJPEG_LIB} ${OpenCV_LIBS} strmiids
-        tnzcore tnzbase toonzlib colorfx tnzext image sound toonzqt tnztools tnzstdfx tfarm
-    )
-elseif(BUILD_ENV_MSVC)
-    target_link_libraries(OpenToonz
-        Qt5::WinMain Qt5::Core Qt5::Gui Qt5::Network Qt5::OpenGL Qt5::Svg Qt5::Xml
-        Qt5::Script Qt5::Widgets Qt5::PrintSupport Qt5::Multimedia
-        ${GL_LIB} ${GLUT_LIB} strmiids
+        Qt5::Script Qt5::Widgets Qt5::PrintSupport Qt5::Multimedia Qt5::UiTools
+        ${GL_LIB} ${GLUT_LIB}
+        ${EXTRA_LIBS} strmiids
         tnzcore tnzbase toonzlib colorfx tnzext image sound toonzqt tnztools tnzstdfx tfarm
     )
 elseif(BUILD_ENV_APPLE)
@@ -462,25 +541,49 @@ elseif(BUILD_ENV_APPLE)
 
     _find_toonz_library(EXTRA_LIBS "tnzcore;tnzbase;toonzlib;colorfx;tnzext;image;sound;toonzqt;tnztools")
 
-    # 変なところにライブラリ生成するカスども
+    # Workaround for non-standard library output locations
     set(EXTRA_LIBS ${EXTRA_LIBS} "$<TARGET_FILE:tnzstdfx>" "$<TARGET_FILE:tfarm>")
+    set(X64ONLY_LIBS)
+    if(PLATFORM EQUAL 64)
+        set(X64ONLY_LIBS ${X64ONLY_LIBS} Qt5::SerialPort ${TURBOJPEG_LIB} ${OpenCV_LIBS})
+        if(WITH_CANON)
+            set(X64ONLY_LIBS ${X64ONLY_LIBS} ${CANON_LIB})
+        endif()
+    endif()
 
-    add_dependencies(OpenToonz tnzcore tnzbase toonzlib colorfx tnzext image sound toonzqt tnztools tnzstdfx tfarm)
+    target_link_directories(OpenToonz PRIVATE ${MYPAINT_LIB_LIBRARY_DIRS})
 
     target_link_libraries(OpenToonz
         Qt5::Core Qt5::Gui Qt5::Network Qt5::OpenGL Qt5::Svg Qt5::Xml
-        Qt5::Script Qt5::Widgets Qt5::PrintSupport Qt5::Multimedia Qt5::MultimediaWidgets
+        Qt5::Script Qt5::Widgets Qt5::PrintSupport Qt5::Multimedia Qt5::MultimediaWidgets Qt5::UiTools
         ${GL_LIB} ${GLUT_LIB}
-        ${COCOA_LIB} ${EXTRA_LIBS} mousedragfilter
+        ${COCOA_LIB} ${EXTRA_LIBS} ${X64ONLY_LIBS} mousedragfilter
+        ${MYPAINT_LIB_LIBRARIES}
+    )
+
+    # ADDED/UPDATED: Expanded dependencies for all libs and utilities (ensures build order)
+    add_dependencies(OpenToonz tnzcore tnzbase toonzlib colorfx tnzext image sound toonzqt tnztools tnzstdfx tfarm tcomposer tcleanup tconverter tfarmcontroller tfarmserver)
+
+    # ADDED/UPDATED: Configure Info.plist for bundle (retina support etc.)
+    set_target_properties(OpenToonz PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/../cmake/BundleInfo.plist.in)
+
+    # ADDED/UPDATED: Merged RPATH command (single one with both paths; || true for CI; COMMENT for logs)
+    add_custom_command(TARGET OpenToonz POST_BUILD
+        COMMAND ${CMAKE_INSTALL_NAME_TOOL} -add_rpath @executable_path/. "$<TARGET_FILE:OpenToonz>" || true
+        COMMAND ${CMAKE_INSTALL_NAME_TOOL} -add_rpath ${CMAKE_INSTALL_RPATH} "$<TARGET_FILE:OpenToonz>" || true
+        COMMENT "Adding RPATHs to OpenToonz executable"
     )
 
 elseif(BUILD_ENV_UNIXLIKE)
     _find_toonz_library(EXTRA_LIBS "tnzcore;tnzbase;toonzlib;colorfx;tnzext;image;sound;toonzqt;tnztools")
 
-    # 変なところにライブラリ生成するカスども
+    # Workaround for non-standard library output locations
     set(EXTRA_LIBS ${EXTRA_LIBS} "$<TARGET_FILE:tnzstdfx>" "$<TARGET_FILE:tfarm>")
 
-    set(EXTRA_LIBS ${EXTRA_LIBS} ${Boost_LIBRARIES} ${OPENBLAS_LIB})
+    set(EXTRA_LIBS ${EXTRA_LIBS} ${Boost_LIBRARIES} ${OPENBLAS_LIB} ${EXECINFO_LIBRARY})
+    if(PLATFORM EQUAL 64)
+        set(EXTRA_LIBS ${EXTRA_LIBS} Qt5::SerialPort ${TURBOJPEG_LIB} ${OpenCV_LIBS})
+    endif()
 
     if(BUILD_TARGET_WIN)
         set(EXTRA_LIBS ${EXTRA_LIBS} Qt5::WinMain -lstrmiids -mwindows)
@@ -488,7 +591,7 @@ elseif(BUILD_ENV_UNIXLIKE)
 
     target_link_libraries(
         OpenToonz Qt5::Core Qt5::Gui Qt5::Network Qt5::OpenGL Qt5::Svg Qt5::Xml
-        Qt5::Script Qt5::Widgets Qt5::PrintSupport Qt5::Multimedia
+        Qt5::Script Qt5::Widgets Qt5::PrintSupport Qt5::Multimedia Qt5::UiTools
         ${GL_LIB} ${GLUT_LIB} ${GLU_LIB}
         ${EXTRA_LIBS}
     )
@@ -496,49 +599,79 @@ endif()
 
 if(BUILD_ENV_APPLE)
     # CMAKE_RUNTIME_OUTPUT_DIRECTORY should be equivalent to usage on windows despite empty
-    # OSX だと CMAKE_RUNTIME_OUTPUT_DIRECTORY が空だが Windows 版と同じ使い方ができるようにしておく
-    get_target_property(bin OpenToonz LOCATION)
-    get_filename_component(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${bin} DIRECTORY)
-    # show CMAKE_RUNTIME_OUTPUT_DIRECTORY
+    # On OSX, CMAKE_RUNTIME_OUTPUT_DIRECTORY is empty; ensuring it can be used the same way as the Windows version.
+    # Removed: get_target_property(bin OpenToonz LOCATION)
+    # Use generator expression for runtime directory
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:OpenToonz>")
     message("CMAKE_RUNTIME_OUTPUT_DIRECTORY:" ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 endif()
 
-# copy utilty executables onto the directory after build
+# copy utility executables onto the directory after build
 if(LZODRIVER_FOUND)
-    add_custom_command(TARGET OpenToonz POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:lzocompress> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} DEPENDS lzocompress)
-    add_custom_command(TARGET OpenToonz POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:lzodecompress> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} DEPENDS lzodecompress)
+    add_custom_command(TARGET OpenToonz POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:lzocompress> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        COMMENT "Copying lzocompress to output dir"
+    )
+    add_custom_command(TARGET OpenToonz POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:lzodecompress> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        COMMENT "Copying lzodecompress to output dir"
+    )
+    add_dependencies(OpenToonz lzocompress lzodecompress)  # Ensures order
 endif()
 
 if(BUILD_ENV_APPLE)
     get_target_property(loc OpenToonz MACOSX_BUNDLE_NAME)
     message(" ==> App Bundle: " ${loc})
-    message(" ==> Mach-o: " ${bin})
+    message(" ==> Mach-o: " $<TARGET_FILE:OpenToonz>)  # Fixed: Use generator expression instead of ${bin}
     foreach(lib ${EXTRA_LIBS})
         message(" copy:" ${lib} "==>" ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-        add_custom_command(TARGET OpenToonz POST_BUILD COMMAND cp ${lib} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+        add_custom_command(TARGET OpenToonz POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy ${lib} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}  # UPDATED: Use CMAKE_COMMAND for portability (instead of cp)
+            COMMENT "Copying lib ${lib} to output dir"
+        )
     endforeach()
+    # ADDED: Already included in expanded dependencies above
 
-    add_custom_command(TARGET OpenToonz POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tcomposer> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} DEPENDS tcomposer)
-    add_custom_command(TARGET OpenToonz POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tcleanup> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} DEPENDS tcleanup)
-    add_custom_command(TARGET OpenToonz POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tconverter> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} DEPENDS tconverter)
-    add_custom_command(TARGET OpenToonz POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tfarmcontroller> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} DEPENDS tfarmcontroller)
-    add_custom_command(TARGET OpenToonz POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tfarmserver> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} DEPENDS tfarmserver)
-
-    add_custom_command(TARGET OpenToonz POST_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../Resources)
-    add_custom_command(TARGET OpenToonz POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/../install/SystemVar.ini ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../Resources)
-
-    add_custom_command(TARGET OpenToonz POST_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../../../qss)
-
-    add_custom_command(TARGET OpenToonz
-        POST_BUILD COMMAND
-        ${CMAKE_INSTALL_NAME_TOOL} -add_rpath @executable_path/. ${bin} || true
+    add_custom_command(TARGET OpenToonz POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tcomposer> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        COMMENT "Copying tcomposer to output dir"
     )
-    add_custom_command(TARGET OpenToonz
-        POST_BUILD COMMAND
-        ${CMAKE_INSTALL_NAME_TOOL} -add_rpath ${CMAKE_INSTALL_RPATH} ${bin} || true
+    add_custom_command(TARGET OpenToonz POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tcleanup> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        COMMENT "Copying tcleanup to output dir"
+    )
+    add_custom_command(TARGET OpenToonz POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tconverter> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        COMMENT "Copying tconverter to output dir"
+    )
+    add_custom_command(TARGET OpenToonz POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tfarmcontroller> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        COMMENT "Copying tfarmcontroller to output dir"
+    )
+    add_custom_command(TARGET OpenToonz POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tfarmserver> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        COMMENT "Copying tfarmserver to output dir"
+    )
+    # ADDED: Already included in expanded dependencies above
+
+    add_custom_command(TARGET OpenToonz POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../Resources
+        COMMENT "Creating Resources directory"
+    )
+    add_custom_command(TARGET OpenToonz POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/../install/SystemVar.ini ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../Resources
+        COMMENT "Copying SystemVar.ini to Resources"
     )
 
-elseif(BUILD_ENV_UNIXLIKE AND BUILD_TARGET_WIN)
+    add_custom_command(TARGET OpenToonz POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../../../qss
+        COMMENT "Creating qss directory"
+    )
+
+    # REMOVED: The duplicate RPATH commands were merged at the top of if(BUILD_ENV_APPLE)
+endif()
+
+if(BUILD_ENV_UNIXLIKE AND BUILD_TARGET_WIN)
     # Setup files on Windows platform while cross compilation.
     install(
         TARGETS
@@ -580,7 +713,7 @@ elseif(BUILD_ENV_UNIXLIKE AND BUILD_TARGET_WIN)
             "$<TARGET_FILE:tfarm>"
         DESTINATION bin
     )
-    
+
     install(
         DIRECTORY
             ${CMAKE_SOURCE_DIR}/../../stuff
@@ -638,7 +771,7 @@ TOONZSTUDIOPALETTE=\"\$HOME/.config/OpenToonz/stuff/studiopalette\"
 EOF
 fi
 
-export LD_LIBRARY_PATH=\${OPENTOONZ_BASE}/lib/opentoonz:\${LD_LIBRARY_PATH}
+export ${PRELOAD_VARIABLE}=\${OPENTOONZ_BASE}/lib/opentoonz:\${${PRELOAD_VARIABLE}}
 
 exec \$OPENTOONZ_BASE/bin/OpenToonz \"\$@\"
 ")

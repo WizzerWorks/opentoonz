@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g id="revert_scene">
+        <rect id="bg" x="-0" y="0.02" width="16" height="16" style="fill:#878787;fill-opacity:0;"/>
+        <path d="M9.037,14.02l3.463,-0c0.828,-0 1.5,-0.673 1.5,-1.5c-0,-0.828 -0.672,-1.5 -1.5,-1.5l-1.5,-0l-0,2l-2.667,-2l-0.003,-0l-1.33,-1l4,-3l-0,2l1.5,-0c1.932,-0 3.5,1.568 3.5,3.5c0,1.931 -1.568,3.5 -3.5,3.5l-3.463,-0l0,-2Z"/>
+        <path id="clapboard" d="M8.067,15.049l-7.059,-0l0,-7.993l-0.02,-0l0,-4l2.02,-0l2,2l-1.982,1.983l0.99,-0l1.982,-1.983l2.131,-0l-1.983,1.983l1.697,-0l1.983,-1.983l2.334,-0l-1.002,1.002c-0.254,-0.033 -0.516,0.033 -0.728,0.192l-2.385,1.789c-3.012,-0 -6.037,-0 -6.037,-0l0,6.01c0,-0 3.04,-0 6.059,-0c0,-0 0,1 0,1Zm3.951,-8.154l1.839,-1.839l1.151,-0l0.022,3.024c-0.017,-0.012 -1.818,-0 -3,-0c0,-0.109 -0.004,-1.134 -0.012,-1.185Zm-4.266,-3.255l-2.587,0.582l-1.673,-1.673l2.586,-0.582l1.674,1.673Zm-0.288,-1.985l2.695,-0.607l1.673,1.673l-2.695,0.607l-1.673,-1.673Zm4.08,-0.919l3.047,-0.686l0.439,1.951l-1.813,0.408l-1.673,-1.673Z"/>
+    </g>
+</svg>

@@ -12,14 +12,14 @@
 #ifdef _WIN32
 #include <cstdlib>
 #include <GL/glut.h>
-#elif defined(LINUX)
+#elif defined(LINUX) || defined(FREEBSD) || defined(HAIKU)
 #include <GL/glut.h>
 #else
 #include <GLUT/glut.h>
 #endif
 #endif
 
-#if defined(MACOSX) || defined(LINUX)
+#if defined(MACOSX) || defined(LINUX) || defined(FREEBSD) || defined(HAIKU)
 #include <QGLContext>
 #endif
 
@@ -66,9 +66,19 @@ double tglGetPixelSize2() {
   glMatrixMode(GL_MODELVIEW);
   glGetDoublev(GL_MODELVIEW_MATRIX, mat);
 
-  double det                      = fabs(mat[0] * mat[5] - mat[1] * mat[4]);
+  double det = fabs(mat[0] * mat[5] - mat[1] * mat[4]);
   if (det < TConsts::epsilon) det = TConsts::epsilon;
   return 1.0 / det;
+}
+
+//-----------------------------------------------------------------------------
+
+TRectD tglGetBounds() {
+  TAffine4 modelview;
+  TAffine4 projection;
+  glGetDoublev(GL_MODELVIEW_MATRIX, modelview.a);
+  glGetDoublev(GL_PROJECTION_MATRIX, projection.a);
+  return (projection*modelview).get2d().inv() * TRectD(-1.0, -1.0, 1.0, 1.0);
 }
 
 //-----------------------------------------------------------------------------
@@ -126,56 +136,25 @@ void tglDrawSegment(const TPointD &p1, const TPointD &p2) {
 void tglDrawCircle(const TPointD &center, double radius) {
   if (radius <= 0) return;
 
-  double pixelSize = 1;
-  int slices       = 60;
+  double pixelSize = sqrt( tglGetPixelSize2() );
+  int slices = std::max(3, computeSlices(radius, pixelSize));
 
-  if (slices <= 0) slices = computeSlices(radius, pixelSize) >> 1;
-
-  double step  = M_PI / slices;
-  double step2 = 2.0 * step;
-
-  double cos_t, sin_t, cos_ts, sin_ts, t;
+  double step = M_2PI / (double)slices;
+  double c = cos(step), s = sin(step);
 
   glPushMatrix();
   glTranslated(center.x, center.y, 0.0);
-  glBegin(GL_LINES);
+  glBegin(GL_LINE_STRIP);
 
-  cos_t = radius /* *1.0*/;
-  sin_t = 0.0;
-  for (t = 0; t + step < M_PI_2; t += step2) {
-    cos_ts = radius * cos(t + step);
-    sin_ts = radius * sin(t + step);
-
-    glVertex2f(cos_t, sin_t);
-    glVertex2f(cos_ts, sin_ts);
-
-    glVertex2f(-cos_t, sin_t);
-    glVertex2f(-cos_ts, sin_ts);
-
-    glVertex2f(-cos_t, -sin_t);
-    glVertex2f(-cos_ts, -sin_ts);
-
-    glVertex2f(cos_t, -sin_t);
-    glVertex2f(cos_ts, -sin_ts);
-
-    cos_t = cos_ts;
-    sin_t = sin_ts;
+  double x = radius, y = 0.0;
+  glVertex2d(x, y);
+  for(int i = slices - 1; i; --i) {
+    double xx = x;
+    x = c*xx - s*y;
+    y = s*xx + c*y;
+    glVertex2d(x, y);
   }
-
-  cos_ts = 0.0;
-  sin_ts = radius /* *1.0*/;
-
-  glVertex2f(cos_t, sin_t);
-  glVertex2f(cos_ts, sin_ts);
-
-  glVertex2f(-cos_t, sin_t);
-  glVertex2f(-cos_ts, sin_ts);
-
-  glVertex2f(-cos_t, -sin_t);
-  glVertex2f(-cos_ts, -sin_ts);
-
-  glVertex2f(cos_t, -sin_t);
-  glVertex2f(cos_ts, -sin_ts);
+  glVertex2d(radius, 0.0);
 
   glEnd();
   glPopMatrix();
@@ -256,6 +235,8 @@ void tglEnableLineSmooth(bool enable, double lineSize) {
 
 void tglEnablePointSmooth(double pointSize) {
   glEnable(GL_BLEND);
+  glEnable(GL_POINT_SMOOTH);
+  glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
   glPointSize(pointSize);
 }
 
@@ -431,7 +412,7 @@ void tglDraw(const TRectD &rect, const std::vector<TRaster32P> &textures,
   unsigned int level = 1;
   while (pixelSize2 * level * level <= 1.0) level <<= 1;
 
-  unsigned int texturesCount       = (int)textures.size();
+  unsigned int texturesCount = (int)textures.size();
   if (level > texturesCount) level = texturesCount;
 
   level = texturesCount - level;
@@ -467,8 +448,8 @@ void tglDraw(const TRectD &rect, const TRaster32P &tex, bool blending) {
     texture = TRaster32P(texWidth, texHeight);
     texture->fill(TPixel32(0, 0, 0, 0));
     texture->copy(tex);
-    lwTex                  = (texLx) / (double)(texWidth);
-    lhTex                  = (texLy) / (double)(texHeight);
+    lwTex = (texLx) / (double)(texWidth);
+    lhTex = (texLy) / (double)(texHeight);
     if (lwTex > 1.0) lwTex = 1.0;
     if (lhTex > 1.0) lhTex = 1.0;
   } else
@@ -587,10 +568,10 @@ void tglBuildMipmaps(std::vector<TRaster32P> &rasters,
     ly >>= 1;
     if (lx < 1) lx = 1;
     if (ly < 1) ly = 1;
-    rasters[i]     = TRaster32P(lx, ly);
-    sx             = (double)lx / (double)ras2Lx;
-    sy             = (double)ly / (double)ras2Ly;
-    rasters[i]     = TRaster32P(lx, ly);
+    rasters[i] = TRaster32P(lx, ly);
+    sx         = (double)lx / (double)ras2Lx;
+    sy         = (double)ly / (double)ras2Ly;
+    rasters[i] = TRaster32P(lx, ly);
 #ifndef SCALE_BY_GLU
     TRop::resample(rasters[i], ras2, TScale(sx, sy), resampleFilter);
 #else
@@ -617,7 +598,7 @@ void tglMakeCurrent(TGlContext context) {
 
 void tglDoneCurrent(TGlContext) { wglMakeCurrent(NULL, NULL); }
 
-#elif defined(LINUX) || defined(__sgi) || defined(MACOSX)
+#elif defined(LINUX) || defined(FREEBSD) || defined(__sgi) || defined(MACOSX) || defined(HAIKU)
 
 TGlContext tglGetCurrentContext() {
   return reinterpret_cast<TGlContext>(

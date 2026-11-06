@@ -18,12 +18,7 @@
 #endif
 
 //******************** IK Utility *********************
-//
-//	Di seguito le classi VectorRn e MatrixRmn
-//	TODO: Se possibile cambiare e usare le STL
-//
-//
-//****************************************************
+//*****************************************************
 
 //***********************************************************************
 // CLASS VectorRN
@@ -286,7 +281,7 @@ public:
 
   // Loads matrix in as a sub-matrix.  (i,j) is the base point. Defaults to
   // (0,0).
-  // The "Tranpose" versions load the transpose of A.
+  // The "Transpose" versions load the transpose of A.
   void LoadAsSubmatrix(const MatrixRmn &A);
   void LoadAsSubmatrix(long i, long j, const MatrixRmn &A);
   void LoadAsSubmatrixTranspose(const MatrixRmn &A);
@@ -683,15 +678,15 @@ public:
   void Reset();
 
 private:
-  IKSkeleton *skeleton;  // skeletro associato a questa matrice Jacobiana
+  IKSkeleton *skeleton;  // skeleton associated with this Jacobian matrix
   std::vector<TPointD> target;
-  int nEffector;  // Numero di end effectors
-  int nJoint;     // Numero di Joints
-  int nRow;       // righe matrice J (= 2*numero di end effectors)
-  int nCol;       // numero di colonne di J
+  int nEffector;  // Number of end effectors
+  int nJoint;     // Number of Joints
+  int nRow;       // matrix rows J(= 2 * number of end effectors)
+  int nCol;       // number of columns of J
 
   MatrixRmn
-      Jend;  // matrice Jacobiana basata sulle posizioni degli end effectors
+      Jend;  // Jacobian matrix based on the positions of the end effectors
   MatrixRmn Jtarget;
   MatrixRmn Jnorms;  // Norms of 2-vectors in active Jacobian (solo SDLS)
 
@@ -709,10 +704,10 @@ private:
 
   VectorRn dPreTheta;  // (vale solo per SDLS)
 
-  // Parametri per pseudorinversa
+  // Parameters for pseudoinverse
   static const double PseudoInverseThresholdFactor;
 
-  // Paremetri pe il metodo Damped Least Squares
+  // Parameters for the Damped Least Squares method
   static const double DefaultDampingLambda;
   double DampingLambda;
   double DampingLambdaSq;

@@ -29,12 +29,12 @@
 #include <QVBoxLayout>
 #include <QObject>
 
-TEnv::IntVar ShowAllToolsToggle("ShowAllToolsToggle", 0);
+TEnv::IntVar ShowAllToolsToggle("ShowAllToolsToggle", 1);
 
 namespace {
 struct {
   const char *toolName;
-  bool collapsable;
+  bool collapsible;
   QAction *action;
 } buttonLayout[] = {{T_Edit, false, 0},        {T_Selection, false, 0},
                     {"Separator_1", false, 0}, {T_Brush, false, 0},
@@ -44,6 +44,7 @@ struct {
                     {T_Tape, false, 0},        {T_Finger, false, 0},
                     {"Separator_3", false, 0}, {T_StylePicker, false, 0},
                     {T_RGBPicker, false, 0},   {T_Ruler, false, 0},
+                    {T_EditAssistants, false, 0},
                     {"Separator_4", false, 0}, {T_ControlPointEditor, false, 0},
                     {T_Pinch, true, 0},        {T_Pump, true, 0},
                     {T_Magnet, true, 0},       {T_Bender, true, 0},
@@ -69,7 +70,7 @@ Toolbar::Toolbar(QWidget *parent, bool isVertical)
   else
     setOrientation(Qt::Horizontal);
 
-  setIconSize(QSize(23, 23));
+  setIconSize(QSize(20, 20));
   setToolButtonStyle(Qt::ToolButtonIconOnly);
 
   m_expandButton = new QToolButton(this);
@@ -116,7 +117,7 @@ void Toolbar::updateToolbar() {
         xsh->getCellRange(colIndex, r0, r1);
         if (0 <= r0 && r0 <= r1) {
           // level type depends on previous occupied cell
-          for (int r = min(r1, rowIndex); r >= r0; r--) {
+          for (int r = std::min(r1, rowIndex); r >= r0; r--) {
             TXshCell cell = xsh->getCell(r, colIndex);
             if (cell.isEmpty()) continue;
             levelType = cell.m_level->getType();
@@ -178,7 +179,7 @@ void Toolbar::updateToolbar() {
         (m_toolbarLevel & LEVELCOLUMN_XSHLEVEL))
       enable = true;
 
-    if (!m_isExpanded && buttonLayout[idx].collapsable) continue;
+    if (!m_isExpanded && buttonLayout[idx].collapsible) continue;
 
     if (!buttonLayout[idx].action) {
       if (isSeparator)
@@ -286,8 +287,7 @@ void Toolbar::hideEvent(QHideEvent *e) {
 
 void Toolbar::onToolChanged() {
   ToolHandle *toolHandle = TApp::instance()->getCurrentTool();
-  TTool *tool            = toolHandle->getTool();
-  std::string toolName   = tool->getName();
+  std::string toolName   = toolHandle->getRequestedToolName().toStdString();
   QAction *act = CommandManager::instance()->getAction(toolName.c_str());
   if (!act || act->isChecked()) return;
   act->setChecked(true);

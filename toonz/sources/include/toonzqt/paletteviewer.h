@@ -3,8 +3,12 @@
 #ifndef PALETTEVIEWER_H
 #define PALETTEVIEWER_H
 
+#include "saveloadqsettings.h"
 #include "paletteviewergui.h"
 #include "toonz/tpalettehandle.h"
+#include "toonz/preferences.h"
+#include <QVBoxLayout>
+#include <QHBoxLayout>
 
 #undef DVAPI
 #undef DVVAR
@@ -18,6 +22,7 @@
 
 // forward declaration
 class QScrollArea;
+class DvScrollWidget;
 class QToolBar;
 class PaletteKeyframeNavigator;
 class TFrameHandle;
@@ -40,7 +45,7 @@ class TXsheetHandle;
 // PaletteViewer
 //-----------------------------------------------------------------------------
 
-class DVAPI PaletteViewer final : public QFrame {
+class DVAPI PaletteViewer final : public QFrame, public SaveLoadQSettings {
   Q_OBJECT
 
 public:
@@ -49,7 +54,16 @@ public:
                 bool hasPasteColors = true);
   ~PaletteViewer();
 
-  const TPaletteHandle *getPaletteHandle() const { return m_paletteHandle; }
+  enum ToolbarButtons : int  //! Toolbar buttons to display
+  {
+    TBVisKeyframe,
+    TBVisNewStylePage,
+    TBVisPaletteGizmo,
+    TBVisNameEditor,
+    TBVisTotal
+  };
+
+  TPaletteHandle *getPaletteHandle() const { return m_paletteHandle; }
   void setPaletteHandle(TPaletteHandle *paletteHandle);
 
   const TFrameHandle *getFrameHandle() const { return m_frameHandle; }
@@ -78,6 +92,10 @@ public:
 
   void enableSaveAction(bool enable);
 
+  // SaveLoadQSettings
+  virtual void save(QSettings &settings) const override;
+  virtual void load(QSettings &settings) override;
+
 protected:
   TPaletteHandle *m_paletteHandle;
   TFrameHandle *m_frameHandle;
@@ -88,7 +106,6 @@ protected:
   PaletteViewerGUI::PageViewer *m_pageViewer;
   TabBarContainter *m_tabBarContainer;
   PaletteTabBar *m_pagesBar;
-
   QToolBar *m_paletteToolBar;
   QToolBar *m_savePaletteToolBar;
 
@@ -107,6 +124,22 @@ protected:
 
   QAction *m_lockPaletteAction;
   QToolButton *m_lockPaletteToolButton;
+
+  bool m_toolbarOnTop;
+  QAction *m_showToolbarOnTopAct;
+  DvScrollWidget *m_toolbarContainer;
+  QHBoxLayout *m_hLayout;
+
+  StyleNameEditor *m_styleNameEditor;
+  QAction *m_sharedGizmoAction;
+
+  int m_toolbarVisibleOtherParts;
+  QMultiMap<int, QAction *> m_toolbarParts;
+  QAction *m_visibleKeysAction;
+  QAction *m_visibleNewAction;
+  QAction *m_visibleGizmoAction;
+  QAction *m_visibleNameAction;
+  QAction *m_variableWidthAction;
 
 protected:
   void createTabBar();
@@ -139,6 +172,8 @@ protected:
 
   void clearStyleSelection();
 
+  void applyToolbarPartVisibility(int part, bool visible);
+
 protected slots:
 
   void setPageView(int currentIndexPage);
@@ -166,6 +201,16 @@ protected slots:
   void setIsLocked(bool lock);
 
   void onSwitchToPage(int pageIndex);
+  void onShowNewStyleButtonToggled();
+
+  void toggleToolbarOnTop();
+
+  void toggleKeyframeVisibility(bool);
+  void toggleNewStylePageVisibility(bool);
+  void togglePaletteGizmoVisibility(bool);
+  void toggleNameEditorVisibility(bool);
+
+  void toggleVariableWidth(bool);
 };
 
 #endif  // PALETTEVIEWER_H

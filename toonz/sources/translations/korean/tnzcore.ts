@@ -35,7 +35,7 @@
     </message>
     <message>
         <source>Skipping frame.</source>
-        <translation>프레임 건너뛰기</translation>
+        <translation type="vanished">프레임 건너뛰기.</translation>
     </message>
     <message>
         <source>Malformed frame name</source>

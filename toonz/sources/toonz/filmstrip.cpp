@@ -94,11 +94,7 @@ QString fidToFrameNumberWithLetter(int f) {
 // Filmstrip
 //-----------------------------------------------------------------------------
 
-#if QT_VERSION >= 0x050500
 FilmstripFrames::FilmstripFrames(QScrollArea *parent, Qt::WindowFlags flags)
-#else
-FilmstripFrames::FilmstripFrames(QScrollArea *parent, Qt::WFlags flags)
-#endif
     : QFrame(parent, flags)
     , m_scrollArea(parent)
     , m_selection(new TFilmstripSelection())
@@ -119,9 +115,14 @@ FilmstripFrames::FilmstripFrames(QScrollArea *parent, Qt::WFlags flags)
   setFrameStyle(QFrame::StyledPanel);
 
   setFocusPolicy(Qt::StrongFocus);
-  setFixedWidth(m_iconSize.width() + fs_leftMargin + fs_rightMargin +
-                fs_iconMarginLR * 2);
-  setFixedHeight(parentWidget()->height());
+  if (m_isVertical) {
+    setFixedWidth(m_iconSize.width() + fs_leftMargin + fs_rightMargin +
+                  fs_iconMarginLR * 2);
+    setFixedHeight(parentWidget()->height());
+  } else {
+    setFixedHeight(parentWidget()->height());
+    setFixedWidth(parentWidget()->width());
+  }
 
   // la testa mobile che indica il frame corrente (e gestisce la GUI dell'onion
   // skin)
@@ -150,6 +151,17 @@ TXshSimpleLevel *FilmstripFrames::getLevel() const {
 
 //-----------------------------------------------------------------------------
 
+bool FilmstripFrames::isOutOfBounds(int n) const {
+  const int width = getIconSize().width() + fs_frameSpacing + fs_iconMarginLR +
+                    fs_leftMargin + fs_rightMargin;
+  const int hight = getIconSize().height() + fs_frameSpacing +
+                    fs_iconMarginTop + fs_iconMarginBottom;
+  int limit = m_isVertical ? width : hight;
+  return n < 0 || n >= limit;
+}
+
+//-----------------------------------------------------------------------------
+
 int FilmstripFrames::y2index(int y) const {
   const int dy = getIconSize().height() + fs_frameSpacing + fs_iconMarginTop +
                  fs_iconMarginBottom;
@@ -158,10 +170,26 @@ int FilmstripFrames::y2index(int y) const {
 
 //-----------------------------------------------------------------------------
 
+int FilmstripFrames::x2index(int x) const {
+  const int dx = getIconSize().width() + fs_frameSpacing + fs_iconMarginLR +
+                 fs_leftMargin + fs_rightMargin;
+  return x / dx;
+}
+
+//-----------------------------------------------------------------------------
+
 int FilmstripFrames::index2y(int index) const {
   const int dy = getIconSize().height() + fs_frameSpacing + fs_iconMarginTop +
                  fs_iconMarginBottom;
   return index * dy;
+}
+
+//-----------------------------------------------------------------------------
+
+int FilmstripFrames::index2x(int index) const {
+  const int dx = getIconSize().width() + fs_frameSpacing + fs_iconMarginLR +
+                 fs_leftMargin + fs_rightMargin;
+  return index * dx;
 }
 
 //-----------------------------------------------------------------------------
@@ -192,53 +220,110 @@ int FilmstripFrames::getFramesHeight() const {
 
 //-----------------------------------------------------------------------------
 
+int FilmstripFrames::getFramesWidth() const {
+  TXshSimpleLevel *level = getLevel();
+  int frameCount         = level ? level->getFrameCount() : 1;
+  int frameWidth = m_iconSize.width() + fs_frameSpacing + fs_leftMargin +
+                   fs_rightMargin + fs_iconMarginLR;
+  return frameWidth * (frameCount + 1);
+}
+
+//-----------------------------------------------------------------------------
+
 int FilmstripFrames::getOneFrameHeight() {
   return m_iconSize.height() + fs_frameSpacing + fs_iconMarginTop +
          fs_iconMarginBottom;
 }
 
 //-----------------------------------------------------------------------------
+
+int FilmstripFrames::getOneFrameWidth() {
+  return m_iconSize.width() + fs_frameSpacing + fs_leftMargin +
+         fs_iconMarginLR + fs_rightMargin;
+}
+
+//-----------------------------------------------------------------------------
 void FilmstripFrames::updateContentHeight(int minimumHeight) {
   if (minimumHeight < 0)
-    minimumHeight   = visibleRegion().boundingRect().bottom();
+    minimumHeight = visibleRegion().boundingRect().bottom();
   int contentHeight = getFramesHeight();
   if (contentHeight < minimumHeight) contentHeight = minimumHeight;
-  int parentHeight                                 = parentWidget()->height();
-  if (contentHeight < parentHeight) contentHeight  = parentHeight;
+  int parentHeight = parentWidget()->height();
+  if (contentHeight < parentHeight) contentHeight = parentHeight;
   if (contentHeight != height()) setFixedHeight(contentHeight);
+}
+
+//-----------------------------------------------------------------------------
+void FilmstripFrames::updateContentWidth(int minimumWidth) {
+  setFixedHeight(getOneFrameHeight());
+  if (minimumWidth < 0) minimumWidth = visibleRegion().boundingRect().right();
+  int contentWidth = getFramesWidth();
+  if (contentWidth < minimumWidth) contentWidth = minimumWidth;
+  int parentWidth = parentWidget()->width();
+  if (contentWidth < parentWidth) contentWidth = parentWidth;
+  if (contentWidth != width()) setFixedWidth(contentWidth);
 }
 
 //-----------------------------------------------------------------------------
 
 void FilmstripFrames::showFrame(int index) {
   TXshSimpleLevel *level = getLevel();
-
-  if (!level->isFid(index2fid(index))) return;
-  int y0 = index2y(index);
-  int y1 = y0 + m_iconSize.height() + fs_frameSpacing + fs_iconMarginTop +
-           fs_iconMarginBottom;
-  if (y1 > height()) setFixedHeight(y1);
-  m_scrollArea->ensureVisible(0, (y0 + y1) / 2, 50, (y1 - y0) / 2);
+  if (m_isVertical) {
+    if (!level->isFid(index2fid(index))) {
+      if (!level->isFid(index2fid(index))) return;
+    }
+    int y0 = index2y(index);
+    int y1 = y0 + m_iconSize.height() + fs_frameSpacing + fs_iconMarginTop +
+             fs_iconMarginBottom;
+    if (y1 > height()) setFixedHeight(y1);
+    m_scrollArea->ensureVisible(0, (y0 + y1) / 2, 50, (y1 - y0) / 2);
+  } else {
+    if (!level->isFid(index2fid(index))) {
+      if (!level->isFid(index2fid(index - 1))) return;
+    }
+    int x0 = index2x(index);
+    int x1 = x0 + m_iconSize.width() + fs_frameSpacing + fs_leftMargin +
+             fs_rightMargin + fs_iconMarginLR;
+    if (x1 > width()) setFixedWidth(x1);
+    m_scrollArea->ensureVisible((x0 + x1) / 2, 0, (x1 - x0) / 2, 50);
+  }
 }
 
 //-----------------------------------------------------------------------------
 
 void FilmstripFrames::scroll(int dy) {
-  QScrollBar *sb = m_scrollArea->verticalScrollBar();
-  int sbValue    = sb->value();
+  if (m_isVertical) {
+    QScrollBar *sb = m_scrollArea->verticalScrollBar();
+    int sbValue    = sb->value();
 
-  updateContentHeight(getFramesHeight());
-  if (sbValue + dy > getFramesHeight()) {
-    sb->setValue(getFramesHeight());
-    return;
+    updateContentHeight(getFramesHeight());
+    if (sbValue + dy > getFramesHeight()) {
+      sb->setValue(getFramesHeight());
+      return;
+    }
+    sb->setValue(sbValue + dy);
+  } else {
+    QScrollBar *sb = m_scrollArea->horizontalScrollBar();
+    int sbValue    = sb->value();
+
+    updateContentWidth(getFramesWidth());
+    if (sbValue + dy > getFramesWidth()) {
+      sb->setValue(getFramesWidth());
+      return;
+    }
+    sb->setValue(sbValue + dy);
   }
-  sb->setValue(sbValue + dy);
 }
 
 //---------------------------------------------------------------------------
 
 void FilmstripFrames::mouseDoubleClickEvent(QMouseEvent *event) {
-  int index = y2index(event->pos().y());
+  int index;
+  if (m_isVertical) {
+    index = y2index(event->pos().y());
+  } else {
+    index = x2index(event->pos().x());
+  }
   select(index, ONLY_SELECT);  // ONLY_SELECT
 }
 
@@ -423,6 +508,8 @@ void FilmstripFrames::getViewer() {
     if (m_viewer) {
       disconnect(m_viewer, SIGNAL(onZoomChanged()), this, SLOT(update()));
       disconnect(m_viewer, SIGNAL(refreshNavi()), this, SLOT(update()));
+      disconnect(m_viewer, SIGNAL(aboutToBeDestroyed()), this,
+                 SLOT(onViewerAboutToBeDestroyed()));
     }
     viewerChanged = true;
   }
@@ -432,6 +519,8 @@ void FilmstripFrames::getViewer() {
   if (m_viewer && viewerChanged) {
     connect(m_viewer, SIGNAL(onZoomChanged()), this, SLOT(update()));
     connect(m_viewer, SIGNAL(refreshNavi()), this, SLOT(update()));
+    connect(m_viewer, SIGNAL(aboutToBeDestroyed()), this,
+            SLOT(onViewerAboutToBeDestroyed()));
     update();
   }
 }
@@ -458,10 +547,17 @@ void FilmstripFrames::paintEvent(QPaintEvent *evt) {
       QRect(QPoint(fs_leftMargin, fs_frameSpacing / 2), frameSize);
 
   int oneFrameHeight = frameSize.height() + fs_frameSpacing;
+  int oneFrameWidth  = frameSize.width() + fs_frameSpacing;
 
   // visible frame index range
-  int i0 = y2index(clipRect.top());
-  int i1 = y2index(clipRect.bottom());
+  int i0, i1;
+  if (m_isVertical) {
+    i0 = y2index(clipRect.top());
+    i1 = y2index(clipRect.bottom());
+  } else {
+    i0 = x2index(clipRect.left());
+    i1 = x2index(clipRect.right());
+  }
 
   // fids, frameCount <- frames del livello
   std::vector<TFrameId> fids;
@@ -471,7 +567,12 @@ void FilmstripFrames::paintEvent(QPaintEvent *evt) {
   else {
     for (int i = i0; i <= i1; i++) {
       // draw white rectangles if obtaining the level is failed
-      QRect iconRect = frameRect.translated(QPoint(0, oneFrameHeight * i));
+      QRect iconRect;
+      if (m_isVertical) {
+        iconRect = frameRect.translated(QPoint(0, oneFrameHeight * i));
+      } else {
+        iconRect = frameRect.translated(QPoint(oneFrameWidth * i, 0));
+      }
       p.setBrush(QColor(192, 192, 192));
       p.setPen(Qt::NoPen);
       p.drawRect(iconRect);
@@ -512,9 +613,8 @@ void FilmstripFrames::paintEvent(QPaintEvent *evt) {
     QRectF naviRatio(
         (-(float)m_viewer->width() * 0.5f - (float)imgBottomLeft.x) /
             imgSizeInViewer.width(),
-        1.0f -
-            ((float)m_viewer->height() * 0.5f - (float)imgBottomLeft.y) /
-                imgSizeInViewer.height(),
+        1.0f - ((float)m_viewer->height() * 0.5f - (float)imgBottomLeft.y) /
+                   imgSizeInViewer.height(),
         (float)m_viewer->width() / imgSizeInViewer.width(),
         (float)m_viewer->height() / imgSizeInViewer.height());
 
@@ -539,7 +639,7 @@ void FilmstripFrames::paintEvent(QPaintEvent *evt) {
 
   int frameCount = (int)fids.size();
 
-  bool isReadOnly    = false;
+  bool isReadOnly = false;
   if (sl) isReadOnly = sl->isReadOnly();
 
   int i;
@@ -551,17 +651,27 @@ void FilmstripFrames::paintEvent(QPaintEvent *evt) {
   // linee orizzontali che separano i frames
   p.setPen(getLightLineColor());
   for (i = i0; i <= i1; i++) {
-    int y = index2y(i) + frameHeight;
-    p.drawLine(0, y, x1, y);
+    if (m_isVertical) {
+      int y = index2y(i) + frameHeight;
+      p.drawLine(0, y, x1, y);
+    } else {
+      int x = index2x(i) + iconWidth;
+      p.drawLine(x, 0, x, frameHeight);
+    }
   }
 
   TFilmstripSelection::InbetweenRange range = m_selection->getInbetweenRange();
 
   // draw for each frames
   for (i = i0; i <= i1; i++) {
-    QRect tmp_iconImgRect =
-        iconImgRect.translated(QPoint(0, oneFrameHeight * i));
-    QRect tmp_frameRect = frameRect.translated(QPoint(0, oneFrameHeight * i));
+    QRect tmp_iconImgRect, tmp_frameRect;
+    if (m_isVertical) {
+      tmp_iconImgRect = iconImgRect.translated(QPoint(0, oneFrameHeight * i));
+      tmp_frameRect   = frameRect.translated(QPoint(0, oneFrameHeight * i));
+    } else {
+      tmp_iconImgRect = iconImgRect.translated(QPoint(oneFrameWidth * i, 0));
+      tmp_frameRect   = frameRect.translated(QPoint(oneFrameWidth * i, 0));
+    }
     bool isCurrentFrame =
         (i == sl->fid2index(TApp::instance()->getCurrentFrame()->getFid()));
     bool isSelected =
@@ -599,15 +709,15 @@ void FilmstripFrames::paintEvent(QPaintEvent *evt) {
           fid.getNumber() == TFrameId::NO_FRAME) {
         text = QString("Single Frame");
       }
-      // for sequencial frame (with letter)
+      // for sequential frame (with letter)
       else if (Preferences::instance()->isShowFrameNumberWithLettersEnabled()) {
         text = fidToFrameNumberWithLetter(fid.getNumber());
       }
-      // for sequencial frame
+      // for sequential frame
       else {
-        char letter = fid.getLetter();
-        text        = QString::number(fid.getNumber()).rightJustified(4, '0') +
-               (letter != '\0' ? QString(letter) : "");
+        QString letter = fid.getLetter();
+        text = QString::number(fid.getNumber()).rightJustified(4, '0') +
+               (!letter.isEmpty() ? letter : "");
       }
       p.drawText(tmp_frameRect.adjusted(0, 0, -3, 2), text,
                  QTextOption(Qt::AlignRight | Qt::AlignBottom));
@@ -623,9 +733,14 @@ void FilmstripFrames::paintEvent(QPaintEvent *evt) {
     }
 
     // navigator rect
-    if (naviRect.isValid() && fid >= 0 && fid == getCurrentFrameId()) {
+    if (m_showNavigator && naviRect.isValid() && fid >= 0 &&
+        fid == getCurrentFrameId()) {
       p.setPen(QPen(Qt::red, 1));
-      p.drawRect(naviRect.translated(0, oneFrameHeight * i));
+      if (m_isVertical) {
+        p.drawRect(naviRect.translated(0, oneFrameHeight * i));
+      } else {
+        p.drawRect(naviRect.translated(oneFrameWidth * i, 0));
+      }
       p.setPen(Qt::NoPen);
     }
 
@@ -662,29 +777,43 @@ void FilmstripFrames::drawFrameIcon(QPainter &p, const QRect &r, int index,
     p.drawPixmap(r.left(), r.top(), pm);
 
     if (sl && sl->getType() == PLI_XSHLEVEL && flags & F_INBETWEEN_RANGE) {
-      int x1 = r.right();
-      int x0 = x1 - 12;
-      int y0 = r.top();
-      int y1 = r.bottom();
-      p.fillRect(x0, y0, x1 - x0 + 1, y1 - y0 + 1, QColor(180, 180, 180, 255));
-      p.setPen(Qt::black);
-      p.drawLine(x0 - 1, y0, x0 - 1, y1);
+      if (m_isVertical) {
+        int x1 = r.right();
+        int x0 = x1 - 12;
+        int y0 = r.top();
+        int y1 = r.bottom();
+        p.fillRect(x0, y0, x1 - x0 + 1, y1 - y0 + 1,
+                   QColor(180, 180, 180, 255));
+        p.setPen(Qt::black);
+        p.drawLine(x0 - 1, y0, x0 - 1, y1);
 
-      QPixmap inbetweenPixmap(
-          svgToPixmap(":Resources/filmstrip_inbetween.svg"));
+        QRectF txtRect(y0 + 1, -x1, y1 - y0 - 1, x1 - x0 + 1);
+        QFontMetricsF tmpFm(p.font());
+        QRectF bbox = tmpFm.boundingRect(
+            txtRect, Qt::AlignBottom | Qt::AlignHCenter, tr("INBETWEEN"));
+        double ratio = std::min(1.0, txtRect.width() / bbox.width());
 
-      if (r.height() - 6 < inbetweenPixmap.height()) {
-        QSize rectSize(inbetweenPixmap.size());
-        rectSize.setHeight(r.height() - 6);
-        inbetweenPixmap = inbetweenPixmap.scaled(
-            rectSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        p.save();
+        p.setRenderHint(QPainter::TextAntialiasing);
+        p.rotate(90.0);
+        p.scale(ratio, 1.0);
+        p.drawText(QRectF(txtRect.left() / ratio, txtRect.top(),
+                          txtRect.width() / ratio, txtRect.height()),
+                   tr("INBETWEEN"),
+                   QTextOption(Qt::AlignBottom | Qt::AlignHCenter));
+        p.restore();
+      } else {
+        int x1 = r.right();
+        int x0 = r.left();
+        int y0 = r.bottom() - 15;
+        int y1 = r.bottom();
+        p.fillRect(x0, y0, x1 - x0 + 1, y1 - y0 + 1,
+                   QColor(180, 180, 180, 255));
+        p.setPen(Qt::black);
+        p.drawLine(x0, y0, x1, y0);
+        p.drawText(r, tr("INBETWEEN"),
+                   QTextOption(Qt::AlignBottom | Qt::AlignHCenter));
       }
-
-      p.drawPixmap(
-          x0 + 2,
-          y1 - inbetweenPixmap.height() / inbetweenPixmap.devicePixelRatio() -
-              3,
-          inbetweenPixmap);
     }
   } else {
     // non riesco (per qualche ragione) a visualizzare l'icona
@@ -719,16 +848,33 @@ TFrameId FilmstripFrames::getCurrentFrameId() {
 //-----------------------------------------------------------------------------
 
 void FilmstripFrames::mousePressEvent(QMouseEvent *event) {
-  m_selecting  = false;
-  int index    = y2index(event->pos().y());
+  m_selecting = false;
+  int index   = 0;
+  if (m_isVertical) {
+    index = y2index(event->pos().y());
+  } else {
+    index = x2index(event->pos().x());
+  }
   TFrameId fid = index2fid(index);
 
   TXshSimpleLevel *sl = getLevel();
-  int i0              = y2index(0);
   int frameHeight = m_iconSize.height() + fs_frameSpacing + fs_iconMarginTop +
                     fs_iconMarginBottom;
-  QPoint clickedPos = event->pos() - QPoint(0, (index - i0) * frameHeight);
-  bool actualIconClicked =
+  int frameWidth = m_iconSize.width() + fs_frameSpacing + fs_iconMarginLR +
+                   fs_leftMargin + fs_rightMargin;
+
+  int i0;
+  QPoint clickedPos;
+  bool actualIconClicked;
+
+  if (m_isVertical) {
+    i0         = y2index(0);
+    clickedPos = event->pos() - QPoint(0, (index - i0) * frameHeight);
+  } else {
+    i0         = x2index(0);
+    clickedPos = event->pos() - QPoint((index - i0) * frameWidth, 0);
+  }
+  actualIconClicked =
       QRect(QPoint(fs_leftMargin + fs_iconMarginLR,
                    fs_frameSpacing / 2 +
                        fs_iconMarginTop)  //<- top-left position of the icon
@@ -745,9 +891,11 @@ void FilmstripFrames::mousePressEvent(QMouseEvent *event) {
         (sl->getType() == TZP_XSHLEVEL || sl->getType() == OVL_XSHLEVEL) &&
         m_viewer && m_viewer->isVisible() && actualIconClicked &&
         event->button() == Qt::MiddleButton) {
-      m_isNavigatorPanning = true;
-      execNavigatorPan(event->pos());
-      QApplication::setOverrideCursor(Qt::ClosedHandCursor);
+      if (m_showNavigator) {
+        m_isNavigatorPanning = true;
+        execNavigatorPan(event->pos());
+        QApplication::setOverrideCursor(Qt::ClosedHandCursor);
+      }
     } else
       m_isNavigatorPanning = false;
     // end of navigator section
@@ -757,6 +905,15 @@ void FilmstripFrames::mousePressEvent(QMouseEvent *event) {
       m_justStartedSelection = false;
       return;
     }
+
+    // was the inbetween button clicked?
+    bool inbetweenSelected = false;
+    if (m_isVertical)
+      inbetweenSelected = event->pos().x() > width() - 20 - fs_rightMargin;
+    else
+      inbetweenSelected =
+          event->pos().y() > height() - fs_iconMarginBottom - 20 &&
+          event->pos().y() < height() - fs_iconMarginBottom - fs_frameSpacing;
 
     // with shift or control
     if (event->modifiers() & Qt::ShiftModifier) {
@@ -770,10 +927,8 @@ void FilmstripFrames::mousePressEvent(QMouseEvent *event) {
     } else if (event->modifiers() & Qt::ControlModifier)
       select(index, CTRL_SELECT);
 
-    // was the inbetween button clicked?
     else if (sl->getType() == PLI_XSHLEVEL &&
-             m_selection->isInInbetweenRange(fid) &&
-             event->pos().x() > width() - 20 - fs_rightMargin) {
+             m_selection->isInInbetweenRange(fid) && inbetweenSelected) {
       inbetween();
     } else {
       // move current frame when clicked without modifier
@@ -815,13 +970,18 @@ void FilmstripFrames::mousePressEvent(QMouseEvent *event) {
 //-----------------------------------------------------------------------------
 
 void FilmstripFrames::execNavigatorPan(const QPoint &point) {
-  int index    = y2index(point.y());
+  int index = y2index(point.y());
+  if (!m_isVertical) index = x2index(point.x());
   TFrameId fid = index2fid(index);
   int i0       = y2index(0);
+  if (!m_isVertical) i0 = x2index(0);
 
   int frameHeight = m_iconSize.height() + fs_frameSpacing + fs_iconMarginTop +
                     fs_iconMarginBottom;
+  int frameWidth = m_iconSize.width() + fs_frameSpacing + fs_iconMarginLR +
+                   fs_leftMargin + fs_rightMargin;
   QPoint clickedPos = point - QPoint(0, (index - i0) * frameHeight);
+  if (!m_isVertical) clickedPos = point - QPoint((index - i0) * frameWidth, 0);
 
   if (fid != getCurrentFrameId()) return;
 
@@ -866,10 +1026,18 @@ void FilmstripFrames::mouseReleaseEvent(QMouseEvent *e) {
 
 void FilmstripFrames::mouseMoveEvent(QMouseEvent *e) {
   QPoint pos = e->pos();
-  int index  = y2index(e->pos().y());
+  //m_dragDropArmed
+  int index;
+  if (m_isVertical) {
+    index = y2index(e->pos().y());
+    if (isOutOfBounds(e->pos().x())) m_dragDropArmed = true;
+  } else {
+    index = x2index(e->pos().x());
+    if (isOutOfBounds(e->pos().y())) m_dragDropArmed = true;
+  }
   if (e->buttons() & Qt::LeftButton || e->buttons() & Qt::MiddleButton) {
     // navigator pan
-    if (m_isNavigatorPanning) {
+    if (m_showNavigator && m_isNavigatorPanning) {
       execNavigatorPan(e->pos());
       e->accept();
       return;
@@ -888,47 +1056,81 @@ void FilmstripFrames::mouseMoveEvent(QMouseEvent *e) {
 
     // autopan
     int speed = getOneFrameHeight() / 64;
+    if (!m_isVertical) speed = getOneFrameWidth() / 64;
 
     QRect visibleRect = visibleRegion().boundingRect();
     int visibleTop    = visibleRect.top();
     int visibleBottom = visibleRect.bottom();
-    if (pos.y() < visibleRect.top()) {
-      m_scrollSpeed = -speed;
-      if (visibleRect.top() - pos.y() > 30) {
-        m_timerInterval = 50;
-      } else if (visibleRect.top() - pos.y() > 15) {
-        m_timerInterval = 150;
-      } else {
-        m_timerInterval = 300;
-      }
-    } else if (pos.y() > visibleRect.bottom()) {
-      m_scrollSpeed = speed;
-      if (pos.y() - visibleRect.bottom() > 30) {
-        m_timerInterval = 50;
-      } else if (pos.y() - visibleRect.bottom() > 15) {
-        m_timerInterval = 150;
-      } else {
-        m_timerInterval = 300;
-      }
-    } else
-      m_scrollSpeed = 0;
+    if (m_isVertical) {
+      if (pos.y() < visibleRect.top()) {
+        m_scrollSpeed = -speed;
+        if (visibleRect.top() - pos.y() > 30) {
+          m_timerInterval = 50;
+        } else if (visibleRect.top() - pos.y() > 15) {
+          m_timerInterval = 150;
+        } else {
+          m_timerInterval = 300;
+        }
+      } else if (pos.y() > visibleRect.bottom()) {
+        m_scrollSpeed = speed;
+        if (pos.y() - visibleRect.bottom() > 30) {
+          m_timerInterval = 50;
+        } else if (pos.y() - visibleRect.bottom() > 15) {
+          m_timerInterval = 150;
+        } else {
+          m_timerInterval = 300;
+        }
+      } else
+        m_scrollSpeed = 0;
+    } else {
+      if (pos.x() < visibleRect.left()) {
+        m_scrollSpeed = -speed;
+        if (visibleRect.left() - pos.x() > 30) {
+          m_timerInterval = 50;
+        } else if (visibleRect.left() - pos.x() > 15) {
+          m_timerInterval = 150;
+        } else {
+          m_timerInterval = 300;
+        }
+      } else if (pos.x() > visibleRect.right()) {
+        m_scrollSpeed = speed;
+        if (pos.x() - visibleRect.right() > 30) {
+          m_timerInterval = 50;
+        } else if (pos.x() - visibleRect.right() > 15) {
+          m_timerInterval = 150;
+        } else {
+          m_timerInterval = 300;
+        }
+      } else
+        m_scrollSpeed = 0;
+    }
     if (m_scrollSpeed != 0) {
       startAutoPanning();
     } else
       stopAutoPanning();
     update();
-  } else if (e->buttons() & Qt::MidButton) {
+  } else if (e->buttons() & Qt::MiddleButton) {
     // scroll con il tasto centrale
     pos = e->globalPos();
-    scroll((m_pos.y() - pos.y()) * 10);
+    if (m_isVertical) {
+      scroll((m_pos.y() - pos.y()) * 10);
+    } else {
+      scroll((m_pos.x() - pos.x()) * 10);
+    }
     m_pos = pos;
   } else {
     TFrameId fid        = index2fid(index);
     TXshSimpleLevel *sl = getLevel();
 
-    if (sl && m_selection && sl->getType() == PLI_XSHLEVEL &&
+    if (m_isVertical && sl && m_selection && sl->getType() == PLI_XSHLEVEL &&
         m_selection->isInInbetweenRange(fid) &&
         e->pos().x() > width() - 20 - fs_rightMargin) {
+      setToolTip(tr("Auto Inbetween"));
+    }
+    if (!m_isVertical && sl && m_selection && sl->getType() == PLI_XSHLEVEL &&
+        m_selection->isInInbetweenRange(fid) &&
+        e->pos().y() > height() - 15 - fs_iconMarginBottom &&
+        e->pos().y() < height() - fs_iconMarginBottom - fs_frameSpacing) {
       setToolTip(tr("Auto Inbetween"));
     }
   }
@@ -954,25 +1156,39 @@ void FilmstripFrames::keyPressEvent(QKeyEvent *event) {
   }
 
   fh->setFrameIds(fids);
-  if (event->key() == Qt::Key_Up)
+  if (event->key() == Qt::Key_Up || event->key() == Qt::Key_Left)
     fh->prevFrame();
-  else if (event->key() == Qt::Key_Down)
+  else if (event->key() == Qt::Key_Down || event->key() == Qt::Key_Right)
     fh->nextFrame(newId);
   else if (event->key() == Qt::Key_Home)
     fh->firstFrame();
   else if (event->key() == Qt::Key_End)
     fh->lastFrame();
   else if (event->key() == Qt::Key_PageDown) {
-    int frameHeight   = m_iconSize.height();
-    int visibleHeight = visibleRegion().rects()[0].height();
-    int visibleFrames = double(visibleHeight) / double(frameHeight);
-    scroll(visibleFrames * frameHeight);
+    if (m_isVertical) {
+      int frameHeight   = m_iconSize.height();
+      int visibleHeight = visibleRegion().begin()[0].height();
+      int visibleFrames = double(visibleHeight) / double(frameHeight);
+      scroll(visibleFrames * frameHeight);
+    } else {
+      int frameWidth    = m_iconSize.width();
+      int visibleWidth  = visibleRegion().begin()[0].width();
+      int visibleFrames = double(visibleWidth) / double(frameWidth);
+      scroll(visibleFrames * frameWidth);
+    }
     return;
   } else if (event->key() == Qt::Key_PageUp) {
-    int frameHeight   = m_iconSize.height();
-    int visibleHeight = visibleRegion().rects()[0].height();
-    int visibleFrames = double(visibleHeight) / double(frameHeight);
-    scroll(-visibleFrames * frameHeight);
+    if (m_isVertical) {
+      int frameHeight   = m_iconSize.height();
+      int visibleHeight = visibleRegion().begin()[0].height();
+      int visibleFrames = double(visibleHeight) / double(frameHeight);
+      scroll(-visibleFrames * frameHeight);
+    } else {
+      int frameWidth    = m_iconSize.width();
+      int visibleWidth  = visibleRegion().begin()[0].width();
+      int visibleFrames = double(visibleWidth) / double(frameWidth);
+      scroll(-visibleFrames * frameWidth);
+    }
     return;
   } else
     return;
@@ -986,7 +1202,7 @@ void FilmstripFrames::keyPressEvent(QKeyEvent *event) {
 //-----------------------------------------------------------------------------
 
 void FilmstripFrames::wheelEvent(QWheelEvent *event) {
-  scroll(-event->delta());
+  scroll(-event->angleDelta().y());
 }
 
 //-----------------------------------------------------------------------------
@@ -1016,6 +1232,7 @@ void FilmstripFrames::timerEvent(QTimerEvent *) {
   if (m_selecting) {
     QPoint pos = mapFromGlobal(m_pos);
     int index  = y2index(pos.y());
+    if (!m_isVertical) index = x2index(pos.x());
     select(index, DRAG_SELECT);
     showFrame(index);
     update();
@@ -1063,29 +1280,143 @@ void FilmstripFrames::contextMenuEvent(QContextMenuEvent *event) {
     menu->addAction(cm->getAction(MI_Renumber));
     if (sl && sl->getType() == TZP_XSHLEVEL)
       menu->addAction(cm->getAction(MI_RevertToCleanedUp));
-    if (sl &&
-        (sl->getType() == TZP_XSHLEVEL || sl->getType() == PLI_XSHLEVEL ||
-         (sl->getType() == OVL_XSHLEVEL && sl->getPath().getType() != "psd" &&
-          sl->getPath().getType() != "gif" &&
-          sl->getPath().getType() != "mp4" &&
-          sl->getPath().getType() != "webm")))
-      menu->addAction(cm->getAction(MI_RevertToLastSaved));
   }
+  if (sl && (sl->getType() == TZP_XSHLEVEL || sl->getType() == PLI_XSHLEVEL ||
+             (sl->getType() == OVL_XSHLEVEL && !sl->getPath().isUneditable())))
+    menu->addAction(cm->getAction(MI_RevertToLastSaved));
+  menu->addSeparator();
+  createSelectLevelMenu(menu);
+  QMenu *panelMenu           = menu->addMenu(tr("Panel Settings"));
+  QAction *toggleOrientation = panelMenu->addAction(tr("Toggle Orientation"));
+  QAction *hideComboBox = panelMenu->addAction(tr("Show/Hide Drop Down Menu"));
+  QAction *hideNavigator =
+      panelMenu->addAction(tr("Show/Hide Level Navigator"));
+  hideComboBox->setCheckable(true);
+  hideComboBox->setChecked(m_showComboBox);
+  hideNavigator->setCheckable(true);
+  hideNavigator->setChecked(m_showNavigator);
+  connect(toggleOrientation, SIGNAL(triggered(bool)), this,
+          SLOT(orientationToggled(bool)));
+  connect(hideComboBox, SIGNAL(triggered(bool)), this,
+          SLOT(comboBoxToggled(bool)));
+  connect(hideNavigator, SIGNAL(triggered(bool)), this,
+          SLOT(navigatorToggled(bool)));
 
   menu->exec(event->globalPos());
 }
 
 //-----------------------------------------------------------------------------
 
+void FilmstripFrames::createSelectLevelMenu(QMenu *menu) {
+  ToonzScene *scene = TApp::instance()->getCurrentScene()->getScene();
+  if (scene) {
+    std::vector<TXshLevel *> levels;
+    scene->getLevelSet()->listLevels(levels);
+    std::vector<TXshLevel *>::iterator it;
+    int i       = 0;
+    bool active = false;
+    QMenu *levelSelectMenu;
+    for (it = levels.begin(); it != levels.end(); ++it) {
+      TXshSimpleLevel *sl = (*it)->getSimpleLevel();
+      if (sl) {
+        // register only used level in xsheet
+        if (!scene->getTopXsheet()->isLevelUsed(sl)) continue;
+        QString levelName = QString::fromStdWString(sl->getName());
+        if (i == 0) {
+          levelSelectMenu = menu->addMenu(tr("Select Level"));
+          active          = true;
+        }
+        if (active) {
+          QAction *action = levelSelectMenu->addAction(levelName);
+          connect(action, &QAction::triggered, [=] { levelSelected(i); });
+        }
+        i++;
+      }
+    }
+  }
+}
+
+//-----------------------------------------------------------------------------
+
+void FilmstripFrames::levelSelected(int index) {
+  emit(levelSelectedSignal(index));
+}
+
+//-----------------------------------------------------------------------------
+
+void FilmstripFrames::comboBoxToggled(bool ignore) {
+  emit(comboBoxToggledSignal());
+}
+
+//-----------------------------------------------------------------------------
+
+void FilmstripFrames::navigatorToggled(bool ignore) {
+  emit(navigatorToggledSignal());
+}
+
+//-----------------------------------------------------------------------------
+
+void FilmstripFrames::orientationToggled(bool ignore) {
+  m_isVertical = !m_isVertical;
+  emit(orientationToggledSignal(m_isVertical));
+}
+
+//-----------------------------------------------------------------------------
+
+void FilmstripFrames::setOrientation(bool isVertical) {
+  m_isVertical = isVertical;
+  if (m_isVertical) {
+    setFixedWidth(m_iconSize.width() + fs_leftMargin + fs_rightMargin +
+                  fs_iconMarginLR * 2);
+    setFixedHeight(parentWidget()->height());
+  } else {
+    setFixedHeight(parentWidget()->height());
+    setFixedWidth(parentWidget()->width());
+  }
+  if (m_isVertical)
+    updateContentHeight();
+  else
+    updateContentWidth();
+  TApp *app        = TApp::instance();
+  TFrameHandle *fh = app->getCurrentFrame();
+  TFrameId fid     = getCurrentFrameId();
+
+  int index = fid2index(fid);
+  if (index >= 0) {
+    showFrame(index);
+  }
+  update();
+}
+
+//-----------------------------------------------------------------------------
+
+void FilmstripFrames::setNavigator(bool showNavigator) {
+  m_showNavigator = showNavigator;
+}
+
+//-----------------------------------------------------------------------------
+
+void FilmstripFrames::setComboBox(bool showComboBox) {
+  m_showComboBox = showComboBox;
+}
+
+//-----------------------------------------------------------------------------
+
 void FilmstripFrames::onLevelChanged() {
-  updateContentHeight();
+  if (m_isVertical)
+    updateContentHeight();
+  else
+    updateContentWidth();
   update();
 }
 
 //-----------------------------------------------------------------------------
 
 void FilmstripFrames::onLevelSwitched(TXshLevel *) {
-  updateContentHeight(0);
+  if (m_isVertical)
+    updateContentHeight(0);
+  else
+    updateContentWidth(0);
   onFrameSwitched();  // deve visualizzare il frame corrente nella levelstrip
 }
 
@@ -1176,16 +1507,21 @@ void FilmstripFrames::inbetween() {
   FilmstripCmd::inbetween(getLevel(), range.first, range.second, interpolation);
 }
 
+//-----------------------------------------------------------------------------
+
+void FilmstripFrames::onViewerAboutToBeDestroyed() {
+  if (m_viewer) {
+    disconnect(m_viewer, SIGNAL(onZoomChanged()), this, SLOT(update()));
+    disconnect(m_viewer, SIGNAL(refreshNavi()), this, SLOT(update()));
+    m_viewer = nullptr;
+  }
+}
+
 //=============================================================================
 // Filmstrip
 //-----------------------------------------------------------------------------
 
-#if QT_VERSION >= 0x050500
-Filmstrip::Filmstrip(QWidget *parent, Qt::WindowFlags flags)
-#else
-Filmstrip::Filmstrip(QWidget *parent, Qt::WFlags flags)
-#endif
-    : QWidget(parent) {
+Filmstrip::Filmstrip(QWidget *parent, Qt::WindowFlags flags) : QWidget(parent) {
   setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
 
   m_frameArea        = new QScrollArea(this);
@@ -1193,21 +1529,20 @@ Filmstrip::Filmstrip(QWidget *parent, Qt::WFlags flags)
   m_frames           = new FilmstripFrames(m_frameArea);
 
   //----
-
+  m_frames->m_isVertical = m_isVertical;
   m_frameArea->setObjectName("filmScrollArea");
   m_frameArea->setFrameStyle(QFrame::StyledPanel);
-  m_frameArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-  m_frameArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+  setOrientation(m_isVertical);
 
-  m_frameArea->verticalScrollBar()->setObjectName("LevelStripScrollBar");
   m_frameArea->setWidget(m_frames);
 
   m_chooseLevelCombo->setMaxVisibleItems(50);
+  m_chooseLevelCombo->setObjectName("filmLevelCombo");
 
   // layout
   QVBoxLayout *mainLayout = new QVBoxLayout();
-  mainLayout->setMargin(0);
-  mainLayout->setSpacing(3);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
+  mainLayout->setSpacing(0);
   {
     mainLayout->addWidget(m_chooseLevelCombo, 0);
     mainLayout->addWidget(m_frameArea, 1);
@@ -1223,12 +1558,20 @@ Filmstrip::Filmstrip(QWidget *parent, Qt::WFlags flags)
   // changed
   connect(m_chooseLevelCombo, SIGNAL(activated(int)), this,
           SLOT(onChooseLevelComboChanged(int)));
+  connect(m_frames, SIGNAL(orientationToggledSignal(bool)), this,
+          SLOT(orientationToggled(bool)));
+  connect(m_frames, SIGNAL(comboBoxToggledSignal()), this,
+          SLOT(comboBoxToggled()));
+  connect(m_frames, SIGNAL(navigatorToggledSignal()), this,
+          SLOT(navigatorToggled()));
+  connect(m_frames, SIGNAL(levelSelectedSignal(int)), this,
+          SLOT(onChooseLevelComboChanged(int)));
 }
 
 //-----------------------------------------------------------------------------
 /*! switch the current level when the current index of m_chooseLevelCombo is
  * changed
-*/
+ */
 void Filmstrip::onChooseLevelComboChanged(int index) {
   TApp *tapp = TApp::instance();
   // empty level
@@ -1270,10 +1613,11 @@ void Filmstrip::onChooseLevelComboChanged(int index) {
 
 //-----------------------------------------------------------------------------
 /*! update combo items when the contents of scene cast are changed
-*/
+ */
 void Filmstrip::updateChooseLevelComboItems() {
   // clear items
   m_chooseLevelCombo->clear();
+  for (auto oldLevel : m_levels) oldLevel->release();
   m_levels.clear();
 
   std::map<TXshSimpleLevel *, TFrameId> new_workingFrames;
@@ -1292,6 +1636,7 @@ void Filmstrip::updateChooseLevelComboItems() {
         // register only used level in xsheet
         if (!scene->getTopXsheet()->isLevelUsed(sl)) continue;
 
+        sl->addRef();
         m_levels.push_back(sl);
 
         // create new m_workingFrames map with the new levelset
@@ -1319,7 +1664,8 @@ void Filmstrip::updateChooseLevelComboItems() {
     }
   }
 
-  m_chooseLevelCombo->addItem(tr("- No Current Level -"));
+  if (m_chooseLevelCombo->count() == 0)
+    m_chooseLevelCombo->addItem(tr("- No Current Level -"));
 
   // swap the list
   m_workingFrames.clear();
@@ -1331,9 +1677,10 @@ void Filmstrip::updateChooseLevelComboItems() {
 
 //-----------------------------------------------------------------------------
 /*! synchronize the current index of combo to the current level
-*/
+ */
 void Filmstrip::updateCurrentLevelComboItem() {
-  if (m_chooseLevelCombo->count() == 1) {
+  if (m_chooseLevelCombo->count() == 1 &&
+      m_chooseLevelCombo->itemText(0) == tr("- No Current Level -")) {
     m_chooseLevelCombo->setCurrentIndex(0);
     return;
   }
@@ -1342,6 +1689,10 @@ void Filmstrip::updateCurrentLevelComboItem() {
       TApp::instance()->getCurrentLevel()->getSimpleLevel();
   if (!currentLevel) {
     int noLevelIndex = m_chooseLevelCombo->findText(tr("- No Current Level -"));
+    if (noLevelIndex == -1) {
+      noLevelIndex = m_chooseLevelCombo->count();
+      m_chooseLevelCombo->addItem(tr("- No Current Level -"));
+    }
     m_chooseLevelCombo->setCurrentIndex(noLevelIndex);
     return;
   }
@@ -1349,17 +1700,27 @@ void Filmstrip::updateCurrentLevelComboItem() {
   for (int i = 0; i < m_levels.size(); i++) {
     if (currentLevel->getName() == m_levels[i]->getName()) {
       m_chooseLevelCombo->setCurrentIndex(i);
+      int noLevelIndex =
+          m_chooseLevelCombo->findText(tr("- No Current Level -"));
+      if (noLevelIndex != -1) m_chooseLevelCombo->removeItem(noLevelIndex);
       return;
     }
   }
 
   int noLevelIndex = m_chooseLevelCombo->findText(tr("- No Current Level -"));
+  if (noLevelIndex == -1) {
+    noLevelIndex = m_chooseLevelCombo->count();
+    m_chooseLevelCombo->addItem(tr("- No Current Level -"));
+  }
   m_chooseLevelCombo->setCurrentIndex(noLevelIndex);
 }
 
 //-----------------------------------------------------------------------------
 
-Filmstrip::~Filmstrip() {}
+Filmstrip::~Filmstrip() {
+  for (auto level : m_levels) level->release();
+  m_levels.clear();
+}
 
 //-----------------------------------------------------------------------------
 
@@ -1368,7 +1729,7 @@ void Filmstrip::showEvent(QShowEvent *) {
   TXshLevelHandle *levelHandle = app->getCurrentLevel();
   bool ret = connect(levelHandle, SIGNAL(xshLevelSwitched(TXshLevel *)),
                      SLOT(onLevelSwitched(TXshLevel *)));
-  ret = ret &&
+  ret      = ret &&
         connect(levelHandle, SIGNAL(xshLevelChanged()), SLOT(onLevelChanged()));
 
   // updateWindowTitle is called in the onLevelChanged
@@ -1437,9 +1798,15 @@ void Filmstrip::hideEvent(QHideEvent *) {
 //-----------------------------------------------------------------------------
 
 void Filmstrip::resizeEvent(QResizeEvent *e) {
-  m_frames->updateContentHeight();
-  m_frameArea->verticalScrollBar()->setSingleStep(
-      m_frames->getOneFrameHeight());
+  if (m_isVertical) {
+    m_frames->updateContentHeight();
+    m_frameArea->verticalScrollBar()->setSingleStep(
+        m_frames->getOneFrameHeight());
+  } else {
+    m_frames->updateContentWidth();
+    m_frameArea->horizontalScrollBar()->setSingleStep(
+        m_frames->getOneFrameWidth());
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -1496,9 +1863,17 @@ void Filmstrip::onLevelSwitched(TXshLevel *oldLevel) {
 void Filmstrip::onSliderMoved(int val) {
   int oneFrameHeight = m_frames->getIconSize().height() + fs_frameSpacing +
                        fs_iconMarginTop + fs_iconMarginBottom;
-  int tmpVal =
-      (int)((float)val / (float)oneFrameHeight + 0.5f) * oneFrameHeight;
-  m_frameArea->verticalScrollBar()->setValue(tmpVal);
+  int oneFrameWidth =
+      m_frames->getIconSize().width() + fs_frameSpacing + fs_iconMarginLR;
+  if (m_isVertical) {
+    int tmpVal =
+        (int)((float)val / (float)oneFrameHeight + 0.5f) * oneFrameHeight;
+    m_frameArea->verticalScrollBar()->setValue(tmpVal);
+  } else {
+    int tmpVal =
+        (int)((float)val / (float)oneFrameWidth + 0.5f) * oneFrameWidth;
+    m_frameArea->horizontalScrollBar()->setValue(tmpVal);
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -1525,12 +1900,88 @@ void Filmstrip::onFrameSwitched() {
                                   levelName);
 }
 
+//-----------------------------------------------------------------------------
+
+void Filmstrip::orientationToggled(bool isVertical) {
+  setOrientation(isVertical);
+}
+
+//-----------------------------------------------------------------------------
+
+void Filmstrip::comboBoxToggled() {
+  if (m_chooseLevelCombo->isHidden())
+    m_chooseLevelCombo->show();
+  else
+    m_chooseLevelCombo->hide();
+  m_showComboBox = !m_chooseLevelCombo->isHidden();
+  m_frames->setComboBox(m_showComboBox);
+}
+
+//-----------------------------------------------------------------------------
+
+void Filmstrip::navigatorToggled() {
+  m_showNavigator = !m_showNavigator;
+  m_frames->setNavigator(m_showNavigator);
+}
+
+//-----------------------------------------------------------------------------
+
+void Filmstrip::setOrientation(bool isVertical) {
+  m_isVertical = isVertical;
+  if (isVertical) {
+    m_frameArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_frameArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    m_frameArea->verticalScrollBar()->setObjectName("LevelStripScrollBar");
+  } else {
+    m_frameArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    m_frameArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_frameArea->horizontalScrollBar()->setObjectName("LevelStripScrollBar");
+  }
+  m_frames->setOrientation(m_isVertical);
+  dynamic_cast<TPanel *>(parentWidget())
+      ->setFixWidthMode(m_isVertical ? TPanel::sizeable : TPanel::variable);
+}
+
+// SaveLoadQSettings
+void Filmstrip::save(QSettings &settings) const {
+  UINT orientation = 0;
+  orientation      = m_isVertical ? 1 : 0;
+  settings.setValue("vertical", orientation);
+
+  UINT showCombo = 0;
+  showCombo      = m_chooseLevelCombo->isHidden() ? 0 : 1;
+  settings.setValue("showCombo", showCombo);
+
+  UINT navigator = 0;
+  navigator      = m_showNavigator ? 1 : 0;
+  settings.setValue("navigator", navigator);
+}
+
+void Filmstrip::load(QSettings &settings) {
+  UINT orientation = settings.value("vertical", 1).toUInt();
+  m_isVertical     = orientation == 1;
+  setOrientation(m_isVertical);
+
+  UINT navigator  = settings.value("navigator", 1).toUInt();
+  m_showNavigator = navigator == 1;
+  m_frames->setNavigator(m_showNavigator);
+
+  UINT showCombo = settings.value("showCombo", 1).toUInt();
+  m_showComboBox = showCombo == 1;
+  if (showCombo == 1) {
+    m_chooseLevelCombo->show();
+  } else {
+    m_chooseLevelCombo->hide();
+  }
+  m_frames->setComboBox(m_showComboBox);
+}
+
 //=============================================================================
 // inbetweenDialog
 //-----------------------------------------------------------------------------
 
 InbetweenDialog::InbetweenDialog(QWidget *parent)
-    : Dialog(TApp::instance()->getMainWindow(), true, "InBeetween") {
+    : Dialog(TApp::instance()->getMainWindow(), true, "InBetween") {
   setWindowTitle(tr("Inbetween"));
 
   QString linear(tr("Linear"));
@@ -1561,7 +2012,7 @@ QString InbetweenDialog::getValue() { return m_comboBox->currentText(); }
 //-----------------------------------------------------------------------------
 
 void InbetweenDialog::setValue(const QString &value) {
-  int currentIndex                   = m_comboBox->findText(value);
+  int currentIndex = m_comboBox->findText(value);
   if (currentIndex < 0) currentIndex = 0;
   m_comboBox->setCurrentIndex(currentIndex);
 }

@@ -133,6 +133,9 @@ public:
   virtual int getTaskCount() const { return 1; }
   virtual TFarmTask *getTask(int index) { return this; }
 
+  QString getCommandLinePrgName() const;
+  QString getCommandLineArguments() const;
+  QStringList getCommandLineArgumentsList() const;
   QString getCommandLine(bool isFarmTask = false) const;
   void parseCommandLine(QString commandLine);
 

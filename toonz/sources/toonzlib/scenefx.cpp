@@ -33,8 +33,11 @@
 
 #include "../stdfx/motionawarebasefx.h"
 #include "../stdfx/textawarebasefx.h"
+#include "../stdfx/globalcontrollablefx.h"
 
 #include "toonz/scenefx.h"
+
+#include <QList>
 
 /*
   TODO: Some parts of the following render-tree building procedure should be
@@ -68,10 +71,14 @@ private:
   int m_frame;                 //!< Frame this fx redirects to
   TFxTimeRegion m_timeRegion;  //!< Input (outer) valid column frame range
   TRasterFxPort m_port;        //!< Input port
+  TXshCellColumn *m_cellColumn;
 
 public:
-  TimeShuffleFx() : TRasterFx(), m_frame(0), m_timeRegion() {
+  TimeShuffleFx()
+      : TRasterFx(), m_frame(0), m_timeRegion(), m_cellColumn(nullptr) {
     addInputPort("source", m_port);
+
+    enableComputeInFloat(true);
   }
   ~TimeShuffleFx() {}
 
@@ -81,6 +88,7 @@ public:
 
     fx->setFrame(m_frame);
     fx->setTimeRegion(getTimeRegion());
+    fx->setCellColumn(m_cellColumn);
 
     return fx;
   }
@@ -93,16 +101,19 @@ public:
   }
   TFxTimeRegion getTimeRegion() const override { return m_timeRegion; }
 
+  void setCellColumn(TXshCellColumn *cellColumn) { m_cellColumn = cellColumn; }
+
   bool canHandle(const TRenderSettings &info, double frame) override {
     return true;
   }
 
   std::string getPluginId() const override { return std::string(); }
 
-  void compute(TFlash &flash, int frame) override {
-    if (!m_port.isConnected()) return;
-
-    TRasterFxP(m_port.getFx())->compute(flash, m_frame);
+  int getLevelFrame(int frame) const {
+    if (!m_cellColumn) return m_frame;
+    TXshCell cell = m_cellColumn->getCell(tfloor(frame));
+    assert(!cell.isEmpty());
+    return cell.m_frameId.getNumber() - 1;
   }
 
   void doCompute(TTile &tile, double frame,
@@ -113,25 +124,30 @@ public:
     }
 
     // Exchange frame with the stored one
-    TRasterFxP(m_port.getFx())->compute(tile, m_frame, ri);
+    TRasterFxP(m_port.getFx())->compute(tile, getLevelFrame(frame), ri);
   }
 
   bool doGetBBox(double frame, TRectD &bbox,
                  const TRenderSettings &info) override {
     if (!m_port.isConnected()) return false;
-
-    return TRasterFxP(m_port.getFx())->doGetBBox(m_frame, bbox, info);
+    return TRasterFxP(m_port.getFx())
+        ->doGetBBox(getLevelFrame(frame), bbox, info);
   }
 
   std::string getAlias(double frame,
                        const TRenderSettings &info) const override {
-    return TRasterFx::getAlias(m_frame, info);
+    return TRasterFx::getAlias(getLevelFrame(frame), info);
   }
 
   void doDryCompute(TRectD &rect, double frame,
                     const TRenderSettings &info) override {
     if (m_port.isConnected())
-      TRasterFxP(m_port.getFx())->dryCompute(rect, m_frame, info);
+      TRasterFxP(m_port.getFx())->dryCompute(rect, getLevelFrame(frame), info);
+  }
+
+  bool toBeComputedInLinearColorSpace(bool settingsIsLinear,
+                                      bool tileIsLinear) const override {
+    return tileIsLinear;
   }
 
 private:
@@ -232,6 +248,7 @@ public:
   double m_z;         //!< Z value for this fx's column
   double m_so;        //!< Same as above, for stacking order
   int m_columnIndex;  //!< This fx's column index
+  bool m_isPostXsheetNode;
 
   TFxP m_fx;      //!< The referenced fx
   TAffine m_aff;  //!<
@@ -245,31 +262,29 @@ public:
       , m_columnIndex(-1)
       , m_fx(0)
       , m_aff()
-      , m_leftXsheetPort(0) {}
+      , m_leftXsheetPort(0)
+      , m_isPostXsheetNode(false) {}
   explicit PlacedFx(const TFxP &fx)
       : m_z(0)
       , m_so(0)
       , m_columnIndex(-1)
       , m_fx(fx)
       , m_aff()
-      , m_leftXsheetPort(0) {}
+      , m_leftXsheetPort(0)
+      , m_isPostXsheetNode(false) {}
 
   bool operator<(const PlacedFx &pf) const {
-    return (m_z < pf.m_z)
-               ? true
-               : (m_z > pf.m_z)
-                     ? false
-                     : (m_so < pf.m_so)
-                           ? true
-                           : (m_so > pf.m_so)
-                                 ? false
-                                 : (m_columnIndex < pf.m_columnIndex);
+    return (m_z < pf.m_z)     ? true
+           : (m_z > pf.m_z)   ? false
+           : (m_so < pf.m_so) ? true
+           : (m_so > pf.m_so) ? false
+                              : (m_columnIndex < pf.m_columnIndex);
   }
 
   TFxP makeFx() {
-    return (!m_fx)
-               ? TFxP()
-               : (m_aff == TAffine()) ? m_fx : TFxUtil::makeAffine(m_fx, m_aff);
+    return (!m_fx)                ? TFxP()
+           : (m_aff == TAffine()) ? m_fx
+                                  : TFxUtil::makeAffine(m_fx, m_aff);
   }
 };
 
@@ -279,11 +294,13 @@ public:
 
 namespace {
 
-TFxP timeShuffle(TFxP fx, int frame, TFxTimeRegion timeRegion) {
+TFxP timeShuffle(TFxP fx, int frame, TFxTimeRegion timeRegion,
+                 TXshCellColumn *cellColumn) {
   TimeShuffleFx *timeShuffle = new TimeShuffleFx();
 
   timeShuffle->setFrame(frame);
   timeShuffle->setTimeRegion(timeRegion);
+  timeShuffle->setCellColumn(cellColumn);
   if (!timeShuffle->connect("source", fx.getPointer()))
     assert(!"Could not connect ports!");
 
@@ -308,7 +325,7 @@ bool getColumnPlacement(TAffine &aff, TXsheet *xsh, double row, int col,
   if (isPreview)
     cameraId = xsh->getStageObjectTree()->getCurrentPreviewCameraId();
   else
-    cameraId           = xsh->getStageObjectTree()->getCurrentCameraId();
+    cameraId = xsh->getStageObjectTree()->getCurrentCameraId();
   TStageObject *camera = xsh->getStageObject(cameraId);
   TAffine cameraAff    = camera->getPlacement(row);
   double cameraZ       = camera->getZ(row);
@@ -333,7 +350,7 @@ static bool getColumnPlacement(PlacedFx &pf, TXsheet *xsh, double row, int col,
   if (isPreview)
     cameraId = xsh->getStageObjectTree()->getCurrentPreviewCameraId();
   else
-    cameraId           = xsh->getStageObjectTree()->getCurrentCameraId();
+    cameraId = xsh->getStageObjectTree()->getCurrentCameraId();
   TStageObject *camera = xsh->getStageObject(cameraId);
   TAffine cameraAff    = camera->getPlacement(row);
   double cameraZ       = camera->getZ(row);
@@ -346,7 +363,7 @@ static bool getColumnPlacement(PlacedFx &pf, TXsheet *xsh, double row, int col,
 }
 
 //-------------------------------------------------------------------
-/*-- Objectの位置を得る --*/
+/*-- Obtain the position of the Object --*/
 static bool getStageObjectPlacement(TAffine &aff, TXsheet *xsh, double row,
                                     TStageObjectId &id, bool isPreview) {
   TStageObject *pegbar = xsh->getStageObjectTree()->getStageObject(id, false);
@@ -360,7 +377,7 @@ static bool getStageObjectPlacement(TAffine &aff, TXsheet *xsh, double row,
   if (isPreview)
     cameraId = xsh->getStageObjectTree()->getCurrentPreviewCameraId();
   else
-    cameraId           = xsh->getStageObjectTree()->getCurrentCameraId();
+    cameraId = xsh->getStageObjectTree()->getCurrentCameraId();
   TStageObject *camera = xsh->getStageObject(cameraId);
   TAffine cameraAff    = camera->getPlacement(row);
   double cameraZ       = camera->getZ(row);
@@ -371,7 +388,7 @@ static bool getStageObjectPlacement(TAffine &aff, TXsheet *xsh, double row,
   return isVisible;
 }
 
-/*-- typeとindexからStageObjectIdを得る --*/
+/*-- Get StageObjectId from type and index --*/
 namespace {
 TStageObjectId getMotionObjectId(MotionObjectType type, int index) {
   switch (type) {
@@ -408,12 +425,12 @@ static TPointD getColumnSpeed(TXsheet *xsh, double row, int col,
   const double h = 0.001;
   getColumnPlacement(aff, xsh, row + h, col, isPreview);
 
-  /*-- カラムと、カメラの動きに反応 --*/
+  /*-- Reacts to columns and camera movement --*/
   TStageObjectId cameraId;
   if (isPreview)
     cameraId = xsh->getStageObjectTree()->getCurrentPreviewCameraId();
   else
-    cameraId           = xsh->getStageObjectTree()->getCurrentCameraId();
+    cameraId = xsh->getStageObjectTree()->getCurrentCameraId();
   TStageObject *camera = xsh->getStageObject(cameraId);
   TAffine cameraAff    = camera->getPlacement(row + h);
   a                    = aff * TPointD(-cameraAff.a13, -cameraAff.a23);
@@ -428,15 +445,15 @@ static TPointD getColumnSpeed(TXsheet *xsh, double row, int col,
 }
 
 //-------------------------------------------------------------------
-/*-- オブジェクトの軌跡を、基準点との差分で得る
-        objectId: 移動の参考にするオブジェクト。自分自身の場合はNoneId
+/*-- Obtain the trajectory of an object by the difference from the reference
+point objectId: The reference object for the move. NoneId for itself.
 --*/
 static QList<TPointD> getColumnMotionPoints(TXsheet *xsh, double row, int col,
                                             TStageObjectId &objectId,
                                             bool isPreview, double shutterStart,
                                             double shutterEnd,
                                             int traceResolution) {
-  /*-- 前後フレームが共に０なら空のリストを返す --*/
+  /*-- Returns an empty list if the previous and next frames are both zero. --*/
   if (shutterStart == 0.0 && shutterEnd == 0.0) return QList<TPointD>();
 
   /*-- 現在のカメラを得る --*/
@@ -444,7 +461,7 @@ static QList<TPointD> getColumnMotionPoints(TXsheet *xsh, double row, int col,
   if (isPreview)
     cameraId = xsh->getStageObjectTree()->getCurrentPreviewCameraId();
   else
-    cameraId           = xsh->getStageObjectTree()->getCurrentCameraId();
+    cameraId = xsh->getStageObjectTree()->getCurrentCameraId();
   TStageObject *camera = xsh->getStageObject(cameraId);
   TAffine dpiAff       = getDpiAffine(camera->getCamera());
 
@@ -500,6 +517,57 @@ static QList<TPointD> getColumnMotionPoints(TXsheet *xsh, double row, int col,
   return points;
 }
 
+//-------------------------------------------------------------------
+/*--
+    フレーム前後のアフィン変換を得る
+        objectId: 移動の参考にするオブジェクト。自分自身の場合はNoneId
+--*/
+static void getColumnMotionAffines(TAffine &aff_Before, TAffine &aff_After,
+                                   TXsheet *xsh, double row, int col,
+                                   TStageObjectId &objectId, bool isPreview,
+                                   double shutterLength) {
+  /*-- 現在のカメラを得る --*/
+  TStageObjectId cameraId;
+  if (isPreview)
+    cameraId = xsh->getStageObjectTree()->getCurrentPreviewCameraId();
+  else
+    cameraId = xsh->getStageObjectTree()->getCurrentCameraId();
+  TStageObject *camera = xsh->getStageObject(cameraId);
+  TAffine dpiAff       = getDpiAffine(camera->getCamera());
+
+  /*-- objectIdが有効なものかどうかチェック --*/
+  bool useOwnMotion = false;
+  if (objectId == TStageObjectId::NoneId ||
+      !xsh->getStageObjectTree()->getStageObject(objectId, false)) {
+    useOwnMotion = true;
+  }
+
+  /*-- 結果を収めるリスト --*/
+  TAffine retAff[2];
+  TAffine aff;
+
+  /*-- 各点の位置を、基準点との差分で格納していく --*/
+  for (int i = 0; i < 2; i++) {
+    /*-- 基準位置とのフレーム差 --*/
+    double frameOffset = (i == 0) ? -shutterLength : shutterLength;
+    double targetFrame = row + frameOffset;
+    // Proper position cannot be obtained for frame = -1.0
+    if (targetFrame == -1.0) targetFrame = -0.9999;
+
+    /*-- 自分自身の動きを使うか、別オブジェクトの動きを使うか --*/
+    if (useOwnMotion)
+      getColumnPlacement(aff, xsh, targetFrame, col, isPreview);
+    else
+      getStageObjectPlacement(aff, xsh, targetFrame, objectId, isPreview);
+
+    TAffine cameraAff = camera->getPlacement(targetFrame);
+    retAff[i]         = dpiAff.inv() * aff * cameraAff.inv();
+  }
+
+  aff_Before = retAff[0];
+  aff_After  = retAff[1];
+}
+
 namespace {
 
 QString getNoteText(TXsheet *xsh, double row, int col, int noteColumnIndex,
@@ -518,7 +586,7 @@ QString getNoteText(TXsheet *xsh, double row, int col, int noteColumnIndex,
 
   return cell.getSoundTextLevel()->getFrameText(cell.m_frameId.getNumber() - 1);
 }
-};
+};  // namespace
 
 //***************************************************************************************************
 //    FxBuilder  definition
@@ -539,6 +607,13 @@ public:
   // ancestor
   // (at least) of a particle Fx
   int m_particleDescendentCount;
+
+  // fxid and pointer to the correspondent blend fx for the global
+  // control. Boolean is the flag indicating that the makePF is just called
+  // from the blend fx. If the flag is true then just compute the
+  // global controlled Fx without inserting the same blend fx in order to
+  // prevent infinite loop.
+  QMap<std::wstring, QPair<TFxP, bool>> m_globalControlledFx;
 
 public:
   FxBuilder(ToonzScene *scene, TXsheet *xsh, double frame, int whichLevels,
@@ -692,13 +767,21 @@ PlacedFx FxBuilder::makePF(TFx *fx) {
 
 PlacedFx FxBuilder::makePF(TXsheetFx *fx) {
   if (!m_expandXSheet)  // Xsheet expansion is typically blocked for render-tree
-                        // building of
-    return PlacedFx(fx);  // post-xsheet fxs only.
+                        // building of post-xsheet fxs only.
+  {
+    PlacedFx ret(fx);
+    ret.m_isPostXsheetNode = true;
+    return ret;
+  }
 
   // Expand the render-tree from terminal fxs
   TFxSet *fxs = m_xsh->getFxDag()->getTerminalFxs();
   int m       = fxs->getFxCount();
-  if (m == 0) return PlacedFx();
+  if (m == 0) {
+    PlacedFx ret;
+    ret.m_isPostXsheetNode = true;
+    return ret;
+  }
 
   std::vector<PlacedFx> pfs(m);
   int i;
@@ -739,7 +822,9 @@ PlacedFx FxBuilder::makePF(TXsheetFx *fx) {
     }
   }
 
-  return PlacedFx(currentFx);
+  PlacedFx ret(currentFx);
+  ret.m_isPostXsheetNode = true;
+  return ret;
 }
 
 //-------------------------------------------------------------------
@@ -757,7 +842,8 @@ PlacedFx FxBuilder::makePF(TLevelColumnFx *lcfx) {
   assert(m_scene);
   assert(lcfx);
   assert(lcfx->getColumn());
-  if (!lcfx || !lcfx->getColumn()) return PlacedFx();
+  if (!lcfx || !lcfx->getColumn() || lcfx->getColumn()->isEmpty())
+    return PlacedFx();
 
   if (!lcfx->getColumn()->isPreviewVisible())  // This is the 'eye' icon
                                                // property in the column header
@@ -770,7 +856,9 @@ PlacedFx FxBuilder::makePF(TLevelColumnFx *lcfx) {
   int levelFrame = cell.m_frameId.getNumber() - 1;
 
   /*--  ParticlesFxに繋がっておらず、空セルの場合は 中身無しを返す --*/
-  if (m_particleDescendentCount == 0 && cell.isEmpty()) return PlacedFx();
+  // -> even if the cell is empty, pass the affine infotmation of the column to
+  // the subsequent nodes
+  // if (m_particleDescendentCount == 0 && cell.isEmpty()) return PlacedFx();
 
   if (m_whichLevels == TOutputProperties::AnimatedOnly) {
     // In case only 'animated levels' are selected to be rendered, exclude all
@@ -781,12 +869,18 @@ PlacedFx FxBuilder::makePF(TLevelColumnFx *lcfx) {
     // it anywhere :\ ?
 
     TXshLevel *xl = cell.m_level.getPointer();
+    // if the cell is empty, use a level of the first occupied cell instead.
+    if (!xl) {
+      int r0, r1;
+      if (lcfx->getColumn()->getRange(r0, r1) > 0)
+        xl = lcfx->getColumn()->getCell(r0).m_level.getPointer();
+    }
 
     /*-- ParticleFxのTextureポートに繋がっていない場合 --*/
     if (m_particleDescendentCount == 0) {
       if (!xl ||
-          xl->getType() != PLI_XSHLEVEL && xl->getType() != TZP_XSHLEVEL &&
-              xl->getType() != CHILD_XSHLEVEL)
+          (xl->getType() != PLI_XSHLEVEL && xl->getType() != TZP_XSHLEVEL &&
+           xl->getType() != CHILD_XSHLEVEL))
         return PlacedFx();
     }
     /*-- ParticleFxのTextureポートに繋がっている場合 --*/
@@ -801,11 +895,14 @@ PlacedFx FxBuilder::makePF(TLevelColumnFx *lcfx) {
   // common (image) levels
   PlacedFx pf;
   pf.m_columnIndex = lcfx->getColumn()->getIndex();
-  pf.m_fx          = lcfx;
-
   // Build column placement
   bool columnVisible =
       getColumnPlacement(pf, m_xsh, m_frame, pf.m_columnIndex, m_isPreview);
+
+  // if the cell is empty, only inherits its placement
+  if ((m_particleDescendentCount == 0 && cell.isEmpty())) return pf;
+
+  pf.m_fx = lcfx;
 
   /*-- subXsheetのとき、その中身もBuildFxを実行 --*/
   if (!cell.isEmpty() && cell.m_level->getChildLevel()) {
@@ -817,7 +914,8 @@ PlacedFx FxBuilder::makePF(TLevelColumnFx *lcfx) {
     FxBuilder builder(m_scene, xsh, levelFrame, m_whichLevels, m_isPreview);
 
     // Then, add the TimeShuffleFx
-    pf.m_fx = timeShuffle(builder.buildFx(), levelFrame, lcfx->getTimeRegion());
+    pf.m_fx = timeShuffle(builder.buildFx(), levelFrame, lcfx->getTimeRegion(),
+                          lcfx->getColumn());
     pf.m_fx->setIdentifier(lcfx->getIdentifier());
     pf.m_fx->getAttributes()->passiveCacheDataIdx() =
         lcfx->getAttributes()->passiveCacheDataIdx();
@@ -860,28 +958,30 @@ PlacedFx FxBuilder::makePF(TLevelColumnFx *lcfx) {
        * 空セルのとき、Dpiアフィン変換には、その素材が入っている一番上のセルのものを使う
        * --*/
       TXshLevelColumn *column = lcfx->getColumn();
-      int i;
-      for (i = 0; i < column->getRowCount(); i++) {
-        TXshCell dpiCell = lcfx->getColumn()->getCell(i);
-        if (dpiCell.isEmpty()) continue;
 
-        sl = dpiCell.m_level->getSimpleLevel();
-        if (!sl) break;
-
-        TAffine dpiAff = ::getDpiAffine(sl, dpiCell.m_frameId, true);
-        pf.m_fx        = TFxUtil::makeAffine(pf.m_fx, dpiAff);
-        break;
+      int r0, r1;
+      if (column->getRange(r0, r1) > 0)
+        sl = column->getCell(r0).m_level->getSimpleLevel();
+      if (sl) {
+        TAffine dpiAff =
+            ::getDpiAffine(sl, column->getCell(r0).m_frameId, true);
+        pf.m_fx = TFxUtil::makeAffine(pf.m_fx, dpiAff);
       }
     }
 
     // Apply column's color filter and semi-transparency for rendering
     TXshLevelColumn *column = lcfx->getColumn();
     if (m_scene->getProperties()->isColumnColorFilterOnRenderEnabled() &&
-        (column->getFilterColorId() != TXshColumn::FilterNone ||
+        (column->getColorFilterId() != 0 ||  // None
          (column->isCamstandVisible() && column->getOpacity() != 255))) {
-      TPixel32 colorScale = column->getFilterColor();
-      colorScale.m        = column->getOpacity();
-      pf.m_fx             = TFxUtil::makeColumnColorFilter(pf.m_fx, colorScale);
+      TPixel32 colorScale = m_scene->getProperties()->getColorFilterColor(
+          column->getColorFilterId());
+      if (colorScale != TPixel::Black || column->getOpacity() != 255) {
+        colorScale.m = (typename TPixel32::Channel)((int)colorScale.m *
+                                                    (int)column->getOpacity() /
+                                                    TPixel32::maxChannelValue);
+        pf.m_fx      = TFxUtil::makeColumnColorFilter(pf.m_fx, colorScale);
+      }
     }
 
     return pf;
@@ -925,15 +1025,25 @@ PlacedFx FxBuilder::makePF(TZeraryColumnFx *zcfx) {
     return PlacedFx();
 
   TXshCell cell = zcfx->getColumn()->getCell(tfloor(m_frame));
-  if (cell.isEmpty()) return PlacedFx();
 
   // Build
   PlacedFx pf;
   pf.m_columnIndex = zcfx->getColumn()->getIndex();
-  pf.m_fx          = fx->clone(
-      false);  // Detach the fx with a clone. Why? It's typically done to
-               // build fx connections in the render-tree freely. Here, it's
-               // used just for particles, I guess...
+
+  // if the cell is empty, only inherits its placement
+  if (cell.isEmpty()) {
+    // Add the column placement NaAffineFx
+    if (!getColumnPlacement(pf, m_xsh, m_frame, pf.m_columnIndex, m_isPreview))
+      return PlacedFx();
+    return pf;
+  }
+
+  // set m_fx only when the current cell is not empty
+  pf.m_fx =
+      fx->clone(false);  // Detach the fx with a clone. Why? It's typically done
+                         // to build fx connections in the render-tree freely.
+                         // Here, it's used just for particles, I guess...
+
   // Deal with input sub-trees
   for (int i = 0; i < fx->getInputPortCount(); ++i) {
     // Note that only particles should end up here, currently
@@ -973,6 +1083,21 @@ PlacedFx FxBuilder::makePF(TZeraryColumnFx *zcfx) {
                                           noteColumnIndex, getNeighbor));
     }
   }
+  if (pf.m_fx->getAttributes()->isSpeedAware()) {
+    MotionAwareAffineFx *maafx =
+        dynamic_cast<MotionAwareAffineFx *>(pf.m_fx.getPointer());
+    if (maafx) {
+      double shutterLength    = maafx->getShutterLength()->getValue(m_frame);
+      MotionObjectType type   = maafx->getMotionObjectType();
+      int index               = maafx->getMotionObjectIndex()->getValue();
+      TStageObjectId objectId = getMotionObjectId(type, index);
+      TAffine aff_Before, aff_After;
+      getColumnMotionAffines(aff_Before, aff_After, m_xsh, m_frame,
+                             pf.m_columnIndex, objectId, m_isPreview,
+                             shutterLength);
+      pf.m_fx->getAttributes()->setMotionAffines(aff_Before, aff_After);
+    }
+  }
 
   // Add the column placement NaAffineFx
   if (getColumnPlacement(pf, m_xsh, m_frame, pf.m_columnIndex, m_isPreview))
@@ -991,8 +1116,35 @@ PlacedFx FxBuilder::makePFfromUnaryFx(TFx *fx) {
   TFx *inputFx = fx->getInputPort(0)->getFx();
   if (!inputFx) return PlacedFx();
 
+  // global controllable fx
+  if (fx->getAttributes()->hasGlobalControl()) {
+    if (!m_globalControlledFx.contains(fx->getFxId())) {
+      GlobalControllableFx *gcFx = dynamic_cast<GlobalControllableFx *>(fx);
+      double val                 = gcFx->getGrobalControlValue(m_frame);
+      if (val < 1.0) {
+        // insert cross dissolve fx and mix with the input fx
+        TFxP blendFx = TFx::create("blendFx");
+        blendFx->connect("Source1", fx);
+        blendFx->connect("Source2", inputFx);
+        // set the global intensity value to the cross dissolve fx
+        dynamic_cast<TDoubleParam *>(blendFx->getParams()->getParam("value"))
+            ->setDefaultValue(val * 100.0);
+        m_globalControlledFx.insert(fx->getFxId(), {blendFx, true});
+        return makePF(blendFx.getPointer());
+      }
+    } else if (m_globalControlledFx.value(fx->getFxId()).second)
+      m_globalControlledFx[fx->getFxId()].second = false;
+    else {
+      m_globalControlledFx[fx->getFxId()].second = true;
+      return makePF(
+          m_globalControlledFx.value(fx->getFxId()).first.getPointer());
+    }
+  }
+
   PlacedFx pf = makePF(inputFx);  // Build sub-render-tree
-  if (!pf.m_fx) return PlacedFx();
+  if (pf.m_columnIndex < 0 && !pf.m_isPostXsheetNode) return PlacedFx();
+  // inherit the column placement even if the current cell is empty
+  if (!pf.m_fx) return pf;
 
   if (fx->getAttributes()->isEnabled()) {
     // Fx is enabled, so insert it in the render-tree
@@ -1057,6 +1209,33 @@ PlacedFx FxBuilder::makePFfromGenericFx(TFx *fx) {
     return pf;
   }
 
+  // global controllable fx
+  if (fx->getAttributes()->hasGlobalControl()) {
+    if (!m_globalControlledFx.contains(fx->getFxId())) {
+      GlobalControllableFx *gcFx = dynamic_cast<GlobalControllableFx *>(fx);
+      double val                 = gcFx->getGrobalControlValue(m_frame);
+      if (val < 1.0) {
+        TFxP inputFx = fx->getInputPort(fx->getPreferredInputPort())->getFx();
+        if (!inputFx) return pf;
+        // insert cross dissolve fx and mix with the input fx
+        TFxP blendFx = TFx::create("blendFx");
+        blendFx->connect("Source1", fx);
+        blendFx->connect("Source2", inputFx.getPointer());
+        m_globalControlledFx.insert(fx->getFxId(), {blendFx, true});
+        // set the global intensity value to the cross dissolve fx
+        dynamic_cast<TDoubleParam *>(blendFx->getParams()->getParam("value"))
+            ->setDefaultValue(val * 100.0);
+        return makePF(blendFx.getPointer());
+      }
+    } else if (m_globalControlledFx.value(fx->getFxId()).second)
+      m_globalControlledFx[fx->getFxId()].second = false;
+    else {
+      m_globalControlledFx[fx->getFxId()].second = true;
+      return makePF(
+          m_globalControlledFx.value(fx->getFxId()).first.getPointer());
+    }
+  }
+
   // Multi-input fxs are always cloned - since at least one of its input ports
   // will have an NaAffineFx
   // injected just before its actual input fx.
@@ -1067,18 +1246,28 @@ PlacedFx FxBuilder::makePFfromGenericFx(TFx *fx) {
   int m = fx->getInputPortCount();
   for (int i = 0; i < m; ++i) {
     if (TFxP inputFx = fx->getInputPort(i)->getFx()) {
-      PlacedFx inputPF = makePF(inputFx.getPointer());
-      inputFx          = inputPF.m_fx;
-      if (!inputFx) continue;
+      PlacedFx inputPF;
+      if (fx->getFxType() == "STD_iwa_FlowPaintBrushFx") {
+        m_particleDescendentCount++;
+        inputPF = makePF(inputFx.getPointer());
+        m_particleDescendentCount--;
+      } else
+        inputPF = makePF(inputFx.getPointer());
+      inputFx = inputPF.m_fx;
+      // check the column index instead of inputFx
+      // so that the firstly-found input column always inherits
+      // its placement even if the current cell is empty.
+      if (inputPF.m_columnIndex < 0 && !inputPF.m_isPostXsheetNode) continue;
 
       if (firstInput) {
         firstInput = false;
 
         // The first found input PlacedFx carries its placement infos up
-        pf.m_aff         = inputPF.m_aff;
-        pf.m_columnIndex = inputPF.m_columnIndex;
-        pf.m_z           = inputPF.m_z;
-        pf.m_so          = inputPF.m_so;
+        pf.m_aff              = inputPF.m_aff;
+        pf.m_columnIndex      = inputPF.m_columnIndex;
+        pf.m_z                = inputPF.m_z;
+        pf.m_so               = inputPF.m_so;
+        pf.m_isPostXsheetNode = inputPF.m_isPostXsheetNode;
 
         /*-- 軌跡を取得するBinaryFxの場合 --*/
         if (pf.m_fx->getAttributes()->isSpeedAware()) {
@@ -1098,7 +1287,11 @@ PlacedFx FxBuilder::makePFfromGenericFx(TFx *fx) {
           }
         }
 
-      } else {
+        if (!inputFx) continue;
+
+      } else if (!inputFx)
+        continue;
+      else {
         // The follow-ups traduce their PlacedFx::m_aff into an NaAffineFx,
         // instead
         inputFx = getFxWithColumnMovements(inputPF);
@@ -1131,7 +1324,7 @@ TFxP buildSceneFx(ToonzScene *scene, TXsheet *xsh, double row, int whichLevels,
   if (isPreview)
     cameraId = xsh->getStageObjectTree()->getCurrentPreviewCameraId();
   else
-    cameraId                 = xsh->getStageObjectTree()->getCurrentCameraId();
+    cameraId = xsh->getStageObjectTree()->getCurrentCameraId();
   TStageObject *cameraPegbar = xsh->getStageObject(cameraId);
   assert(cameraPegbar);
   TCamera *camera = cameraPegbar->getCamera();
@@ -1202,7 +1395,7 @@ DVAPI TFxP buildPartialSceneFx(ToonzScene *scene, double row, const TFxP &root,
   if (isPreview)
     cameraId = xsh->getStageObjectTree()->getCurrentPreviewCameraId();
   else
-    cameraId                 = xsh->getStageObjectTree()->getCurrentCameraId();
+    cameraId = xsh->getStageObjectTree()->getCurrentCameraId();
   TStageObject *cameraPegbar = xsh->getStageObject(cameraId);
   assert(cameraPegbar);
   TCamera *camera = cameraPegbar->getCamera();
@@ -1270,7 +1463,7 @@ DVAPI TFxP buildPostSceneFx(ToonzScene *scene, double frame, int shrink,
   int whichLevels =
       scene->getProperties()->getOutputProperties()->getWhichLevels();
 
-  TXsheet *xsh  = scene->getXsheet();
+  TXsheet *xsh = scene->getXsheet();
   if (!xsh) xsh = scene->getXsheet();
 
   // Do not expand the xsheet node
@@ -1282,7 +1475,7 @@ DVAPI TFxP buildPostSceneFx(ToonzScene *scene, double frame, int shrink,
   if (isPreview)
     cameraId = xsh->getStageObjectTree()->getCurrentPreviewCameraId();
   else
-    cameraId                 = xsh->getStageObjectTree()->getCurrentCameraId();
+    cameraId = xsh->getStageObjectTree()->getCurrentCameraId();
   TStageObject *cameraPegbar = xsh->getStageObject(cameraId);
   assert(cameraPegbar);
   TCamera *camera = cameraPegbar->getCamera();

@@ -13,7 +13,10 @@
 // TnzLib includes
 #include "toonz/tproject.h"
 #include "toonz/toonzscene.h"
+#include "toonz/levelset.h"
 #include "toonz/sceneresources.h"
+#include "toonz/txshlevel.h"
+#include "toonz/txshsimplelevel.h"
 
 // TnzCore includes
 #include "tsystem.h"
@@ -28,15 +31,23 @@
 #include <QPainter>
 #include <QApplication>
 #include <QMainWindow>
+#include <QStandardPaths>
+
+#include <vector>
 
 using namespace DVGui;
+
+TFilePath getStdDocumentsPath() {
+  QString documentsPath =
+      QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation)[0];
+  return TFilePath(documentsPath);
+}
 
 //------------------------------------------------------------------------
 namespace {
 //------------------------------------------------------------------------
 
-TFilePath importScene(TFilePath scenePath) {
-  ToonzScene scene;
+TFilePath loadSceneToProject(TFilePath scenePath, ToonzScene &scene) {
   bool ret;
   try {
     ret = IoCmd::loadScene(scene, scenePath, true);
@@ -61,7 +72,6 @@ TFilePath importScene(TFilePath scenePath) {
   }
 
   TFilePath path = scene.getScenePath();
-  scene.save(scene.getScenePath());
   DvDirModel::instance()->refreshFolder(
       TProjectManager::instance()->getCurrentProjectPath().getParentDir());
   return path;
@@ -69,20 +79,29 @@ TFilePath importScene(TFilePath scenePath) {
 
 //------------------------------------------------------------------------
 
-int collectAssets(TFilePath scenePath) {
-  ToonzScene scene;
-  scene.load(scenePath);
+int collectAssets(ToonzScene &scene) {
   ResourceCollector collector(&scene);
   SceneResources resources(&scene, scene.getXsheet());
   resources.accept(&collector);
   int count = collector.getCollectedResourceCount();
-  if (count > 0) {
-    scene.save(scenePath);
-  }
   return count;
 }
 
 //------------------------------------------------------------------------
+
+void decodeLevelsPath(ToonzScene &scene) {
+  std::vector<TXshLevel *> levels;
+  scene.getLevelSet()->listLevels(levels);
+  for (auto level : levels) {
+    TXshSimpleLevel *sl = level->getSimpleLevel();
+    if (!sl) continue;
+    TFilePath orinPath = sl->getPath();
+    if (!orinPath.isAbsolute()) {
+      TFilePath absolutePath = scene.decodeFilePath(orinPath);
+      sl->setPath(absolutePath);
+    }
+  }
+}
 }  // namespace
 //------------------------------------------------------------------------
 
@@ -115,10 +134,13 @@ ExportSceneDvDirModelFileFolderNode::createExposeSceneNode(
 // ExportSceneDvDirModelProjectNode
 
 QPixmap ExportSceneDvDirModelProjectNode::getPixmap(bool isOpen) const {
-  static QPixmap openProjectPixmap(
-      svgToPixmap(":Resources/browser_project_open.svg"));
-  static QPixmap closeProjectPixmap(
-      svgToPixmap(":Resources/browser_project_close.svg"));
+  QPixmap openProjectPixmap =
+      createQIcon("folder_project")
+          .pixmap(QSize(18, 18), QIcon::Normal, QIcon::On);
+  QPixmap closeProjectPixmap =
+      createQIcon("folder_project")
+          .pixmap(QSize(18, 18), QIcon::Normal, QIcon::Off);
+
   return isOpen ? openProjectPixmap : closeProjectPixmap;
 }
 
@@ -141,7 +163,7 @@ ExportSceneDvDirModelProjectNode::createExposeSceneNode(DvDirModelNode *parent,
     node = new ExportSceneDvDirModelFileFolderNode(parent, path);
     if (path.getName().find("_files") == std::string::npos)
       node->enableRename(true);
-    TProject *project = new TProject();
+    auto project = std::make_shared<TProject>();
     project->load(
         TProjectManager::instance()->projectFolderToProjectPath(getPath()));
     int k = project->getFolderIndexFromPath(node->getPath());
@@ -182,10 +204,13 @@ void ExportSceneDvDirModelRootNode::refreshChildren() {
   int i;
   for (i = 0; i < (int)projectRoots.size(); i++) {
     TFilePath projectRoot = projectRoots[i];
+    std::wstring rootDir  = projectRoot.getWideString();
     ExportSceneDvDirModelSpecialFileFolderNode *projectRootNode =
-        new ExportSceneDvDirModelSpecialFileFolderNode(this, L"Project root",
-                                                       projectRoot);
-    projectRootNode->setPixmap(QPixmap(svgToPixmap(":Resources/projects.svg")));
+        new ExportSceneDvDirModelSpecialFileFolderNode(
+            this, L"Project root (" + rootDir + L")", projectRoot);
+    projectRootNode->setPixmap(
+        createQIcon("folder_project_root")
+            .pixmap(QSize(18, 18), QIcon::Normal, QIcon::Off));
     m_projectRootNodes.push_back(projectRootNode);
     addChild(projectRootNode);
   }
@@ -357,17 +382,20 @@ bool ExportSceneDvDirModel::hasChildren(const QModelIndex &parent) const {
 //-----------------------------------------------------------------------------
 
 void ExportSceneDvDirModel::refresh(const QModelIndex &index) {
-  DvDirModelNode *node;
-  if (!index.isValid())
-    node = m_root;
-  else
-    node = getNode(index);
+  DvDirModelNode *node = index.isValid() ? getNode(index) : m_root;
   if (!node) return;
-  emit layoutAboutToBeChanged();
-  emit beginRemoveRows(index, 0, node->getChildCount());
+  int oldCount = node->getChildCount();
+  if (oldCount > 0) {
+    emit beginRemoveRows(index, 0, oldCount - 1);
+    node->removeChildren(0, oldCount);
+    emit endRemoveRows();
+  }
   node->refreshChildren();
-  emit endRemoveRows();
-  emit layoutChanged();
+  int newCount = node->getChildCount();
+  if (newCount > 0) {
+    emit beginInsertRows(index, 0, newCount - 1);
+    emit endInsertRows();
+  }
 }
 
 //=============================================================================
@@ -403,7 +431,7 @@ void ExportSceneTreeViewDelegate::paint(QPainter *painter,
   QPixmap px = node->getPixmap(m_treeView->isExpanded(index));
   if (!px.isNull()) {
     int x = rect.left();
-    int y = rect.top() + (rect.height() - px.height()) / 2;
+    int y = rect.center().y() - ((rect.height() / 2) - 2);
     painter->drawPixmap(QPoint(x, y), px);
   }
   rect.adjust(pnode ? 31 : 22, 0, 0, 0);
@@ -443,7 +471,7 @@ QSize ExportSceneTreeViewDelegate::sizeHint(const QStyleOptionViewItem &option,
 
 ExportSceneTreeView::ExportSceneTreeView(QWidget *parent)
     : StyledTreeView(parent) {
-  setStyleSheet("border:1px solid rgb(120,120,120);");
+  setStyleSheet("border:1px solid rgba(0,0,0,0.5);");
   m_model = new ExportSceneDvDirModel();
   setModel(m_model);
   header()->close();
@@ -455,9 +483,9 @@ ExportSceneTreeView::ExportSceneTreeView(QWidget *parent)
   bool ret = connect(this, SIGNAL(expanded(const QModelIndex &)), this,
                      SLOT(resizeToConts()));
   ret      = ret && connect(this, SIGNAL(collapsed(const QModelIndex &)), this,
-                       SLOT(resizeToConts()));
+                            SLOT(resizeToConts()));
   ret      = ret && connect(this->model(), SIGNAL(layoutChanged()), this,
-                       SLOT(resizeToConts()));
+                            SLOT(resizeToConts()));
 
   assert(ret);
   setAcceptDrops(true);
@@ -500,7 +528,7 @@ void ExportSceneTreeView::focusInEvent(QFocusEvent *event) {
 ExportScenePopup::ExportScenePopup(std::vector<TFilePath> scenes)
     : Dialog(TApp::instance()->getMainWindow(), true, false, "ExportScene")
     , m_scenes(scenes)
-    , m_createNewProject(false) {
+    , m_mode(0) {
   setWindowTitle(tr("Export Scene"));
 
   bool ret = true;
@@ -524,7 +552,7 @@ ExportScenePopup::ExportScenePopup(std::vector<TFilePath> scenes)
   chooseProjectLayout->addWidget(m_chooseProjectButton);
 
   m_projectTreeView = new ExportSceneTreeView(chooseProjectWidget);
-  m_projectTreeView->setMinimumWidth(200);
+  m_projectTreeView->setMinimumWidth(400);
   ret = ret && connect(m_projectTreeView, SIGNAL(focusIn()), this,
                        SLOT(onProjectTreeViweFocusIn()));
   chooseProjectLayout->addWidget(m_projectTreeView);
@@ -547,12 +575,44 @@ ExportScenePopup::ExportScenePopup(std::vector<TFilePath> scenes)
 
   m_newProjectName = new LineEdit(newProjectWidget);
   ret              = ret && connect(m_newProjectName, SIGNAL(focusIn()), this,
-                       SLOT(onProjectNameFocusIn()));
+                                    SLOT(onProjectNameFocusIn()));
   newProjectLayout->setColumnStretch(1, 5);
   newProjectLayout->addWidget(m_newProjectName, 1, 1, 1, 1, Qt::AlignLeft);
 
-  newProjectWidget->setLayout(chooseProjectLayout);
+  m_newProPathFieldLabel = new QLabel(tr("Create In:"), this);
+  m_projectLocationFld =
+      new DVGui::FileField(this, getStdDocumentsPath().getQString());
+  ret = ret && connect(m_projectLocationFld->getField(), SIGNAL(focusIn()),
+                       this, SLOT(onProjectNameFocusIn()));
+
+  newProjectLayout->addWidget(m_newProPathFieldLabel, 2, 0,
+                              Qt::AlignRight | Qt::AlignVCenter);
+  newProjectLayout->addWidget(m_projectLocationFld, 2, 1);
+
+  newProjectWidget->setLayout(newProjectLayout);
   layout->addWidget(newProjectWidget);
+
+  // Export as Lonely Scene
+  QWidget *lonelyProjectWidget     = new QWidget(this);
+  QGridLayout *lonelyProjectLayout = new QGridLayout(lonelyProjectWidget);
+
+  m_lonelyModeButton =
+      new QRadioButton(tr("Export as Standalone Scene"), lonelyProjectWidget);
+  group->addButton(m_lonelyModeButton, 2);
+  lonelyProjectLayout->addWidget(m_lonelyModeButton, 0, 0, 1, 2);
+
+  m_lonelyModePathLabel = new QLabel(tr("Export To:"), lonelyProjectWidget);
+  lonelyProjectLayout->addWidget(m_lonelyModePathLabel, 1, 0,
+                                 Qt::AlignRight | Qt::AlignVCenter);
+
+  m_lonelyModePathFld = new DVGui::FileField(
+      lonelyProjectWidget, getStdDocumentsPath().getQString());
+  ret = ret && connect(m_lonelyModePathFld->getField(), SIGNAL(focusIn()), this,
+                       SLOT(onLonelyModeFocusIn()));
+  lonelyProjectLayout->addWidget(m_lonelyModePathFld, 1, 1);
+
+  lonelyProjectWidget->setLayout(lonelyProjectLayout);
+  layout->addWidget(lonelyProjectWidget);
 
   ret = ret &&
         connect(group, SIGNAL(buttonClicked(int)), this, SLOT(switchMode(int)));
@@ -570,22 +630,16 @@ ExportScenePopup::ExportScenePopup(std::vector<TFilePath> scenes)
   switchMode(0);
   //  updateCommandLabel();
 
+  adjustSize();
   assert(ret);
 }
 
 //-----------------------------------------------------------------------------
 
 void ExportScenePopup::switchMode(int id) {
-  if (id == 0)  // choose Existing Project
-  {
-    m_createNewProject = false;
-    // m_projectTreeView->setEnabled(true);
-  } else  // create new project
-  {
-    assert(id == 1);
-    m_createNewProject = true;
-    // m_projectTreeView->setEnabled(false);
-  }
+  assert(id < 3);
+  m_mode = id;
+  // m_projectTreeView->setEnabled(true);
 }
 
 //-----------------------------------------------------------------------------
@@ -602,6 +656,11 @@ void ExportScenePopup::onProjectNameFocusIn() {
   switchMode(1);
 }
 
+void ExportScenePopup::onLonelyModeFocusIn() {
+  m_lonelyModeButton->setChecked(true);
+  switchMode(2);
+}
+
 //-----------------------------------------------------------------------------
 
 void ExportScenePopup::onExport() {
@@ -609,42 +668,82 @@ void ExportScenePopup::onExport() {
   TProjectManager *pm      = TProjectManager::instance();
   TFilePath oldProjectPath = pm->getCurrentProjectPath();
   TFilePath projectPath;
-  if (!m_createNewProject) {
+  if (m_mode == 0) {  // Export to Existing Project
     DvDirModelFileFolderNode *node =
         (DvDirModelFileFolderNode *)m_projectTreeView->getCurrentNode();
-    if (!node || !pm->isProject(node->getPath())) {
+    if (!node || node->getNodeType() == "Root" ||
+        !pm->isProject(node->getPath())) {
       QApplication::restoreOverrideCursor();
       DVGui::warning(tr("The folder you selected is not a project."));
       return;
     }
     projectPath = pm->projectFolderToProjectPath(node->getPath());
     assert(projectPath != TFilePath());
-  } else  // Create project
-  {
+  } else if (m_mode == 1) {  // Create New Project
     projectPath = createNewProject();
     if (projectPath == TFilePath()) {
       QApplication::restoreOverrideCursor();
       return;
     }
-  }
+  } else                           // Export as Lonely Scene
+    projectPath = oldProjectPath;  // pm->getSandboxProjectPath();
+
   pm->setCurrentProjectPath(projectPath);
 
-  std::vector<TFilePath> newScenes;
   int i;
+  bool success = true;
+  QString label("Exporting Scenes");
+  QString cancel("Cancel");
+  ProgressDialog progressBar(label, cancel, 0, m_scenes.size(), this);
+  progressBar.show();
   for (i = 0; i < m_scenes.size(); i++) {
-    TFilePath newScenePath = importScene(m_scenes[i]);
-    if (newScenePath == TFilePath()) continue;
-    newScenes.push_back(newScenePath);
+    ToonzScene scene;
+    TFilePath newScenePath = loadSceneToProject(m_scenes[i], scene);
+    label =
+        QString("Exporting ") + QString::fromStdString(newScenePath.getName());
+    progressBar.setLabelText(label);
+    if (newScenePath == TFilePath()) {
+      DVGui::warning(tr("There was an error exporting the scene."));
+      success = false;
+      continue;
+    };
+    if (m_mode != 2) {  // m_mode == 1 || m_mode == 0
+      int count = collectAssets(scene);
+      scene.save(newScenePath);
+    } else {
+      decodeLevelsPath(scene);
+      QString path             = m_lonelyModePathFld->getPath();
+      TFilePath newSceneFolder = TFilePath(path) + newScenePath.getName();
+
+      QDir newSceneFolderDir(newSceneFolder.getQString());
+      if ((newSceneFolderDir.exists() && !newSceneFolderDir.isEmpty())) {
+        DVGui::warning(tr("Target folder already exists and not empty.\n %1")
+                           .arg(newSceneFolder.getQString()));
+        success = false;
+        continue;
+      }
+
+      TSystem::mkDir(newSceneFolder);
+      newScenePath = newSceneFolder + m_scenes[i].withoutParentDir();
+      scene.setScenePath(newScenePath);
+      Preferences::PathAliasPriority oldPriority =
+          Preferences::instance()->getPathAliasPriority();
+      Preferences::instance()->setValue(
+          PreferencesItemId::pathAliasPriority,
+          Preferences::PathAliasPriority::SceneFolderAlias, false);
+      int count = collectAssets(scene);
+      scene.save(newScenePath);
+      Preferences::instance()->setValue(PreferencesItemId::pathAliasPriority,
+                                        oldPriority, false);
+    }
+    progressBar.setValue(i + 1);
   }
+  progressBar.hide();
   pm->setCurrentProjectPath(oldProjectPath);
-  if (newScenes.empty()) {
-    QApplication::restoreOverrideCursor();
-    DVGui::warning(tr("There was an error exporting the scene."));
-    return;
-  }
-  for (i = 0; i < newScenes.size(); i++) collectAssets(newScenes[i]);
 
   QApplication::restoreOverrideCursor();
+  if (!success) return;
+
   accept();
 }
 
@@ -672,25 +771,25 @@ TFilePath ExportScenePopup::createNewProject() {
     return TFilePath();
   }
 
-  TFilePath currentProjectRoot;
-  DvDirModelFileFolderNode *node = dynamic_cast<DvDirModelFileFolderNode *>(
-      m_projectTreeView->getCurrentNode());
-  if (node)
-    currentProjectRoot = node->getPath();
-  else
-    currentProjectRoot = pm->getCurrentProjectRoot();
-  TFilePath projectFolder = currentProjectRoot + projectName;
+  TFilePath newLocation   = TFilePath(m_projectLocationFld->getPath());
+  TFilePath projectFolder = newLocation + projectName;
   TFilePath projectPath   = pm->projectFolderToProjectPath(projectFolder);
-  TProject *project       = new TProject();
 
-  TProjectP currentProject = pm->getCurrentProject();
+  if (TSystem::doesExistFileOrLevel(projectPath)) {
+    error(tr("Project '%1' already exists").arg(m_newProjectName->text()));
+    return TFilePath();
+  }
+
+  auto project = std::make_shared<TProject>();
+
+  auto currentProject = pm->getCurrentProject();
   assert(currentProject);
   int i;
   for (i = 0; i < (int)currentProject->getFolderCount(); i++)
     project->setFolder(currentProject->getFolderName(i),
                        currentProject->getFolder(i));
   project->save(projectPath);
-  DvDirModel::instance()->refreshFolder(currentProjectRoot);
+  DvDirModel::instance()->refreshFolder(newLocation);
 
   return projectPath;
 }

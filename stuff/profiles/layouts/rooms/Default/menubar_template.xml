@@ -24,10 +24,18 @@
         <separator/>
         <menu title="Import">
             <command>MI_ImportMagpieFile</command>
+            <command>MI_ImportOCA</command>
         </menu>
         <menu title="Export">
+            <command>MI_ExportCurrentScene</command>		
             <command>MI_SoundTrack</command>
             <command>MI_ExportXDTS</command>
+            <command>MI_ExportSXF</command>
+            <command>MI_ExportOCA</command>
+            <command>MI_StopMotionExportImageSequence</command>
+            <command>MI_ExportTvpJson</command>
+            <command>MI_ExportXsheetPDF</command>
+            <command>MI_ExportCameraTrack</command>
         </menu>
         <separator/>
         <command>MI_PrintXsheet</command>
@@ -54,9 +62,11 @@
         <command>MI_Paste</command>
         <command>MI_PasteAbove</command>
         <command>MI_PasteInto</command>
+        <command>MI_PasteDuplicate</command>
         <command>MI_Insert</command>
         <command>MI_InsertAbove</command>
         <command>MI_Clear</command>
+        <command>MI_ClearViewerContent</command>
         <separator/>
         <command>MI_SelectAll</command>
         <command>MI_InvertSelection</command>
@@ -71,8 +81,8 @@
         <menu title="Arrange">
             <command>MI_BringToFront</command>
             <command>MI_BringForward</command>
-            <command>MI_SendBack</command>
             <command>MI_SendBackward</command>
+            <command>MI_SendBack</command>
         </menu>
     </menu>
     <menu title="Scan &amp;&amp; Cleanup">
@@ -106,6 +116,7 @@
         <command>MI_SaveAllLevels</command>
         <command>MI_OpenRecentLevel</command>
         <command>MI_ExportLevel</command>
+        <command>MI_ExportAllLevels</command>
         <separator/>
         <command>MI_AddFrames</command>
         <command>MI_Renumber</command>
@@ -123,6 +134,7 @@
             <command>MI_LinesFade</command>
         </menu>
         <menu title="Optimize">
+            <command>MI_FillHoles</command>
             <command>MI_RemoveEndpoints</command>
             <command>MI_ConvertVectorToVector</command>
         </menu>
@@ -288,6 +300,8 @@
         <command>MI_OpenCommandToolbar</command>
         <command>MI_OpenToolbar</command>
         <command>MI_OpenToolOptionBar</command>
+        <command>MI_OpenBrushPresetPanel</command>
+        <command>MI_OpenToolPropertiesPanel</command>
         <separator/>
         <command>MI_OpenStyleControl</command>
         <command>MI_OpenPalette</command>
@@ -306,6 +320,7 @@
         <command>MI_OpenFilmStrip</command>
         <separator/>
         <command>MI_OpenFileBrowser</command>
+        <command>MI_OpenPreproductionBoard</command>
         <command>MI_OpenFileBrowser2</command>
         <separator/>
         <command>MI_OpenCleanupSettings</command>
@@ -317,9 +332,11 @@
         <command>MI_OpenStopMotionPanel</command>
         <command>MI_StartupPopup</command>
         <command>MI_OpenGuidedDrawingControls</command>
+        <command>MI_OpenCustomPanels</command>
         <separator/>
         <command>MI_MaximizePanel</command>
         <command>MI_FullScreenWindow</command>
+        <command>MI_SeeThroughWindow</command>
     </menu>
     <menu title="Help">
         <command>MI_OpenOnlineManual</command>

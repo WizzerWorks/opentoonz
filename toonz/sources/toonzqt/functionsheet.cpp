@@ -12,6 +12,8 @@
 #include "toonz/preferences.h"
 #include "toonz/toonzfolders.h"
 #include "toonz/tstageobject.h"
+#include "toonz/txsheethandle.h"
+#include "toonz/txsheet.h"
 
 // TnzBase includes
 #include "tunit.h"
@@ -25,6 +27,7 @@
 #include <QMenu>
 #include <QApplication>  //for drag&drop
 #include <QDrag>
+#include <QPushButton>
 
 //********************************************************************************
 //    Local namespace stuff
@@ -185,6 +188,40 @@ public:
 };
 
 //********************************************************************************
+//    FunctionSheetButtonArea  implementation
+//********************************************************************************
+
+FunctionSheetButtonArea::FunctionSheetButtonArea(QWidget *parent)
+    : QWidget(parent) {
+  m_syncSizeBtn = new QPushButton("", this);
+  m_syncSizeBtn->setCheckable(true);
+  m_syncSizeBtn->setFixedSize(20, 20);
+
+  // Create icon
+  QIcon icon(createQIcon("syncscale"));
+  m_syncSizeBtn->setIcon(icon);
+  m_syncSizeBtn->setIconSize(QSize(16, 16));
+
+  m_syncSizeBtn->setToolTip(tr("Toggle synchronizing zoom with xsheet"));
+
+  QVBoxLayout *layout = new QVBoxLayout();
+  layout->setContentsMargins(2, 2, 2, 2);
+  layout->setSpacing(0);
+  {
+    layout->addStretch();
+    layout->addWidget(m_syncSizeBtn, 0, Qt::AlignCenter);
+  }
+  setLayout(layout);
+
+  connect(m_syncSizeBtn, SIGNAL(clicked(bool)), this,
+          SIGNAL(syncSizeBtnToggled(bool)));
+}
+
+void FunctionSheetButtonArea::setSyncSizeBtnState(bool on) {
+  m_syncSizeBtn->setChecked(on);
+}
+
+//********************************************************************************
 //    FunctionSheetRowViewer  implementation
 //********************************************************************************
 
@@ -283,13 +320,13 @@ void FunctionSheetColumnHeadViewer::paintEvent(QPaintEvent *e) {
 
   int y0 = 0;
   int y1 = 17;  // needs work
-  int y2 = 34;
   int y3 = 53;
+  if (m_sheet->isSmallHeader()) y3 = 34;
 
   /*--- Fill header with background color ---*/
   for (int c = c0; c <= c1; c++) {
     FunctionTreeModel::Channel *channel = m_sheet->getChannel(c);
-    if (!channel) continue;
+    if (!channel) break;
     int x0 = getViewer()->columnToX(c);
     int x1 = getViewer()->columnToX(c + 1) - 1;
     // Column Width
@@ -300,7 +337,15 @@ void FunctionSheetColumnHeadViewer::paintEvent(QPaintEvent *e) {
 
   for (int c = c0; c <= c1; ++c) {
     FunctionTreeModel::Channel *channel = m_sheet->getChannel(c);
-    if (!channel) continue;
+    if (!channel) {
+      if (c != c0) {
+        // draw "the end" border
+        int x0 = getViewer()->columnToX(c);
+        painter.setPen(getViewer()->getColumnHeaderBorderColor());
+        painter.drawLine(x0, y0, x0, y3);
+      }
+      break;
+    }
     int i = c - c0 + 1;
     /*---- Channel Column of the current Column and the preceding and following
      * Columns ---*/
@@ -342,22 +387,30 @@ void FunctionSheetColumnHeadViewer::paintEvent(QPaintEvent *e) {
                        getViewer()->getColumnHeaderBorderColor());
 
     // channel name
-    painter.setPen(getViewer()->getTextColor());
+    painter.setPen(getViewer()->getChannelNameTextColor());
     if (channel->isCurrent())
-      painter.setPen(getViewer()->getSelectedColumnTextColor());
+      painter.setPen(m_sheet->getViewer()->getCurrentTextColor());
 
     QString text = channel->getShortName();
     int d        = 8;
-    painter.drawText(x0 + d, y1, width - d, y3 - y1 + 1,
-                     Qt::TextWrapAnywhere | Qt::AlignLeft | Qt::AlignVCenter,
-                     text);
+    int flags    = Qt::AlignLeft | Qt::AlignVCenter;
+    if (!m_sheet->isSmallHeader()) flags |= Qt::TextWrapAnywhere;
+    painter.drawText(x0 + d, y1, width - d, y3 - y1 + 1, flags, text);
+
+    // warning of losing expression reference
+    TXsheet *xsh = m_sheet->getViewer()->getXsheetHandle()->getXsheet();
+    if (xsh->isReferenceManagementIgnored(channel->getParam())) {
+      static QIcon paramIgnoredIcon(":Resources/paramignored_on.svg");
+      painter.drawPixmap(QPoint(x0 + 30, y1 + 20),
+                         paramIgnoredIcon.pixmap(21, 17));
+    }
 
     // group name
     if (firstGroupColumn) {
       int tmpwidth = (lastGroupColumn) ? width : width * 2;
-      painter.setPen(getViewer()->getTextColor());
+      painter.setPen(getViewer()->getGroupNameTextColor());
       if (group == currentGroup)
-        painter.setPen(getViewer()->getSelectedColumnTextColor());
+        painter.setPen(m_sheet->getViewer()->getCurrentTextColor());
       text = group->getShortName();
       painter.drawText(x0 + d, y0, tmpwidth - d, y1 - y0 + 1,
                        Qt::AlignLeft | Qt::AlignVCenter, text);
@@ -369,7 +422,7 @@ void FunctionSheetColumnHeadViewer::paintEvent(QPaintEvent *e) {
 /*! update tooltips
  */
 void FunctionSheetColumnHeadViewer::mouseMoveEvent(QMouseEvent *e) {
-  if ((e->buttons() & Qt::MidButton) && m_draggingChannel &&
+  if ((e->buttons() & Qt::MiddleButton) && m_draggingChannel &&
       (e->pos() - m_dragStartPosition).manhattanLength() >=
           QApplication::startDragDistance()) {
     QDrag *drag         = new QDrag(this);
@@ -381,13 +434,23 @@ void FunctionSheetColumnHeadViewer::mouseMoveEvent(QMouseEvent *e) {
     Qt::DropAction dropAction = drag->exec();
     return;
   }
+
   // get the column under the cursor
   int col = getViewer()->xyToPosition(e->pos()).layer();
   FunctionTreeModel::Channel *channel = m_sheet->getChannel(col);
   if (!channel) {
     setToolTip(QString(""));
-  } else
-    setToolTip(channel->getExprRefName());
+  } else {
+    QString tooltip = channel->getExprRefName();
+    TXsheet *xsh    = m_sheet->getViewer()->getXsheetHandle()->getXsheet();
+    if (xsh->isReferenceManagementIgnored(channel->getParam()))
+      tooltip +=
+          "\n" + tr("Some key(s) in this parameter loses original reference in "
+                    "expression.\nManually changing any keyframe will clear "
+                    "the warning.");
+
+    setToolTip(tooltip);
+  }
 
   // modify selected channel by left dragging
   if (m_clickedColumn >= 0 && channel && e->buttons() & Qt::LeftButton) {
@@ -419,7 +482,7 @@ void FunctionSheetColumnHeadViewer::mousePressEvent(QMouseEvent *e) {
     return;
   }
 
-  if (e->button() == Qt::MidButton) {
+  if (e->button() == Qt::MiddleButton) {
     m_draggingChannel   = channel;
     m_dragStartPosition = e->pos();
     return;
@@ -565,7 +628,7 @@ FunctionSheetCellViewer::FunctionSheetCellViewer(FunctionSheet *parent)
   bool ret = connect(m_lineEdit, SIGNAL(editingFinished()), this,
                      SLOT(onCellEditorEditingFinished()));
   ret      = ret && connect(m_lineEdit, SIGNAL(mouseMoved(QMouseEvent *)), this,
-                       SLOT(onMouseMovedInLineEdit(QMouseEvent *)));
+                            SLOT(onMouseMovedInLineEdit(QMouseEvent *)));
   assert(ret);
   setMouseTracking(true);
 
@@ -608,15 +671,29 @@ void FunctionSheetCellViewer::drawCells(QPainter &painter, int r0, int c0,
   QColor KeyFrameColor         = getViewer()->getKeyFrameColor();
   QColor KeyFrameBorderColor   = getViewer()->getKeyFrameBorderColor();
   QColor SelectedKeyFrameColor = getViewer()->getSelectedKeyFrameColor();
+  QColor IgnoredKeyFrameColor  = getViewer()->getIgnoredKeyFrameColor();
+  QColor SelectedIgnoredKeyFrameColor =
+      getViewer()->getSelectedIgnoredKeyFrameColor();
   // inbetween
   QColor InBetweenColor         = getViewer()->getInBetweenColor();
   QColor InBetweenBorderColor   = getViewer()->getInBetweenBorderColor();
   QColor SelectedInBetweenColor = getViewer()->getSelectedInBetweenColor();
+  QColor IgnoredInBetweenColor  = getViewer()->getIgnoredInBetweenColor();
+  QColor SelectedIgnoredInBetweenColor =
+      getViewer()->getSelectedIgnoredInBetweenColor();
+
   // empty cells
   QColor SelectedEmptyColor = getViewer()->getSelectedEmptyColor();
   // empty cells in scene frame range
   QColor SelectedSceneRangeEmptyColor =
       getViewer()->getSelectedSceneRangeEmptyColor();
+
+  TXsheet *xsh = m_sheet->getViewer()->getXsheetHandle()->getXsheet();
+
+  bool simpleView = getViewer()->getFrameZoomFactor() <=
+                    Orientations::topToBottom()->dimension(
+                        PredefinedDimension::SCALE_THRESHOLD);
+  bool showIbtwn = !simpleView && m_sheet->isIbtwnValueVisible();
 
   // top and bottom pos
   int y0 = getViewer()->rowToY(r0);
@@ -648,6 +725,8 @@ void FunctionSheetCellViewer::drawCells(QPainter &painter, int r0, int c0,
     bool isParamCycled = curve->isCycleEnabled();
     int rowCount       = getViewer()->getRowCount();
 
+    bool isRefMngIgnored = xsh->isReferenceManagementIgnored(curve);
+
     // draw each cell
     for (int row = r0; row <= r1; row++) {
       int ya = m_sheet->rowToY(row);
@@ -668,15 +747,23 @@ void FunctionSheetCellViewer::drawCells(QPainter &painter, int r0, int c0,
       /*--- キーフレーム間の範囲だけ色をつける ---*/
       if (kr0 <= row && row <= kr1) {
         if (curve->isKeyframe(row)) {
-          cellColor   = (isSelected) ? SelectedKeyFrameColor : KeyFrameColor;
+          cellColor =
+              (isRefMngIgnored)
+                  ? ((isSelected) ? SelectedIgnoredKeyFrameColor
+                                  : IgnoredKeyFrameColor)
+                  : ((isSelected) ? SelectedKeyFrameColor : KeyFrameColor);
           borderColor = KeyFrameBorderColor;
         } else {
-          cellColor   = (isSelected) ? SelectedInBetweenColor : InBetweenColor;
+          cellColor =
+              (isRefMngIgnored)
+                  ? ((isSelected) ? SelectedIgnoredInBetweenColor
+                                  : IgnoredInBetweenColor)
+                  : ((isSelected) ? SelectedInBetweenColor : InBetweenColor);
           borderColor = InBetweenBorderColor;
 
           // when the inbetween values are hidden, change the cell colors to
           // semi-transparent if the frame is in middle of the value step
-          if (!m_sheet->isIbtwnValueVisible()) {
+          if (!showIbtwn) {
             TDoubleKeyframe kf =
                 curve->getKeyframe(curve->getPrevKeyframe(row));
             int step = kf.m_step;
@@ -704,9 +791,9 @@ void FunctionSheetCellViewer::drawCells(QPainter &painter, int r0, int c0,
           }
         }
 
-        drawValue = (curve->isKeyframe(row))
-                        ? Key
-                        : (m_sheet->isIbtwnValueVisible()) ? Inbetween : None;
+        drawValue = (curve->isKeyframe(row)) ? Key
+                    : (showIbtwn)            ? Inbetween
+                                             : None;
 
       }
       // empty cells
@@ -738,7 +825,7 @@ void FunctionSheetCellViewer::drawCells(QPainter &painter, int r0, int c0,
         if (drawValue == Key || drawValue == Inbetween)
           painter.setPen(getViewer()->getTextColor());
         else {
-          QColor semiTranspTextColor = getViewer()->getTextColor();
+          QColor semiTranspTextColor = getViewer()->getKeyframeLineColor();
           semiTranspTextColor.setAlpha(128);
           painter.setPen(semiTranspTextColor);
         }
@@ -786,8 +873,9 @@ void FunctionSheetCellViewer::drawCells(QPainter &painter, int r0, int c0,
       int qx             = x0 + 4;
       int qy             = m_sheet->rowToY(kr1 + 1);
       int zig            = 2;
-      QColor zigzagColor = (isStageObjectCycled) ? getViewer()->getTextColor()
-                                                 : KeyFrameBorderColor;
+      QColor zigzagColor = (isStageObjectCycled)
+                               ? getViewer()->getKeyframeLineColor()
+                               : KeyFrameBorderColor;
       painter.setPen(zigzagColor);
       painter.drawLine(QPoint(qx, qy), QPoint(qx - zig, qy + zig));
       qy += zig;
@@ -893,7 +981,7 @@ void FunctionSheetCellViewer::mousePressEvent(QMouseEvent *e) {
     if (curve) {
       KeyframeSetter::removeKeyframeAt(curve, row);
     }
-  } else if (e->button() == Qt::LeftButton || e->button() == Qt::MidButton)
+  } else if (e->button() == Qt::LeftButton || e->button() == Qt::MiddleButton)
     Spreadsheet::CellPanel::mousePressEvent(e);
   else if (e->button() == Qt::RightButton) {
     update();
@@ -1091,7 +1179,8 @@ FunctionSheet::FunctionSheet(QWidget *parent, bool isFloating)
     : SpreadsheetViewer(parent)
     , m_selectedCells()
     , m_selection(0)
-    , m_isFloating(isFloating) {
+    , m_isFloating(isFloating)
+    , m_buttonArea(nullptr) {
   setColumnsPanel(m_columnHeadViewer = new FunctionSheetColumnHeadViewer(this));
   setRowsPanel(m_rowViewer = new FunctionSheetRowViewer(this));
   setCellsPanel(m_cellViewer = new FunctionSheetCellViewer(this));
@@ -1109,6 +1198,10 @@ FunctionSheet::FunctionSheet(QWidget *parent, bool isFloating)
     setGeometry(settings.value("FunctionSpreadsheet", QRect(500, 500, 400, 300))
                     .toRect());
   }
+
+  setButtonAreaWidget(m_buttonArea = new FunctionSheetButtonArea(this));
+  connect(m_buttonArea, SIGNAL(syncSizeBtnToggled(bool)), this,
+          SLOT(onSyncSizeBtnToggled(bool)));
 }
 
 //-----------------------------------------------------------------------------
@@ -1142,6 +1235,12 @@ void FunctionSheet::setSelection(FunctionSelection *selection) {
 void FunctionSheet::showEvent(QShowEvent *e) {
   m_frameScroller.registerFrameScroller();
   SpreadsheetViewer::showEvent(e);
+
+  if (m_xshHandle && m_syncSize) {
+    connect(m_xshHandle, SIGNAL(zoomScaleChanged()), this,
+            SLOT(onZoomScaleChanged()));
+    onZoomScaleChanged();
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -1149,6 +1248,11 @@ void FunctionSheet::showEvent(QShowEvent *e) {
 void FunctionSheet::hideEvent(QHideEvent *e) {
   m_frameScroller.unregisterFrameScroller();
   SpreadsheetViewer::hideEvent(e);
+
+  if (m_xshHandle && m_syncSize) {
+    disconnect(m_xshHandle, SIGNAL(zoomScaleChanged()), this,
+               SLOT(onZoomScaleChanged()));
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -1296,4 +1400,49 @@ TStageObject *FunctionSheet::getStageObject(int column) {
   if (!stageItem) return nullptr;
 
   return stageItem->getStageObject();
+}
+
+//-----------------------------------------------------------------------------
+
+void FunctionSheet::setSyncSize(bool on) {
+  m_syncSize = on;
+  m_buttonArea->setSyncSizeBtnState(on);
+  update();
+}
+
+//-----------------------------------------------------------------------------
+
+int FunctionSheet::getFrameZoomFactor() const {
+  if (m_syncSize && m_xshHandle) {
+    int zoomFactor = m_xshHandle->getZoomFactor();
+    return 50 + (zoomFactor - 20) * 5 / 8;
+  }
+  return 100;
+}
+
+//-----------------------------------------------------------------------------
+
+void FunctionSheet::onSyncSizeBtnToggled(bool on) {
+  // switch the flag
+  m_syncSize = on;
+
+  if (m_xshHandle) {
+    if (on)
+      connect(m_xshHandle, SIGNAL(zoomScaleChanged()), this,
+              SLOT(onZoomScaleChanged()));
+    else
+      disconnect(m_xshHandle, SIGNAL(zoomScaleChanged()), this,
+                 SLOT(onZoomScaleChanged()));
+    onZoomScaleChanged();
+  }
+}
+
+//-----------------------------------------------------------------------------
+
+void FunctionSheet::onZoomScaleChanged() {
+  QPoint xyOrig = positionToXY(CellPosition(getCurrentFrame(), -1));
+  setScaleFactor(getFrameZoomFactor());
+  QPoint xyNew = positionToXY(CellPosition(getCurrentFrame(), -1));
+  scroll(xyNew - xyOrig);
+  update();
 }

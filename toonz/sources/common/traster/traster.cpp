@@ -9,7 +9,7 @@
 #include "tbigmemorymanager.h"
 #include "traster.h"
 #include "trastercm.h"
-//#include "tspecialstyleid.h"
+// #include "tspecialstyleid.h"
 #include "tpixel.h"
 #include "tpixelgr.h"
 #include "timagecache.h"
@@ -28,6 +28,7 @@ TRaster::TRaster(int lx, int ly, int pixelSize)
     , m_bufferOwner(true)
     , m_buffer(0)
     , m_lockCount(0)
+    , m_isLinear(false)
 #ifdef _DEBUG
     , m_cashed(false)
 #endif
@@ -65,7 +66,7 @@ m_buffer = BigMemoryManager.getMemoryChunk(lx*ly*pixelSize, this);
 //m_buffer = new UCHAR[lx*ly*pixelSize];
 m_totalMemory += ((lx*ly*pixelSize)>>10);
 #ifdef _WIN32
-MessageBox( NULL, "Run out of contiguos phisical memory: please save all and
+MessageBox( NULL, "Run out of contiguous physical memory: please save all and
 restart toonz!", "Warning", MB_OK);
 #endif
 }*/
@@ -83,15 +84,18 @@ TRaster::TRaster(int lx, int ly, int pixelSize, int wrap, UCHAR *buffer,
     , m_buffer(buffer)
     , m_bufferOwner(bufferOwner)
     , m_lockCount(0)
+    , m_isLinear(false)
 #ifdef _DEBUG
     , m_cashed(false)
 #endif
+    , m_parent(nullptr)
 
 {
   if (parent) {
     assert(bufferOwner == false);
     while (parent->m_parent) parent = parent->m_parent;
     parent->addRef();
+    setLinear(parent->isLinear());
   }
 #ifdef _DEBUG
   else if (bufferOwner)
@@ -288,6 +292,7 @@ void TRaster::copy(const TRasterP &src0, const TPoint &offset) {
       srcRow += srcWrapSize;
     }
   }
+  setLinear(src0->isLinear());
   dst->unlock();
   src0->unlock();
 }

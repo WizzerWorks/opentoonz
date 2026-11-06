@@ -103,7 +103,7 @@ public:
   void deleteSelection();
   //! Copy selected fxs in the clipboard.
   void copySelection();
-  //! Copy selected fxs in the clipboard and alls the
+  //! Copy selected fxs in the clipboard and calls the
   //! TFxCommand::deleteSelection()
   //! to remove selected links or fxs.
   void cutSelection();
@@ -155,6 +155,8 @@ private:
 signals:
   void doCollapse(const QList<TFxP> &);
   void doExplodeChild(const QList<TFxP> &);
+  void doDelete();
+  void columnPasted(const QList<TXshColumnP> &);
 };
 
 #endif

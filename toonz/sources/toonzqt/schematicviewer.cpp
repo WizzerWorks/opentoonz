@@ -13,6 +13,8 @@
 #include "toonzqt/gutil.h"
 #include "toonzqt/imageutils.h"
 #include "toonzqt/dvscrollwidget.h"
+#include "toonzqt/fxselection.h"
+#include "stageobjectselection.h"
 
 // TnzLib includes
 #include "toonz/txsheethandle.h"
@@ -73,7 +75,11 @@ public:
   }
 };
 
+const int snapDistance = 15;
 }  // namespace
+
+int SchematicScene::snapHSpacing  = 50;
+int SchematicScene::snapVInterval = 75;
 
 //==================================================================
 //
@@ -189,6 +195,96 @@ QVector<SchematicNode *> SchematicScene::getPlacedNode(SchematicNode *node) {
   return nodes;
 }
 
+//------------------------------------------------------------------
+
+void SchematicScene::addSnapTarget(const QPointF &pos, const QRectF &rect,
+                                   const QPointF &theOtherEndPos,
+                                   const QPointF &endPosOffset) {
+  // reduce highlight margin
+  QRectF nodeRect = rect.adjusted(5, 5, -5, -5);
+
+  /*
+  auto findSnapPos = [&](QPointF pos) {
+    for (auto item : m_snapTargets) {
+      if (item->scenePos() == pos) return true;
+    }
+    return false;
+  };
+
+  QList<QPointF> posList = {pos};
+
+  for (int i = 1; i <= 10; i++) {
+    QPointF tmp_pos =
+        pos + QPointF(0, (double)(SchematicScene::snapVInterval * i));
+    posList.append(tmp_pos);
+    if (isAnEmptyZone(nodeRect.translated(tmp_pos))) break;
+  }
+  for (int i = -1; i >= -10; i--) {
+    QPointF tmp_pos =
+        pos + QPointF(0, (double)(SchematicScene::snapVInterval * i));
+    posList.append(tmp_pos);
+    if (isAnEmptyZone(nodeRect.translated(tmp_pos))) break;
+  }
+
+  for (auto p : posList) {
+    if (findSnapPos(p)) continue;
+    SnapTargetItem *item = new SnapTargetItem(p, nodeRect);
+    addItem(item);
+    m_snapTargets.append(item);
+  }*/
+
+  SnapTargetItem *item =
+      new SnapTargetItem(pos, nodeRect, theOtherEndPos, endPosOffset);
+  addItem(item);
+  m_snapTargets.append(item);
+}
+
+//------------------------------------------------------------------
+
+void SchematicScene::clearSnapTargets() {
+  for (auto item : m_snapTargets) {
+    removeItem(item);
+    delete item;
+  }
+  m_snapTargets.clear();
+}
+
+//------------------------------------------------------------------
+// snap to neighbor nodes on dragging
+void SchematicScene::computeSnap(SchematicNode *node, QPointF &delta,
+                                 bool enable) {
+  if (m_snapTargets.isEmpty()) return;
+
+  if (!enable) {
+    // hide targets
+    if (m_snapTargets[0]->isVisible()) {
+      for (auto item : m_snapTargets) item->setVisible(false);
+    }
+    return;
+  }
+
+  if (!m_snapTargets[0]->isVisible()) {
+    for (auto item : m_snapTargets) item->setVisible(true);
+  }
+
+  QPointF newScenePos = node->scenePos() + delta;
+  QPointF newPos      = views()[0]->mapFromScene(newScenePos);
+
+  for (auto target : m_snapTargets) {
+    QPointF targetPos = target->scenePos();
+    int snapIndex     = std::nearbyint((newScenePos.y() - targetPos.y()) /
+                                       (double)SchematicScene::snapVInterval);
+    targetPos.setY(targetPos.y() +
+                   (double)(snapIndex * SchematicScene::snapVInterval));
+    target->setPos(targetPos);
+    if ((newPos - views()[0]->mapFromScene(targetPos)).manhattanLength() <
+        snapDistance) {
+      delta = targetPos - node->scenePos();
+      return;
+    }
+  }
+}
+
 //==================================================================
 //
 // SchematicSceneViewer
@@ -247,14 +343,14 @@ void SchematicSceneViewer::mousePressEvent(QMouseEvent *me) {
     } else if (m_cursorMode == CursorMode::Hand) {
       m_mousePanPoint = m_touchDevice == QTouchDevice::TouchScreen
                             ? mapToScene(me->pos())
-                            : me->pos() * getDevPixRatio();
-      m_panning = true;
+                            : me->pos() * getDevicePixelRatio(this);
+      m_panning       = true;
       return;
     }
-  } else if (m_buttonState == Qt::MidButton) {
+  } else if (m_buttonState == Qt::MiddleButton) {
     m_mousePanPoint = m_touchDevice == QTouchDevice::TouchScreen
                           ? mapToScene(me->pos())
-                          : me->pos() * getDevPixRatio();
+                          : me->pos() * getDevicePixelRatio(this);
   }
   bool drawRect                       = true;
   QList<QGraphicsItem *> pointedItems = items(me->pos());
@@ -278,6 +374,7 @@ void SchematicSceneViewer::mousePressEvent(QMouseEvent *me) {
 /*! Reimplemets the QGraphicsView::mouseMoveEvent()
  */
 void SchematicSceneViewer::mouseMoveEvent(QMouseEvent *me) {
+  // qDebug() << "[mouseMoveEvent]";
   if (m_gestureActive && m_touchDevice == QTouchDevice::TouchScreen &&
       !m_stylusUsed) {
     return;
@@ -286,15 +383,15 @@ void SchematicSceneViewer::mouseMoveEvent(QMouseEvent *me) {
   QPoint currWinPos    = me->pos();
   QPointF currScenePos = mapToScene(currWinPos);
   if ((m_cursorMode == CursorMode::Hand && m_panning) ||
-      m_buttonState == Qt::MidButton) {
-    QPointF usePos = m_touchDevice == QTouchDevice::TouchScreen
-                         ? mapToScene(me->pos())
-                         : me->pos() * getDevPixRatio();
+      m_buttonState == Qt::MiddleButton) {
+    QPointF usePos     = m_touchDevice == QTouchDevice::TouchScreen
+                             ? mapToScene(me->pos())
+                             : me->pos() * getDevicePixelRatio(this);
     QPointF deltaPoint = usePos - m_mousePanPoint;
     panQt(deltaPoint);
     m_mousePanPoint = m_touchDevice == QTouchDevice::TouchScreen
                           ? mapToScene(me->pos())
-                          : me->pos() * getDevPixRatio();
+                          : me->pos() * getDevicePixelRatio(this);
   } else {
     if (m_cursorMode == CursorMode::Zoom && m_zooming) {
       int deltaY     = (m_oldWinPos.y() - me->pos().y()) * 10;
@@ -384,12 +481,12 @@ void SchematicSceneViewer::wheelEvent(QWheelEvent *me) {
 
   default:  // Qt::MouseEventSynthesizedByQt,
             // Qt::MouseEventSynthesizedByApplication
-    {
-      std::cout << "not supported event: Qt::MouseEventSynthesizedByQt, "
-                   "Qt::MouseEventSynthesizedByApplication"
-                << std::endl;
-      break;
-    }
+  {
+    std::cout << "not supported event: Qt::MouseEventSynthesizedByQt, "
+                 "Qt::MouseEventSynthesizedByApplication"
+              << std::endl;
+    break;
+  }
 
   }  // end switch
 
@@ -398,7 +495,7 @@ void SchematicSceneViewer::wheelEvent(QWheelEvent *me) {
          m_touchDevice == QTouchDevice::TouchScreen) ||
         m_gestureActive == false) {
       double factor = exp(delta * 0.001);
-      changeScale(me->pos(), factor);
+      changeScale(me->position().toPoint(), factor);
       m_panning = false;
     }
   }
@@ -409,28 +506,24 @@ void SchematicSceneViewer::wheelEvent(QWheelEvent *me) {
 
 void SchematicSceneViewer::zoomQt(bool zoomin, bool resetView) {
   if (resetView) {
-    resetMatrix();
-    // reseting will set view to the center of items bounding
+    resetTransform();
+    // resetting will set view to the center of items bounding
     centerOn(scene()->itemsBoundingRect().center());
     return;
   }
 
-#if QT_VERSION >= 0x050000
-  double scale2 = matrix().determinant();
-#else
-  double scale2 = matrix().det();
-#endif
+  double scale2 = transform().determinant();
   if ((scale2 < 100000 || !zoomin) && (scale2 > 0.001 * 0.05 || zoomin)) {
     double oldZoomScale = sqrt(scale2);
     double zoomScale =
         resetView ? 1
                   : ImageUtils::getQuantizedZoomFactor(oldZoomScale, zoomin);
-    QMatrix scale =
-        QMatrix().scale(zoomScale / oldZoomScale, zoomScale / oldZoomScale);
+    QTransform scale =
+        QTransform().scale(zoomScale / oldZoomScale, zoomScale / oldZoomScale);
 
     // See QGraphicsView::mapToScene()'s doc for details
     QPointF sceneCenter(mapToScene(rect().center()));
-    setMatrix(scale, true);
+    setTransform(scale, true);
     centerOn(sceneCenter);
   }
 }
@@ -442,8 +535,8 @@ void SchematicSceneViewer::zoomQt(bool zoomin, bool resetView) {
 void SchematicSceneViewer::changeScale(const QPoint &winPos,
                                        qreal scaleFactor) {
   QPointF startScenePos = mapToScene(winPos);
-  QMatrix scale         = QMatrix().scale(scaleFactor, scaleFactor);
-  setMatrix(scale, true);
+  QTransform scale      = QTransform().scale(scaleFactor, scaleFactor);
+  setTransform(scale, true);
   QPointF endScenePos = mapToScene(winPos);
   QPointF delta       = endScenePos - startScenePos;
   translate(delta.x(), delta.y());
@@ -478,7 +571,7 @@ void SchematicSceneViewer::reorderScene() {
 void SchematicSceneViewer::normalizeScene() {
   // See QGraphicsView::mapToScene()'s doc for details
   QPointF sceneCenter(mapToScene(rect().center()));
-  resetMatrix();
+  resetTransform();
 #if defined(MACOSX)
   scale(1.32, 1.32);
 #endif
@@ -502,7 +595,7 @@ void SchematicSceneViewer::showEvent(QShowEvent *se) {
   if (m_firstShowing) {
     m_firstShowing = false;
     QRectF rect    = scene()->itemsBoundingRect();
-    resetMatrix();
+    resetTransform();
     centerOn(rect.center());
   }
 }
@@ -537,7 +630,7 @@ void SchematicSceneViewer::tabletEvent(QTabletEvent *e) {
     m_stylusUsed = false;
   }
 
-  e->accept();
+  QGraphicsView::tabletEvent(e);
 }
 
 //------------------------------------------------------------------
@@ -592,8 +685,9 @@ void SchematicSceneViewer::gestureEvent(QGestureEvent *e) {
       }
 
       if (changeFlags & QPinchGesture::CenterPointChanged) {
-        QPointF centerDelta = (gesture->centerPoint() * getDevPixRatio()) -
-                              (gesture->lastCenterPoint() * getDevPixRatio());
+        QPointF centerDelta =
+            (gesture->centerPoint() * getDevicePixelRatio(this)) -
+            (gesture->lastCenterPoint() * getDevicePixelRatio(this));
         if (centerDelta.manhattanLength() > 1) {
           // panQt(centerDelta.toPoint());
         }
@@ -628,14 +722,14 @@ void SchematicSceneViewer::touchEvent(QTouchEvent *e, int type) {
         }
       }
       if (m_panning) {
-        QPointF curPos =
-            m_touchDevice == QTouchDevice::TouchScreen
-                ? mapToScene(panPoint.pos().toPoint())
-                : mapToScene(panPoint.pos().toPoint()) * getDevPixRatio();
-        QPointF lastPos =
-            m_touchDevice == QTouchDevice::TouchScreen
-                ? mapToScene(panPoint.lastPos().toPoint())
-                : mapToScene(panPoint.lastPos().toPoint()) * getDevPixRatio();
+        QPointF curPos      = m_touchDevice == QTouchDevice::TouchScreen
+                                  ? mapToScene(panPoint.pos().toPoint())
+                                  : mapToScene(panPoint.pos().toPoint()) *
+                                   getDevicePixelRatio(this);
+        QPointF lastPos     = m_touchDevice == QTouchDevice::TouchScreen
+                                  ? mapToScene(panPoint.lastPos().toPoint())
+                                  : mapToScene(panPoint.lastPos().toPoint()) *
+                                    getDevicePixelRatio(this);
         QPointF centerDelta = curPos - lastPos;
         panQt(centerDelta);
       }
@@ -685,10 +779,9 @@ bool SchematicSceneViewer::event(QEvent *e) {
   }
   */
 
-  if (e->type() == QEvent::Gesture &&
-      CommandManager::instance()
-          ->getAction(MI_TouchGestureControl)
-          ->isChecked()) {
+  if (e->type() == QEvent::Gesture && CommandManager::instance()
+                                          ->getAction(MI_TouchGestureControl)
+                                          ->isChecked()) {
     gestureEvent(static_cast<QGestureEvent *>(e));
     return true;
   }
@@ -741,7 +834,7 @@ SchematicViewer::SchematicViewer(QWidget *parent)
 
   // layout
   QVBoxLayout *mainLayout = new QVBoxLayout();
-  mainLayout->setMargin(0);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
   mainLayout->setSpacing(0);
   {
     mainLayout->addWidget(m_viewer, 1);
@@ -749,7 +842,7 @@ SchematicViewer::SchematicViewer(QWidget *parent)
     QFrame *bottomFrame = new QFrame(this);
     bottomFrame->setObjectName("SchematicBottomFrame");
     QHBoxLayout *horizontalLayout = new QHBoxLayout();
-    horizontalLayout->setMargin(0);
+    horizontalLayout->setContentsMargins(0, 0, 0, 0);
     horizontalLayout->setSpacing(0);
     {
       horizontalLayout->addWidget(m_commonToolbar);
@@ -776,6 +869,18 @@ SchematicViewer::SchematicViewer(QWidget *parent)
           SIGNAL(doExplodeChild(QList<TStageObjectId>)));
   connect(m_stageScene, SIGNAL(editObject()), this, SIGNAL(editObject()));
   connect(m_fxScene, SIGNAL(editObject()), this, SIGNAL(editObject()));
+
+  connect(m_fxScene->getFxSelection(), SIGNAL(doDelete()), this,
+          SLOT(deleteFxs()));
+  connect(m_stageScene->getStageSelection(), SIGNAL(doDelete()), this,
+          SLOT(deleteStageObjects()));
+
+  connect(m_fxScene->getFxSelection(),
+          SIGNAL(columnPasted(const QList<TXshColumnP> &)), this,
+          SIGNAL(columnPasted(const QList<TXshColumnP> &)));
+  connect(m_stageScene->getStageSelection(),
+          SIGNAL(columnPasted(const QList<TXshColumnP> &)), this,
+          SIGNAL(columnPasted(const QList<TXshColumnP> &)));
 
   m_viewer->setScene(m_stageScene);
   m_fxToolbar->hide();
@@ -809,6 +914,9 @@ void SchematicViewer::getNodeColor(int ltype, QColor &nodeColor) {
     break;
   case MESH_XSHLEVEL:
     nodeColor = getMeshColumnColor();
+    break;
+  case META_XSHLEVEL:
+    nodeColor = getMetaColumnColor();
     break;
   case PLT_XSHLEVEL:
     nodeColor = getPaletteColumnColor();
@@ -874,22 +982,22 @@ void SchematicViewer::setSchematicScene(SchematicScene *scene) {
 void SchematicViewer::createToolbars() {
   // Initialize them
   m_stageToolbar->setMovable(false);
-  m_stageToolbar->setIconSize(QSize(17, 17));
+  m_stageToolbar->setIconSize(QSize(20, 20));
   m_stageToolbar->setLayoutDirection(Qt::RightToLeft);
   m_stageToolbar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
   m_commonToolbar->setMovable(false);
-  m_commonToolbar->setIconSize(QSize(17, 17));
+  m_commonToolbar->setIconSize(QSize(20, 20));
   m_commonToolbar->setLayoutDirection(Qt::RightToLeft);
   m_commonToolbar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
   m_fxToolbar->setMovable(false);
-  m_fxToolbar->setIconSize(QSize(17, 17));
+  m_fxToolbar->setIconSize(QSize(20, 20));
   m_fxToolbar->setLayoutDirection(Qt::RightToLeft);
   m_fxToolbar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
   m_swapToolbar->setMovable(false);
-  m_swapToolbar->setIconSize(QSize(17, 17));
+  m_swapToolbar->setIconSize(QSize(20, 20));
   m_swapToolbar->setLayoutDirection(Qt::RightToLeft);
   m_swapToolbar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 }
@@ -902,48 +1010,48 @@ void SchematicViewer::createActions() {
           *addOutputFx = 0, *switchPort = 0, *iconifyNodes = 0;
   {
     // Fit schematic
-    QIcon fitSchematicIcon = createQIconOnOff("fit", false);
+    QIcon fitSchematicIcon = createQIcon("fit_to_window");
     m_fitSchematic =
         new QAction(fitSchematicIcon, tr("&Fit to Window"), m_commonToolbar);
     connect(m_fitSchematic, SIGNAL(triggered()), m_viewer, SLOT(fitScene()));
 
     // Center On
-    QIcon centerOnIcon = createQIconOnOff("centerselection", false);
+    QIcon centerOnIcon = createQIcon("focus");
     m_centerOn =
         new QAction(centerOnIcon, tr("&Focus on Current"), m_commonToolbar);
     connect(m_centerOn, SIGNAL(triggered()), m_viewer, SLOT(centerOnCurrent()));
 
     // Reorder schematic
-    QIcon reorderIcon = createQIconOnOff("reorder", false);
+    QIcon reorderIcon = createQIcon("reorder", false);
     m_reorder = new QAction(reorderIcon, tr("&Reorder Nodes"), m_commonToolbar);
     connect(m_reorder, SIGNAL(triggered()), m_viewer, SLOT(reorderScene()));
 
     // Normalize schematic schematic
-    QIcon normalizeIcon = createQIconOnOff("resetsize", false);
+    QIcon normalizeIcon = createQIcon("actual_pixel_size");
     m_normalize =
         new QAction(normalizeIcon, tr("&Reset Size"), m_commonToolbar);
     connect(m_normalize, SIGNAL(triggered()), m_viewer, SLOT(normalizeScene()));
 
-    QIcon nodeSizeIcon = createQIconOnOff(
-        m_maximizedNode ? "minimizenodes" : "maximizenodes", false);
+    QIcon nodeSizeIcon =
+        createQIcon(m_maximizedNode ? "minimizenodes" : "maximizenodes");
     m_nodeSize = new QAction(
         nodeSizeIcon,
         m_maximizedNode ? tr("&Minimize Nodes") : tr("&Maximize Nodes"),
         m_commonToolbar);
     connect(m_nodeSize, SIGNAL(triggered()), this, SLOT(changeNodeSize()));
 
-    QIcon selectModeIcon = createQIconOnOff("schematic_selection_mode", false);
+    QIcon selectModeIcon = createQIcon("selection_schematic");
     m_selectMode =
         new QAction(selectModeIcon, tr("&Selection Mode"), m_commonToolbar);
     m_selectMode->setCheckable(true);
     connect(m_selectMode, SIGNAL(triggered()), this, SLOT(selectModeEnabled()));
 
-    QIcon zoomModeIcon = createQIconOnOff("schematic_zoom_mode", false);
+    QIcon zoomModeIcon = createQIcon("zoom_schematic");
     m_zoomMode = new QAction(zoomModeIcon, tr("&Zoom Mode"), m_commonToolbar);
     m_zoomMode->setCheckable(true);
     connect(m_zoomMode, SIGNAL(triggered()), this, SLOT(zoomModeEnabled()));
 
-    QIcon handModeIcon = createQIconOnOff("schematic_hand_mode", false);
+    QIcon handModeIcon = createQIcon("hand_schematic");
     m_handMode = new QAction(handModeIcon, tr("&Hand Mode"), m_commonToolbar);
     m_handMode->setCheckable(true);
     connect(m_handMode, SIGNAL(triggered()), this, SLOT(handModeEnabled()));
@@ -953,31 +1061,31 @@ void SchematicViewer::createActions() {
     if (m_fullSchematic) {
       // AddPegbar
       addPegbar           = new QAction(tr("&New Pegbar"), m_stageToolbar);
-      QIcon addPegbarIcon = createQIconOnOff("pegbar", false);
+      QIcon addPegbarIcon = createQIcon("pegbar");
       addPegbar->setIcon(addPegbarIcon);
       connect(addPegbar, SIGNAL(triggered()), m_stageScene,
               SLOT(onPegbarAdded()));
 
       // AddCamera
       addCamera           = new QAction(tr("&New Camera"), m_stageToolbar);
-      QIcon addCameraIcon = createQIconOnOff("camera", false);
+      QIcon addCameraIcon = createQIcon("camera");
       addCamera->setIcon(addCameraIcon);
       connect(addCamera, SIGNAL(triggered()), m_stageScene,
               SLOT(onCameraAdded()));
 
       // AddSpline
       addSpline           = new QAction(tr("&New Motion Path"), m_stageToolbar);
-      QIcon addSplineIcon = createQIconOnOff("motionpath", false);
+      QIcon addSplineIcon = createQIcon("motionpath");
       addSpline->setIcon(addSplineIcon);
       connect(addSpline, SIGNAL(triggered()), m_stageScene,
               SLOT(onSplineAdded()));
 
       // Switch display of stage schematic's output port
       switchPort =
-          new QAction(tr("&Swtich output port display mode"), m_stageToolbar);
+          new QAction(tr("&Switch output port display mode"), m_stageToolbar);
       switchPort->setCheckable(true);
       switchPort->setChecked(m_stageScene->isShowLetterOnPortFlagEnabled());
-      QIcon switchPortIcon = createQIconOnOff("switchport");
+      QIcon switchPortIcon = createQIcon("switchport");
       switchPort->setIcon(switchPortIcon);
       connect(switchPort, SIGNAL(toggled(bool)), m_stageScene,
               SLOT(onSwitchPortModeToggled(bool)));
@@ -985,7 +1093,7 @@ void SchematicViewer::createActions() {
       // InsertFx
       insertFx = CommandManager::instance()->getAction("MI_InsertFx");
       if (insertFx) {
-        QIcon insertFxIcon = createQIconOnOff("fx", false);
+        QIcon insertFxIcon = createQIcon("fx_logo");
         insertFx->setIcon(insertFxIcon);
       }
 
@@ -996,13 +1104,13 @@ void SchematicViewer::createActions() {
       iconifyNodes = new QAction(tr("&Toggle node icons"), m_fxToolbar);
       iconifyNodes->setCheckable(true);
       iconifyNodes->setChecked(!m_fxScene->isNormalIconView());
-      QIcon iconifyNodesIcon = createQIconOnOff("iconifynodes");
+      QIcon iconifyNodesIcon = createQIcon("iconifynodes");
       iconifyNodes->setIcon(iconifyNodesIcon);
       connect(iconifyNodes, SIGNAL(toggled(bool)), m_fxScene,
               SLOT(onIconifyNodesToggled(bool)));
 
       // Swap fx/stage schematic
-      QIcon changeSchematicIcon = createQIconOnOff("swap", false);
+      QIcon changeSchematicIcon = createQIcon("swap");
       m_changeScene =
           CommandManager::instance()->getAction("A_FxSchematicToggle", true);
       if (m_changeScene) {
@@ -1052,7 +1160,7 @@ void SchematicViewer::setStageSchematic() {
     m_viewer->setScene(m_stageScene);
     QRectF rect = m_stageScene->itemsBoundingRect();
 
-    m_viewer->resetMatrix();
+    m_viewer->resetTransform();
     m_viewer->centerOn(rect.center());
 
     m_fxToolbar->hide();
@@ -1071,7 +1179,7 @@ void SchematicViewer::setFxSchematic() {
     m_viewer->setScene(m_fxScene);
     QRectF rect = m_fxScene->itemsBoundingRect();
 
-    m_viewer->resetMatrix();
+    m_viewer->resetTransform();
     m_viewer->centerOn(rect.center());
 
     m_stageToolbar->hide();
@@ -1105,15 +1213,15 @@ void SchematicViewer::onSceneSwitched() {
                         ->getXsheet()
                         ->getFxDag()
                         ->getDagGridDimension() == 0;
-  QIcon nodeSizeIcon = createQIconOnOff(
-      m_maximizedNode ? "minimizenodes" : "maximizenodes", false);
+  QIcon nodeSizeIcon =
+      createQIcon(m_maximizedNode ? "minimizenodes" : "maximizenodes");
   m_nodeSize->setIcon(nodeSizeIcon);
   QString label(m_maximizedNode ? tr("&Minimize Nodes")
                                 : tr("&Maximize Nodes"));
   m_nodeSize->setText(label);
 
   // reset schematic
-  m_viewer->resetMatrix();
+  m_viewer->resetTransform();
   m_viewer->centerOn(m_viewer->scene()->itemsBoundingRect().center());
   if (m_viewer->scene() == m_fxScene && !m_fxScene->isNormalIconView())
     m_fxScene->updateScene();
@@ -1139,7 +1247,7 @@ void SchematicViewer::setStageSchematicViewed(bool isStageSchematic) {
 }
 
 //------------------------------------------------------------------
-
+// called when the signals xshLevelChanged or objectSwitched is emitted
 void SchematicViewer::updateScenes() {
   TStageObjectId id = m_stageScene->getCurrentObject();
   if (id.isColumn()) {
@@ -1147,12 +1255,9 @@ void SchematicViewer::updateScenes() {
     TXsheet *xsh = m_stageScene->getXsheetHandle()->getXsheet();
     if (!xsh) return;
     TXshColumn *column = xsh->getColumn(id.getIndex());
-    if (!column) {
-      m_fxScene->getFxHandle()->setFx(0, false);
-      return;
-    }
-    TFx *fx = column->getFx();
-    m_fxScene->getFxHandle()->setFx(fx, false);
+    if (!column || !column->getZeraryFxColumn()) return;
+    TFx *fx = column->getZeraryFxColumn()->getZeraryColumnFx();
+    m_fxScene->getFxHandle()->setFx(fx);
     m_fxScene->update();
   }
 }
@@ -1164,8 +1269,8 @@ void SchematicViewer::changeNodeSize() {
   // aggiono l'icona del pulsante;
   m_fxScene->resizeNodes(m_maximizedNode);
   m_stageScene->resizeNodes(m_maximizedNode);
-  QIcon nodeSizeIcon = createQIconOnOff(
-      m_maximizedNode ? "minimizenodes" : "maximizenodes", false);
+  QIcon nodeSizeIcon =
+      createQIcon(m_maximizedNode ? "minimizenodes" : "maximizenodes");
   m_nodeSize->setIcon(nodeSizeIcon);
   QString label(m_maximizedNode ? tr("&Minimize Nodes")
                                 : tr("&Maximize Nodes"));
@@ -1206,3 +1311,15 @@ void SchematicViewer::zoomModeEnabled() { setCursorMode(CursorMode::Zoom); }
 //------------------------------------------------------------------
 
 void SchematicViewer::handModeEnabled() { setCursorMode(CursorMode::Hand); }
+
+//------------------------------------------------------------------
+
+void SchematicViewer::deleteFxs() {
+  emit doDeleteFxs(m_fxScene->getFxSelection());
+}
+
+//------------------------------------------------------------------
+
+void SchematicViewer::deleteStageObjects() {
+  emit doDeleteStageObjects(m_stageScene->getStageSelection());
+}

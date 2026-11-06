@@ -85,7 +85,7 @@ public:
 
   virtual void leftButtonDown(const TPointD &pos, const TMouseEvent &) {}
   virtual void leftButtonDrag(const TPointD &pos, const TMouseEvent &) {}
-  virtual void leftButtonUp(const TPointD &pos, const TMouseEvent &) {}
+  virtual void leftButtonUp() {}
 
   void onChange(const TParamChange &) override;
   void createUndo();
@@ -106,6 +106,7 @@ public:
   virtual void leftButtonDown(const TPointD &pos, const TMouseEvent &) = 0;
   virtual void leftButtonDrag(const TPointD &pos, const TMouseEvent &) = 0;
   virtual void leftButtonUp(const TPointD &pos, const TMouseEvent &)   = 0;
+  virtual void leftButtonUp()                                          = 0;
   virtual ~DragTool() {}
 
   virtual void enableGlobalKeyframes(bool enabled) {}
@@ -149,6 +150,13 @@ public:
   bool isEditingNonZeraryFx() const { return m_editingNonZeraryFx; }
 
   bool hasGadget() { return m_gadgets.size() != 0; }
+
+  int getDevPixRatio();
+
+  // get the current viewer geometry
+  TRectD getGeometry();
+
+  TRectD getCameraRect();
 
 public slots:
 

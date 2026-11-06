@@ -56,7 +56,7 @@ sufficiently
 <I> colors recognition,
   colors adjustment, despeckling <\I> and \a antialiasing-related effects.
 
-\note This class also acts as a wrapper to CleanupParamaters' palette, attaching
+\note This class also acts as a wrapper to CleanupParameters' palette, attaching
 to the
       "current cleanup palette handle" accessible through the
 TPaletteController.
@@ -143,7 +143,8 @@ public:
   void setCommitMask(CommitMask allowedProcessing);
 
   void saveSettings(const TFilePath &clnPath);
-  bool loadSettings(const TFilePath &clnPath);
+  bool loadSettings(const TFilePath &clnPath,
+                    bool isCalledFromLoadSettingsPopup = false);
 
   //! Prompts to save current settings in case they have been modified. Returns
   //! false if the

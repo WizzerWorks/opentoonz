@@ -38,6 +38,7 @@
 #include <QButtonGroup>
 #include <QMenu>
 #include <QListView>
+#include <QContextMenuEvent>
 
 #include "tooloptionscontrols.h"
 
@@ -54,10 +55,7 @@ ToolOptionControl::ToolOptionControl(TTool *tool, std::string propertyName,
 //-----------------------------------------------------------------------------
 
 void ToolOptionControl::notifyTool(bool addToUndo) {
-  std::string tempPropertyName = m_propertyName;
-  if (addToUndo && m_propertyName == "Maximum Gap")
-    tempPropertyName = tempPropertyName + "withUndo";
-  m_tool->onPropertyChanged(tempPropertyName);
+  m_tool->onPropertyChanged(m_propertyName, addToUndo);
 }
 
 //-----------------------------------------------------------------------------
@@ -107,10 +105,6 @@ ToolOptionCheckbox::ToolOptionCheckbox(TTool *tool, TBoolProperty *property,
 void ToolOptionCheckbox::updateStatus() {
   bool check = m_property->getValue();
 
-  if (!actions().isEmpty() && actions()[0]->isCheckable() &&
-      actions()[0]->isChecked() != check)
-    actions()[0]->setChecked(check);
-
   if (isChecked() == check) return;
 
   setCheckState(check ? Qt::Checked : Qt::Unchecked);
@@ -122,23 +116,6 @@ void ToolOptionCheckbox::nextCheckState() {
   QAbstractButton::nextCheckState();
   m_property->setValue(checkState() == Qt::Checked);
   notifyTool();
-}
-
-//-----------------------------------------------------------------------------
-
-void ToolOptionCheckbox::doClick(bool checked) {
-  if (m_toolHandle && m_toolHandle->getTool() != m_tool) return;
-  // active only if the belonging combo-viewer is visible
-  if (!isInVisibleViewer(this)) return;
-
-  if (isChecked() == checked) return;
-
-  setChecked(checked);
-  m_property->setValue(checked);
-  notifyTool();
-
-  // for updating a cursor without any effect to the tool options
-  if(m_toolHandle) m_toolHandle->notifyToolCursorTypeChanged();
 }
 
 //=============================================================================
@@ -162,11 +139,11 @@ ToolOptionSlider::ToolOptionSlider(TTool *tool, TDoubleProperty *property,
   // set the maximum width of the widget according to the text length (with 5
   // pixels margin)
   txt.fill('0', textMaxLength);
-  int widgetWidth = fontMetrics().width(txt) + 5;
+  int widgetWidth = fontMetrics().horizontalAdvance(txt) + 5;
   m_lineEdit->parentWidget()->setMaximumWidth(widgetWidth);
   // set the maximum width of the slider to 250 pixels
   setMaximumWidth(250 + widgetWidth);
-
+  setMinimumWidth(50 + widgetWidth);
   updateStatus();
   connect(this, SIGNAL(valueChanged(bool)), SLOT(onValueChanged(bool)));
   // synchronize the state with the same widgets in other tool option bars
@@ -190,56 +167,6 @@ void ToolOptionSlider::onValueChanged(bool isDragging) {
   m_property->setValue(getValue());
   notifyTool(!isDragging);
 }
-
-//-----------------------------------------------------------------------------
-
-void ToolOptionSlider::increase(double step) {
-  if (m_toolHandle && m_toolHandle->getTool() != m_tool) return;
-  // active only if the belonging combo-viewer is visible
-  if (!isInVisibleViewer(this)) return;
-
-  double value = getValue();
-  double minValue, maxValue;
-  getRange(minValue, maxValue);
-
-  value += step;
-  if (value > maxValue) value = maxValue;
-
-  setValue(value);
-  m_property->setValue(getValue());
-  notifyTool();
-  // update the interface
-  repaint();
-}
-
-//-----------------------------------------------------------------------------
-
-void ToolOptionSlider::increaseFractional() { increase(0.06); }
-
-//-----------------------------------------------------------------------------
-
-void ToolOptionSlider::decrease(double step) {
-  if (m_toolHandle && m_toolHandle->getTool() != m_tool) return;
-  // active only if the belonging combo-viewer is visible
-  if (!isInVisibleViewer(this)) return;
-
-  double value = getValue();
-  double minValue, maxValue;
-  getRange(minValue, maxValue);
-
-  value -= step;
-  if (value < minValue) value = minValue;
-
-  setValue(value);
-  m_property->setValue(getValue());
-  notifyTool();
-  // update the interface
-  repaint();
-}
-
-//-----------------------------------------------------------------------------
-
-void ToolOptionSlider::decreaseFractional() { decrease(0.06); }
 
 //=============================================================================
 
@@ -266,14 +193,14 @@ ToolOptionPairSlider::ToolOptionPairSlider(TTool *tool,
   // set the maximum width of the widget according to the text length (with 5
   // pixels margin)
   txt.fill('0', textMaxLength);
-  int widgetWidth = fontMetrics().width(txt) + 5;
+  int widgetWidth = fontMetrics().horizontalAdvance(txt) + 5;
   m_leftLineEdit->setFixedWidth(widgetWidth);
   m_rightLineEdit->setFixedWidth(widgetWidth);
   m_leftMargin  = widgetWidth + 12;
   m_rightMargin = widgetWidth + 12;
   // set the maximum width of the slider to 300 pixels
   setMaximumWidth(300 + m_leftMargin + m_rightMargin);
-
+  setMinimumWidth(120 + m_leftMargin + m_rightMargin);
   setLeftText(leftName);
   setRightText(rightName);
 
@@ -292,81 +219,9 @@ void ToolOptionPairSlider::updateStatus() {
 
 void ToolOptionPairSlider::onValuesChanged(bool isDragging) {
   m_property->setValue(getValues());
-  notifyTool();
+  notifyTool(!isDragging);
   // synchronize the state with the same widgets in other tool option bars
   if (m_toolHandle) m_toolHandle->notifyToolChanged();
-}
-
-//-----------------------------------------------------------------------------
-
-void ToolOptionPairSlider::increaseMaxValue() {
-  if (m_toolHandle && m_toolHandle->getTool() != m_tool) return;
-  // active only if the belonging combo-viewer is visible
-  if (!isInVisibleViewer(this)) return;
-
-  std::pair<double, double> values = getValues();
-  double minValue, maxValue;
-  getRange(minValue, maxValue);
-  values.second += 1;
-  if (values.second > maxValue) values.second = maxValue;
-  setValues(values);
-  m_property->setValue(getValues());
-  notifyTool();
-  // update the interface
-  repaint();
-}
-
-//-----------------------------------------------------------------------------
-
-void ToolOptionPairSlider::decreaseMaxValue() {
-  if (m_toolHandle && m_toolHandle->getTool() != m_tool) return;
-  // active only if the belonging combo-viewer is visible
-  if (!isInVisibleViewer(this)) return;
-
-  std::pair<double, double> values = getValues();
-  values.second -= 1;
-  if (values.second < values.first) values.second = values.first;
-  setValues(values);
-  m_property->setValue(getValues());
-  notifyTool();
-  // update the interface
-  repaint();
-}
-
-//-----------------------------------------------------------------------------
-
-void ToolOptionPairSlider::increaseMinValue() {
-  if (m_toolHandle && m_toolHandle->getTool() != m_tool) return;
-  // active only if the belonging combo-viewer is visible
-  if (!isInVisibleViewer(this)) return;
-
-  std::pair<double, double> values = getValues();
-  values.first += 1;
-  if (values.first > values.second) values.first = values.second;
-  setValues(values);
-  m_property->setValue(getValues());
-  notifyTool();
-  // update the interface
-  repaint();
-}
-
-//-----------------------------------------------------------------------------
-
-void ToolOptionPairSlider::decreaseMinValue() {
-  if (m_toolHandle && m_toolHandle->getTool() != m_tool) return;
-  // active only if the belonging combo-viewer is visible
-  if (!isInVisibleViewer(this)) return;
-
-  std::pair<double, double> values = getValues();
-  double minValue, maxValue;
-  getRange(minValue, maxValue);
-  values.first -= 1;
-  if (values.first < minValue) values.first = minValue;
-  setValues(values);
-  m_property->setValue(getValues());
-  notifyTool();
-  // update the interface
-  repaint();
 }
 
 //=============================================================================
@@ -387,6 +242,7 @@ ToolOptionIntPairSlider::ToolOptionIntPairSlider(TTool *tool,
   TIntPairProperty::Range range = property->getRange();
   setRange(range.first, range.second);
   setMaximumWidth(300);
+  setMinimumWidth(200);
   updateStatus();
   connect(this, SIGNAL(valuesChanged(bool)), SLOT(onValuesChanged(bool)));
 }
@@ -402,89 +258,9 @@ void ToolOptionIntPairSlider::updateStatus() {
 
 void ToolOptionIntPairSlider::onValuesChanged(bool isDragging) {
   m_property->setValue(getValues());
-  notifyTool();
+  notifyTool(!isDragging);
   // synchronize the state with the same widgets in other tool option bars
   if (m_toolHandle) m_toolHandle->notifyToolChanged();
-}
-
-//-----------------------------------------------------------------------------
-
-void ToolOptionIntPairSlider::increaseMaxValue() {
-  if (m_toolHandle && m_toolHandle->getTool() != m_tool) return;
-  // active only if the belonging combo-viewer is visible
-  if (!isInVisibleViewer(this)) return;
-
-  std::pair<int, int> values = getValues();
-  int minValue, maxValue;
-  getRange(minValue, maxValue);
-  values.second += 1;
-
-  // a "cross-like shape" of the brush size = 3 is hard to use. so skip it
-  if (values.second == 3 && m_tool->isPencilModeActive()) values.second += 1;
-
-  if (values.second > maxValue) values.second = maxValue;
-  setValues(values);
-  m_property->setValue(getValues());
-  notifyTool();
-  // update the interface
-  repaint();
-}
-
-//-----------------------------------------------------------------------------
-
-void ToolOptionIntPairSlider::decreaseMaxValue() {
-  if (m_toolHandle && m_toolHandle->getTool() != m_tool) return;
-  // active only if the belonging combo-viewer is visible
-  if (!isInVisibleViewer(this)) return;
-
-  std::pair<int, int> values = getValues();
-  values.second -= 1;
-
-  // a "cross-like shape" of the brush size = 3 is hard to use. so skip it
-  if (values.second == 3 && m_tool->isPencilModeActive()) values.second -= 1;
-
-  if (values.second < values.first) values.second = values.first;
-  setValues(values);
-  m_property->setValue(getValues());
-  notifyTool();
-  // update the interface
-  repaint();
-}
-
-//-----------------------------------------------------------------------------
-
-void ToolOptionIntPairSlider::increaseMinValue() {
-  if (m_toolHandle && m_toolHandle->getTool() != m_tool) return;
-  // active only if the belonging combo-viewer is visible
-  if (!isInVisibleViewer(this)) return;
-
-  std::pair<int, int> values = getValues();
-  values.first += 1;
-  if (values.first > values.second) values.first = values.second;
-  setValues(values);
-  m_property->setValue(getValues());
-  notifyTool();
-  // update the interface
-  repaint();
-}
-
-//-----------------------------------------------------------------------------
-
-void ToolOptionIntPairSlider::decreaseMinValue() {
-  if (m_toolHandle && m_toolHandle->getTool() != m_tool) return;
-  // active only if the belonging combo-viewer is visible
-  if (!isInVisibleViewer(this)) return;
-
-  std::pair<int, int> values = getValues();
-  int minValue, maxValue;
-  getRange(minValue, maxValue);
-  values.first -= 1;
-  if (values.first < minValue) values.first = minValue;
-  setValues(values);
-  m_property->setValue(getValues());
-  notifyTool();
-  // update the interface
-  repaint();
 }
 
 //=============================================================================
@@ -498,7 +274,15 @@ ToolOptionIntSlider::ToolOptionIntSlider(TTool *tool, TIntProperty *property,
   m_property->addListener(this);
   TIntProperty::Range range = property->getRange();
   setRange(range.first, range.second);
-  setMaximumWidth(300);
+  if (property->isSpinner()) {
+    enableSlider(false);
+    enableSpinner(true);
+    setMinimumWidth(60);
+    setMaximumWidth(80);
+  } else {
+    setMinimumWidth(50);
+    setMaximumWidth(300);
+  }
   updateStatus();
   connect(this, SIGNAL(valueChanged(bool)), SLOT(onValueChanged(bool)));
   // synchronize the state with the same widgets in other tool option bars
@@ -518,56 +302,9 @@ void ToolOptionIntSlider::updateStatus() {
 
 //-----------------------------------------------------------------------------
 
-void ToolOptionIntSlider::increase() {
-  if (m_toolHandle && m_toolHandle->getTool() != m_tool) return;
-  // active only if the belonging combo-viewer is visible
-  if (!isInVisibleViewer(this)) return;
-
-  int value = getValue();
-  int minValue, maxValue;
-  getRange(minValue, maxValue);
-  value += 1;
-  // a "cross-like shape" of the brush size = 3 is hard to use. so skip it
-  if (value == 3 && m_tool->isPencilModeActive()) value += 1;
-
-  if (value > maxValue) value = maxValue;
-
-  setValue(value);
-  m_property->setValue(getValue());
-  notifyTool();
-  // update the interface
-  repaint();
-}
-
-//-----------------------------------------------------------------------------
-
-void ToolOptionIntSlider::decrease() {
-  if (m_toolHandle && m_toolHandle->getTool() != m_tool) return;
-  // active only if the belonging combo-viewer is visible
-  if (!isInVisibleViewer(this)) return;
-
-  int value = getValue();
-  int minValue, maxValue;
-  getRange(minValue, maxValue);
-  value -= 1;
-
-  // a "cross-like shape" of the brush size = 3 is hard to use. so skip it
-  if (value == 3 && m_tool->isPencilModeActive()) value -= 1;
-
-  if (value < minValue) value = minValue;
-
-  setValue(value);
-  m_property->setValue(getValue());
-  notifyTool();
-  // update the interface
-  repaint();
-}
-
-//-----------------------------------------------------------------------------
-
 void ToolOptionIntSlider::onValueChanged(bool isDragging) {
   m_property->setValue(getValue());
-  notifyTool();
+  notifyTool(!isDragging);
 }
 
 //=============================================================================
@@ -615,17 +352,17 @@ void ToolOptionCombo::loadEntries() {
               itemStr);
       if (!hasIcon) {
         hasIcon = true;
-        setIconSize(QSize(17, 17));
+        setIconSize(QSize(18, 18));
         // add margin between items if they are with icons
         setView(new QListView());
-        view()->setIconSize(QSize(17, 17));
+        view()->setIconSize(QSize(18, 18));
         setStyleSheet(
             "QComboBox  QAbstractItemView::item{ \
                        margin: 5 0 0 0;\
                       }");
       }
     }
-    int tmpWidth = fontMetrics().width(items[i].UIName);
+    int tmpWidth = fontMetrics().horizontalAdvance(items[i].UIName);
     if (tmpWidth > maxWidth) maxWidth = tmpWidth;
   }
 
@@ -653,51 +390,6 @@ void ToolOptionCombo::onActivated(int index) {
   std::wstring item = range[index];
   m_property->setValue(item);
   notifyTool();
-}
-
-//-----------------------------------------------------------------------------
-
-void ToolOptionCombo::doShowPopup() {
-  if (Preferences::instance()->getDropdownShortcutsCycleOptions()) {
-    const TEnumProperty::Range &range = m_property->getRange();
-    int theIndex                      = currentIndex() + 1;
-    if (theIndex >= (int)range.size()) theIndex = 0;
-    doOnActivated(theIndex);
-  } else {
-    if (isVisible()) showPopup();
-  }
-}
-
-//-----------------------------------------------------------------------------
-
-void ToolOptionCombo::doOnActivated(int index) {
-  if (m_toolHandle && m_toolHandle->getTool() != m_tool) return;
-  // active only if the belonging combo-viewer is visible
-  if (!isInVisibleViewer(this)) return;
-  bool cycleOptions =
-      Preferences::instance()->getDropdownShortcutsCycleOptions();
-  // Just move the index if the first item is not "Normal"
-  if (m_property->indexOf(L"Normal") != 0) {
-    onActivated(index);
-    setCurrentIndex(index);
-    // for updating the cursor
-    if (m_toolHandle) m_toolHandle->notifyToolChanged();
-    return;
-  }
-
-  // If the first item of this combo box is "Normal", enable shortcut key toggle
-  // can "back and forth" behavior.
-  if (currentIndex() == index) {
-    // estimating that the "Normal" option is located at the index 0
-    onActivated(0);
-    setCurrentIndex(0);
-  } else {
-    onActivated(index);
-    setCurrentIndex(index);
-  }
-
-  // for updating a cursor without any effect to the tool options
-  if (m_toolHandle) m_toolHandle->notifyToolCursorTypeChanged();
 }
 
 //=============================================================================
@@ -735,21 +427,6 @@ void ToolOptionFontCombo::onActivated(int index) {
   std::wstring item = range[index];
   m_property->setValue(item);
   notifyTool();
-}
-
-//-----------------------------------------------------------------------------
-
-void ToolOptionFontCombo::doShowPopup() {
-  if (!isInVisibleViewer(this)) return;
-  if (Preferences::instance()->getDropdownShortcutsCycleOptions()) {
-    const TEnumProperty::Range &range = m_property->getRange();
-    int theIndex                      = currentIndex() + 1;
-    if (theIndex >= (int)range.size()) theIndex = 0;
-    onActivated(theIndex);
-    setCurrentIndex(theIndex);
-  } else {
-    if (isVisible()) showPopup();
-  }
 }
 
 //=============================================================================
@@ -795,20 +472,8 @@ void ToolOptionPopupButton::onActivated(int index) {
 
 //-----------------------------------------------------------------------------
 
-void ToolOptionPopupButton::doShowPopup() {
-  if (isVisible()) showMenu();
-}
-
-//-----------------------------------------------------------------------------
-
 void ToolOptionPopupButton::doSetCurrentIndex(int index) {
   if (isVisible()) setCurrentIndex(index);
-}
-
-//-----------------------------------------------------------------------------
-
-void ToolOptionPopupButton::doOnActivated(int index) {
-  if (isVisible()) onActivated(index);
 }
 
 //=============================================================================
@@ -1087,7 +752,6 @@ void MeasuredValueField::setMeasure(std::string name) {
 //-----------------------------------------------------------------------------
 
 void MeasuredValueField::commit() {
-  if (!m_modified && !isReturnPressed()) return;
   // commit is called when the field comes out of focus.
   // mouse drag will call this - return if coming from mouse drag.
   // else undo is set twice
@@ -1095,6 +759,8 @@ void MeasuredValueField::commit() {
     m_mouseEdit = false;
     return;
   }
+  if (!m_modified && !isReturnPressed()) return;
+
   int err    = 1;
   bool isSet = m_value->setValue(text().toStdWString(), &err);
   m_modified = false;
@@ -1192,7 +858,7 @@ void MeasuredValueField::mouseMoveEvent(QMouseEvent *e) {
 
 void MeasuredValueField::mouseReleaseEvent(QMouseEvent *e) {
   if (!isEnabled()) return;
-  // m_mouseEdit will be set false in commit
+  // m_mouseEdit will be set false in commit and at HERE
   if (m_mouseEdit) {
     // This seems redundant, but this is necessary for undo to work
     double valueToRestore = m_value->getValue(TMeasuredValue::CurrentUnit);
@@ -1204,6 +870,7 @@ void MeasuredValueField::mouseReleaseEvent(QMouseEvent *e) {
     setText(QString::fromStdWString(m_value->toWideString(m_precision)));
     emit measuredValueChanged(m_value, true);
     clearFocus();
+    m_mouseEdit = false;
   } else
     QLineEdit::mouseReleaseEvent(e);
 }
@@ -1234,7 +901,8 @@ void MeasuredValueField::receiveMouseRelease(QMouseEvent *e) {
 namespace {
 // calculate maximum field size (once) with 10 pixels margin
 int getMaximumWidthForEditToolField(QWidget *widget) {
-  static int fieldMaxWidth = widget->fontMetrics().width("-0000.00 field") + 10;
+  static int fieldMaxWidth =
+      widget->fontMetrics().horizontalAdvance("-0000.00 field") + 10;
   return fieldMaxWidth;
 }
 }  // namespace
@@ -1354,7 +1022,7 @@ void PegbarChannelField::onChange(TMeasuredValue *fld, bool addToUndo) {
     after.setValue(v);
   after.applyValues();
 
-  TTool::Viewer *viewer = m_tool->getViewer();
+  TToolViewer *viewer = m_tool->getViewer();
   if (viewer) m_tool->invalidate();
   setCursorPosition(0);
 
@@ -1571,7 +1239,8 @@ void PropertyMenuButton::onActionTriggered(QAction *action) {
 namespace {
 // calculate maximum field size (once) with 10 pixels margin
 int getMaximumWidthForSelectionToolField(QWidget *widget) {
-  static int fieldMaxWidth = widget->fontMetrics().width("-000.00 %") + 10;
+  static int fieldMaxWidth =
+      widget->fontMetrics().horizontalAdvance("-000.00 %") + 10;
   return fieldMaxWidth;
 }
 }  // namespace
@@ -1597,14 +1266,14 @@ bool SelectionScaleField::applyChange(bool addToUndo) {
     return false;
   using namespace DragSelectionTool;
   DragTool *scaleTool = createNewScaleTool(m_tool, ScaleType::GLOBAL);
-  double p                               = getValue();
+  double p            = getValue();
   if (p == 0) p = 0.00001;
   FourPoints points = m_tool->getBBox();
-  TPointD center                       = m_tool->getCenter();
-  TPointD p0M                          = points.getPoint(7);
-  TPointD p1M                          = points.getPoint(5);
-  TPointD pM1                          = points.getPoint(6);
-  TPointD pM0                          = points.getPoint(4);
+  TPointD center    = m_tool->getCenter();
+  TPointD p0M       = points.getPoint(7);
+  TPointD p1M       = points.getPoint(5);
+  TPointD pM1       = points.getPoint(6);
+  TPointD pM0       = points.getPoint(4);
   int pointIndex;
   TPointD sign(1, 1);
   TPointD scaleFactor = m_tool->m_deformValues.m_scaleValue;
@@ -1680,10 +1349,10 @@ SelectionRotationField::SelectionRotationField(SelectionTool *tool,
 
 //-----------------------------------------------------------------------------
 
-void SelectionRotationField::onChange(TMeasuredValue *fld, bool addToUndo) {
+bool SelectionRotationField::applyChange(bool addToUndo) {
   if (!m_tool || !m_tool->isEnabled() ||
       (m_tool->isSelectionEmpty() && !m_tool->isLevelType()))
-    return;
+    return false;
 
   DragSelectionTool::DragTool *rotationTool = createNewRotationTool(m_tool);
 
@@ -1699,6 +1368,15 @@ void SelectionRotationField::onChange(TMeasuredValue *fld, bool addToUndo) {
   if (!m_tool->isLevelType() && addToUndo) rotationTool->addTransformUndo();
 
   setCursorPosition(0);
+
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+
+void SelectionRotationField::onChange(TMeasuredValue *fld, bool addToUndo) {
+  if (!m_tool->isEnabled()) return;
+  if (!applyChange(addToUndo)) return;
 }
 
 //-----------------------------------------------------------------------------
@@ -1799,18 +1477,23 @@ ThickChangeField::ThickChangeField(SelectionTool *tool, QString name)
 
 void ThickChangeField::onChange(TMeasuredValue *fld, bool addToUndo) {
   if (!m_tool || (m_tool->isSelectionEmpty() && !m_tool->isLevelType())) return;
-
-  DragSelectionTool::VectorChangeThicknessTool *changeThickTool =
-      new DragSelectionTool::VectorChangeThicknessTool(
-          (VectorSelectionTool *)m_tool);
+  if (!m_changeThickTool)
+    m_changeThickTool.reset(new DragSelectionTool::VectorChangeThicknessTool(
+        (VectorSelectionTool *)m_tool));
 
   TVectorImageP vi = (TVectorImageP)m_tool->getImage(true);
+  double p         = 0.5 * getValue();
 
-  double p            = 0.5 * getValue();
-  double newThickness = p - m_tool->m_deformValues.m_maxSelectionThickness;
-
-  changeThickTool->setThicknessChange(newThickness);
-  changeThickTool->changeImageThickness(*vi, newThickness);
+  // The chageThickTool would deal the rest frames when adding undo
+  if (isLabelClicked()) {
+    m_changeThickTool->setStrokesThickness(*vi);
+    double newThickness = p - m_tool->m_deformValues.m_maxSelectionThickness;
+    m_changeThickTool->setThicknessChange(newThickness);
+    m_changeThickTool->changeImageThickness(*vi, newThickness);
+  } else {
+    m_changeThickTool->setThicknessChange(p);
+    m_changeThickTool->setImageThickness(*vi, p);
+  }
 
   // DragSelectionTool::DeformValues deformValues = m_tool->m_deformValues;
   // // Like when I found it - it's a noop.
@@ -1818,11 +1501,12 @@ void ThickChangeField::onChange(TMeasuredValue *fld, bool addToUndo) {
   // // Seems that the actual update is performed inside
   // the above change..() instruction...   >_<
   if (addToUndo) {
-    changeThickTool->addUndo();
+    m_changeThickTool->addUndo();
+    m_changeThickTool.release();
   }
   m_tool->computeBBox();
   m_tool->invalidate();
-  m_tool->notifyImageChanged(m_tool->getCurrentFid());
+  m_tool->notifyImageChanged();  // overided version of VectorSelectionTool
 }
 
 //-----------------------------------------------------------------------------

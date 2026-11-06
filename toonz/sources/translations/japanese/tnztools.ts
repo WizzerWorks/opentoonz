@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="ja_JP">
+<TS version="2.1" language="ja_JP" sourcelanguage="en_US">
 <context>
     <name>ArrowToolOptionsBox</name>
     <message>
@@ -12,12 +12,12 @@
         <translation>位置</translation>
     </message>
     <message>
-        <source>E/W:</source>
-        <translation>E/W:</translation>
+        <source>X:</source>
+        <translation>X:</translation>
     </message>
     <message>
-        <source>N/S:</source>
-        <translation>N/S:</translation>
+        <source>Y:</source>
+        <translation>Y:</translation>
     </message>
     <message>
         <source>Z:</source>
@@ -87,6 +87,22 @@
         <source>Table</source>
         <translation>テーブル</translation>
     </message>
+    <message>
+        <source>Flip Object Horizontally</source>
+        <translation>水平方向に反転</translation>
+    </message>
+    <message>
+        <source>Flip Object Vertically</source>
+        <translation>垂直方向に反転</translation>
+    </message>
+    <message>
+        <source>Rotate Object Left</source>
+        <translation>90°回転（反時計回り）</translation>
+    </message>
+    <message>
+        <source>Rotate Object Right</source>
+        <translation>90°回転（時計回り）</translation>
+    </message>
 </context>
 <context>
     <name>BrushTool</name>
@@ -100,7 +116,7 @@
     </message>
     <message>
         <source>Accuracy:</source>
-        <translation>精度：</translation>
+        <translation type="vanished">精度：</translation>
     </message>
     <message>
         <source>Selective</source>
@@ -108,7 +124,7 @@
     </message>
     <message>
         <source>Preset:</source>
-        <translation>プリセット：</translation>
+        <translation type="vanished">プリセット：</translation>
     </message>
     <message>
         <source>Break Sharp Angles</source>
@@ -124,23 +140,23 @@
     </message>
     <message>
         <source>Cap</source>
-        <translation>線端</translation>
+        <translation type="vanished">線端</translation>
     </message>
     <message>
         <source>Join</source>
-        <translation>角の形状</translation>
+        <translation type="vanished">角の形状</translation>
     </message>
     <message>
         <source>Miter:</source>
-        <translation>角の比率：</translation>
+        <translation type="vanished">角の比率：</translation>
     </message>
     <message>
         <source>Size</source>
-        <translation>サイズ</translation>
+        <translation type="vanished">サイズ</translation>
     </message>
     <message>
         <source>Break</source>
-        <translation>鋭角で線を分割</translation>
+        <translation type="vanished">鋭角で線を分割</translation>
     </message>
     <message>
         <source>Pencil</source>
@@ -148,79 +164,79 @@
     </message>
     <message>
         <source>Pressure</source>
-        <translation>圧力感知</translation>
+        <translation type="vanished">圧力感知</translation>
     </message>
     <message>
         <source>Smooth:</source>
-        <translation>平滑化：</translation>
+        <translation type="vanished">平滑化：</translation>
     </message>
     <message>
         <source>Range:</source>
-        <translation>中割り：</translation>
+        <translation type="vanished">中割り：</translation>
     </message>
     <message>
         <source>Snap</source>
-        <translation>スナップ</translation>
+        <translation type="vanished">スナップ</translation>
     </message>
     <message>
         <source>&lt;custom&gt;</source>
-        <translation>&lt;カスタム&gt;</translation>
+        <translation type="vanished">&lt;カスタム&gt;</translation>
     </message>
     <message>
         <source>Off</source>
-        <translation>無効</translation>
+        <translation type="vanished">無効</translation>
     </message>
     <message>
         <source>Linear</source>
-        <translation>均等割り</translation>
+        <translation type="vanished">均等割り</translation>
     </message>
     <message>
         <source>In</source>
-        <translation>イーズイン</translation>
+        <translation type="vanished">イーズイン</translation>
     </message>
     <message>
         <source>Out</source>
-        <translation>イーズアウト</translation>
+        <translation type="vanished">イーズアウト</translation>
     </message>
     <message>
         <source>In&amp;Out</source>
-        <translation>イーズインアウト</translation>
+        <translation type="vanished">イーズインアウト</translation>
     </message>
     <message>
         <source>Low</source>
-        <translation>低</translation>
+        <translation type="vanished">低</translation>
     </message>
     <message>
         <source>Med</source>
-        <translation>中</translation>
+        <translation type="vanished">中</translation>
     </message>
     <message>
         <source>High</source>
-        <translation>高</translation>
+        <translation type="vanished">高</translation>
     </message>
     <message>
         <source>Butt cap</source>
-        <translation>バット線端</translation>
+        <translation type="vanished">バット線端</translation>
     </message>
     <message>
         <source>Round cap</source>
-        <translation>丸型線端</translation>
+        <translation type="vanished">丸型線端</translation>
     </message>
     <message>
         <source>Projecting cap</source>
-        <translation>突出線端</translation>
+        <translation type="vanished">突出線端</translation>
     </message>
     <message>
         <source>Miter join</source>
-        <translation>マイター結合</translation>
+        <translation type="vanished">マイター結合</translation>
     </message>
     <message>
         <source>Round join</source>
-        <translation>ラウンド結合</translation>
+        <translation type="vanished">ラウンド結合</translation>
     </message>
     <message>
         <source>Bevel join</source>
-        <translation>ベベル結合</translation>
+        <translation type="vanished">ベベル結合</translation>
     </message>
     <message>
         <source>Draw Order:</source>
@@ -260,6 +276,34 @@
         <source>Auto Select Drawing</source>
         <translation>レベルをまたいで選択</translation>
     </message>
+    <message>
+        <source>Snap</source>
+        <translation>スナップ</translation>
+    </message>
+    <message>
+        <source>Type:</source>
+        <translation>タイプ：</translation>
+    </message>
+    <message>
+        <source>Rectangular</source>
+        <translation>長方形</translation>
+    </message>
+    <message>
+        <source>Freehand</source>
+        <translation>なげなわ</translation>
+    </message>
+    <message>
+        <source>Low</source>
+        <translation>低</translation>
+    </message>
+    <message>
+        <source>Med</source>
+        <translation>中</translation>
+    </message>
+    <message>
+        <source>High</source>
+        <translation>高</translation>
+    </message>
 </context>
 <context>
     <name>ControlPointSelection</name>
@@ -280,6 +324,21 @@
     </message>
 </context>
 <context>
+    <name>EditAssistantsTool</name>
+    <message>
+        <source>&lt;choose to create&gt;</source>
+        <translation>&lt;選択して作成&gt;</translation>
+    </message>
+    <message>
+        <source>Assistant Type</source>
+        <translation>タイプ</translation>
+    </message>
+    <message>
+        <source>Order</source>
+        <translation>順番</translation>
+    </message>
+</context>
+<context>
     <name>EditTool</name>
     <message>
         <source>Scale Constraint:</source>
@@ -294,19 +353,19 @@
         <translation>グローバルキー</translation>
     </message>
     <message>
-        <source>Lock Center E/W</source>
+        <source>Lock Center X</source>
         <translation>基準点 [X]</translation>
     </message>
     <message>
-        <source>Lock Center N/S</source>
+        <source>Lock Center Y</source>
         <translation>基準点［Y］</translation>
     </message>
     <message>
-        <source>Lock Position E/W</source>
+        <source>Lock Position X</source>
         <translation>位置 ［X］</translation>
     </message>
     <message>
-        <source>Lock Position N/S</source>
+        <source>Lock Position Y</source>
         <translation>位置［Y］</translation>
     </message>
     <message>
@@ -334,7 +393,7 @@
         <translation>拡大・縮小［全体］</translation>
     </message>
     <message>
-        <source>E/W and N/S Positions</source>
+        <source>X and Y Positions</source>
         <translation>X と Y の位置</translation>
     </message>
     <message>
@@ -468,6 +527,26 @@
         <source>Lines &amp; Areas</source>
         <translation>線と塗り</translation>
     </message>
+    <message>
+        <source>Segment</source>
+        <translation>線分の自動検出</translation>
+    </message>
+    <message>
+        <source>Linear</source>
+        <translation>均等割り</translation>
+    </message>
+    <message>
+        <source>Ease In</source>
+        <translation>後詰め</translation>
+    </message>
+    <message>
+        <source>Ease Out</source>
+        <translation>先詰め</translation>
+    </message>
+    <message>
+        <source>Ease In/Out</source>
+        <translation>両詰め</translation>
+    </message>
 </context>
 <context>
     <name>FillTool</name>
@@ -481,7 +560,7 @@
     </message>
     <message>
         <source>Selective</source>
-        <translation>塗りの保護</translation>
+        <translation type="vanished">塗りの保護</translation>
     </message>
     <message>
         <source>Mode:</source>
@@ -535,6 +614,30 @@
         <source>Maximum Gap</source>
         <translation>隙間の判定</translation>
     </message>
+    <message>
+        <source>Pick+Freehand</source>
+        <translation>スポイト＋なげなわ</translation>
+    </message>
+    <message>
+        <source>Empty Only</source>
+        <translation>透明部分のみ</translation>
+    </message>
+    <message>
+        <source>Close Gap</source>
+        <translation>隙間を閉じる</translation>
+    </message>
+    <message>
+        <source>Refer Fill</source>
+        <translation>全レイヤーを参照</translation>
+    </message>
+    <message>
+        <source>Gap Close Distance:</source>
+        <translation>隙間の間隔：</translation>
+    </message>
+    <message>
+        <source>Extend Fill</source>
+        <translation>細い領域に拡張</translation>
+    </message>
 </context>
 <context>
     <name>FingerTool</name>
@@ -545,6 +648,18 @@
     <message>
         <source>Invert</source>
         <translation>反転</translation>
+    </message>
+    <message>
+        <source>Mode:</source>
+        <translation>モード：</translation>
+    </message>
+    <message>
+        <source>Pick</source>
+        <translation>色を拾う</translation>
+    </message>
+    <message>
+        <source>Empty Only</source>
+        <translation>透明部分のみ</translation>
     </message>
 </context>
 <context>
@@ -575,7 +690,7 @@
     </message>
     <message>
         <source>Pressure</source>
-        <translation>圧力感知</translation>
+        <translation>筆圧感知</translation>
     </message>
     <message>
         <source>Opacity</source>
@@ -592,6 +707,10 @@
     <message>
         <source>&lt;custom&gt;</source>
         <translation>&lt;カスタム&gt;</translation>
+    </message>
+    <message>
+        <source>Assistants</source>
+        <translation>パース定規</translation>
     </message>
 </context>
 <context>
@@ -636,6 +755,10 @@
         <source>Polyline</source>
         <translation>多角形</translation>
     </message>
+    <message>
+        <source>MultiArc</source>
+        <translation>連続円弧</translation>
+    </message>
 </context>
 <context>
     <name>FullColorFillTool</name>
@@ -677,7 +800,7 @@
     </message>
     <message>
         <source>Selective</source>
-        <translation>塗りの保護</translation>
+        <translation>選択色の範囲のみ</translation>
     </message>
     <message>
         <source>Lines</source>
@@ -690,6 +813,22 @@
     <message>
         <source>Lines &amp; Areas</source>
         <translation>線と塗り</translation>
+    </message>
+    <message>
+        <source>Lock Alpha</source>
+        <translation>透明部分の保護</translation>
+    </message>
+    <message>
+        <source>Empty Only</source>
+        <translation>透明部分のみ</translation>
+    </message>
+    <message>
+        <source>Pick</source>
+        <translation>色を拾う</translation>
+    </message>
+    <message>
+        <source>Paint by Filling</source>
+        <translation>線の内側のみ</translation>
     </message>
 </context>
 <context>
@@ -905,7 +1044,7 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>Selective</source>
-        <translation>塗りの保護</translation>
+        <translation type="vanished">塗りの保護</translation>
     </message>
     <message>
         <source>Pencil Mode</source>
@@ -995,6 +1134,30 @@ Do you want to proceed?</source>
         <source>High</source>
         <translation>高</translation>
     </message>
+    <message>
+        <source>MultiArc</source>
+        <translation>連続円弧</translation>
+    </message>
+    <message>
+        <source>Smooth</source>
+        <translation>滑らかに連結</translation>
+    </message>
+    <message>
+        <source>Rotate</source>
+        <translation>作成後に回転</translation>
+    </message>
+    <message>
+        <source>Empty Only</source>
+        <translation>透明部分のみ</translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation>サイズ</translation>
+    </message>
+    <message>
+        <source>Opacity</source>
+        <translation>不透明度</translation>
+    </message>
 </context>
 <context>
     <name>PumpTool</name>
@@ -1067,19 +1230,19 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>The current tool cannot be used on a Vector Level.</source>
-        <translation>現在のツールはベクトルレベルには使用できません。</translation>
+        <translation type="vanished">現在のツールはベクトルレベルには使用できません。</translation>
     </message>
     <message>
         <source>The current tool cannot be used on a Toonz Level.</source>
-        <translation>現在のツールはToonzレベルには使用できません。</translation>
+        <translation type="vanished">現在のツールはToonzレベルには使用できません。</translation>
     </message>
     <message>
         <source>The current tool cannot be used on a Raster Level.</source>
-        <translation>現在のツールはラスターレベルには使用できません。</translation>
+        <translation type="vanished">現在のツールはラスターレベルには使用できません。</translation>
     </message>
     <message>
         <source>The current tool cannot be used on a Mesh Level.</source>
-        <translation>現在のツールはメッシュレベルには使用できません。</translation>
+        <translation type="vanished">現在のツールはメッシュレベルには使用できません。</translation>
     </message>
     <message>
         <source>The current tool cannot be used on a mesh-deformed level</source>
@@ -1201,6 +1364,38 @@ Do you want to proceed?</source>
         <source>The selection cannot be moved. It is not editable.</source>
         <translation>選択グループを移動できません。レベルまたは列が編集不可に設定されています。</translation>
     </message>
+    <message>
+        <source>Snap At Intersection</source>
+        <translation>交点にスナップ</translation>
+    </message>
+    <message>
+        <source>Sort Vector Strokes With Palette Order Level : %1 Frame : %2</source>
+        <translation>パレット順にベクター線の重ね順を並べ替え&#x3000;レベル：%1&#x3000;フレーム：%2</translation>
+    </message>
+    <message>
+        <source>Sort Vector Strokes With Palette Order Level : %1</source>
+        <translation>パレット順にベクター線の重ね順を並べ替え&#x3000;レベル：%1</translation>
+    </message>
+    <message>
+        <source>The current tool cannot be used on: </source>
+        <translation>現在のツールは以下の対象には使用できません： </translation>
+    </message>
+    <message>
+        <source>, </source>
+        <translation>, </translation>
+    </message>
+    <message>
+        <source>You can use this tool on empty cell in Xsheet/Timeline.</source>
+        <translation>このツールはタイムシート又はタイムラインの空コマ上でも使えます。</translation>
+    </message>
+    <message>
+        <source>You can use this tool with: </source>
+        <translation>このツールは以下の対象で使用できます： </translation>
+    </message>
+    <message>
+        <source>Or just choose an empty cell in Xsheet/Timeline.</source>
+        <translation>または、タイムシート／タイムラインの空コマを選択してください。</translation>
+    </message>
 </context>
 <context>
     <name>RGBPickerTool</name>
@@ -1293,12 +1488,28 @@ Do you want to proceed?</source>
         <source>current</source>
         <translation>選択色</translation>
     </message>
+    <message>
+        <source>Ignore AutoPaint Inks</source>
+        <translation>色トレス線の隙間を無視</translation>
+    </message>
 </context>
 <context>
     <name>RotateTool</name>
     <message>
         <source>Rotate On Camera Center</source>
         <translation>カメラ中心点を基準にする</translation>
+    </message>
+    <message>
+        <source>Rotate by Step</source>
+        <translation>ステップ毎に回転</translation>
+    </message>
+    <message>
+        <source>Step Angle:</source>
+        <translation>ステップ角度：</translation>
+    </message>
+    <message>
+        <source>Rotate Left/Right Angle:</source>
+        <translation>「ビューアを左／右に回転」の回転角：</translation>
     </message>
 </context>
 <context>
@@ -1375,12 +1586,12 @@ Do you want to proceed?</source>
         <translation>回転</translation>
     </message>
     <message>
-        <source>E/W:</source>
-        <translation>E/W:</translation>
+        <source>X:</source>
+        <translation>X:</translation>
     </message>
     <message>
-        <source>N/S:</source>
-        <translation>N/S:</translation>
+        <source>Y:</source>
+        <translation>Y:</translation>
     </message>
     <message>
         <source>Thickness</source>
@@ -1397,6 +1608,22 @@ Do you want to proceed?</source>
     <message>
         <source>Position</source>
         <translation>位置</translation>
+    </message>
+    <message>
+        <source>Flip Selection Horizontally</source>
+        <translation>選択範囲を水平方向に反転</translation>
+    </message>
+    <message>
+        <source>Flip Selection Vertically</source>
+        <translation>選択範囲を垂直方向に反転</translation>
+    </message>
+    <message>
+        <source>Rotate Selection Left</source>
+        <translation>選択範囲を90°回転（反時計回り）</translation>
+    </message>
+    <message>
+        <source>Rotate Selection Right</source>
+        <translation>選択範囲を90°回転（時計回り）</translation>
     </message>
 </context>
 <context>
@@ -1461,7 +1688,7 @@ Do you want to proceed?</source>
     </message>
     <message>
         <source>Palette must have more than one palette to be organized.</source>
-        <translation>パレットの整理には２つ以上のページが必要です。</translation>
+        <translation type="vanished">パレットの整理には２つ以上のページが必要です。</translation>
     </message>
     <message>
         <source>Mode:</source>
@@ -1487,14 +1714,330 @@ Do you want to proceed?</source>
         <source>Lines &amp; Areas</source>
         <translation>線と塗り</translation>
     </message>
+    <message>
+        <source>No available palette.</source>
+        <translation>有効なパレットが見つかりません。</translation>
+    </message>
+    <message>
+        <source>Palette to be organized must have more than one page.</source>
+        <translation>整理するパレットには2つ以上のページが必要です。</translation>
+    </message>
 </context>
 <context>
     <name>StylePickerToolOptionsBox</name>
     <message>
         <source>With this option being activated, the picked style will be
 moved to the end of the first page of the palette.</source>
-        <translation>このオプションを有効にしてカラーモデルから色を拾っていくと、サンプルされた
+        <translation type="vanished">このオプションを有効にしてカラーモデルから色を拾っていくと、サンプルされた
 スタイルがパレットの1ページ目の末尾に順番に移動します。</translation>
+    </message>
+    <message>
+        <source>With this option being activated, the picked style will replace
+the current style in current level.</source>
+        <translation>このオプションを有効にしてカラーモデルから色を拾うと、レベルの中で現在選択中のスタイルで
+描かれている部分を、サンプルされたスタイルで置き換えます。</translation>
+    </message>
+    <message>
+        <source>With this option being activated, the picked style will be
+moved to the end of the current style&apos;s page of the palette.</source>
+        <translation>このオプションを有効にしてカラーモデルから色を拾っていくと、サンプルされた
+スタイルが現在選択中のスタイルと同じページの末尾に順番に移動します。</translation>
+    </message>
+</context>
+<context>
+    <name>TAssistant</name>
+    <message>
+        <source>Magnetism</source>
+        <translation>スナップ強度</translation>
+    </message>
+</context>
+<context>
+    <name>TAssistantBase</name>
+    <message>
+        <source>Enabled</source>
+        <translation>有効</translation>
+    </message>
+</context>
+<context>
+    <name>TAssistantEllipse</name>
+    <message>
+        <source>Fish Eye</source>
+        <translation>魚眼レンズ</translation>
+    </message>
+    <message>
+        <source>Circle</source>
+        <translation>円形</translation>
+    </message>
+    <message>
+        <source>Grid</source>
+        <translation>格子</translation>
+    </message>
+    <message>
+        <source>Depth Grid</source>
+        <translation>奥行き格子</translation>
+    </message>
+    <message>
+        <source>Flip Grids</source>
+        <translation>格子を反転</translation>
+    </message>
+    <message>
+        <source>Ellipse</source>
+        <translation>楕円形</translation>
+    </message>
+    <message>
+        <source>Restrict A</source>
+        <translation>A点を固定</translation>
+    </message>
+    <message>
+        <source>Restrict B</source>
+        <translation>B点を固定</translation>
+    </message>
+    <message>
+        <source>Repeat</source>
+        <translation>繰り返し</translation>
+    </message>
+    <message>
+        <source>Perspective</source>
+        <translation>遠近</translation>
+    </message>
+    <message>
+        <source>Depth</source>
+        <translation>奥行き</translation>
+    </message>
+</context>
+<context>
+    <name>TAssistantPerspective</name>
+    <message>
+        <source>Perspective</source>
+        <translation>遠近</translation>
+    </message>
+    <message>
+        <source>Parallel X</source>
+        <translation>X軸平行投影</translation>
+    </message>
+    <message>
+        <source>Parallel Y</source>
+        <translation>Y軸平行投影</translation>
+    </message>
+    <message>
+        <source>Parallel Z</source>
+        <translation>Z軸平行投影</translation>
+    </message>
+    <message>
+        <source>Grid XY</source>
+        <translation>XY格子</translation>
+    </message>
+    <message>
+        <source>Grid YZ</source>
+        <translation>YZ格子</translation>
+    </message>
+    <message>
+        <source>Grid ZX</source>
+        <translation>ZX格子</translation>
+    </message>
+    <message>
+        <source>Show Box</source>
+        <translation>ボックスを表示</translation>
+    </message>
+</context>
+<context>
+    <name>TAssistantVanishingPoint</name>
+    <message>
+        <source>Vanishing Point</source>
+        <translation>消失点</translation>
+    </message>
+    <message>
+        <source>Pass Through</source>
+        <translation>消失点を通過</translation>
+    </message>
+    <message>
+        <source>Grid</source>
+        <translation>格子</translation>
+    </message>
+    <message>
+        <source>Perspective</source>
+        <translation>遠近</translation>
+    </message>
+    <message>
+        <source>Line</source>
+        <translation>直線</translation>
+    </message>
+    <message>
+        <source>Restrict A</source>
+        <translation>A点を固定</translation>
+    </message>
+    <message>
+        <source>Restrict B</source>
+        <translation>B点を固定</translation>
+    </message>
+    <message>
+        <source>Parallel</source>
+        <translation>平行線</translation>
+    </message>
+</context>
+<context>
+    <name>TReplicator</name>
+    <message>
+        <source>Skip First Tracks</source>
+        <translation>先頭の複製をスキップ</translation>
+    </message>
+    <message>
+        <source>Skip Last Tracks</source>
+        <translation>後ろの複製をスキップ</translation>
+    </message>
+</context>
+<context>
+    <name>TReplicatorAffine</name>
+    <message>
+        <source>Replicator Affine</source>
+        <translation>繰り返し - 変形</translation>
+    </message>
+    <message>
+        <source>Fix Scale</source>
+        <translation>拡大縮小を固定</translation>
+    </message>
+    <message>
+        <source>Fix Aspect</source>
+        <translation>縦横比を固定</translation>
+    </message>
+    <message>
+        <source>Fix Angle</source>
+        <translation>回転を固定</translation>
+    </message>
+    <message>
+        <source>Fix Skew</source>
+        <translation>せん断を固定</translation>
+    </message>
+    <message>
+        <source>Count</source>
+        <translation>繰り返し回数</translation>
+    </message>
+    <message>
+        <source>Inv. Count</source>
+        <translation>逆繰り返し回数</translation>
+    </message>
+    <message>
+        <source>Pressure</source>
+        <translation>筆圧補正</translation>
+    </message>
+</context>
+<context>
+    <name>TReplicatorGrid</name>
+    <message>
+        <source>Replicator Grid</source>
+        <translation>繰り返し - 格子</translation>
+    </message>
+    <message>
+        <source>Fix Angle</source>
+        <translation>回転を固定</translation>
+    </message>
+    <message>
+        <source>Fix Skew</source>
+        <translation>せん断を固定</translation>
+    </message>
+    <message>
+        <source>Mirror A</source>
+        <translation>A方向に反転</translation>
+    </message>
+    <message>
+        <source>Mirror B</source>
+        <translation>B方向に反転</translation>
+    </message>
+    <message>
+        <source>Count A</source>
+        <translation>A個数</translation>
+    </message>
+    <message>
+        <source>Inv. Count A</source>
+        <translation>逆A個数</translation>
+    </message>
+    <message>
+        <source>Count B</source>
+        <translation>B個数</translation>
+    </message>
+    <message>
+        <source>Inv. Count B</source>
+        <translation>逆B個数</translation>
+    </message>
+</context>
+<context>
+    <name>TReplicatorJitter</name>
+    <message>
+        <source>Jitter</source>
+        <translation>ジッター</translation>
+    </message>
+    <message>
+        <source>Period</source>
+        <translation>周期</translation>
+    </message>
+    <message>
+        <source>Amplitude</source>
+        <translation>振幅</translation>
+    </message>
+    <message>
+        <source>Fix First Point</source>
+        <translation>最初の点を固定</translation>
+    </message>
+    <message>
+        <source>Fix Last Point</source>
+        <translation>最後の点を固定</translation>
+    </message>
+</context>
+<context>
+    <name>TReplicatorMirror</name>
+    <message>
+        <source>Replicator Mirror</source>
+        <translation>繰り返し - 鏡像</translation>
+    </message>
+    <message>
+        <source>Discrete Angle</source>
+        <translation>離散的な傾き</translation>
+    </message>
+    <message>
+        <source>Pressure</source>
+        <translation>筆圧補正</translation>
+    </message>
+</context>
+<context>
+    <name>TReplicatorStar</name>
+    <message>
+        <source>Replicator Star</source>
+        <translation>繰り返し - 星型</translation>
+    </message>
+    <message>
+        <source>Discrete Angle</source>
+        <translation>離散的な傾き</translation>
+    </message>
+    <message>
+        <source>Mirror</source>
+        <translation>反転</translation>
+    </message>
+    <message>
+        <source>Count</source>
+        <translation>繰り返し回数</translation>
+    </message>
+</context>
+<context>
+    <name>TTool</name>
+    <message>
+        <source>Toonz Vector Level</source>
+        <translation>Toonzベクター</translation>
+    </message>
+    <message>
+        <source>Toonz Raster Level</source>
+        <translation>Toonzラスター</translation>
+    </message>
+    <message>
+        <source>Raster Level</source>
+        <translation>ラスター</translation>
+    </message>
+    <message>
+        <source>Mesh Level</source>
+        <translation>メッシュ</translation>
+    </message>
+    <message>
+        <source>Assistants Level</source>
+        <translation>パース定規</translation>
     </message>
 </context>
 <context>
@@ -1541,7 +2084,142 @@ moved to the end of the first page of the palette.</source>
     </message>
     <message>
         <source>Pressure</source>
-        <translation>圧力感知</translation>
+        <translation>筆圧感知</translation>
+    </message>
+    <message>
+        <source>Lock Alpha</source>
+        <translation>透明部分の保護</translation>
+    </message>
+    <message>
+        <source>Assistants</source>
+        <translation>パース定規</translation>
+    </message>
+</context>
+<context>
+    <name>ToonzVectorBrushTool</name>
+    <message>
+        <source>Size</source>
+        <translation>サイズ</translation>
+    </message>
+    <message>
+        <source>Accuracy:</source>
+        <translation>精度：</translation>
+    </message>
+    <message>
+        <source>Smooth:</source>
+        <translation>平滑化：</translation>
+    </message>
+    <message>
+        <source>Preset:</source>
+        <translation>プリセット：</translation>
+    </message>
+    <message>
+        <source>&lt;custom&gt;</source>
+        <translation>&lt;カスタム&gt;</translation>
+    </message>
+    <message>
+        <source>Break</source>
+        <translation>鋭角で線を分割</translation>
+    </message>
+    <message>
+        <source>Pressure</source>
+        <translation>筆圧感知</translation>
+    </message>
+    <message>
+        <source>Cap</source>
+        <translation>線端</translation>
+    </message>
+    <message>
+        <source>Join</source>
+        <translation>角の形状</translation>
+    </message>
+    <message>
+        <source>Miter:</source>
+        <translation>角の比率：</translation>
+    </message>
+    <message>
+        <source>Range:</source>
+        <translation>中割り：</translation>
+    </message>
+    <message>
+        <source>Snap</source>
+        <translation>スナップ</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>無効</translation>
+    </message>
+    <message>
+        <source>Linear</source>
+        <translation>均等割り</translation>
+    </message>
+    <message>
+        <source>In</source>
+        <translation>イーズイン</translation>
+    </message>
+    <message>
+        <source>Out</source>
+        <translation>イーズアウト</translation>
+    </message>
+    <message>
+        <source>In&amp;Out</source>
+        <translation>イーズインアウト</translation>
+    </message>
+    <message>
+        <source>Low</source>
+        <translation>低</translation>
+    </message>
+    <message>
+        <source>Med</source>
+        <translation>中</translation>
+    </message>
+    <message>
+        <source>High</source>
+        <translation>高</translation>
+    </message>
+    <message>
+        <source>Butt cap</source>
+        <translation>バット線端</translation>
+    </message>
+    <message>
+        <source>Round cap</source>
+        <translation>丸型線端</translation>
+    </message>
+    <message>
+        <source>Projecting cap</source>
+        <translation>突出線端</translation>
+    </message>
+    <message>
+        <source>Miter join</source>
+        <translation>マイター結合</translation>
+    </message>
+    <message>
+        <source>Round join</source>
+        <translation>ラウンド結合</translation>
+    </message>
+    <message>
+        <source>Bevel join</source>
+        <translation>ベベル結合</translation>
+    </message>
+    <message>
+        <source>Draw Order:</source>
+        <translation>線の重ね順:</translation>
+    </message>
+    <message>
+        <source>Over All</source>
+        <translation>上に描く</translation>
+    </message>
+    <message>
+        <source>Under All</source>
+        <translation>下に描く</translation>
+    </message>
+    <message>
+        <source>Palette Order</source>
+        <translation>パレット順</translation>
+    </message>
+    <message>
+        <source>Assistants</source>
+        <translation>パース定規</translation>
     </message>
 </context>
 <context>
@@ -1663,6 +2341,10 @@ moved to the end of the first page of the palette.</source>
     <message>
         <source>Round cap</source>
         <translation>丸型線端</translation>
+    </message>
+    <message>
+        <source>Include Intersection</source>
+        <translation>交差選択</translation>
     </message>
 </context>
 <context>

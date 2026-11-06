@@ -5,6 +5,7 @@
 
 #include "tfilepath.h"
 #include <map>
+#include <memory>
 
 #undef DVAPI
 #undef DVVAR
@@ -17,6 +18,7 @@
 #endif
 
 #include <QString>
+#include <QSet>
 
 //=============================================================================
 // forward declarations
@@ -112,8 +114,8 @@ If scene is untitled update save path.
 */
   void updatePath(TFilePath &fp);
 
-  virtual bool isDirty()            = 0;
-  virtual QString getResourceName() = 0;
+  virtual bool isDirty()                = 0;
+  virtual QStringList getResourceName() = 0;
 };
 
 //=============================================================================
@@ -157,7 +159,7 @@ Set simple level path to old path.
   }
 
   bool isDirty() override;
-  QString getResourceName() override;
+  QStringList getResourceName() override;
 };
 
 //=============================================================================
@@ -203,7 +205,7 @@ Set simple level path to old path.
   }
 
   bool isDirty() override;
-  QString getResourceName() override;
+  QStringList getResourceName() override;
 };
 
 //=============================================================================
@@ -247,7 +249,7 @@ Set sound track path to old path.
   }
 
   bool isDirty() override { return false; }
-  QString getResourceName() override { return QString(); }
+  QStringList getResourceName() override { return QStringList(); }
 };
 
 //=============================================================================
@@ -299,11 +301,11 @@ used in subXsheet.
   void save(const TFilePath newScenePath);
 
   /*!
-Update all resouces paths.
+Update all resources paths.
 */
   void updatePaths();
   /*!
-Set all resouces paths to old paths.
+Set all resources paths to old paths.
 */
   void rollbackPaths();
   /*!
@@ -316,7 +318,7 @@ If doesn't make \b commit() destroyer calls \b rollbackPaths().
   void accept(ResourceProcessor *processor, bool autoCommit = true);
 
   // return the name list of dirty resources
-  void getDirtyResources(std::vector<QString> &dirtyResources);
+  void getDirtyResources(QStringList &dirtyResources);
 
 private:
   // not implemented
@@ -328,7 +330,7 @@ private:
 
 class DVAPI ResourceImporter final : public ResourceProcessor {
 public:
-  ResourceImporter(ToonzScene *scene, TProject *dstProject,
+  ResourceImporter(ToonzScene *scene, std::shared_ptr<TProject> dstProject,
                    ResourceImportStrategy &strategy);
   ~ResourceImporter();
 
@@ -353,7 +355,7 @@ public:
 
 private:
   ToonzScene *m_scene;
-  TProject *m_dstProject;
+  std::shared_ptr<TProject> m_dstProject;
   ToonzScene *m_dstScene;
   ResourceImportStrategy &m_importStrategy;
 };

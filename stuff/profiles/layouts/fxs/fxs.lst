@@ -22,6 +22,8 @@
     STD_inoSpinBlurFx
     STD_iwa_BokehFx
     STD_iwa_BokehRefFx
+    STD_iwa_BokehAdvancedFx
+    STD_iwa_FlowBlurFx
   </Blur>
   <Distort>
     STD_freeDistortFx
@@ -34,6 +36,7 @@
     STD_warpFx
     STD_inoWarphvFx
     STD_iwa_BarrelDistortFx
+    STD_iwa_FloorBumpFx
   </Distort>
   <Gradient>
     STD_diamondGradientFx
@@ -72,6 +75,7 @@
     STD_rgbmFadeFx 
     STD_rgbmScaleFx
     STD_sharpenFx 
+    STD_iwa_SmootherFx 
   </Image_Adjust>
   <Layer_Blending>
     addFx 
@@ -124,6 +128,9 @@
     STD_iwa_SpectrumFx
     STD_iwa_SoapBubbleFx
     STD_targetSpotFx
+    STD_iwa_GlareFx
+    STD_iwa_BloomFx
+    STD_iwa_RainbowFx
   </Light>
   <Matte>
     STD_erodeDilateFx
@@ -142,6 +149,7 @@
     STD_noiseFx 
     STD_iwa_PNPerspectiveFx
     STD_saltpepperNoiseFx 
+    STD_iwa_FractalNoiseFx 
   </Noise>
   <Render>
     STD_cloudsFx 
@@ -150,6 +158,7 @@
     STD_iwa_TiledParticlesFx
     STD_iwa_TimeCodeFx
     STD_iwa_TextFx
+    STD_iwa_FlowPaintBrushFx
   </Render>
   <Stylize>
     STD_colorEmbossFx
@@ -158,7 +167,10 @@
     STD_mosaicFx
     STD_inoMotionWindFx
     STD_posterizeFx
-    STD_solarizeFx 
+    STD_solarizeFx
+    STD_iwa_TangentFlowFx
+    STD_iwa_MotionFlowFx
+    STD_naru_LazyBrushFx
   </Stylize>
   <Toonz_Level>
     STD_artContourFx
@@ -179,6 +191,7 @@
   SHADER_wavy
   SHADER_radialblurGPU
   SHADER_spinblurGPU
+  SHADER_HSLBlendGPU
 </Shaders>
   <Utility>
     STD_nothingFx

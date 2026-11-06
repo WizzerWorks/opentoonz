@@ -127,7 +127,7 @@
         <source>&apos;%1&apos; doesn&apos;t seem a well formed camera preset. 
 Possibly the preset file has been corrupted</source>
         <translation>%1은 잘 형성된 카메라 사전 설정으로 보임. 
-사전 설정 파일이 손상되었을 수 있음.</translation>
+사전 설정 파일이 손상되었을 수 있음</translation>
     </message>
     <message>
         <source>Preset name</source>
@@ -144,6 +144,39 @@ Possibly the preset file has been corrupted</source>
     <message>
         <source>The preset name must not use &apos;,&apos;(comma).</source>
         <translation>사전 설정 이름은 &apos;,&apos;(쉼표)를 사용해서는 안됨.</translation>
+    </message>
+    <message>
+        <source>cm</source>
+        <translation>cm</translation>
+    </message>
+    <message>
+        <source>mm</source>
+        <translation>mm</translation>
+    </message>
+    <message>
+        <source>inch</source>
+        <translation>inch</translation>
+    </message>
+    <message>
+        <source>field</source>
+        <translation>field</translation>
+    </message>
+    <message>
+        <source>pixel</source>
+        <translation>픽셀</translation>
+    </message>
+    <message>
+        <source>Deleting &quot;%1&quot;.
+Are you sure?</source>
+        <translation type="unfinished">&quot;%1&quot;을 삭제합니다. 확실합니까?</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation type="unfinished">삭제</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">취소</translation>
     </message>
 </context>
 <context>
@@ -165,69 +198,26 @@ Possibly the preset file has been corrupted</source>
         <translation>알파</translation>
     </message>
     <message>
-        <source>RGBA</source>
-        <translation></translation>
+        <source>RGB</source>
+        <translation>RGB</translation>
     </message>
 </context>
 <context>
     <name>CleanupCameraSettingsWidget</name>
     <message>
-        <source>N/S</source>
+        <source>Y</source>
         <translation></translation>
     </message>
     <message>
-        <source>E/W</source>
+        <source>X</source>
         <translation></translation>
     </message>
 </context>
 <context>
     <name>ColorChannelControl</name>
     <message>
-        <source>R</source>
-        <translation type="vanished"></translation>
-    </message>
-    <message>
-        <source>G</source>
-        <translation type="vanished"></translation>
-    </message>
-    <message>
-        <source>B</source>
-        <translation type="vanished"></translation>
-    </message>
-    <message>
-        <source>A</source>
-        <translation type="vanished"></translation>
-    </message>
-    <message>
         <source>H</source>
         <translation type="vanished">수평</translation>
-    </message>
-    <message>
-        <source>S</source>
-        <translation type="vanished"></translation>
-    </message>
-    <message>
-        <source>V</source>
-        <translation type="vanished"></translation>
-    </message>
-</context>
-<context>
-    <name>ColorField</name>
-    <message>
-        <source>R:</source>
-        <translation type="vanished"></translation>
-    </message>
-    <message>
-        <source>G:</source>
-        <translation type="vanished"></translation>
-    </message>
-    <message>
-        <source>B:</source>
-        <translation type="vanished"></translation>
-    </message>
-    <message>
-        <source>A:</source>
-        <translation type="vanished"></translation>
     </message>
 </context>
 <context>
@@ -241,7 +231,15 @@ Possibly the preset file has been corrupted</source>
     <name>ComboHistoRGBLabel</name>
     <message>
         <source>R:%1 G:%2 B:%3</source>
-        <translation></translation>
+        <translation>R:%1 G:%2 B:%3</translation>
+    </message>
+    <message>
+        <source> A:%1</source>
+        <translation> A:%1</translation>
+    </message>
+    <message>
+        <source>A:%1</source>
+        <translation>A:%1</translation>
     </message>
 </context>
 <context>
@@ -261,6 +259,18 @@ Possibly the preset file has been corrupted</source>
     <message>
         <source>Y:</source>
         <translation></translation>
+    </message>
+    <message>
+        <source>8bit (0-255)</source>
+        <translation>8bit (0-255)</translation>
+    </message>
+    <message>
+        <source>16bit (0-65535)</source>
+        <translation>16bit (0-65535)</translation>
+    </message>
+    <message>
+        <source>0.0-1.0</source>
+        <translation>0.0-1.0</translation>
     </message>
 </context>
 <context>
@@ -319,6 +329,18 @@ Possibly the preset file has been corrupted</source>
         <source>A:</source>
         <translation></translation>
     </message>
+    <message>
+        <source>Paste Color</source>
+        <translation>색상 붙여넣기</translation>
+    </message>
+    <message>
+        <source>Paste Color of %1</source>
+        <translation>%1의 색상 붙여넣기</translation>
+    </message>
+    <message>
+        <source>Copy Color</source>
+        <translation>색상 복사</translation>
+    </message>
 </context>
 <context>
     <name>DVGui::DvTextEdit</name>
@@ -355,10 +377,129 @@ Possibly the preset file has been corrupted</source>
     </message>
 </context>
 <context>
+    <name>DVGui::HexColorNamesEditor</name>
+    <message>
+        <source>Hex Color Names Editor</source>
+        <translation>16진수 색상 이름 편집기</translation>
+    </message>
+    <message>
+        <source>OK</source>
+        <translation>네</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>적용</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>닫기</translation>
+    </message>
+    <message>
+        <source>Unselect</source>
+        <translation>선택 해제</translation>
+    </message>
+    <message>
+        <source>Add Color</source>
+        <translation>색상 추가</translation>
+    </message>
+    <message>
+        <source>Delete Color</source>
+        <translation>색상 삭제</translation>
+    </message>
+    <message>
+        <source>User Defined Colors</source>
+        <translation>정의된 색상</translation>
+    </message>
+    <message>
+        <source>Default Main Colors</source>
+        <translation>기본 메인 컬러</translation>
+    </message>
+    <message>
+        <source>Enable Auto-Complete</source>
+        <translation>자동 완성 사용</translation>
+    </message>
+    <message>
+        <source>Import</source>
+        <translation>수입</translation>
+    </message>
+    <message>
+        <source>Export</source>
+        <translation>수출</translation>
+    </message>
+    <message>
+        <source>Open Color Names</source>
+        <translation>색상 이름 열기</translation>
+    </message>
+    <message>
+        <source>Text or XML (*.txt *.xml);;Text files (*.txt);;XML files (*.xml)</source>
+        <translation>텍스트 또는 XML (*.txt *.xml);; 텍스트 파일 (*.txt);; XML 파일 (*.xml)</translation>
+    </message>
+    <message>
+        <source>Hex Color Names Import</source>
+        <translation>16진수 색상 이름 가져오기</translation>
+    </message>
+    <message>
+        <source>Do you want to merge with existing entries?</source>
+        <translation>기존 항목과 병합하시겠습니까?</translation>
+    </message>
+    <message>
+        <source>Error importing color names XML</source>
+        <translation type="vanished">색상 이름 XML을 가져오는 중 오류 발생</translation>
+    </message>
+    <message>
+        <source>Save Color Names</source>
+        <translation>색상 이름 저장</translation>
+    </message>
+    <message>
+        <source>XML files (*.xml);;Text files (*.txt)</source>
+        <translation>XML 파일 (*.xml);; 텍스트 파일 (*.txt)</translation>
+    </message>
+    <message>
+        <source>Error exporting color names XML</source>
+        <translation>색 이름 XML 내보내기 오류</translation>
+    </message>
+    <message>
+        <source>Color name is not valid.
+The following characters cannot be used: \ # &lt; &gt; &quot; &apos;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Color name already exists.
+Please use another name.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Invalid hex color format.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Error importing color names XML:
+File not found or invalid format</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Error importing color names XML:
+The file may be corrupt or have invalid format.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>An unexpected error occurred while importing colors.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to save user color names file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>DVGui::LineEdit</name>
     <message>
         <source>A file name cannot contains any of the following chracters: /\:*?&quot;&lt;&gt;|.</source>
-        <translation>파일 이름에는 다음 문자 중 어느 것도 포함될 수 없음: /\:*?&quot;&lt;&gt;|.</translation>
+        <translation type="vanished">파일 이름에는 다음 문자 중 어느 것도 포함될 수 없음: /\:*?&quot;&lt;&gt;|.</translation>
+    </message>
+    <message>
+        <source>A file name cannot contains any of the following characters: /\:*?&quot;&lt;&gt;|.</source>
+        <translation>파일 이름에는 다음 문자 중 하나를 포함할 수 없습니다: /\:*?&lt;&gt;\.</translation>
     </message>
 </context>
 <context>
@@ -387,6 +528,18 @@ Possibly the preset file has been corrupted</source>
     <message>
         <source>Channel:</source>
         <translation>채널:</translation>
+    </message>
+    <message>
+        <source>Range:</source>
+        <translation>범위:</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation>출력:</translation>
+    </message>
+    <message>
+        <source>Input:</source>
+        <translation>입력 :</translation>
     </message>
 </context>
 <context>
@@ -435,11 +588,11 @@ Possibly the preset file has been corrupted</source>
     <name>EaseInOutSegmentPage</name>
     <message>
         <source>Ease In:</source>
-        <translation>이지 인:</translation>
+        <translation>서서히 멈춤:</translation>
     </message>
     <message>
         <source>Ease Out:</source>
-        <translation>이지 아웃:</translation>
+        <translation>서서히 시작:</translation>
     </message>
 </context>
 <context>
@@ -451,13 +604,6 @@ Possibly the preset file has been corrupted</source>
     <message>
         <source>%1 is already registered</source>
         <translation>%1은 이미등록되어 있음</translation>
-    </message>
-</context>
-<context>
-    <name>FileField</name>
-    <message>
-        <source>...</source>
-        <translation type="vanished"></translation>
     </message>
 </context>
 <context>
@@ -587,7 +733,7 @@ Possibly the preset file has been corrupted</source>
     </message>
     <message>
         <source>&amp;Next frame</source>
-        <translation>다음 프레임(&amp;N)</translation>
+        <translation type="vanished">다음 프레임(&amp;N)</translation>
     </message>
     <message>
         <source>&amp;Last Frame</source>
@@ -647,7 +793,7 @@ Possibly the preset file has been corrupted</source>
     </message>
     <message>
         <source>Drag to play the animation</source>
-        <translation>애니메이션을 재생하려면 끌어서 놓으세요.</translation>
+        <translation>애니메이션을 재생하려면 끌어서 놓으세요</translation>
     </message>
     <message>
         <source>Set the playback frame rate</source>
@@ -676,6 +822,48 @@ Possibly the preset file has been corrupted</source>
     <message>
         <source>&amp;Reset View</source>
         <translation>보기 재설정(&amp;R)</translation>
+    </message>
+    <message>
+        <source>Sound</source>
+        <translation>소리</translation>
+    </message>
+    <message>
+        <source>Locator</source>
+        <translation>로케이터</translation>
+    </message>
+    <message>
+        <source>&amp;Next Frame</source>
+        <translation>다음 프레임(&amp;N)</translation>
+    </message>
+    <message>
+        <source>Gain Controls</source>
+        <translation>게인 컨트롤</translation>
+    </message>
+    <message>
+        <source>&amp;Reduce gain 1/2 stop (divide by sqrt(2))</source>
+        <translation>&amp;이득 1/2 스톱 감소(제곱(2)으로 나누기)</translation>
+    </message>
+    <message>
+        <source>Toggle gain between 1 and the previous setting.
+Gain is shown as an f-stop and the &quot;neutral&quot; or 1.0 gain f-stop is f/8.</source>
+        <translation>게임을 1과 이전 설정 사이에서 전환합니다.
+게인은 F-스톱으로 표시되며 &quot;중립&quot; 또는 1.0 게인 F-스톱은 F.8입니다.</translation>
+    </message>
+    <message>
+        <source>&amp;Increase gain 1/2 stop (multiply by sqrt(2))</source>
+        <translation>&amp;증가 게인 1/2스톱(곱하기 sqrt(2))</translation>
+    </message>
+    <message>
+        <source> (gain %1)</source>
+        <translation>(dlemr %1)</translation>
+    </message>
+    <message>
+        <source>&amp;Rotate Left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&amp;Rotate Right</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -759,11 +947,11 @@ Possibly the preset file has been corrupted</source>
     </message>
     <message>
         <source>Ease In / Ease Out Interpolation</source>
-        <translation>이즈 인/이즈 아웃 보간</translation>
+        <translation>서서히 멈춤/서서히 시작 보간</translation>
     </message>
     <message>
         <source>Ease In / Ease Out (%) Interpolation</source>
-        <translation>이즈 인/이즈 아웃(%)보간</translation>
+        <translation>서서히 멈춤/서서히 시작(%)보간</translation>
     </message>
     <message>
         <source>Exponential Interpolation</source>
@@ -834,11 +1022,11 @@ Possibly the preset file has been corrupted</source>
     </message>
     <message>
         <source>Ease In / Ease Out</source>
-        <translation>이즈 인/이즈 아웃</translation>
+        <translation>서서히 멈춤/서서히 시작</translation>
     </message>
     <message>
         <source>Ease In / Ease Out %</source>
-        <translation>이즈 인/이즈 아웃 %</translation>
+        <translation>서서히 멈춤/서서히 시작 %</translation>
     </message>
     <message>
         <source>Exponential</source>
@@ -920,6 +1108,10 @@ Possibly the preset file has been corrupted</source>
         <source>????</source>
         <translation></translation>
     </message>
+    <message>
+        <source>Link/Unlink Handles</source>
+        <translation>링크/링크 해제 핸들</translation>
+    </message>
 </context>
 <context>
     <name>FunctionSelection</name>
@@ -933,6 +1125,13 @@ Possibly the preset file has been corrupted</source>
     <message>
         <source>Function Editor</source>
         <translation>기능 편집기</translation>
+    </message>
+</context>
+<context>
+    <name>FunctionSheetButtonArea</name>
+    <message>
+        <source>Toggle synchronizing zoom with xsheet</source>
+        <translation>xsheet와 확대/축소 동기화 전환</translation>
     </message>
 </context>
 <context>
@@ -955,11 +1154,11 @@ Possibly the preset file has been corrupted</source>
     </message>
     <message>
         <source>Ease In / Ease Out Interpolation</source>
-        <translation>이즈 인/이즈 아웃 보간</translation>
+        <translation>서서히 멈춤/서서히 시작 보간</translation>
     </message>
     <message>
         <source>Ease In / Ease Out (%) Interpolation</source>
-        <translation>이즈 인/이즈 아웃(%)보간</translation>
+        <translation>서서히 멈춤/서서히 시작(%)보간</translation>
     </message>
     <message>
         <source>Exponential Interpolation</source>
@@ -1023,6 +1222,15 @@ Possibly the preset file has been corrupted</source>
     </message>
 </context>
 <context>
+    <name>FunctionSheetColumnHeadViewer</name>
+    <message>
+        <source>Some key(s) in this parameter loses original reference in expression.
+Manually changing any keyframe will clear the warning.</source>
+        <translation>이 매개변수의 일부 키가 표현식에서 원래 참조를 잃습니다.
+키프레임을 수동으로 변경하면 경고가 지워집니다.</translation>
+    </message>
+</context>
+<context>
     <name>FunctionToolbar</name>
     <message>
         <source>Value</source>
@@ -1046,6 +1254,12 @@ Possibly the preset file has been corrupted</source>
     <message>
         <source>Plastic Skeleton</source>
         <translation>플라스틱 골격</translation>
+    </message>
+    <message>
+        <source>Some key(s) in this parameter loses original reference in expression.
+Manually changing any keyframe will clear the warning.</source>
+        <translation>이 매개변수의 일부 키가 표현식에서 원래 참조를 잃습니다.
+키프레임을 수동으로 변경하면 경고가 지워집니다.</translation>
     </message>
 </context>
 <context>
@@ -1200,6 +1414,17 @@ Possibly the preset file has been corrupted</source>
     </message>
 </context>
 <context>
+    <name>FxPassThroughPainter</name>
+    <message>
+        <source>&amp;Paste Add</source>
+        <translation>붙여넣기 추가(&amp;P)</translation>
+    </message>
+    <message>
+        <source>&amp;Preview</source>
+        <translation>미리보기(&amp;P)</translation>
+    </message>
+</context>
+<context>
     <name>FxSchematicLink</name>
     <message>
         <source>&amp;Delete</source>
@@ -1215,6 +1440,13 @@ Possibly the preset file has been corrupted</source>
     <message>
         <source>Output</source>
         <translation>출력</translation>
+    </message>
+</context>
+<context>
+    <name>FxSchematicPassThroughNode</name>
+    <message>
+        <source> (Pass Through)</source>
+        <translation> (통과)</translation>
     </message>
 </context>
 <context>
@@ -1516,6 +1748,50 @@ Select FX nodes and related links before copying or cutting the selection you wa
         <source>)</source>
         <translation></translation>
     </message>
+    <message>
+        <source>Hide New Style Button</source>
+        <translation>새 스타일 버튼 숨기기</translation>
+    </message>
+    <message>
+        <source>Show New Style Button</source>
+        <translation>새 스타일 버튼 표시</translation>
+    </message>
+    <message>
+        <source>Failed to save palette.</source>
+        <translation>팔레트를 저장하지 못했습니다.</translation>
+    </message>
+    <message>
+        <source>Set Toolbar Below Styles</source>
+        <translation>스타일 아래에 도구 모음 설정</translation>
+    </message>
+    <message>
+        <source>Set Toolbar Above Styles</source>
+        <translation>스타일 위에 도구 모음 설정</translation>
+    </message>
+    <message>
+        <source>Auto Adjust Panel Width</source>
+        <translation>패널 너비자동조정</translation>
+    </message>
+    <message>
+        <source>Visible Toolbar Buttons</source>
+        <translation>표시되는 도구 모음 버튼</translation>
+    </message>
+    <message>
+        <source>KeyFrame</source>
+        <translation>키 프레임</translation>
+    </message>
+    <message>
+        <source>New Style/Page</source>
+        <translation>새로운 스타일/페이지</translation>
+    </message>
+    <message>
+        <source>Palette Gizmo</source>
+        <translation>팔레트 기즈모</translation>
+    </message>
+    <message>
+        <source>Name Editor</source>
+        <translation>이름 편집기</translation>
+    </message>
 </context>
 <context>
     <name>PaletteViewerGUI::PageViewer</name>
@@ -1534,6 +1810,10 @@ Select FX nodes and related links before copying or cutting the selection you wa
     <message>
         <source>New Page</source>
         <translation>새로운 페이지</translation>
+    </message>
+    <message>
+        <source> + </source>
+        <translation> + </translation>
     </message>
 </context>
 <context>
@@ -1554,6 +1834,10 @@ Select FX nodes and related links before copying or cutting the selection you wa
         <source>&lt;files&gt;</source>
         <translation>&lt;파일&gt;</translation>
     </message>
+    <message>
+        <source>Failed to import palette.</source>
+        <translation>팔레트를 가져오지 못했습니다.</translation>
+    </message>
 </context>
 <context>
     <name>ParamViewer</name>
@@ -1566,7 +1850,18 @@ Select FX nodes and related links before copying or cutting the selection you wa
     <name>ParamsPageSet</name>
     <message>
         <source>Fx Help</source>
-        <translation>Fx 도움말</translation>
+        <translation type="vanished">Fx 도움말</translation>
+    </message>
+    <message>
+        <source>View help page</source>
+        <translation>도움말 페이지 보기</translation>
+    </message>
+    <message>
+        <source>This Fx does not support rendering in floating point channel width (32bit).
+The output pixel values from this fx will be clamped to 0.0 - 1.0
+and tone may be slightly discretized.</source>
+        <translation>이 Fx는 부동 소수점 채널 너비(32비트)로 랜더링을 지원하지 않습니다.
+이 Fx의 출력 픽셀 값은 0.0 ~ 1.0으로 클램핑되며, 톤이 약간 불연속화될 수 있습니다.</translation>
     </message>
 </context>
 <context>
@@ -1610,7 +1905,7 @@ Select FX nodes and related links before copying or cutting the selection you wa
     <message>
         <source>Deleting &quot;%1&quot;.
 Are you sure?</source>
-        <translation>&quot;%1&quot;을 삭제합니다. 확실합니까?</translation>
+        <translation type="vanished">&quot;%1&quot;을 삭제합니다. 확실합니까?</translation>
     </message>
     <message>
         <source>Delete</source>
@@ -1622,19 +1917,19 @@ Are you sure?</source>
     </message>
     <message>
         <source>It is not possible to delete the style #</source>
-        <translation># 스타일을 삭제할 수 없음</translation>
+        <translation type="vanished"># 스타일을 삭제할 수 없음</translation>
     </message>
     <message>
         <source>Paste Style  in Palette : %1</source>
-        <translation>팔레트의 붙여넣기 스타일:%1</translation>
+        <translation type="vanished">팔레트의 붙여넣기 스타일:%1</translation>
     </message>
     <message>
         <source>Delete Style  from Palette : %1</source>
-        <translation>팔레트에서 스타일 삭제: %1</translation>
+        <translation type="vanished">팔레트에서 스타일 삭제: %1</translation>
     </message>
     <message>
         <source>Cut Style  from Palette : %1</source>
-        <translation>팔레트에서 잘라낸 스타일: %1</translation>
+        <translation type="vanished">팔레트에서 잘라낸 스타일: %1</translation>
     </message>
     <message>
         <source>It is not possible to delete styles #0 and #1.</source>
@@ -1642,11 +1937,11 @@ Are you sure?</source>
     </message>
     <message>
         <source>Can&apos;t paste styles there</source>
-        <translation>스타일을 붙여넣을 수 없음.</translation>
+        <translation>스타일을 붙여넣을 수 없음</translation>
     </message>
     <message>
         <source>  to Palette : %1</source>
-        <translation>팔레트: %1</translation>
+        <translation type="vanished">팔레트: %1</translation>
     </message>
     <message>
         <source>Paste Color &amp;&amp; Name%1</source>
@@ -1666,7 +1961,7 @@ Are you sure?</source>
     </message>
     <message>
         <source>Can&apos;t modify color #0</source>
-        <translation>색상 수정할 수 없음.</translation>
+        <translation>색상 수정할 수 없음</translation>
     </message>
     <message>
         <source>There are more cut/copied styles than selected. Paste anyway (adding styles)?</source>
@@ -1678,15 +1973,15 @@ Are you sure?</source>
     </message>
     <message>
         <source>Blend Colors  in Palette : %1</source>
-        <translation>팔레트의 혼합색상: %1</translation>
+        <translation type="vanished">팔레트의 혼합색상: %1</translation>
     </message>
     <message>
         <source>Toggle Link  in Palette : %1</source>
-        <translation>팔레트에서 링크전환: %1</translation>
+        <translation type="vanished">팔레트에서 링크전환: %1</translation>
     </message>
     <message>
         <source>Remove Reference  in Palette : %1</source>
-        <translation>팔레트에서 참조 제거: %1</translation>
+        <translation type="vanished">팔레트에서 참조 제거: %1</translation>
     </message>
     <message>
         <source>Get Color from Studio Palette</source>
@@ -1810,7 +2105,7 @@ Are you sure?</source>
     </message>
     <message>
         <source>Palette</source>
-        <translation>팔레트</translation>
+        <translation type="vanished">팔레트</translation>
     </message>
     <message>
         <source>Overwrite</source>
@@ -1937,7 +2232,7 @@ Are you sure?</source>
         <translation>출력 경로: </translation>
     </message>
     <message>
-        <source>Endianess:      </source>
+        <source>Endianness:      </source>
         <translation>엔디언: </translation>
     </message>
     <message>
@@ -1970,7 +2265,7 @@ Are you sure?</source>
     </message>
     <message>
         <source>It is not possible to find the level %1</source>
-        <translation>%1 레벨을 찾을 수 없음.</translation>
+        <translation>%1 레벨을 찾을 수 없음</translation>
     </message>
     <message>
         <source>Cannot premultiply the selected file.</source>
@@ -1986,11 +2281,11 @@ Are you sure?</source>
     </message>
     <message>
         <source>Frame %1 : conversion failed!</source>
-        <translation>프레임 %1: 변환실패</translation>
+        <translation>프레임 %1: 변환실패!</translation>
     </message>
     <message>
         <source>The source image seems not suitable for this kind of conversion</source>
-        <translation>소스 이미지는 이러한 종류의 변환에 적합하지 않는 것으로 보임.</translation>
+        <translation>소스 이미지는 이러한 종류의 변환에 적합하지 않는 것으로 보임</translation>
     </message>
     <message>
         <source>The file name cannot be empty or contain any of the following characters: (new line) \ / : * ? &quot; |</source>
@@ -2075,12 +2370,12 @@ Are you sure?</source>
     <message>
         <source>Failed to get attribute location of %1</source>
         <comment>gl</comment>
-        <translation>%1의 속성 위치를 가져오지 못함.</translation>
+        <translation>%1의 속성 위치를 가져오지 못함</translation>
     </message>
     <message>
         <source>Failed to get uniform location of %1</source>
         <comment>gl</comment>
-        <translation>%1의 동일한 위치를 가져오지 못함.</translation>
+        <translation>%1의 동일한 위치를 가져오지 못함</translation>
     </message>
     <message>
         <source>Failed to Open 3DLUT File.</source>
@@ -2122,7 +2417,7 @@ The second line should be &quot;Mesh [Input bit depth] [Output bit depth]&quot;<
     <message>
         <source>Custom Texture</source>
         <comment>TextureStyleChooserPage</comment>
-        <translation>사용자 지정 텍스처</translation>
+        <translation type="vanished">사용자 지정 텍스처</translation>
     </message>
     <message>
         <source>Plain color</source>
@@ -2145,6 +2440,79 @@ The second line should be &quot;Mesh [Input bit depth] [Output bit depth]&quot;<
     <message>
         <source>That is a reserved file name and cannot be used.</source>
         <translation>이것은 예약 된 파일 이름이며 사용할 수 없습니다.</translation>
+    </message>
+    <message>
+        <source>There are no unused styles.</source>
+        <translation>사용하지 않는 스타일이 없습니다.</translation>
+    </message>
+    <message>
+        <source>and %1 more styles.</source>
+        <translation>스타일이 %1개 더 있습니다.</translation>
+    </message>
+    <message>
+        <source>Erasing unused styles with following indices. Are you sure?
+
+%1</source>
+        <translation>다음 지수로 사용하지 않는 스타일을 지 웁니다. 확실합니까?
+
+%1</translation>
+    </message>
+    <message>
+        <source>Erase</source>
+        <translation>삭제</translation>
+    </message>
+    <message>
+        <source>Click &amp; Drag Palette into Studio Palette</source>
+        <translation>팔레트를 클릭하여 스튜디오 팔레트로 끌어오기</translation>
+    </message>
+    <message>
+        <source>Plain color</source>
+        <comment>TextureStyleChooserPage</comment>
+        <translation>일반 색상</translation>
+    </message>
+    <message>
+        <source>Sample Type: </source>
+        <translation>샘플 유형:</translation>
+    </message>
+    <message>
+        <source>It is not possible to delete style #</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Paste Style to Palette: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete Style from Palette: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cut Style from Palette: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source> to Palette: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Blend Colors in Palette: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Toggle Link in Palette: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove Reference in Palette: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Set As...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete Lines and Areas</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -2170,6 +2538,29 @@ The second line should be &quot;Mesh [Input bit depth] [Output bit depth]&quot;<
     <message>
         <source>Swap %1 and %2</source>
         <translation>스완%1과 %2</translation>
+    </message>
+</context>
+<context>
+    <name>SchematicName</name>
+    <message>
+        <source>Cu&amp;t</source>
+        <translation>Cu&amp;t</translation>
+    </message>
+    <message>
+        <source>&amp;Copy</source>
+        <translation>&amp;복사</translation>
+    </message>
+    <message>
+        <source>&amp;Paste</source>
+        <translation>&amp;붙여넣기</translation>
+    </message>
+    <message>
+        <source>&amp;Delete</source>
+        <translation>삭제(&amp;D)</translation>
+    </message>
+    <message>
+        <source>Select &amp;All</source>
+        <translation>&amp;모두선택</translation>
     </message>
 </context>
 <context>
@@ -2212,7 +2603,7 @@ The second line should be &quot;Mesh [Input bit depth] [Output bit depth]&quot;<
     </message>
     <message>
         <source>&amp;Swtich output port display mode</source>
-        <translation>스위치 출력 포트 표시모드(&amp;S)</translation>
+        <translation type="vanished">스위치 출력 포트 표시모드(&amp;S)</translation>
     </message>
     <message>
         <source>&amp;Toggle node icons</source>
@@ -2230,12 +2621,43 @@ The second line should be &quot;Mesh [Input bit depth] [Output bit depth]&quot;<
         <source>&amp;Hand Mode</source>
         <translation>핸드 모드(&amp;H)</translation>
     </message>
+    <message>
+        <source>&amp;Switch output port display mode</source>
+        <translation>&amp;출력 포트 표시 모드 전환</translation>
+    </message>
 </context>
 <context>
     <name>SchematicWindowEditor</name>
     <message>
         <source>&amp;Close Editor</source>
         <translation>편집기 닫기(&amp;C)</translation>
+    </message>
+</context>
+<context>
+    <name>SeeThroughWindowPopup</name>
+    <message>
+        <source>See Through Mode (Main Window)</source>
+        <translation>투시모드(기본창)</translation>
+    </message>
+    <message>
+        <source>Opacity</source>
+        <translation>불투명도</translation>
+    </message>
+    <message>
+        <source>Quickly toggle main window semi-transparency and full opacity.</source>
+        <translation>기본 창 반투명도와 전체 불투명도를 빠르게 전환할 수 있습니다.</translation>
+    </message>
+    <message>
+        <source>Hold ALT while clicking to use full transparency instead.</source>
+        <translation>전체 투명도를 사용하려면 클릭하는 동안 Alt 키를 누르고 있습니다.</translation>
+    </message>
+    <message>
+        <source>When slider is at 100% it acts as ALT is held.</source>
+        <translation>슬라이더를 100%로 설정하면 ALT를 누른 상태로 작동합니다.</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>닫기</translation>
     </message>
 </context>
 <context>
@@ -2287,7 +2709,7 @@ The second line should be &quot;Mesh [Input bit depth] [Output bit depth]&quot;<
     </message>
     <message>
         <source>Last Speed:</source>
-        <translation>마지막 속도</translation>
+        <translation>마지막 속도:</translation>
     </message>
     <message>
         <source>---</source>
@@ -2441,6 +2863,18 @@ Are you sure ?</source>
         <source>Replace</source>
         <translation>교체</translation>
     </message>
+    <message>
+        <source>Failed to save palette.</source>
+        <translation>팔레트를 저장하지 못했습니다.</translation>
+    </message>
+    <message>
+        <source>Set As...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>StyleEditor</name>
@@ -2458,7 +2892,7 @@ Are you sure ?</source>
     </message>
     <message>
         <source>Show or hide parts of the Color Page.</source>
-        <translation>색 페이지의 일부 표시 또는 숨기기</translation>
+        <translation>색 페이지의 일부 표시 또는 숨기기.</translation>
     </message>
     <message>
         <source>Wheel</source>
@@ -2478,7 +2912,7 @@ Are you sure ?</source>
     </message>
     <message>
         <source>Toggle orientation of the Color Page.</source>
-        <translation>색상 페이지의 방향 전환</translation>
+        <translation type="vanished">색상 페이지의 방향 전환.</translation>
     </message>
     <message>
         <source>Auto</source>
@@ -2534,19 +2968,63 @@ Are you sure ?</source>
     </message>
     <message>
         <source>Style Editor - No Valid Style Selected</source>
-        <translation>스타일 편집기 - 유효한 스타일이 선택되지 않음.</translation>
+        <translation>스타일 편집기 - 유효한 스타일이 선택되지 않음</translation>
     </message>
     <message>
         <source>[CLEANUP]  </source>
-        <translation>[정리]</translation>
+        <translation type="vanished">[정리]</translation>
     </message>
     <message>
         <source>[STUDIO]  </source>
-        <translation>[스튜디오]</translation>
+        <translation type="vanished">[스튜디오]</translation>
     </message>
     <message>
         <source>[LEVEL]  </source>
-        <translation>[레벨]</translation>
+        <translation type="vanished">[레벨]</translation>
+    </message>
+    <message>
+        <source>Cleanup </source>
+        <translation>정리</translation>
+    </message>
+    <message>
+        <source>Studio </source>
+        <translation>스튜디오</translation>
+    </message>
+    <message>
+        <source>Level </source>
+        <translation>레벨</translation>
+    </message>
+    <message>
+        <source>Hex</source>
+        <translation>Hex</translation>
+    </message>
+    <message>
+        <source>Relative colored + Triangle handle</source>
+        <translation>상대적 색상 + 삼각형 핸들</translation>
+    </message>
+    <message>
+        <source>Absolute colored + Line handle</source>
+        <translation>절대 컬러 + 라인 핸들</translation>
+    </message>
+    <message>
+        <source>Slider Appearance</source>
+        <translation>슬라이더 외관</translation>
+    </message>
+    <message>
+        <source>Toggle Orientation</source>
+        <translation>방향 전환</translation>
+    </message>
+    <message>
+        <source>Hex Color Names...</source>
+        <translation>16진수 색상 이름...</translation>
+    </message>
+    <message>
+        <source>Search</source>
+        <translation>검색</translation>
+    </message>
+    <message>
+        <source>Clear Search</source>
+        <translation>검색 삭제</translation>
     </message>
 </context>
 <context>
@@ -2589,6 +3067,21 @@ Are you sure ?</source>
     <message>
         <source>Reset to default</source>
         <translation>기본값으로 재설정</translation>
+    </message>
+</context>
+<context>
+    <name>StyleEditorGUI::StyleChooserPage</name>
+    <message>
+        <source>Pin To Top</source>
+        <translation>맨 위로 고정</translation>
+    </message>
+    <message>
+        <source>Set Pins To Top</source>
+        <translation>핀을 상단으로 설정</translation>
+    </message>
+    <message>
+        <source>Clear Pins To Top</source>
+        <translation>핀을 위로 지우기</translation>
     </message>
 </context>
 <context>

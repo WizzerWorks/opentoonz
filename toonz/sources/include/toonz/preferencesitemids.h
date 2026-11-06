@@ -5,25 +5,21 @@ enum PreferencesItemId {
   // General
   defaultViewerEnabled,
   rasterOptimizedMemory,
-  autosaveEnabled,
-  autosavePeriod,
-  autosaveSceneEnabled,
-  autosaveOtherFilesEnabled,
   startupPopupEnabled,
   undoMemorySize,
   taskchunksize,
-  replaceAfterSaveLevelAs,
-  backupEnabled,
-  backupKeepCount,
   sceneNumberingEnabled,
   watchFileSystemEnabled,
   projectRoot,
   customProjectRoot,
   pathAliasPriority,
+  lazyLoadRooms,
 
   //----------
   // Interface
   CurrentStyleSheetName,
+  additionalStyleSheet,
+  iconTheme,
   pixelsOnly,
   oldUnits,
   oldCameraUnits,
@@ -33,9 +29,7 @@ enum PreferencesItemId {
   functionEditorToggle,
   moveCurrentFrameByClickCellArea,
   actualPixelViewOnSceneEditingMode,
-  levelNameOnEachMarkerEnabled,
   showRasterImagesDarkenBlendedInViewer,
-  showFrameNumberWithLetters,
   iconSize,
   viewShrink,
   viewStep,
@@ -45,36 +39,58 @@ enum PreferencesItemId {
   interfaceFontStyle,
   colorCalibrationEnabled,
   colorCalibrationLutPaths,
+  showIconsInMenu,
+  showRoomBindButtons,
+  displayIn30bit,
+  viewerIndicatorEnabled,
 
   //----------
   // Visualization
   show0ThickLines,
   regionAntialias,
+  rasterizeAntialias,
 
   //----------
   // Loading
   importPolicy,
+  renamePolicy,
+  convertPolicy,
   autoExposeEnabled,
   subsceneFolderEnabled,
   removeSceneNumberFromLoadedLevelName,
   IgnoreImageDpi,
-  initialLoadTlvCachingBehavior,
+  rasterLevelCachingBehavior,
+  // initialLoadTlvCachingBehavior, // deprecated
   columnIconLoadingPolicy,
   levelFormats,  // need to be handle separately
+  autoRemoveUnusedLevels,
 
   //----------
   // Saving
+  autosaveEnabled,
+  autosavePeriod,
+  autosaveSceneEnabled,
+  autosaveOtherFilesEnabled,
+  replaceAfterSaveLevelAs,
+  backupEnabled,
+  backupKeepCount,
   rasterBackgroundColor,
+  resetUndoOnSavingLevel,
 
   //----------
   // Import / Export
   ffmpegPath,
   ffmpegTimeout,
   fastRenderPath,
+  ffmpegMultiThread,
+  quickTimeBackend,
+  rhubarbPath,
+  rhubarbTimeout,
 
   //----------
   // Drawing
-  scanLevelType,
+  DefRasterFormat,
+  // scanLevelType,// deprecated
   DefLevelType,
   newLevelSizeToCameraSizeEnabled,
   DefLevelWidth,
@@ -96,37 +112,56 @@ enum PreferencesItemId {
 
   //----------
   // Tools
-  dropdownShortcutsCycleOptions,
+  // dropdownShortcutsCycleOptions, // removed
   FillOnlysavebox,
+  DefRegionWithPaint,
+  ReferFillPrevailing,
   multiLayerStylePickerEnabled,
   cursorBrushType,
   cursorBrushStyle,
   cursorOutlineEnabled,
   levelBasedToolsDisplay,
+  useCtrlAltToResizeBrush,
+  useStrokeEndCursor,
+  clickTwiceToCreateArcs,
+  tempToolSwitchTimer,
+  animateToolHandleSize,
+  animateToolColor,
 
   //----------
   // Xsheet
   xsheetLayoutPreference,
   xsheetStep,
   xsheetAutopanEnabled,
+  alwaysDragFrameCell,
   DragCellsBehaviour,
+  deleteCommandBehavior,
+  pasteCellsBehavior,
   ignoreAlphaonColumn1Enabled,
   showKeyframesOnXsheetCellArea,
   showXsheetCameraColumn,
   useArrowKeyToShiftCellSelection,
-  inputCellsWithoutDoubleClickingEnabled,
+  cellInputMethod,
   shortcutCommandsWhileRenamingCellEnabled,
   showXSheetToolbar,
+  showXsheetBreadcrumbs,
   expandFunctionHeader,
   showColumnNumbers,
+  unifyColumnVisibilityToggles,
+  parentColorsInXsheetColumn,
+  highlightLineEverySecond,
   syncLevelRenumberWithXsheet,
   currentTimelineEnabled,
   currentColumnColor,
+  levelNameDisplayType,
+  showFrameNumberWithLetters,
+  linkColumnNameWithLevel,
 
   //----------
   // Animation
   keyframeType,
   animationStep,
+  modifyExpressionOnMovingReferences,
 
   //----------
   // Preview
@@ -134,7 +169,7 @@ enum PreferencesItemId {
   blankColor,
   rewindAfterPlayback,
   previewAlwaysOpenNewFlip,
-  fitToFlipbook,
+  fitToFlipbookWhenPreview,
   generatedMovieViewEnabled,
   shortPlayFrameCount,
 
@@ -159,6 +194,9 @@ enum PreferencesItemId {
   transpCheckInkOnWhite,
   transpCheckInkOnBlack,
   transpCheckPaint,
+  inkCheckColor,
+  ink1CheckColor,
+  paintCheckColor,
 
   //----------
   // Version Control
@@ -171,6 +209,8 @@ enum PreferencesItemId {
   // TounchGestureControl // Touch Gesture is a checkable command and not in
   // preferences.ini
   winInkEnabled,
+  // This option will be shown & available only when WITH_WINTAB is defined
+  useQtNativeWinInk,
 
   //----------
   // Others (not appeared in the popup)

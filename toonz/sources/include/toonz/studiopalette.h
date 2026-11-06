@@ -4,7 +4,8 @@
 #define STUDIOPALETTE_INCLUDED
 
 #include "tpalette.h"
-//#include "tfilepath.h"
+#include "toonz/tproject.h"
+// #include "tfilepath.h"
 
 #undef DVAPI
 #undef DVVAR
@@ -20,7 +21,9 @@ class TPalette;
 class TImage;
 class TColorStyle;
 
-class DVAPI StudioPalette {  // singleton; methods can throw exceptions
+class DVAPI StudioPalette
+    : public TProjectManager::Listener {  // singleton; methods can throw
+                                          // exceptions
 public:
   class Listener {
   public:
@@ -106,6 +109,13 @@ public:
   static void enable(bool enabled);
 
   void save(const TFilePath &path, TPalette *palette);
+
+  void removeEntry(const std::wstring paletteId);
+  void addEntry(const std::wstring paletteId, const TFilePath &path);
+
+  // TProjectManager::Listener
+  void onProjectSwitched() override;
+  void onProjectChanged() override;
 
 private:
   StudioPalette();

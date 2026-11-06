@@ -34,6 +34,8 @@
 #include "toonz/dpiscale.h"
 #include "toonz/palettecontroller.h"
 #include "toonz/tonionskinmaskhandle.h"
+#include "toonz/autoclose.h"
+#include "toutputproperties.h"
 
 // TnzCore includes
 #include "tvectorimage.h"
@@ -53,13 +55,8 @@
 
 namespace {
 
-// Global variables
-
 typedef std::pair<std::string, TTool::ToolTargetType> ToolKey;
-typedef std::map<ToolKey, TTool *> ToolTable;
-ToolTable *toolTable = 0;
-
-std::set<std::string> *toolNames = 0;
+typedef std::multimap<ToolKey, TTool*> ToolTable;
 
 //===================================================================
 
@@ -75,10 +72,13 @@ struct DummyTool final : public TTool {
   int getCursorId() const override {
     return ToolCursor::ForbiddenCursor;
   }  // Forbids everything
-
-  DummyTool() : TTool("T_Dummy") {}
-
+  DummyTool(): TTool("T_Dummy") {}
 } theDummyTool;
+
+// Local functions
+
+ToolTable& toolTable()
+  { static ToolTable t; return t; }
 
 //-------------------------------------------------------------------
 
@@ -102,8 +102,8 @@ TFrameId getNewFrameId(TXshSimpleLevel *sl, int row) {
   TFrameId fid(row + 1);
   if (sl->isFid(fid)) {
     fid = TFrameId(fid.getNumber(), 'a');
-    while (fid.getLetter() < 'z' && sl->isFid(fid))
-      fid = TFrameId(fid.getNumber(), fid.getLetter() + 1);
+    while (fid.getLetter().toUtf8().at(0) < 'z' && sl->isFid(fid))
+      fid = TFrameId(fid.getNumber(), fid.getLetter().toUtf8().at(0) + 1);
   }
   return fid;
 }
@@ -123,9 +123,15 @@ TFrameId getDesiredFId(TXshCellColumn *column, int r0, TXshSimpleLevel *sl,
     if (neighborFId.isEmptyFrame()) neighborFId = tmpFId;
     if (maxFId < tmpFId) maxFId = tmpFId;
   }
-  if (maxFId.getLetter() && maxFId.getLetter() < 'z' && maxFId == neighborFId)
-    return TFrameId(maxFId.getNumber(), maxFId.getLetter() + 1);
-  else
+
+  QByteArray suffix = maxFId.getLetter().toUtf8();
+  // increment letter
+  if (suffix.size() == 1 &&
+      ((suffix.at(0) >= 'A' && suffix.at(0) < 'Z') ||
+       (suffix.at(0) >= 'a' && suffix.at(0) < 'z')) &&
+      maxFId == neighborFId) {
+    return TFrameId(maxFId.getNumber(), suffix.at(0) + 1);
+  } else
     return TFrameId(maxFId.getNumber() + 1);
 }
 
@@ -172,36 +178,89 @@ TTool::TTool(std::string name)
 
 //-------------------------------------------------------------------
 
+unsigned int TTool::getToolHints() const
+  { return HintAssistants | HintAssistantsGuidelines | HintReplicators; }
+
+//-------------------------------------------------------------------
+
 TTool *TTool::getTool(std::string toolName, ToolTargetType targetType) {
-  if (!toolTable) return 0;
-  ToolTable::iterator it =
-      toolTable->find(std::make_pair(toolName, targetType));
-  if (it == toolTable->end()) return 0;
-  return it->second;
+  // if to this name and target type was assigned more then one tool
+  // then select tool which more compatible with default target type
+
+  int defTarget = 0;
+  switch(Preferences::instance()->getDefLevelType()) {
+  case PLI_XSHLEVEL:  defTarget = VectorImage; break;
+  case TZP_XSHLEVEL:  defTarget = ToonzImage;  break;
+  case OVL_XSHLEVEL:  defTarget = RasterImage; break;
+  case META_XSHLEVEL: defTarget = MetaImage;   break;
+  default:            defTarget = 0;           break;
+  }
+
+  bool isDefault = false;
+  int target = 0;
+  TTool *tool = 0;
+
+  std::pair<ToolTable::iterator, ToolTable::iterator> range =
+    toolTable().equal_range(std::make_pair(toolName, targetType));
+  for(ToolTable::iterator it = range.first; it != range.second; ++it) {
+    int t = it->second->getTargetType();
+    bool d = (bool)(t & defTarget);
+    if (!tool || (d && !isDefault) || (d == isDefault && t > target)) {
+      isDefault = d;
+      target = t;
+      tool = it->second;
+    }
+  }
+
+  return tool;
 }
 
 //-----------------------------------------------------------------------------
 
-void TTool::bind(int targetType) {
+void TTool::bind( int targetType,
+                  const std::string &alias1,
+                  const std::string &alias2,
+                  const std::string &alias3 )
+{
+  bind(targetType);
+  if ( !alias1.empty()
+    && alias1 != m_name )
+      bind(alias1, targetType);
+  if ( !alias2.empty()
+    && alias2 != m_name
+    && alias2 != alias1 )
+      bind(alias2, targetType);
+  if ( !alias3.empty()
+    && alias3 != m_name
+    && alias3 != alias1
+    && alias3 != alias2 )
+      bind(alias3, targetType);
+}
+
+//-----------------------------------------------------------------------------
+
+void TTool::bind(const std::string &name, int targetType) {
+  static std::set<std::string> registeredNames;
+
   m_targetType = targetType;
 
-  if (!toolTable) toolTable = new ToolTable();
+  ToolTargetType targets[] = {
+    EmptyTarget,
+    ToonzImage,
+    VectorImage,
+    RasterImage,
+    MeshImage,
+    MetaImage };
+  int targetsCount = sizeof(targets)/sizeof(*targets);
 
-  if (!toolNames) toolNames = new std::set<std::string>();
-
-  std::string name = getName();
-  if (toolNames->count(name) == 0) {
-    toolNames->insert(name);
+  if (!registeredNames.count(name)) {
+    registeredNames.insert(name);
 
     // Initialize with the dummy tool
-    toolTable->insert(
-        std::make_pair(std::make_pair(name, ToonzImage), &theDummyTool));
-    toolTable->insert(
-        std::make_pair(std::make_pair(name, VectorImage), &theDummyTool));
-    toolTable->insert(
-        std::make_pair(std::make_pair(name, RasterImage), &theDummyTool));
-    toolTable->insert(
-        std::make_pair(std::make_pair(name, MeshImage), &theDummyTool));
+    for(int i = 0; i < targetsCount; ++i)
+      if (!toolTable().count(std::make_pair(name, targets[i])))
+        toolTable().insert(
+          std::make_pair(std::make_pair(name, targets[i]), &theDummyTool));
 
     ToolSelector *toolSelector = new ToolSelector(name);
     CommandManager::instance()->setHandler(
@@ -209,14 +268,10 @@ void TTool::bind(int targetType) {
                           toolSelector, &ToolSelector::selectTool));
   }
 
-  if (targetType & ToonzImage)
-    (*toolTable)[std::make_pair(name, ToonzImage)] = this;
-  if (targetType & VectorImage)
-    (*toolTable)[std::make_pair(name, VectorImage)] = this;
-  if (targetType & RasterImage)
-    (*toolTable)[std::make_pair(name, RasterImage)] = this;
-  if (targetType & MeshImage)
-    (*toolTable)[std::make_pair(name, MeshImage)] = this;
+  for(int i = 0; i < targetsCount; ++i)
+    if (targetType & targets[i])
+      toolTable().insert(
+        std::make_pair(std::make_pair(name, targets[i]), this));
 }
 
 //-----------------------------------------------------------------------------
@@ -306,6 +361,11 @@ TImage *TTool::touchImage() {
   TFrameHandle *currentFrame    = m_application->getCurrentFrame();
   TXshLevelHandle *currentLevel = m_application->getCurrentLevel();
 
+  TFrameId tmplFId = m_application->getCurrentScene()
+                         ->getScene()
+                         ->getProperties()
+                         ->formatTemplateFIdForInput();
+
   if (currentFrame->isEditingLevel()) {
     // Editing level
 
@@ -324,6 +384,8 @@ TImage *TTool::touchImage() {
 
       // create a new drawing
       img = sl->createEmptyFrame();
+      // modify frameId to be with the same frame format as existing frames
+      sl->formatFId(fid, tmplFId);
       sl->setFrame(fid, img);
       currentLevel->notifyLevelChange();
       m_isFrameCreated = true;
@@ -384,6 +446,8 @@ TImage *TTool::touchImage() {
       // create the new drawing
       TImageP img      = sl->createEmptyFrame();
       m_isFrameCreated = true;
+      // modify frameId to be with the same frame format as existing frames
+      sl->formatFId(fid, tmplFId);
       // insert the drawing in the level
       sl->setFrame(fid, img);
       // update the cell
@@ -463,6 +527,9 @@ TImage *TTool::touchImage() {
       // create the new drawing
       TImageP img      = sl->createEmptyFrame();
       m_isFrameCreated = true;
+
+      // modify frameId to be with the same frame format as existing frames
+      sl->formatFId(fid, tmplFId);
       // insert the drawing in the level
       sl->setFrame(fid, img);
       // update the cell
@@ -502,7 +569,25 @@ TImage *TTool::touchImage() {
 
   // - - - - empty column case starts here - - - -
   // autoCreate is enabled: we must create a new level
-  int levelType    = pref->getDefLevelType();
+  
+  // select one from supported level types
+  // default level type is preferred
+  int levelType = pref->getDefLevelType();
+  int toolLevelType = UNKNOWN_XSHLEVEL;
+  bool found = false;
+
+  if ( m_targetType & MetaImage )
+    { toolLevelType = META_XSHLEVEL; found = found || toolLevelType == levelType; }
+  if ( m_targetType & RasterImage )
+    { toolLevelType = OVL_XSHLEVEL;  found = found || toolLevelType == levelType; }
+  if ( m_targetType & ToonzImage )
+    { toolLevelType = TZP_XSHLEVEL;  found = found || toolLevelType == levelType; }
+  if ( m_targetType & VectorImage )
+    { toolLevelType = PLI_XSHLEVEL;  found = found || toolLevelType == levelType; }
+
+  if (toolLevelType == UNKNOWN_XSHLEVEL) return 0;
+  if (!found) levelType = toolLevelType;
+
   TXshLevel *xl    = scene->createNewLevel(levelType);
   sl               = xl->getSimpleLevel();
   m_isLevelCreated = true;
@@ -511,6 +596,8 @@ TImage *TTool::touchImage() {
   TFrameId fid = animationSheetEnabled ? getNewFrameId(sl, row) : TFrameId(1);
   TImageP img  = sl->createEmptyFrame();
   m_isFrameCreated = true;
+  // modify frameId to be with the same frame format as existing frames
+  sl->formatFId(fid, tmplFId);
   sl->setFrame(fid, img);
   cell = TXshCell(sl, fid);
   xsh->setCell(row, col, cell);
@@ -524,8 +611,8 @@ TImage *TTool::touchImage() {
 //-----------------------------------------------------------------------------
 
 void TTool::updateToolsPropertiesTranslation() {
-  ToolTable::iterator tt, tEnd(toolTable->end());
-  for (tt = toolTable->begin(); tt != tEnd; ++tt)
+  ToolTable::iterator tt, tEnd(toolTable().end());
+  for (tt = toolTable().begin(); tt != tEnd; ++tt)
     tt->second->updateTranslation();
 }
 
@@ -581,7 +668,7 @@ int TTool::getColumnIndex() {
 
 //-----------------------------------------------------------------------------
 
-TStageObjectId TTool::getObjectId() {
+TStageObjectId TTool::getObjectId() const {
   if (!m_application) return TStageObjectId();
   return m_application->getCurrentObject()->getObjectId();
 }
@@ -596,8 +683,8 @@ TTool::Application *TTool::getApplication() {
 
 //-----------------------------------------------------------------------------
 
-/*! Notify change of current image: update icon and notify level change.
-    If current object is a spline commit spline chenged.
+/*! Notify change of current image: update icon & Closer and notify level change.
+    If current object is a spline commit spline changed.
     If current mode is EditingLevel touch current frame.
 */
 void TTool::notifyImageChanged() {
@@ -613,6 +700,8 @@ void TTool::notifyImageChanged() {
     if (!sl) return;
     TFrameId fid = m_application->getCurrentFrame()->getFid();
     sl->touchFrame(fid);
+    if (sl->getType() & TXshLevelType::RASTER_TYPE)
+      TAutocloser::invalidateSegmentCache(sl->getImageId(fid));
     // sl->setDirtyFlag(true);
     IconGenerator::instance()->invalidate(sl, fid);
     IconGenerator::instance()->invalidateSceneIcon();
@@ -635,6 +724,9 @@ void TTool::notifyImageChanged() {
       if (sl) {
         IconGenerator::instance()->invalidate(sl, cell.m_frameId);
         sl->touchFrame(cell.m_frameId);
+        if (sl->getType() & TXshLevelType::RASTER_TYPE)
+          TAutocloser::invalidateSegmentCache(
+              sl->getImageId(cell.m_frameId, 0));
         IconGenerator::instance()->invalidateSceneIcon();
       }
     }
@@ -644,22 +736,27 @@ void TTool::notifyImageChanged() {
 
 //-----------------------------------------------------------------------------
 
-/*! Notify change of image in \b fid: update icon and notify level change.
+/*! Notify change of image in \b fid: update Icon & Closer and notify level change.
  */
-void TTool::notifyImageChanged(const TFrameId &fid) {
+void TTool::notifyImageChanged(const TFrameId &fid,
+                               TXshSimpleLevel *sl) {
   onImageChanged();
 
   if (!m_application) return;
 
   m_application->getCurrentScene()->setDirtyFlag(true);
   if (m_application->getCurrentFrame()->isEditingLevel()) {
-    TXshLevel *xl = m_application->getCurrentLevel()->getLevel();
-    if (!xl) return;
-    TXshSimpleLevel *sl = xl->getSimpleLevel();
+    if (!sl) {
+      TXshLevel *xl = m_application->getCurrentLevel()->getLevel();
+      if (!xl) return;
+      sl = xl->getSimpleLevel();
+    }
     if (!sl) return;
     sl->setDirtyFlag(true);
     IconGenerator::instance()->invalidate(sl, fid);
     IconGenerator::instance()->invalidateSceneIcon();
+    if (sl->getType() & TXshLevelType::RASTER_TYPE)
+      TAutocloser::invalidateSegmentCache(sl->getImageId(fid, 0));
   } else {
     int row = m_application->getCurrentFrame()->getFrame();
     int col = m_application->getCurrentColumn()->getColumnIndex();
@@ -667,11 +764,16 @@ void TTool::notifyImageChanged(const TFrameId &fid) {
     TXsheet *xsh = m_application->getCurrentXsheet()->getXsheet();
     if (!xsh) return;
     TXshCell cell       = xsh->getCell(row, col);
-    TXshSimpleLevel *sl = cell.getSimpleLevel();
+    if(!sl) sl = cell.getSimpleLevel();
     if (sl) {
       IconGenerator::instance()->invalidate(sl, fid);
       IconGenerator::instance()->invalidateSceneIcon();
+      //In case of Rasterize Vector is on
+      if (sl->m_rasterizePli)
+        sl->touchFrame(fid);
       sl->setDirtyFlag(true);
+      if (sl->getType() & TXshLevelType::RASTER_TYPE)
+        TAutocloser::invalidateSegmentCache(sl->getImageId(fid, 0));
     }
   }
   m_application->getCurrentLevel()->notifyLevelChange();
@@ -697,8 +799,9 @@ TFrameId TTool::getCurrentFid() const {
 
 //-----------------------------------------------------------------------------
 
-TAffine TTool::getCurrentColumnMatrix() const {
-  return getColumnMatrix(m_application->getCurrentColumn()->getColumnIndex());
+TAffine TTool::getCurrentColumnMatrix(int frame) const {
+  return getColumnMatrix(m_application->getCurrentColumn()->getColumnIndex(),
+                         frame);
 }
 
 //-----------------------------------------------------------------------------
@@ -735,12 +838,12 @@ TAffine TTool::getCurrentObjectParentMatrix() const {
 
 //-----------------------------------------------------------------------------
 
-TAffine TTool::getColumnMatrix(int columnIndex) const {
+TAffine TTool::getColumnMatrix(int columnIndex, int frame) const {
   if (!m_application) return TAffine();
 
   TFrameHandle *fh = m_application->getCurrentFrame();
   if (fh->isEditingLevel()) return TAffine();
-  int frame    = fh->getFrame();
+  if (frame < 0) frame = fh->getFrame();
   TXsheet *xsh = m_application->getCurrentXsheet()->getXsheet();
   TStageObjectId columnObjId =
       (columnIndex >= 0)
@@ -825,7 +928,22 @@ QString TTool::updateEnabled() {
   return updateEnabled(rowIndex, columnIndex);
 }
 
+// See the overridden function EditTool::updateEnabled() for the Animate Tool
 QString TTool::updateEnabled(int rowIndex, int columnIndex) {
+  static const struct LevelTypeDesc {
+    int levelType;
+    ToolTargetType targetType;
+    const char *name;
+  } types[] = {
+    { PLI_XSHLEVEL  , VectorImage , QT_TR_NOOP("Toonz Vector Level") },
+    { TZP_XSHLEVEL  , ToonzImage  , QT_TR_NOOP("Toonz Raster Level") },
+    { OVL_XSHLEVEL  , RasterImage , QT_TR_NOOP("Raster Level")       },
+    { MESH_XSHLEVEL , MeshImage   , QT_TR_NOOP("Mesh Level")         },
+    { META_XSHLEVEL , MetaImage   , QT_TR_NOOP("Assistants Level")   },
+  };
+  static const int typesCnt = sizeof(types)/sizeof(*types);
+
+  
   // Disable every tool during playback
   if (m_application->getCurrentFrame()->isPlaying())
     return (enable(false), QString());
@@ -849,10 +967,12 @@ QString TTool::updateEnabled(int rowIndex, int columnIndex) {
   // find the nearest level before it
   if (levelType == NO_XSHLEVEL &&
       !m_application->getCurrentFrame()->isEditingLevel()) {
-    TXshCell cell = xsh->getCell(rowIndex, columnIndex);
-    xl            = cell.isEmpty() ? 0 : (TXshLevel *)(&cell.m_level);
-    sl            = cell.isEmpty() ? 0 : cell.getSimpleLevel();
-    levelType     = cell.isEmpty() ? NO_XSHLEVEL : cell.m_level->getType();
+    if (!column || (column && !column->getSoundColumn())) {
+      TXshCell cell = xsh->getCell(rowIndex, columnIndex);
+      xl            = cell.isEmpty() ? 0 : (TXshLevel *)(&cell.m_level);
+      sl            = cell.isEmpty() ? 0 : cell.getSimpleLevel();
+      levelType     = cell.isEmpty() ? NO_XSHLEVEL : cell.m_level->getType();
+    }
   }
 
   if (Preferences::instance()->isAutoCreateEnabled()) {
@@ -860,15 +980,17 @@ QString TTool::updateEnabled(int rowIndex, int columnIndex) {
     // find the nearest level before it
     if (levelType == NO_XSHLEVEL &&
         !m_application->getCurrentFrame()->isEditingLevel()) {
-      int r0, r1;
-      xsh->getCellRange(columnIndex, r0, r1);
-      for (int r = std::min(r1, rowIndex); r > r0; r--) {
-        TXshCell cell = xsh->getCell(r, columnIndex);
-        if (cell.isEmpty()) continue;
-        xl        = (TXshLevel *)(&cell.m_level);
-        sl        = cell.getSimpleLevel();
-        levelType = cell.m_level->getType();
-        break;
+      if (!column || (column && !column->getSoundColumn())) {
+        int r0, r1;
+        xsh->getCellRange(columnIndex, r0, r1);
+        for (int r = std::min(r1, rowIndex); r > r0; r--) {
+          TXshCell cell = xsh->getCell(r, columnIndex);
+          if (cell.isEmpty()) continue;
+          xl        = (TXshLevel *)(&cell.m_level);
+          sl        = cell.getSimpleLevel();
+          levelType = cell.m_level->getType();
+          break;
+        }
       }
     }
 
@@ -876,16 +998,15 @@ QString TTool::updateEnabled(int rowIndex, int columnIndex) {
     // a version of the same tool that does
     {
       TTool *tool = this;
-
-      if ((levelType == PLI_XSHLEVEL) && !(targetType & VectorImage))
-        tool = TTool::getTool(m_name, VectorImage);
-      else if ((levelType == TZP_XSHLEVEL) && !(targetType & ToonzImage))
-        tool = TTool::getTool(m_name, ToonzImage);
-      else if ((levelType == OVL_XSHLEVEL) && !(targetType & RasterImage))
-        tool = TTool::getTool(m_name, RasterImage);
-      else if ((levelType == MESH_XSHLEVEL) && !(targetType & MeshImage))
-        tool = TTool::getTool(m_name, MeshImage);
-
+      for(int i = 0; i < typesCnt; ++i) {
+        if ( levelType == types[i].levelType
+          && !(targetType & types[i].targetType) )
+        {
+          tool = getTool(m_name, types[i].targetType);
+          break;
+        }
+      }
+      
       if (tool && tool != this && tool->getTargetType() != TTool::NoTarget)
         return tool->updateEnabled();
     }
@@ -904,17 +1025,6 @@ QString TTool::updateEnabled(int rowIndex, int columnIndex) {
   if (!filmstrip && columnIndex < 0 && (targetType & TTool::EmptyTarget) &&
       (m_name == T_Type || m_name == T_Geometric || m_name == T_Brush))
     return (enable(false), QString());
-
-  // In case of Animate Tool
-  if (m_name == T_Edit && !filmstrip) {
-    // if an object other than column is selected, then enable the tool
-    // regardless of the current column state
-    if (!m_application->getCurrentObject()->getObjectId().isColumn())
-      return (enable(true), QString());
-    // if a column object is selected, switch the inspected column to it
-    column = xsh->getColumn(
-        m_application->getCurrentObject()->getObjectId().getIndex());
-  }
 
   bool isZeraryCol =
       column ? (column->getZeraryFxColumn() ? true : false) : false;
@@ -991,25 +1101,50 @@ QString TTool::updateEnabled(int rowIndex, int columnIndex) {
 
     // Check against level types
     {
-      if ((levelType == PLI_XSHLEVEL) && !(targetType & VectorImage))
-        return (
-            enable(false),
-            QObject::tr("The current tool cannot be used on a Vector Level."));
-
-      if ((levelType == TZP_XSHLEVEL) && !(targetType & ToonzImage))
-        return (
-            enable(false),
-            QObject::tr("The current tool cannot be used on a Toonz Level."));
-
-      if ((levelType == OVL_XSHLEVEL) && !(targetType & RasterImage))
-        return (
-            enable(false),
-            QObject::tr("The current tool cannot be used on a Raster Level."));
-
-      if ((levelType == MESH_XSHLEVEL) && !(targetType & MeshImage))
-        return (
-            enable(false),
-            QObject::tr("The current tool cannot be used on a Mesh Level."));
+      for(int i = 0; i < typesCnt; ++i) {
+        if (levelType != types[i].levelType) continue;
+        if (targetType & types[i].targetType) break;
+        
+        // if we are here, then the level is not being supported by the tool
+        // prepeare a detailed message about it
+        
+        QString message = QObject::tr("The current tool cannot be used on: ")
+                        + QObject::tr(types[i].name);
+        
+        QString allowedLevels;
+        
+        // if current tool is dummy, then this->getName() will not informative
+        // we need to know the requested tool name instead
+        if (TApplication *app = getApplication())
+        if (ToolHandle *th = app->getCurrentTool()) {
+          std::string name = th->getRequestedToolName().toStdString();
+          if (!name.empty()) {
+            for(int i = 0; i < typesCnt; ++i) {
+              TTool *tool = getTool(name, types[i].targetType);
+              if (tool && (tool->getTargetType() & types[i].targetType)) {
+                if (!allowedLevels.isEmpty())
+                  allowedLevels += QObject::tr(", ");
+                allowedLevels += QObject::tr(types[i].name);
+              }
+            }
+          }
+        }
+        
+        if (allowedLevels.isEmpty()) {
+          if ( Preferences::instance()->isAutoCreateEnabled()
+            && (targetType & EmptyTarget) )
+            message += "\n\n" + QObject::tr("You can use this tool on empty cell in Xsheet/Timeline.");
+        } else {
+          message += "\n\n" + QObject::tr("You can use this tool with: ")
+                  +  "\n" + allowedLevels;
+          if ( Preferences::instance()->isAutoCreateEnabled()
+            && (targetType & EmptyTarget) )
+            message += "\n\n" + QObject::tr("Or just choose an empty cell in Xsheet/Timeline.");
+        }
+        
+        enable(false);
+        return message;
+      }
     }
 
     // Check against impossibly traceable movements on the column
@@ -1039,11 +1174,7 @@ QString TTool::updateEnabled(int rowIndex, int columnIndex) {
                     "The current frame is locked: any editing is forbidden."));
 
       // Check level type write support
-      if (sl->getPath().getType() ==
-              "psd" ||  // We don't have the API to write psd files
-          sl->getPath().getType() == "gif" ||
-          sl->getPath().getType() == "mp4" ||
-          sl->getPath().getType() == "webm" ||
+      if (sl->getPath().isUneditable() ||
           sl->is16BitChannelLevel() ||  // Inherited by previous
                                         // implementation.
                                         // Could be fixed?
@@ -1067,15 +1198,15 @@ void TTool::setSelectedFrames(const std::set<TFrameId> &selectedFrames) {
 
 //-------------------------------------------------------------------------------------------------------------
 
-void TTool::Viewer::getGuidedFrameIdx(int *backIdx, int *frontIdx) {
+void TToolViewer::getGuidedFrameIdx(int *backIdx, int *frontIdx) {
   if (!Preferences::instance()->isGuidedDrawingEnabled()) return;
 
   OnionSkinMask osMask =
-      m_application->getCurrentOnionSkin()->getOnionSkinMask();
+      TTool::getApplication()->getCurrentOnionSkin()->getOnionSkinMask();
 
   if (!osMask.isEnabled() || osMask.isEmpty()) return;
 
-  TFrameHandle *currentFrame = getApplication()->getCurrentFrame();
+  TFrameHandle *currentFrame = TTool::getApplication()->getCurrentFrame();
 
   int cidx     = currentFrame->getFrameIndex();
   int mosBack  = 0;
@@ -1091,17 +1222,17 @@ void TTool::Viewer::getGuidedFrameIdx(int *backIdx, int *frontIdx) {
     for (int i = 0; i < mosCount; i++) {
       int cmos = osMask.getMos(i);
       if (cmos == 0) continue;  // skip current
-      if (cmos < 0 && (!mosBack || cmos > mosBack)) mosBack    = cmos;
+      if (cmos < 0 && (!mosBack || cmos > mosBack)) mosBack = cmos;
       if (cmos > 0 && (!mosFront || cmos < mosFront)) mosFront = cmos;
     }
-    if (mosBack) *backIdx   = mosBack + cidx;
+    if (mosBack) *backIdx = mosBack + cidx;
     if (mosFront) *frontIdx = mosFront + cidx;
 
     // Get closest fixed onionskin
     for (int i = 0; i < fosCount; i++) {
       int cfos = osMask.getFos(i);
       if (cfos == cidx) continue;  // skip current
-      if (cfos < cidx && (fosBack == -1 || cfos > fosBack)) fosBack    = cfos;
+      if (cfos < cidx && (fosBack == -1 || cfos > fosBack)) fosBack = cfos;
       if (cfos > cidx && (fosFront == -1 || cfos < fosFront)) fosFront = cfos;
     }
 
@@ -1119,17 +1250,17 @@ void TTool::Viewer::getGuidedFrameIdx(int *backIdx, int *frontIdx) {
     for (int i = 0; i < mosCount; i++) {
       int cmos = osMask.getMos(i);
       if (cmos == 0) continue;  // skip current
-      if (cmos < 0 && (!mosBack || cmos < mosBack)) mosBack    = cmos;
+      if (cmos < 0 && (!mosBack || cmos < mosBack)) mosBack = cmos;
       if (cmos > 0 && (!mosFront || cmos > mosFront)) mosFront = cmos;
     }
-    if (mosBack) *backIdx   = mosBack + cidx;
+    if (mosBack) *backIdx = mosBack + cidx;
     if (mosFront) *frontIdx = mosFront + cidx;
 
     // Get fixed onionskin
     for (int i = 0; i < fosCount; i++) {
       int cfos = osMask.getFos(i);
       if (cfos == cidx) continue;  // skip current
-      if (cfos < cidx && (fosBack == -1 || cfos < fosBack)) fosBack    = cfos;
+      if (cfos < cidx && (fosBack == -1 || cfos < fosBack)) fosBack = cfos;
       if (cfos > cidx && (fosFront == -1 || cfos > fosFront)) fosFront = cfos;
     }
 
@@ -1146,7 +1277,7 @@ void TTool::Viewer::getGuidedFrameIdx(int *backIdx, int *frontIdx) {
 
 //-------------------------------------------------------------------------------------------------------------
 
-void TTool::Viewer::doPickGuideStroke(const TPointD &pos) {
+void TToolViewer::doPickGuideStroke(const TPointD &pos) {
   int pickerMode = getGuidedStrokePickerMode();
 
   if (!pickerMode) return;
@@ -1165,16 +1296,16 @@ void TTool::Viewer::doPickGuideStroke(const TPointD &pos) {
     os = osFront;
 
   TFrameId fid;
-  TFrameHandle *currentFrame = getApplication()->getCurrentFrame();
+  TFrameHandle *currentFrame = TTool::getApplication()->getCurrentFrame();
   TXshSimpleLevel *sl =
-      getApplication()->getCurrentLevel()->getLevel()->getSimpleLevel();
+      TTool::getApplication()->getCurrentLevel()->getLevel()->getSimpleLevel();
   if (!sl) return;
 
   if (currentFrame->isEditingScene()) {
-    TXsheet *xsh = getApplication()->getCurrentXsheet()->getXsheet();
-    int col      = getApplication()->getCurrentColumn()->getColumnIndex();
+    TXsheet *xsh = TTool::getApplication()->getCurrentXsheet()->getXsheet();
+    int col      = TTool::getApplication()->getCurrentColumn()->getColumnIndex();
     if (xsh && col >= 0) {
-      TXshCell cell            = xsh->getCell(os, col);
+      TXshCell cell = xsh->getCell(os, col);
       if (!cell.isEmpty()) fid = cell.getFrameId();
     }
   } else
@@ -1257,9 +1388,9 @@ void TTool::tweenSelectedGuideStrokes() {
     TXsheet *xsh = m_application->getCurrentXsheet()->getXsheet();
     int col      = m_application->getCurrentColumn()->getColumnIndex();
     if (xsh && col >= 0) {
-      TXshCell cell             = xsh->getCell(backIdx, col);
+      TXshCell cell = xsh->getCell(backIdx, col);
       if (!cell.isEmpty()) bFid = cell.getFrameId();
-      cell                      = xsh->getCell(frontIdx, col);
+      cell = xsh->getCell(frontIdx, col);
       if (!cell.isEmpty()) fFid = cell.getFrameId();
     }
   } else {
@@ -1297,6 +1428,7 @@ void TTool::tweenSelectedGuideStrokes() {
   if (vbTool) {
     m_isFrameCreated = false;
     m_isLevelCreated = false;
+    vbTool->touchImage();
     vbTool->setViewer(m_viewer);
     vbTool->doFrameRangeStrokes(
         bFid, bStroke, fFid, fStroke,
@@ -1347,7 +1479,7 @@ void TTool::tweenGuideStrokeToSelected() {
       TXsheet *xsh = m_application->getCurrentXsheet()->getXsheet();
       int col      = m_application->getCurrentColumn()->getColumnIndex();
       if (xsh && col >= 0) {
-        TXshCell cell             = xsh->getCell(backIdx, col);
+        TXshCell cell = xsh->getCell(backIdx, col);
         if (!cell.isEmpty()) bFid = cell.getFrameId();
       }
     } else
@@ -1361,7 +1493,7 @@ void TTool::tweenGuideStrokeToSelected() {
       TXsheet *xsh = m_application->getCurrentXsheet()->getXsheet();
       int col      = m_application->getCurrentColumn()->getColumnIndex();
       if (xsh && col >= 0) {
-        TXshCell cell             = xsh->getCell(frontIdx, col);
+        TXshCell cell = xsh->getCell(frontIdx, col);
         if (!cell.isEmpty()) fFid = cell.getFrameId();
       }
     } else
@@ -1398,6 +1530,7 @@ void TTool::tweenGuideStrokeToSelected() {
   if (vbTool) {
     m_isFrameCreated = false;
     m_isLevelCreated = false;
+    vbTool->touchImage();
     vbTool->setViewer(m_viewer);
     TUndoManager::manager()->beginBlock();
     if (bStroke)
@@ -1455,7 +1588,7 @@ void TTool::flipGuideStrokeDirection(int mode) {
     TXsheet *xsh = getApplication()->getCurrentXsheet()->getXsheet();
     int col      = getApplication()->getCurrentColumn()->getColumnIndex();
     if (xsh && col >= 0) {
-      TXshCell cell            = xsh->getCell(os, col);
+      TXshCell cell = xsh->getCell(os, col);
       if (!cell.isEmpty()) fid = cell.getFrameId();
     }
   } else

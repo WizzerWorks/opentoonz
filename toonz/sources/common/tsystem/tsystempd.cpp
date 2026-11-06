@@ -1,30 +1,36 @@
+// Enable Unicode on Windows
 #ifdef _WIN32
 #ifndef UNICODE
 #define UNICODE
 #endif
 #endif
 
+// Standard C++ headers
 #include <memory>
+#include <set>
 
-#include "tsystem.h"
-//#include "tunicode.h"
-#include "tfilepath_io.h"
-#include "tconvert.h"
-
+// Standard C headers
 #include <time.h>
-#include <sys/timeb.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
-#include <set>
-#include <tenv.h>
 
+// Project-specific headers
+#include "tsystem.h"
+//#include "tunicode.h"  // Uncomment if needed
+#include "tfilepath_io.h"
+#include "tconvert.h"
+#include "tenv.h"
+
+// Undefine PLATFORM to avoid conflicts
 #undef PLATFORM
 
+// Disable specific warnings on MSVC
 #ifdef _MSC_VER
 #pragma warning(disable : 4996)
 #endif
 
+// Platform-specific headers and definitions
 #ifdef _WIN32
 #define PLATFORM WIN32
 #include <process.h>
@@ -33,11 +39,11 @@
 #include <stdlib.h>
 #include <direct.h>
 #include <shellapi.h>
-// gmt: sulla mia macchina cosi' non compila!!!
-// #include "winsock2.h"
-// #include "lmcons.h"
 #include <sys/utime.h>
 #include <lm.h>
+// gmt: On my machine, this doesn't compile!!!
+// #include "winsock2.h"
+// #include "lmcons.h"
 #endif
 
 #ifdef LINUX
@@ -46,9 +52,7 @@
 #include <utime.h>
 #include <sys/param.h>
 #include <unistd.h>
-#include <sys/types.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <dirent.h>
 #include <sys/dir.h>
 #include <sys/sysinfo.h>
@@ -57,31 +61,52 @@
 #include <pwd.h>
 #include <mntent.h>
 #include <dlfcn.h>
-#include <utime.h>
 #include <sys/time.h>
 
+// Qt headers for Linux
+#include <QDir>
+#include <QFileInfo>
+#include <QStorageInfo>
+#include <QTextStream>
+#include <QUrl>
 #endif
 
-#if defined(MACOSX)
+#ifdef FREEBSD
+#define PLATFORM FREEBSD
+#include <sys/param.h>
+#include <sys/sched.h>
+#include <sys/sysctl.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/proc.h>
+#include <sys/vmmeter.h>
+#include <vm/vm_param.h>
+#include <grp.h>
+#include <utime.h>
+#include <stdio.h>
+#include <dirent.h>
+#include <sys/mount.h>
+#include <pwd.h>
+#include <dlfcn.h>
+#define pagetok(__nb) ((__nb) * (getpagesize()))
+#endif
+
+#ifdef MACOSX
 #define PLATFORM MACOSX
 #include <grp.h>
 #include <utime.h>
 #include <sys/param.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/timeb.h>  // for ftime
 #include <stdio.h>
-#include <unistd.h>
 #include <dirent.h>
 #include <sys/dir.h>
-#include <sys/param.h>  // for getfsstat
 #include <sys/ucred.h>
 #include <sys/mount.h>
 #include <pwd.h>
 #include <dlfcn.h>
 
+// macOS-specific headers
 #include "Carbon/Carbon.h"
-
 #endif
 
 #ifdef __sgi
@@ -95,9 +120,21 @@
 #include <sys/statfs.h>
 #include <pwd.h>
 #include <mntent.h>
-
 #include <dlfcn.h>
+#endif
 
+#ifdef HAIKU
+#define PLATFORM HAIKU
+#include <grp.h>
+#include <utime.h>
+#include <sys/param.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <stdio.h>
+#include <dirent.h>
+#include <pwd.h>
+#include <dlfcn.h>
+#include <sys/time.h>
 #endif
 
 #ifndef PLATFORM
@@ -173,7 +210,7 @@ bool TSystem::memoryShortage() {
          memStatus.ullTotalVirtual *
              0.6;  // if total memory used by this process(WorkingSetSize) is
 // half of max allocatable memory
-//(ullTotalVirtual: on 32bits machines, tipically it's 2GB)
+//(ullTotalVirtual: on 32bits machines, typically it's 2GB)
 // It's better "to stay large"; for values >0.6 this function may
 // returns that there is memory, but for fragmentation the malloc fails the
 // same!
@@ -188,6 +225,16 @@ bool TSystem::memoryShortage() {
   // to be done...
   return false;
 
+#elif defined(FREEBSD)
+
+  // to be done...
+  return false;
+
+#elif defined(HAIKU)
+
+  // to be done...
+  return false;
+
 #else
 
   @ @ @ERROR : PLATFORM NOT SUPPORTED
@@ -197,7 +244,7 @@ bool TSystem::memoryShortage() {
 
 //------------------------------------------------------------
 
-TINT64 TSystem::getFreeMemorySize(bool onlyPhisicalMemory) {
+TINT64 TSystem::getFreeMemorySize(bool onlyPhysicalMemory) {
   TINT64 totalFree = 0;
 
 #ifdef _WIN32
@@ -206,7 +253,7 @@ TINT64 TSystem::getFreeMemorySize(bool onlyPhisicalMemory) {
   buff.dwLength = sizeof(MEMORYSTATUSEX);
   GlobalMemoryStatusEx(&buff);
 
-  if (onlyPhisicalMemory)
+  if (onlyPhysicalMemory)
     return buff.ullAvailPhys >> 10;
   else
     return buff.ullAvailPageFile >> 10;
@@ -215,7 +262,7 @@ TINT64 TSystem::getFreeMemorySize(bool onlyPhisicalMemory) {
 
   // check for virtual memory
   int numberOfResources =
-      swapctl(SC_GETNSWP, 0); /* get number of swapping resources configued */
+      swapctl(SC_GETNSWP, 0); /* get number of swapping resources configured */
 
   if (numberOfResources == 0) return 0;
 
@@ -234,14 +281,14 @@ TINT64 TSystem::getFreeMemorySize(bool onlyPhisicalMemory) {
   }
 
   free(table);
-  totalFree = virtualFree << 4 + physicalFree;
+  totalFree = (virtualFree << 4) + physicalFree;
 
 #elif defined(LINUX)
 
   struct sysinfo *sysInfo = (struct sysinfo *)calloc(1, sizeof(struct sysinfo));
 
   if (!sysinfo(sysInfo)) {
-    if (onlyPhisicalMemory)
+    if (onlyPhysicalMemory)
       totalFree = sysInfo->freeram;
     else
       totalFree = sysInfo->freeram + sysInfo->freeswap;
@@ -250,7 +297,37 @@ TINT64 TSystem::getFreeMemorySize(bool onlyPhisicalMemory) {
   }
   free(sysInfo);
 
+#elif defined(FREEBSD)
+
+  TINT64 ret = 0;
+  size_t size;
+#ifdef __OpenBSD__
+  int mib[] = {CTL_VM, VM_UVMEXP};
+  struct uvmexp  uvmexp;
+#else
+  int mib[] = {CTL_VM, VM_TOTAL};
+  struct vmtotal vmtotal;
+#endif
+
+#ifdef __OpenBSD__
+  size = sizeof(uvmexp);
+  if (sysctl(mib, 2, &uvmexp, &size, NULL, 0) < 0)
+    return (ret);
+  ret = pagetok((guint64)uvmexp.free);
+#else
+  size = sizeof(vmtotal);
+  if (sysctl(mib, 2, &vmtotal, &size, NULL, 0) < 0)
+    return (ret);
+  ret = pagetok(vmtotal.t_free);
+#endif
+  return ret;
+
 #elif defined(MACOSX)
+
+  // to be done...
+  totalFree = 512 * 1024;
+
+#elif defined(HAIKU)
 
   // to be done...
   totalFree = 512 * 1024;
@@ -283,6 +360,9 @@ TINT64 TSystem::getDiskSize(const TFilePath &diskName) {
     return 0;
   }
 #ifndef _WIN32
+#ifdef HAIKU
+	size = 0;
+#else
   struct statfs buf;
 #ifdef __sgi
   statfs(::to_string(diskName).c_str(), &buf, sizeof(struct statfs), 0);
@@ -290,6 +370,7 @@ TINT64 TSystem::getDiskSize(const TFilePath &diskName) {
   statfs(::to_string(diskName).c_str(), &buf);
 #endif
   size = (TINT64)((buf.f_blocks * buf.f_bsize) >> 10);
+#endif
 #else
   DWORD sectorsPerCluster;     // sectors per cluster
   DWORD bytesPerSector;        // bytes per sector
@@ -320,6 +401,9 @@ TINT64 TSystem::getFreeDiskSize(const TFilePath &diskName) {
     return 0;
   }
 #ifndef _WIN32
+#ifdef HAIKU
+	size = 0;
+#else
   struct statfs buf;
 #ifdef __sgi
   statfs(diskName.getWideString().c_str(), &buf, sizeof(struct statfs), 0);
@@ -327,6 +411,7 @@ TINT64 TSystem::getFreeDiskSize(const TFilePath &diskName) {
   statfs(::to_string(diskName).c_str(), &buf);
 #endif
   size = (TINT64)(buf.f_bfree * buf.f_bsize) >> 10;
+#endif
 #else
   DWORD sectorsPerCluster;     // sectors per cluster
   DWORD bytesPerSector;        // bytes per sector
@@ -350,12 +435,12 @@ TINT64 TSystem::getFreeDiskSize(const TFilePath &diskName) {
 
 //------------------------------------------------------------
 
-TINT64 TSystem::getMemorySize(bool onlyPhisicalMemory) {
+TINT64 TSystem::getMemorySize(bool onlyPhysicalMemory) {
 #ifdef _WIN32
 
   MEMORYSTATUS buff;
   GlobalMemoryStatus(&buff);
-  if (onlyPhisicalMemory)
+  if (onlyPhysicalMemory)
     return buff.dwTotalPhys >> 10;
   else
     return buff.dwTotalPageFile >> 10;
@@ -381,7 +466,38 @@ TINT64 TSystem::getMemorySize(bool onlyPhisicalMemory) {
   free(sysInfo);
   return ret;
 
+#elif defined(FREEBSD)
+
+  TINT64 ret = 0;
+  size_t size;
+#ifdef __OpenBSD__
+  int mib[] = {CTL_VM, VM_UVMEXP};
+  struct uvmexp  uvmexp;
+#else
+  int mib[] = {CTL_VM, VM_TOTAL};
+  struct vmtotal vmtotal;
+#endif
+
+#ifdef __OpenBSD__
+  size = sizeof(uvmexp);
+  if (sysctl(mib, 2, &uvmexp, &size, NULL, 0) < 0)
+    return (ret);
+  ret = pagetok((guint64)uvmexp.npages);
+#else
+  size = sizeof(vmtotal);
+  if (sysctl(mib, 2, &vmtotal, &size, NULL, 0) < 0)
+    return (ret);
+  /* cheat : rm = tot used, add free to get total */
+  ret = pagetok(vmtotal.t_rm + vmtotal.t_free);
+#endif
+  return ret;
+
 #elif defined(MACOSX)
+
+  // to be done...
+  return 512 * 1024;
+
+#elif defined(HAIKU)
 
   // to be done...
   return 512 * 1024;
@@ -452,7 +568,55 @@ void TSystem::moveFileToRecycleBin(const TFilePath &fp) {
     } catch (...) {
     }
   }
+#elif defined(LINUX)
+  //
+  // From https://stackoverflow.com/questions/17964439/move-files-to-trash-recycle-bin-in-qt
+  //
+  QString fileToRecycle = fp.getQString();
+  QFileInfo FileName(fileToRecycle);
 
+  QDateTime currentTime(QDateTime::currentDateTime());    // get system time
+
+  // check if the file is on the local drive
+  const QStorageInfo fileStorageInfo(fileToRecycle);
+  const QStorageInfo homeStorageInfo(QDir::homePath());
+  const bool isOnHomeDrive = fileStorageInfo == homeStorageInfo;
+
+  QString trashFilePath = QDir::homePath() + "/.local/share/Trash/files/";    // this folder contains deleted files
+  QString trashInfoPath = QDir::homePath() + "/.local/share/Trash/info/";     // this folder contains information about the deleted files
+
+  // different paths are used for external drives
+  if (!isOnHomeDrive) {
+    //trashFilePath = fileStorageInfo.rootPath() + "/.Trash-1000/files/";
+    //trashInfoPath = fileStorageInfo.rootPath() + "/.Trash-1000/info/";
+
+    // TODO: Implement this... The standard is /.Trash-<UID>/...
+    outputDebug("Deleting files on external drives in Linux is not implemented yet.");
+    return;
+  }
+
+  // check paths exist
+  if( !QDir(trashFilePath).exists() || !QDir(trashInfoPath).exists() ) {
+    outputDebug("Could not find the right paths to send the file to the recycle bin.");
+    return;
+  }
+
+  // create file for the "Trash/info" folder
+  QFile infoFile(trashInfoPath + FileName.completeBaseName() + "." + FileName.completeSuffix() + ".trashinfo");     // filename+extension+.trashinfo
+
+  infoFile.open(QIODevice::ReadWrite);
+
+  QTextStream stream(&infoFile);
+
+  stream << "[Trash Info]" << Qt::endl;
+  stream << "Path=" + QString(QUrl::toPercentEncoding(FileName.absoluteFilePath(), "~_-./")) << Qt::endl;     // convert path to percentage encoded string
+  stream << "DeletionDate=" + currentTime.toString("yyyy-MM-dd") + "T" + currentTime.toString("hh:mm:ss") << Qt::endl;      // get date and time in format YYYY-MM-DDThh:mm:ss
+
+  infoFile.close();
+
+  // move the original file to the "Trash/files" folder
+  QDir file;
+  file.rename(FileName.absoluteFilePath(), trashFilePath+FileName.completeBaseName() + "." + FileName.completeSuffix());  // rename(original path, trash path)
 #else
   assert(!"Not implemented yet");
 #endif

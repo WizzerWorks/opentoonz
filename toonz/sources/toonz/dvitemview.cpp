@@ -98,7 +98,7 @@ void getFileFids(TFilePath path, std::vector<TFrameId> &fids) {
 
 QString hyphenText(const QString &srcText, const QFont &font, int width) {
   QFontMetrics metrics(font);
-  int srcWidth = metrics.width(srcText);
+  int srcWidth = metrics.horizontalAdvance(srcText);
   if (srcWidth < width) return srcText;
 
   int count = double(srcWidth) / double(width);
@@ -110,8 +110,8 @@ QString hyphenText(const QString &srcText, const QFont &font, int width) {
   int hyphenCount = 1;
   for (i = 0; i < srcText.size(); i++) {
     QChar c       = srcText.at(i);
-    int cWidth    = metrics.width(c);
-    int textWidth = metrics.width(text) + cWidth;
+    int cWidth    = metrics.horizontalAdvance(c);
+    int textWidth = metrics.horizontalAdvance(text) + cWidth;
     if ((c.isSpace() && textWidth > (hyphenCount - 1) * width + diff) ||
         (textWidth > hyphenCount * width)) {
       ++hyphenCount;
@@ -177,10 +177,10 @@ QString DvItemListModel::getItemDataAsString(int index, DataType dataType) {
   case Icon:
     return "";
   case CreationDate:
-    return value.toDateTime().toString(Qt::SystemLocaleShortDate);
+    return QLocale::system().toString(value.toDateTime());
     break;
   case ModifiedDate:
-    return value.toDateTime().toString(Qt::SystemLocaleShortDate);
+    return QLocale::system().toString(value.toDateTime());
     break;
   case FileSize: {
     if (getItemData(index, IsFolder).toBool()) return QString("");
@@ -307,6 +307,9 @@ int DvItemListModel::compareData(DataType dataType, int firstIndex,
 
   case VersionControlStatus:
     return firstValue.toInt() < secondValue.toInt();
+
+  default:
+    break;
   }
 
   return 0;
@@ -350,8 +353,11 @@ void DvItemSelection::selectNone() {
 
 void DvItemSelection::selectAll() {
   m_selectedIndices.clear();
-  int i = 0;
-  for (i = 0; i < m_model->getItemCount(); i++) m_selectedIndices.insert(i);
+
+  // exclude the parent folder
+  int i =
+      m_model->getItemData(0, DvItemListModel::Name).toString() == ".." ? 1 : 0;
+  for (; i < m_model->getItemCount(); i++) m_selectedIndices.insert(i);
   emit itemSelectionChanged();
 }
 
@@ -409,7 +415,7 @@ void ItemViewPlayWidget::PlayManager::setInfo(DvItemListModel *model,
   m_pixmap =
       model->getItemData(index, DvItemListModel::Thumbnail).value<QPixmap>();
   if (!m_pixmap.isNull()) m_iconSize = m_pixmap.size();
-  m_path                             = path;
+  m_path = path;
   getFileFids(m_path, m_fids);
 }
 
@@ -818,6 +824,8 @@ void DvItemViewerPanel::setVisibility(DvItemListModel::DataType dataType,
   case DvItemListModel::VersionControlStatus:
     BrowserVersionControlStatusisVisible = value;
     break;
+  default:
+    break;
   }
 }
 
@@ -1023,7 +1031,7 @@ void DvItemViewerPanel::paintThumbnailItem(QPainter &p, int index) {
   if (!thumbnail.isNull()) p.drawPixmap(iconRect.topLeft(), thumbnail);
   //}
   else {
-    static QPixmap missingPixmap = QPixmap(":Resources/missing.svg");
+    static QPixmap missingPixmap(getIconPath("missing_icon"));
     QRect pixmapRect(rect.left() + (rect.width() - missingPixmap.width()) / 2,
                      rect.top(), missingPixmap.width(), missingPixmap.height());
     p.drawPixmap(pixmapRect.topLeft(), missingPixmap);
@@ -1136,8 +1144,9 @@ void DvItemViewerPanel::paintTableItem(QPainter &p, int index) {
   // Version Control status pixmap
   QPixmap statusPixmap = getStatusPixmap(status);
   if (!statusPixmap.isNull()) {
-    p.drawPixmap(x + 1, y + 1, statusPixmap.scaled(15, 15, Qt::KeepAspectRatio,
-                                                   Qt::SmoothTransformation));
+    p.drawPixmap(x + 1, y + 1,
+                 statusPixmap.scaled(15, 15, Qt::KeepAspectRatio,
+                                     Qt::SmoothTransformation));
     x += 15;
   }
 
@@ -1175,11 +1184,8 @@ void DvItemViewerPanel::mousePressEvent(QMouseEvent *event) {
   updateViewParameters(width());
   int index       = pos2index(event->pos());
   bool isSelected = m_selection->isSelected(index);
+  m_currentIndex  = index;
   if (event->button() == Qt::RightButton) {
-    // when a folder item is right-clicked, do nothing
-    if (getModel()->getItemData(index, DvItemListModel::IsFolder).toBool())
-      return;
-
     if (!isSelected) {
       m_selection->selectNone();
       if (!m_isPlayDelegateDisable) m_itemViewPlayDelegate->resetPlayWidget();
@@ -1188,7 +1194,7 @@ void DvItemViewerPanel::mousePressEvent(QMouseEvent *event) {
       update();
     }
     return;
-  } else if (event->button() == Qt::MidButton) {
+  } else if (event->button() == Qt::MiddleButton) {
     m_lastMousePos = event->globalPos();
     event->accept();
     return;
@@ -1227,7 +1233,7 @@ void DvItemViewerPanel::mousePressEvent(QMouseEvent *event) {
         int a = index, b = index;
         while (a > 0 && !m_selection->isSelected(a - 1)) a--;
         if (a == 0) a = index;
-        int k         = getItemCount();
+        int k = getItemCount();
         while (b < k && !m_selection->isSelected(b + 1)) b++;
         if (b == k) b = index;
         int i;
@@ -1243,8 +1249,7 @@ void DvItemViewerPanel::mousePressEvent(QMouseEvent *event) {
     }
   }
   if (m_globalSelectionEnabled) m_selection->makeCurrent();
-  m_currentIndex = index;
-  if (m_viewer) m_viewer->notifyClick(index);
+  // if (m_viewer ) m_viewer->notifyClick(index);
   m_startDragPosition = event->pos();
   update();
 }
@@ -1252,7 +1257,7 @@ void DvItemViewerPanel::mousePressEvent(QMouseEvent *event) {
 //-----------------------------------------------------------------------------
 
 void DvItemViewerPanel::mouseMoveEvent(QMouseEvent *event) {
-  if (event->buttons() == Qt::MidButton) {
+  if (event->buttons() == Qt::MiddleButton) {
     QPoint d       = event->globalPos() - m_lastMousePos;
     m_lastMousePos = event->globalPos();
     if (m_viewer) {
@@ -1294,7 +1299,10 @@ void DvItemViewerPanel::mouseMoveEvent(QMouseEvent *event) {
 
 //-----------------------------------------------------------------------------
 
-void DvItemViewerPanel::mouseReleaseEvent(QMouseEvent *) {}
+void DvItemViewerPanel::mouseReleaseEvent(QMouseEvent *event) {
+  if (m_viewer)
+    m_viewer->notifyClick(m_currentIndex, event->button() == Qt::LeftButton);
+}
 
 //-----------------------------------------------------------------------------
 
@@ -1374,7 +1382,7 @@ bool DvItemViewerPanel::event(QEvent *event) {
 //-----------------------------------------------------------------------------
 
 void DvItemViewerPanel::setListView() {
-  m_viewType                                                 = ListView;
+  m_viewType = ListView;
   m_viewer->m_windowType == DvItemViewer::Cast ? CastView    = ListView
                                                : BrowserView = ListView;
   emit viewTypeChange(m_viewType);
@@ -1385,7 +1393,7 @@ void DvItemViewerPanel::setListView() {
 //-----------------------------------------------------------------------------
 
 void DvItemViewerPanel::setTableView() {
-  m_viewType                                                 = TableView;
+  m_viewType = TableView;
   m_viewer->m_windowType == DvItemViewer::Cast ? CastView    = TableView
                                                : BrowserView = TableView;
   emit viewTypeChange(m_viewType);
@@ -1396,7 +1404,7 @@ void DvItemViewerPanel::setTableView() {
 //-----------------------------------------------------------------------------
 
 void DvItemViewerPanel::setThumbnailsView() {
-  m_viewType                                                 = ThumbnailView;
+  m_viewType = ThumbnailView;
   m_viewer->m_windowType == DvItemViewer::Cast ? CastView    = ThumbnailView
                                                : BrowserView = ThumbnailView;
   emit viewTypeChange(m_viewType);
@@ -1407,8 +1415,7 @@ void DvItemViewerPanel::setThumbnailsView() {
 //-----------------------------------------------------------------------------
 
 void DvItemViewerPanel::exportFileList() {
-  TProject *project =
-      TProjectManager::instance()->getCurrentProject().getPointer();
+  auto project      = TProjectManager::instance()->getCurrentProject();
   ToonzScene *scene = TApp::instance()->getCurrentScene()->getScene();
   TFilePath fp;
   if (scene) fp = scene->decodeFilePath(project->getFolder(TProject::Extras));
@@ -1428,6 +1435,7 @@ void DvItemViewerPanel::exportFileList() {
   if (data.open(QFile::WriteOnly)) {
     QTextStream out(&data);
 
+    out << "Name,Frames,Path\n";
     for (int index = 0; index < getItemCount(); index++) {
       if (getModel()->getItemData(index, DvItemListModel::IsFolder).toBool())
         continue;
@@ -1436,13 +1444,16 @@ void DvItemViewerPanel::exportFileList() {
         DvItemListModel::DataType dataType = m_columns[i].first;
 
         if (dataType != DvItemListModel::Name &&
-            dataType != DvItemListModel::FrameCount)
+            dataType != DvItemListModel::FrameCount &&
+            dataType != DvItemListModel::FullPath)
           continue;
 
         QString value = getModel()->getItemDataAsString(index, dataType);
 
         out << value;
-        if (dataType == DvItemListModel::Name) out << ",";
+        if (dataType == DvItemListModel::Name ||
+            dataType == DvItemListModel::FrameCount)
+          out << ",";
       }
       out << ('\n');
     }
@@ -1484,9 +1495,9 @@ void DvItemViewer::setModel(DvItemListModel *model) {
 //-----------------------------------------------------------------------------
 
 void DvItemViewer::updateContentSize() {
-  int w              = m_panel->getContentMinimumWidth();
+  int w = m_panel->getContentMinimumWidth();
   if (w < width()) w = width();
-  int h              = m_panel->getContentHeight(w) +
+  int h = m_panel->getContentHeight(w) +
           20;  // 20 is margin for showing the empty area
   if (h < height()) h = height();
   m_panel->resize(w, h);
@@ -1750,14 +1761,14 @@ void DvItemViewerTitleBar::paintEvent(QPaintEvent *) {
   QRect rect(0, 0, width(), height());
 
   QBrush nb    = QBrush(Qt::NoBrush);
-  QPalette pal = QPalette(nb, nb, QBrush(QColor(255, 255, 255, 30)),
-                          QBrush(QColor(0, 0, 0, 110)),
+  QPalette pal = QPalette(nb, nb, QBrush(QColor(getColBorderColor())),
+                          QBrush(QColor(getColBorderColor())),
                           QBrush(QColor(Qt::gray)), nb, nb, nb, nb);
 
-  p.fillRect(rect, QColor(0, 0, 0, 90));  // bg color
+  p.fillRect(rect, getColColor());
 
-  p.setPen(QColor(200, 200, 200, 255));  // text color
-  int h  = 0;                            // fontMetrics().descent();
+  p.setPen(getColTextColor());
+  int h  = 0;  // fontMetrics().descent();
   int y  = rect.top();
   int ly = rect.height();
   int lx = rect.width();
@@ -1773,11 +1784,11 @@ void DvItemViewerTitleBar::paintEvent(QPaintEvent *) {
     // paint background
     QColor bgColor;
     if (dataType == model->getCurrentOrderType())
-      bgColor = QColor(255, 255, 255, 30);
+      bgColor = QColor(getColSortedColor());
     else
       bgColor = QColor(0, 0, 0, 0);
 
-    QRect typeRect(x, y, columnLx, ly);
+    QRect typeRect(x - 1, y - 1, columnLx + 1, ly + 1);
     QBrush brush(bgColor);
     qDrawShadePanel(&p, typeRect, pal, false, 1, &brush);
 
@@ -1788,7 +1799,7 @@ void DvItemViewerTitleBar::paintEvent(QPaintEvent *) {
         arrowIcon = createQIconPNG("arrow_up");
       else
         arrowIcon = createQIconPNG("arrow_down");
-      p.drawPixmap(QRect(x + columnLx - 10, y + 6, 8, 8),
+      p.drawPixmap(QRect(x + columnLx - 11, y + 6, 8, 8),
                    arrowIcon.pixmap(8, 8));
     }
 
@@ -1812,20 +1823,11 @@ DvItemViewerButtonBar::DvItemViewerButtonBar(DvItemViewer *itemViewer,
                                              QWidget *parent)
     : QToolBar(parent) {
   setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-  setIconSize(QSize(17, 17));
   setObjectName("buttonBar");
-  // buttonBar->setIconSize(QSize(10,10));
+  setIconSize(QSize(16, 16));
 
-  QString backButtonEnable  = QString(":Resources/fb_history_back_enable.svg");
-  QString backButtonDisable = QString(":Resources/fb_history_back_disable.svg");
-  QString fwdButtonEnable   = QString(":Resources/fb_history_fwd_enable.svg");
-  QString fwdButtonDisable  = QString(":Resources/fb_history_fwd_disable.svg");
-
-  QIcon backButtonIcon, fwdButtonIcon;
-  backButtonIcon.addFile(backButtonEnable, QSize(), QIcon::Normal);
-  backButtonIcon.addFile(backButtonDisable, QSize(), QIcon::Disabled);
-  fwdButtonIcon.addFile(fwdButtonEnable, QSize(), QIcon::Normal);
-  fwdButtonIcon.addFile(fwdButtonDisable, QSize(), QIcon::Disabled);
+  QIcon backButtonIcon = createQIcon("fb_back");
+  QIcon fwdButtonIcon  = createQIcon("fb_fwd");
 
   m_folderBack = new QAction(backButtonIcon, tr("Back"), this);
   m_folderBack->setIconText("");
@@ -1834,13 +1836,13 @@ DvItemViewerButtonBar::DvItemViewerButtonBar(DvItemViewer *itemViewer,
   m_folderFwd->setIconText("");
   addAction(m_folderFwd);
 
-  QIcon folderUpIcon = createQIcon("folderup");
+  QIcon folderUpIcon = createQIcon("fb_up");
   QAction *folderUp  = new QAction(folderUpIcon, tr("Up One Level"), this);
   folderUp->setIconText(tr("Up"));
   addAction(folderUp);
   addSeparator();
 
-  QIcon newFolderIcon = createQIcon("newfolder");
+  QIcon newFolderIcon = createQIcon("folder_new");
   QAction *newFolder  = new QAction(newFolderIcon, tr("New Folder"), this);
   newFolder->setIconText(tr("New"));
   addAction(newFolder);
@@ -1850,7 +1852,7 @@ DvItemViewerButtonBar::DvItemViewerButtonBar(DvItemViewer *itemViewer,
   QActionGroup *actions = new QActionGroup(this);
   actions->setExclusive(true);
 
-  QIcon thumbViewIcon = createQIconOnOff("viewicon");
+  QIcon thumbViewIcon = createQIcon("viewicon");
   QAction *thumbView  = new QAction(thumbViewIcon, tr("Icons View"), this);
   thumbView->setCheckable(true);
   thumbView->setIconText(tr("Icon"));
@@ -1861,7 +1863,7 @@ DvItemViewerButtonBar::DvItemViewerButtonBar(DvItemViewer *itemViewer,
   actions->addAction(thumbView);
   addAction(thumbView);
 
-  QIcon listViewIcon = createQIconOnOff("viewlist");
+  QIcon listViewIcon = createQIcon("viewlist");
   QAction *listView  = new QAction(listViewIcon, tr("List View"), this);
   listView->setCheckable(true);
   listView->setIconText(tr("List"));
@@ -1881,8 +1883,8 @@ DvItemViewerButtonBar::DvItemViewerButtonBar(DvItemViewer *itemViewer,
 
   // button to export file list to csv
   QAction *exportFileListAction = new QAction(tr("Export File List"), this);
+  exportFileListAction->setIcon(createQIcon("export"));
   addAction(exportFileListAction);
-  addSeparator();
 
   if (itemViewer->m_windowType == DvItemViewer::Browser &&
       !Preferences::instance()->isWatchFileSystemEnabled()) {

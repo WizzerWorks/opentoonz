@@ -19,6 +19,7 @@
 #include "toonz/txshleveltypes.h"
 
 #include <QMap>
+#include "tstream.h"
 
 namespace {
 QMap<int, QPair<QString, TPixel32>> filterColors;
@@ -144,12 +145,12 @@ void TXshCellColumn::getCells(int row, int rowCount, TXshCell cells[]) {
   }
   if (n + src > cellCount) n = cellCount - src;
 
-  TXshCell *dstCell                       = cells;
-  TXshCell *endDstCell                    = dstCell + dst;
+  TXshCell *dstCell    = cells;
+  TXshCell *endDstCell = dstCell + dst;
   while (dstCell < endDstCell) *dstCell++ = emptyCell;
   endDstCell += n;
   while (dstCell < endDstCell) *dstCell++ = m_cells[src++];
-  endDstCell                              = cells + rowCount;
+  endDstCell = cells + rowCount;
   while (dstCell < endDstCell) *dstCell++ = emptyCell;
 }
 
@@ -243,7 +244,7 @@ bool TXshCellColumn::setCells(int row, int rowCount, const TXshCell cells[]) {
   if (row > c_rb)  // sono oltre l'ultima riga
   {
     if (oldCellCount == 0) m_first = row;  // row 'e la nuova firstrow
-    int newCellCount               = row - m_first + rowCount;
+    int newCellCount = row - m_first + rowCount;
     m_cells.resize(newCellCount);
   } else if (row < m_first) {
     int delta = m_first - row;
@@ -278,8 +279,9 @@ bool TXshCellColumn::setCells(int row, int rowCount, const TXshCell cells[]) {
 //-----------------------------------------------------------------------------
 
 void TXshCellColumn::insertEmptyCells(int row, int rowCount) {
-  if (m_cells.empty()) return;  // se la colonna e' vuota non devo inserire
-                                // celle
+  if (m_cells.empty())
+    return;  // se la colonna e' vuota non devo inserire
+             // celle
 
   if (row >= m_first + (int)m_cells.size()) return;  // dopo:non inserisco nulla
   if (row <= m_first)                                // prima
@@ -426,6 +428,66 @@ bool TXshCellColumn::getLevelRange(int row, int &r0, int &r1) const {
   return true;
 }
 
+//-----------------------------------------------------------------------------
+
+void TXshCellColumn::saveCellMarks(TOStream &os) {
+  if (m_cellMarkIds.isEmpty()) return;
+  // gather frame numbers with the same id
+  QMap<int, QString> idStrMap;
+  QMap<int, int>::const_iterator i = m_cellMarkIds.constBegin();
+  while (i != m_cellMarkIds.constEnd()) {
+    if (!idStrMap.contains(i.value()))
+      idStrMap.insert(i.value(), QString::number(i.key()));
+    else
+      idStrMap[i.value()] += " " + QString::number(i.key());
+    ++i;
+  }
+  os.openChild("cellMarks");
+  QMap<int, QString>::const_iterator j = idStrMap.constBegin();
+  while (j != idStrMap.constEnd()) {
+    std::map<std::string, std::string> attr;
+    attr["id"] = std::to_string(j.key());
+    os.openChild("cellMark", attr);
+    os << j.value();
+    os.closeChild();
+    ++j;
+  }
+  os.closeChild();
+}
+
+bool TXshCellColumn::loadCellMarks(std::string tagName, TIStream &is) {
+  if (tagName != "cellMarks") return false;
+  m_cellMarkIds.clear();
+  while (is.openChild(tagName)) {
+    if (tagName == "cellMark") {
+      int id;
+      QString frameStr;
+      if (is.getTagParam("id", id)) {
+        is >> frameStr;
+        QStringList frameStrList = frameStr.split(" ", Qt::SkipEmptyParts);
+        for (auto fStr : frameStrList) m_cellMarkIds.insert(fStr.toInt(), id);
+      }
+    }
+    is.closeChild();
+  }
+  return true;
+}
+
+void TXshCellColumn::setCellMark(int frame, int id) {
+  if (id < 0)
+    m_cellMarkIds.remove(frame);
+  else
+    m_cellMarkIds.insert(frame, id);
+}
+
+int TXshCellColumn::getCellMark(int frame) const {
+  return m_cellMarkIds.value(frame, -1);
+}
+
+QMap<int, int> TXshCellColumn::getCellMarks() const { return m_cellMarkIds; }
+
+void TXshCellColumn::clearCellMarks() { m_cellMarkIds.clear(); }
+
 //=============================================================================
 // TXshColumn
 
@@ -472,6 +534,24 @@ TXshColumn::ColumnType TXshColumn::toColumnType(int levelType) {
     assert(!"Unknown level type!");
 
   return colType;
+}
+
+//-----------------------------------------------------------------------------
+
+bool TXshColumn::canBeParent() const {
+  switch (getColumnType()) {
+  case eLevelType:
+  case eZeraryFxType:
+  case ePaletteType:
+  case eMeshType:
+    return true;
+  case eSoundType:
+  case eSoundTextType:
+    return false;
+  default:
+    assert(!"Unknown level type!");
+    return false;
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -616,47 +696,9 @@ void TXshColumn::setIsMask(bool on) {
 
 //-----------------------------------------------------------------------------
 
-void TXshColumn::initColorFilters() {
-  static bool _firstTime = true;
-  if (!_firstTime) return;
-  filterColors[TXshColumn::FilterNone] =
-      QPair<QString, TPixel32>(QObject::tr("None"), TPixel::Black);
-  filterColors[TXshColumn::FilterRed] =
-      QPair<QString, TPixel32>(QObject::tr("Red"), TPixel::Red);
-  filterColors[TXshColumn::FilterGreen] =
-      QPair<QString, TPixel32>(QObject::tr("Green"), TPixel::Green);
-  filterColors[TXshColumn::FilterBlue] =
-      QPair<QString, TPixel32>(QObject::tr("Blue"), TPixel::Blue);
-  filterColors[TXshColumn::FilterDarkYellow] =
-      QPair<QString, TPixel32>(QObject::tr("DarkYellow"), TPixel(128, 128, 0));
-  filterColors[TXshColumn::FilterDarkCyan] =
-      QPair<QString, TPixel32>(QObject::tr("DarkCyan"), TPixel(0, 128, 128));
-  filterColors[TXshColumn::FilterDarkMagenta] =
-      QPair<QString, TPixel32>(QObject::tr("DarkMagenta"), TPixel(128, 0, 128));
-  _firstTime = false;
-}
-
-//-----------------------------------------------------------------------------
-
-TPixel32 TXshColumn::getFilterColor() {
-  return TXshColumn::getFilterInfo(m_filterColorId).second;
-}
-
-//-----------------------------------------------------------------------------
-
-QPair<QString, TPixel32> TXshColumn::getFilterInfo(
-    TXshColumn::FilterColor key) {
-  TXshColumn::initColorFilters();
-  if (!filterColors.contains(key))
-    return QPair<QString, TPixel32>(QObject::tr("None"), TPixel::Black);
-  return filterColors.value(key);
-}
-
-//-----------------------------------------------------------------------------
-
 void TXshColumn::resetColumnProperties() {
   setStatusWord(0);
   setOpacity(255);
   setColorTag(0);
-  setFilterColorId(FilterNone);
+  setColorFilterId(0);  // None
 }

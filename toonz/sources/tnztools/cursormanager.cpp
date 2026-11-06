@@ -28,6 +28,22 @@ const struct {
     {ToolCursor::PenCursor, "brush", 16, 15, false},
     {ToolCursor::PenLargeCursor, "brush_large", 16, 15, false},
     {ToolCursor::PenCrosshairCursor, "brush_crosshair", 16, 15, false},
+    {ToolCursor::PenTriangleTopLeftCursor, "brush_triangle_top_left",
+     16, 15, false},
+    {ToolCursor::PenTriangleTopRightCursor, "brush_triangle_top_right",
+     16, 15, false},
+    {ToolCursor::PenTriangleBottomLeftCursor, "brush_triangle_bottom_left",
+     16, 15, false},
+    {ToolCursor::PenTriangleBottomRightCursor, "brush_triangle_bottom_right",
+     16, 15, false},
+    {ToolCursor::PenTriangleUpCursor, "brush_triangle_up",
+     16, 15, false},
+    {ToolCursor::PenTriangleDownCursor, "brush_triangle_down",
+     16, 15, false},
+    {ToolCursor::PenTriangleLeftCursor, "brush_triangle_left",
+     16, 15, false},
+    {ToolCursor::PenTriangleRightCursor, "brush_triangle_right",
+     16, 15, false},
     {ToolCursor::BenderCursor, "bender", 9, 7, true},
     {ToolCursor::CutterCursor, "cutter", 6, 24, true},  // 12,20, ???},
     {ToolCursor::EraserCursor, "eraser", 7, 21, true},  // 15,16, ???},
@@ -47,6 +63,7 @@ const struct {
     {ToolCursor::LevelSelectCursor, "level_select", 7, 3, true},
     {ToolCursor::MagnetCursor, "magnet", 18, 18, true},
     {ToolCursor::PanCursor, "pan", 17, 17, true},
+    {ToolCursor::ScrubCursor, "scrub", 17, 17, false},
 
     {ToolCursor::PickerCursorLine, "", 0, 0, false},
     {ToolCursor::PickerCursorLineBase, "picker_style", 7, 22, true},
@@ -119,6 +136,7 @@ const struct {
                     {ToolCursor::Ex_Precise, "ex_precise"},
                     {ToolCursor::Ex_Prev, "ex_prev"},
                     {ToolCursor::Ex_Next, "ex_next"},
+                    {ToolCursor::Ex_FreePick, "ex_freepick"},
                     {0, 0}};
 };  // namespace
 
@@ -174,6 +192,22 @@ public:
         cursorType = ToolCursor::PenLargeCursor;
       else if (brushType == "Crosshair")
         cursorType = ToolCursor::PenCrosshairCursor;
+      else if (brushType == "Triangle Top Left")
+        cursorType = ToolCursor::PenTriangleTopLeftCursor;
+      else if (brushType == "Triangle Top Right")
+        cursorType = ToolCursor::PenTriangleTopRightCursor;
+      else if (brushType == "Triangle Bottom Left")
+        cursorType = ToolCursor::PenTriangleBottomLeftCursor;
+      else if (brushType == "Triangle Bottom Right")
+        cursorType = ToolCursor::PenTriangleBottomRightCursor;
+      else if (brushType == "Triangle Up")
+        cursorType = ToolCursor::PenTriangleUpCursor;
+      else if (brushType == "Triangle Down")
+        cursorType = ToolCursor::PenTriangleDownCursor;
+      else if (brushType == "Triangle Left")
+        cursorType = ToolCursor::PenTriangleLeftCursor;
+      else if (brushType == "Triangle Right")
+        cursorType = ToolCursor::PenTriangleRightCursor;
     }
 
     bool useLeft =
@@ -254,6 +288,9 @@ public:
 if (cursorType == ToolCursor::CURSOR_ARROW)
   cursor = Qt::ArrowCursor;
 else */
+    if (cursorType == ToolCursor::CURSOR_NONE)
+        return Qt::BlankCursor;
+    else
     if (cursorType == ToolCursor::ForbiddenCursor)
       cursor = Qt::ForbiddenCursor;
     else {

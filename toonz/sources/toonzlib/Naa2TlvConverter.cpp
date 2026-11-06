@@ -8,7 +8,7 @@
 #include "tpalette.h"
 
 #include <QSet>
-#include <QTime>
+#include <QElapsedTimer>
 #include <QDebug>
 #include <QMultiMap>
 
@@ -130,7 +130,7 @@ void Naa2TlvConverter::setSourceImage(const TRaster32P &srcRas) {
     TPixel32 *srcScanLine          = srcRas->pixels(y);
     unsigned short *regionScanLine = m_regionRas->pixels(y);
     for (int x = 0; x < lx; x++) {
-      TPixel32 srcPix = overPixOnWhite(srcScanLine[x]);
+      TPixel32 srcPix                       = overPixOnWhite(srcScanLine[x]);
       QMap<TPixel32, int>::ConstIterator it = colorTable.find(srcPix);
       if (it == colorTable.end()) {
         // found new color (and therefore new region)
@@ -357,7 +357,7 @@ void Naa2TlvConverter::findBackgroundRegions() {
   }
 
   for (int i = 0; i < m_regions.count(); i++) {
-    RegionInfo &region                                 = m_regions[i];
+    RegionInfo &region = m_regions[i];
     if (region.colorIndex == bgColorIndex) region.type = RegionInfo::Background;
   }
 }
@@ -407,8 +407,10 @@ void Naa2TlvConverter::findRegionBorders() {
 // pixels belonging to that region with m_border[pix] == k)
 
 void Naa2TlvConverter::erodeRegions() {
-  QTime clock;
+#ifdef _DEBUG
+  QElapsedTimer clock;
   clock.start();
+#endif
   if (!m_regionRas || !m_borderRas) return;
   int lx = m_regionRas->getLx();
   int ly = m_regionRas->getLy();
@@ -461,7 +463,9 @@ void Naa2TlvConverter::erodeRegions() {
       }
     }
   }
+#ifdef _DEBUG
   qDebug() << "Erode regions. time = " << clock.elapsed();
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -543,24 +547,31 @@ void Naa2TlvConverter::findThinInks() {
   if (!m_regionRas || !m_borderRas || m_regions.empty()) return;
   for (int i = 0; i < m_regions.count(); i++) {
     RegionInfo &region = m_regions[i];
-    if (region.type != RegionInfo::Unknown) continue;
+    if (region.type != RegionInfo::Unknown) continue; // Skip already classified regions
+
     QList<int> &bs = region.boundaries;
-    if (bs.count() == 2)
+
+    if (bs.count() == 2) {
+      // If there are exactly 2 boundaries, classify as ThinInk
       region.type = RegionInfo::ThinInk;
-    else if (bs.count() == 3) {
-      continue;
-      if (bs[2] * 5 < bs[1]) region.type = RegionInfo::ThinInk;
+    } else if (bs.count() == 3) {
+      // If there are exactly 3 boundaries, classify as ThinInk if bs[2] is small compared to bs[1]
+      if (bs[2] * 5 < bs[1]) {
+        region.type = RegionInfo::ThinInk;
+      }
     } else {
-      continue;
+      // For other cases, calculate a threshold and classify as ThinInk if conditions are met
       int k = 1;
       int s = 0;
-      while (k < bs.count() && s * 100 < region.pixelCount * 90) s += bs[k++];
-      if (region.pixelCount > 100 && k <= 3)
-        region.type = RegionInfo::ThinInk;  // era Ink per qualche ragione
+      while (k < bs.count() && s * 100 < region.pixelCount * 90) {
+        s += bs[k++];
+      }
+      if (region.pixelCount > 100 && k <= 3) {
+        region.type = RegionInfo::ThinInk; // was Ink for some reason
+      }
     }
   }
 }
-
 //-----------------------------------------------------------------------------
 
 void Naa2TlvConverter::findPaints() {
@@ -630,8 +641,7 @@ void Naa2TlvConverter::findThinPaints() {
     if (inkBoundary * 100 > region.perimeter * 80) regions.append(i);
   }
 
-  for (int c : regions)
-    m_regions[c].type = RegionInfo::SmallPaint;
+  for (int c : regions) m_regions[c].type = RegionInfo::SmallPaint;
 }
 
 //-----------------------------------------------------------------------------
@@ -683,7 +693,8 @@ void Naa2TlvConverter::findSuspectInks() {
       int lx = region.x1 - region.x0 + 1;
       int ly = region.y1 - region.y0 + 1;
       int d  = std::max(lx, ly);
-      if (std::min(lx, ly) * 2 > std::max(lx, ly) && region.pixelCount > d * d / 2) {
+      if (std::min(lx, ly) * 2 > std::max(lx, ly) &&
+          region.pixelCount > d * d / 2) {
         region.type = RegionInfo::Paint;
       }
     }
@@ -695,8 +706,8 @@ void Naa2TlvConverter::findSuspectInks() {
         if (region.boundaries.count() == 2)
           isInk = true;
         else if (region.boundaries.count() == 3) {
-          int b1                 = region.boundaries.at(1);
-          int b2                 = region.boundaries.at(2);
+          int b1 = region.boundaries.at(1);
+          int b2 = region.boundaries.at(2);
           if (b1 * 2 < b2) isInk = true;
         }
       }
@@ -733,7 +744,7 @@ void Naa2TlvConverter::assignColorTypes() {
 
 //-----------------------------------------------------------------------------
 
-void Naa2TlvConverter::addBorderInks()  // add syntethic inks: lines between two
+void Naa2TlvConverter::addBorderInks()  // add synthetic inks: lines between two
                                         // adjacent fill-regions
 {
   int lx                   = m_regionRas->getLx();
@@ -785,7 +796,7 @@ void Naa2TlvConverter::addBorderInks()  // add syntethic inks: lines between two
                      (m_regions[c1].type & RegionInfo::Paint) != 0) {
             // OLD: note: we consider only regions with a lower index, to avoid
             // to create double border strokes
-            // NEW: we put syntetic ink pixels in larger regions
+            // NEW: we put synthetic ink pixels in larger regions
             // UPDATE 2017/5/12 : we put ink on darker style
             if (colorsBrightness[m_regions[c1].colorIndex] >
                 colorsBrightness[m_regions[c].colorIndex]) {
@@ -806,8 +817,10 @@ void Naa2TlvConverter::addBorderInks()  // add syntethic inks: lines between two
 //-----------------------------------------------------------------------------
 
 void Naa2TlvConverter::measureThickness() {
-  QTime timer;
+#ifdef _DEBUG
+  QElapsedTimer timer;
   timer.start();
+#endif
   if (!m_regionRas || !m_borderRas) return;
   unsigned short *regionBuffer = m_regionRas->pixels();
   unsigned char *borderBuffer  = m_borderRas->pixels();
@@ -862,7 +875,9 @@ void Naa2TlvConverter::measureThickness() {
       region.thickness = thickness;
     }
   }
+#ifdef _DEBUG
   qDebug() << "measure thickness. time=" << timer.elapsed();
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -893,9 +908,8 @@ int Naa2TlvConverter::measureThickness(int x0, int y0) {
 
   // a is a direction index; a : inside; a+1 : outside
   int a = 0;
-  while (a < 8 &&
-         !(regionBuffer[k0 + dd[a]] == regionId &&
-           regionBuffer[k0 + dd[(a + 1) % 8]] != regionId))
+  while (a < 8 && !(regionBuffer[k0 + dd[a]] == regionId &&
+                    regionBuffer[k0 + dd[(a + 1) % 8]] != regionId))
     a++;
   if (a == 8) {
     // k0 is an isolated point or (strange!) an intern point
@@ -904,7 +918,7 @@ int Naa2TlvConverter::measureThickness(int x0, int y0) {
   }
   int ka = k0 + dd[a];
 
-  int b                                          = (a + 2) % 8;
+  int b = (a + 2) % 8;
   while (regionBuffer[k0 + dd[b]] != regionId) b = (b + 1) % 8;
   // a..b = boundaries
   int kb = k0 + dd[b];
@@ -941,9 +955,9 @@ int Naa2TlvConverter::measureThickness(int x0, int y0) {
       break;  // just to be sure
     int d2 = (x - x0) * (x - x0) + (y - y0) * (y - y0);
     if (d2 <= lastd2) break;
-    lastd2                                          = d2;
-    int d1                                          = (d + 4) % 8;
-    d1                                              = (d1 + 1) % 8;
+    lastd2 = d2;
+    int d1 = (d + 4) % 8;
+    d1     = (d1 + 1) % 8;
     while (regionBuffer[k + dd[d1]] != regionId) d1 = (d1 + 1) % 8;
     Q_ASSERT(regionBuffer[k + dd[d1]] == regionId);
     oldk         = k;
@@ -967,9 +981,9 @@ int Naa2TlvConverter::measureThickness(int x0, int y0) {
       break;  // just to be sure
     int d2 = (x - x0) * (x - x0) + (y - y0) * (y - y0);
     if (d2 <= lastd2) break;
-    lastd2                                          = d2;
-    int d1                                          = (d + 4) % 8;
-    d1                                              = (d1 + 7) % 8;
+    lastd2 = d2;
+    int d1 = (d + 4) % 8;
+    d1     = (d1 + 7) % 8;
     while (regionBuffer[k + dd[d1]] != regionId) d1 = (d1 + 7) % 8;
     Q_ASSERT(regionBuffer[k + dd[d1]] == regionId);
     oldk         = k;
@@ -1015,9 +1029,9 @@ TToonzImageP Naa2TlvConverter::makeTlv(bool transparentSyntheticInks,
                                        QList<int> &usedStyleIds, double dpi) {
   if (!m_valid || m_colors.empty() || m_regions.empty() || !m_regionRas)
     return TToonzImageP();
-  int lx                = m_regionRas->getLx();
-  int ly                = m_regionRas->getLy();
-  TPalette *palette     = m_palette;
+  int lx            = m_regionRas->getLx();
+  int ly            = m_regionRas->getLy();
+  TPalette *palette = m_palette;
   if (!palette) palette = new TPalette();
 
   TRasterCM32P ras(lx, ly);
@@ -1039,10 +1053,10 @@ TToonzImageP Naa2TlvConverter::makeTlv(bool transparentSyntheticInks,
     styleIds.append(styleId);
     if (!usedStyleIds.contains(styleId)) usedStyleIds.append(styleId);
   }
-  styleIds.append(0);  // syntetic ink
+  styleIds.append(0);  // synthetic ink
 
-  // int synteticInkStyleId = palette->getPage(0)->addStyle(TPixel32(0,0,0,0));
-  // styleIds.append(synteticInkStyleId);
+  // int syntheticInkStyleId = palette->getPage(0)->addStyle(TPixel32(0,0,0,0));
+  // styleIds.append(syntheticInkStyleId);
 
   for (int y = 0; y < ly; y++) {
     unsigned short *workScanLine = m_regionRas->pixels(y);
@@ -1145,7 +1159,7 @@ TVectorImageP Naa2TlvConverter::vectorize(const TToonzImageP &ti) {
   TPointD center = ti->getRaster()->getCenterD();
 
   if (dpix != 0.0 && dpiy != 0.0) dpiAff = TScale(factor / dpix, factor / dpiy);
-  factor                                 = norm(dpiAff * TPointD(1, 0));
+  factor = norm(dpiAff * TPointD(1, 0));
 
   conf.m_affine         = dpiAff * TTranslation(-center);
   conf.m_thickScale     = factor;

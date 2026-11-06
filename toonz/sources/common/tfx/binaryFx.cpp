@@ -3,7 +3,6 @@
 // TnzCore includes
 #include "tstream.h"
 #include "trop.h"
-#include "tflash.h"
 
 // TnzBase includes
 #include "tdoubleparam.h"
@@ -25,7 +24,7 @@ void makeRectCoherent(TRectD &rect, const TPointD &pos) {
   rect.y1 = tceil(rect.y1);
   rect += pos;
 }
-}
+}  // namespace
 
 //******************************************************************************************
 //    TImageCombinationFx  declaration
@@ -83,6 +82,11 @@ public:
                                   std::string &portName) override;
 
   int getPreferredInputPort() override { return 1; }
+
+  bool toBeComputedInLinearColorSpace(bool settingsIsLinear,
+                                      bool tileIsLinear) const override {
+    return settingsIsLinear;
+  }
 };
 
 //******************************************************************************************
@@ -93,6 +97,7 @@ TImageCombinationFx::TImageCombinationFx() : m_group("Source", 2) {
   addInputPort("Source1", new TRasterFxPort, 0);
   addInputPort("Source2", new TRasterFxPort, 0);
   setName(L"ImageCombinationFx");
+  enableComputeInFloat(true);
 }
 
 //---------------------------------------------------------------------------
@@ -408,7 +413,7 @@ public:
 };
 
 //==================================================================
-
+/*
 class LinearBurnFx final : public TImageCombinationFx {
   FX_DECLARATION(LinearBurnFx)
 
@@ -436,7 +441,7 @@ public:
     TRop::overlay(up, down, down);
   }
 };
-
+*/
 //==================================================================
 
 class BlendFx final : public TImageCombinationFx {
@@ -477,6 +482,7 @@ public:
     addInputPort("Source", m_source);
     addInputPort("Matte", m_matte);
     setName(L"InFx");
+    enableComputeInFloat(true);
   }
 
   ~InFx() {}
@@ -527,24 +533,6 @@ public:
                            const TRenderSettings &info) override {
     return TRasterFx::memorySize(rect, info.m_bpp);
   }
-
-  void compute(TFlash &flash, int frame) override {
-    if (m_matte.isConnected()) {
-      flash.pushMatrix();
-      flash.beginMask();
-      ((TRasterFxP)(m_matte.getFx()))->compute(flash, frame);
-      flash.endMask();
-      flash.popMatrix();
-    }
-
-    if (m_source.isConnected()) {
-      flash.pushMatrix();
-      flash.enableMask();
-      ((TRasterFxP)(m_source.getFx()))->compute(flash, frame);
-      flash.disableMask();
-      flash.popMatrix();
-    }
-  }
 };
 
 //==================================================================
@@ -559,6 +547,7 @@ public:
     addInputPort("Source", m_source);
     addInputPort("Matte", m_matte);
     setName(L"OutFx");
+    enableComputeInFloat(true);
   }
 
   ~OutFx() {}
@@ -626,6 +615,7 @@ public:
   AtopFx() {
     addInputPort("Up", m_up);
     addInputPort("Down", m_dn);
+    enableComputeInFloat(true);
   }
 
   bool canHandle(const TRenderSettings &info, double frame) override {
@@ -710,8 +700,8 @@ FX_IDENTIFIER(AtopFx, "atopFx")
 // FX_IDENTIFIER(XorFx,       "xorFx")
 FX_IDENTIFIER(MinFx, "minFx")
 FX_IDENTIFIER(MaxFx, "maxFx")
-FX_IDENTIFIER(LinearBurnFx, "linearBurnFx")
-FX_IDENTIFIER(OverlayFx, "overlayFx")
+// FX_IDENTIFIER(LinearBurnFx, "linearBurnFx")
+// FX_IDENTIFIER(OverlayFx, "overlayFx")
 FX_IDENTIFIER(BlendFx, "blendFx")
 FX_IDENTIFIER(ColorDodgeFx, "colorDodgeFx")
 FX_IDENTIFIER(ColorBurnFx, "colorBurnFx")

@@ -3,11 +3,12 @@
 #ifndef STYLE_PICKER_H
 #define STYLE_PICKER_H
 
-//#include "timage.h"
+// #include "timage.h"
 #include "tcommon.h"
 #include "tpalette.h"
 
 class TStroke;
+class QWidget;
 
 #undef DVAPI
 #undef DVVAR
@@ -22,15 +23,17 @@ class TStroke;
 class DVAPI StylePicker {
   TImageP m_image;
   TPaletteP m_palette;
+  const QWidget *m_widget;
 
 public:
-  StylePicker() {}
+  StylePicker(const QWidget *parent) : m_widget(parent) {}
 
   // usa come palette la palette dell'immagine
-  StylePicker(const TImageP &image);
+  StylePicker(const QWidget *parent, const TImageP &image);
 
   // palette esterna (ad es. se image e' di tipo raster)
-  StylePicker(const TImageP &image, const TPaletteP &palette);
+  StylePicker(const QWidget *parent, const TImageP &image,
+              const TPaletteP &palette);
 
   // pickStyleId(point, radius)
   //
@@ -57,15 +60,22 @@ public:
 
   /*-- (StylePickerTool内で)LineとAreaを切り替えてPickできる。mode: 0=Area,
    * 1=Line, 2=Line&Areas(default)  --*/
-  int pickStyleId(const TPointD &point, double radius2 = 1, int mode = 2) const;
+  int pickStyleId(const TPointD &point, double radius, double scale2,
+                  int mode = 2) const;
 
   /*--- Toonz Raster LevelのToneを拾う。 ---*/
   int pickTone(const TPointD &pos) const;
 
   // per pli come sopra, ma ritorna il maincolor
   // per tzp e fullcolor ritorna il colore effettivo del pixel
-  TPixel32 pickColor(const TPointD &point, double radius2 = 1) const;
+  TPixel32 pickColor(const TPointD &point, double radius, double scale2) const;
+  TPixel64 pickColor16(const TPointD &point, double radius,
+                       double scale2) const;
+  TPixelF pickColor32F(const TPointD &point, double radius,
+                       double scale2) const;
   TPixel32 pickAverageColor(const TRectD &rect) const;
+  TPixel64 pickAverageColor16(const TRectD &rect) const;
+  TPixelF pickAverageColor32F(const TRectD &rect) const;
 
   // ritorna il colore medio presente nell'area della finestra corrente openGL
   TPixel32 pickColor(const TRectD &area) const;
@@ -79,5 +89,4 @@ public:
   // il valore di ritorno si riferisce all'eventuale raster: (0,0)==leftbottom
   TPoint getRasterPoint(const TPointD &p) const;
 };
-
 #endif

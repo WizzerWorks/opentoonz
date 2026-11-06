@@ -32,7 +32,6 @@ class TColorStyle;
 class TThickQuadratic;
 class TStrokeProp;
 class TSegment;
-class TFlash;
 
 //===================================================================
 
@@ -68,7 +67,7 @@ public:
   //! to be erased
   TStroke &operator=(const TStroke &other);
 
-  //! Costructor
+  //! Constructor
   TStroke();
 
   //! Build a stroke from an array of ThickPoint.
@@ -260,7 +259,7 @@ Return parameter for a control point
 */
   double getParameterAtControlPoint(int n) const;
 
-  //! Return the stroke leght at passed control point
+  //! Return the stroke lenght at passed control point
   double getLengthAtControlPoint(int) const;
 
   //! Freeze parameter of a stroke in last valid status
@@ -323,7 +322,7 @@ Split a stroke at parameter t
   //! change tangent versus in the stroke
   /*!
 change tangent versus in a stroke
-\note Change versus of all thickquadratric and change its postion in list
+\note Change versus of all thickquadratric and change its position in list
 */
   TStroke &changeDirection();
 
@@ -409,7 +408,6 @@ public:
   TThread::Mutex *getMutex() { return &m_mutex; }
 
   virtual void draw(const TVectorRenderData &rd) = 0;
-  virtual void draw(TFlash &flash)               = 0;
 
   virtual const TColorStyle *getColorStyle() const = 0;
 

@@ -51,7 +51,7 @@ CleanupTab::CleanupTab() {
 
   mainLayout->setSizeConstraint(QLayout::SetMinimumSize);
   mainLayout->setSpacing(0);
-  mainLayout->setMargin(0);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
 
   QWidget *settingsBox = new QWidget(this);
   mainLayout->addWidget(settingsBox);
@@ -62,7 +62,7 @@ CleanupTab::CleanupTab() {
 
   settingsLayout->setSizeConstraint(QLayout::SetMaximumSize);
   settingsLayout->setSpacing(9);
-  settingsLayout->setMargin(12);
+  settingsLayout->setContentsMargins(12, 12, 12, 12);
 
   int row = 0;
 
@@ -133,7 +133,7 @@ CleanupTab::CleanupTab() {
   flipWidget->setLayout(flipLayout);
 
   flipLayout->setSizeConstraint(QLayout::SetFixedSize);
-  flipLayout->setMargin(0);
+  flipLayout->setContentsMargins(0, 0, 0, 0);
 
   m_flipX = new DVGui::CheckBox(tr("Horizontal"), flipWidget);
   flipLayout->addWidget(m_flipX, 0, Qt::AlignLeft);
@@ -254,7 +254,7 @@ ProcessingTab::ProcessingTab() {
   m_settingsFrame->setLayout(settingsLayout);
 
   settingsLayout->setSpacing(9);
-  settingsLayout->setMargin(6);
+  settingsLayout->setContentsMargins(6, 6, 6, 6);
   settingsLayout->setSizeConstraint(QLayout::SetMinimumSize);
   settingsLayout->setColumnStretch(1, 1);  // needed when lpNone
 
@@ -510,7 +510,7 @@ void CameraTab::onGenericSettingsChange() {
 CleanupSettings::CleanupSettings(QWidget *parent)
     : QWidget(parent), m_attached(false) {
   QVBoxLayout *vLayout = new QVBoxLayout(this);
-  vLayout->setMargin(1);  // NOTE: This works to show the 1-pix black border,
+  vLayout->setContentsMargins(1, 1, 1, 1);  // NOTE: This works to show the 1-pix black border,
                           // because this is a QWidget (not QFrame) heir...
   setLayout(vLayout);
 
@@ -520,7 +520,7 @@ CleanupSettings::CleanupSettings(QWidget *parent)
   TabBarContainter *tabBarContainer = new TabBarContainter(this);
   QHBoxLayout *hLayout              = new QHBoxLayout(tabBarContainer);
 
-  hLayout->setMargin(0);
+  hLayout->setContentsMargins(0, 0, 0, 0);
   hLayout->setAlignment(Qt::AlignLeft);
   hLayout->addSpacing(6);
 
@@ -602,7 +602,7 @@ CleanupSettings::CleanupSettings(QWidget *parent)
   QHBoxLayout *toolBarLayout = new QHBoxLayout(toolBarWidget);
   toolBarWidget->setLayout(toolBarLayout);
 
-  toolBarLayout->setMargin(0);
+  toolBarLayout->setContentsMargins(0, 0, 0, 0);
   toolBarLayout->setSpacing(0);
 
   QToolBar *leftToolBar = new QToolBar(toolBarWidget);
@@ -610,13 +610,13 @@ CleanupSettings::CleanupSettings(QWidget *parent)
 
   leftToolBar->setFixedWidth(110);
 
-  m_swatchAct = new QAction(createQIconOnOff("preview", true),
-                            tr("Toggle Swatch Preview"), this);
+  m_swatchAct =
+      new QAction(createQIcon("preview"), tr("Toggle Swatch Preview"), this);
   m_swatchAct->setCheckable(true);
   leftToolBar->addAction(m_swatchAct);
   leftToolBar->addSeparator();
 
-  m_opacityAct = new QAction(createQIconOnOff("opacitycheck", true),
+  m_opacityAct = new QAction(createQIcon("opacitycheck"),
                              tr("Toggle Opacity Check"), this);
   m_opacityAct->setCheckable(true);
   leftToolBar->addAction(m_opacityAct);
@@ -632,14 +632,14 @@ CleanupSettings::CleanupSettings(QWidget *parent)
   rightToolBar->setFixedWidth(110);
 
   QAction *saveAct =
-      new QAction(createQIconOnOff("save", false), tr("Save Settings"), this);
+      new QAction(createQIcon("save"), tr("Save Settings"), this);
   rightToolBar->addAction(saveAct);
   QAction *loadAct =
-      new QAction(createQIconOnOff("load", false), tr("Load Settings"), this);
+      new QAction(createQIcon("load"), tr("Load Settings"), this);
   rightToolBar->addAction(loadAct);
   rightToolBar->addSeparator();
-  QAction *resetAct = new QAction(createQIconOnOff("resetsize", false),
-                                  tr("Reset Settings"), this);
+  QAction *resetAct =
+      new QAction(createQIcon("settings_reset"), tr("Reset Settings"), this);
   rightToolBar->addAction(resetAct);
 
   //  Model-related stuff

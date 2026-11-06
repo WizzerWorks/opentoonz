@@ -3,8 +3,9 @@
 #include "stdfx.h"
 
 #include "ino_common.h"
+#include "globalcontrollablefx.h"
 //------------------------------------------------------------
-class ino_hsv_adjust final : public TStandardRasterFx {
+class ino_hsv_adjust final : public GlobalControllableFx {
   FX_PLUGIN_DECLARATION(ino_hsv_adjust)
   TRasterFxPort m_input;
   TRasterFxPort m_refer;
@@ -69,6 +70,8 @@ public:
     this->m_ref_mode->addItem(3, "Alpha");
     this->m_ref_mode->addItem(4, "Luminance");
     this->m_ref_mode->addItem(-1, "Nothing");
+
+    enableComputeInFloat(true);
   }
   bool doGetBBox(double frame, TRectD &bBox,
                  const TRenderSettings &info) override {
@@ -97,34 +100,30 @@ void fx_(TRasterP in_ras, const TRasterP refer_ras, const int refer_mode,
   /***std::vector<unsigned char> in_vec;
   ino::ras_to_vec( in_ras, ino::channels(), in_vec );***/
 
+  TRasterGR8P ref_gr8;
+  if ((refer_ras != nullptr) && (0 <= refer_mode)) {
+    ref_gr8 = TRasterGR8P(in_ras->getLy(), in_ras->getLx() * sizeof(float));
+    ref_gr8->lock();
+    ino::ras_to_ref_float_arr(refer_ras,
+                              reinterpret_cast<float *>(ref_gr8->getRawData()),
+                              refer_mode);
+  }
+
   TRasterGR8P in_gr8(in_ras->getLy(),
-                     in_ras->getLx() * ino::channels() *
-                         ((TRaster64P)in_ras ? sizeof(unsigned short)
-                                             : sizeof(unsigned char)));
+                     in_ras->getLx() * ino::channels() * sizeof(float));
   in_gr8->lock();
-  ino::ras_to_arr(in_ras, ino::channels(), in_gr8->getRawData());
+  ino::ras_to_float_arr(in_ras, ino::channels(),
+                        reinterpret_cast<float *>(in_gr8->getRawData()));
 
   igs::hsv_adjust::change(
-      // in_ras->getRawData() // BGRA
-      //&in_vec.at(0) // RGBA
-      in_gr8->getRawData()
-
-          ,
-      in_ras->getLy(), in_ras->getLx()  // Not use in_ras->getWrap()
+      reinterpret_cast<float *>(in_gr8->getRawData()), in_ras->getLy(),
+      in_ras->getLx()  // Not use in_ras->getWrap()
       ,
-      ino::channels(), ino::bits(in_ras)
-
-                           ,
-      (((refer_ras != nullptr) && (0 <= refer_mode)) ? refer_ras->getRawData()
-                                                     : nullptr)  // BGRA
-      ,
-      (((refer_ras != nullptr) && (0 <= refer_mode)) ? ino::bits(refer_ras)
-                                                     : 0),
-      refer_mode
-
-      ,
+      ino::channels(),
+      (ref_gr8) ? reinterpret_cast<float *>(ref_gr8->getRawData()) : nullptr,
       hue_pivot, hue_scale, hue_shift, sat_pivot, sat_scale, sat_shift,
-      val_pivot, val_scale, val_shift
+      val_pivot, val_scale,
+      val_shift
 
       //,true	/* add_blend_sw */
       ,
@@ -132,10 +131,12 @@ void fx_(TRasterP in_ras, const TRasterP refer_ras, const int refer_mode,
 
   /***ino::vec_to_ras( in_vec, ino::channels(), in_ras, 0 );***/
 
-  ino::arr_to_ras(in_gr8->getRawData(), ino::channels(), in_ras, 0);
+  ino::float_arr_to_ras(in_gr8->getRawData(), ino::channels(), in_ras, 0);
   in_gr8->unlock();
+
+  if (ref_gr8) ref_gr8->unlock();
 }
-}
+}  // namespace
 //------------------------------------------------------------
 void ino_hsv_adjust::doCompute(TTile &tile, double frame,
                                const TRenderSettings &rend_sets) {
@@ -146,7 +147,8 @@ void ino_hsv_adjust::doCompute(TTile &tile, double frame,
   }
 
   /* ------ サポートしていないPixelタイプはエラーを投げる --- */
-  if (!((TRaster32P)tile.getRaster()) && !((TRaster64P)tile.getRaster())) {
+  if (!((TRaster32P)tile.getRaster()) && !((TRaster64P)tile.getRaster()) &&
+      !((TRasterFP)tile.getRaster())) {
     throw TRopException("unsupported input pixel type");
   }
 
@@ -216,7 +218,7 @@ void ino_hsv_adjust::doCompute(TTile &tile, double frame,
         hue_scale, hue_shift, sat_pivot, sat_scale, sat_shift, val_pivot,
         val_scale, val_shift,
         anti_alias_sw  // --> add_blend_sw, default is true
-        );
+    );
     if (refer_tile.getRaster() != nullptr) {
       refer_tile.getRaster()->unlock();
     }

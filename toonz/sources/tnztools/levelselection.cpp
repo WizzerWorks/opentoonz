@@ -13,11 +13,7 @@
 #include "tregion.h"
 
 // Boost includes
-#include <boost/algorithm/cxx11/copy_if.hpp>
 #include <boost/iterator/counting_iterator.hpp>
-#include <boost/bind.hpp>
-
-namespace boost_a = boost::algorithm;
 
 //*******************************************************************************
 //    Local namespace  stuff
@@ -108,10 +104,10 @@ void getBoundaries(TVectorImage &vi, std::vector<int> &strokes) {
   }
 
   // Output all not internal regions
-  boost_a::copy_if(boost::make_counting_iterator(0u),
-                   boost::make_counting_iterator(vi.getStrokeCount()),
-                   std::back_inserter(strokes),
-                   boost::bind(locals::isBoundary, sData, _1));
+  std::copy_if(boost::make_counting_iterator(0u),
+               boost::make_counting_iterator(vi.getStrokeCount()),
+               std::back_inserter(strokes),
+               [&](UINT e) { return locals::isBoundary(sData, e); });
 }
 
 }  // namespace
@@ -149,7 +145,7 @@ std::vector<int> getBoundaryStrokes(TVectorImage &vi) {
 }
 
 //------------------------------------------------------------------------
-
+//Only get current Frame's strokes
 std::vector<int> getSelectedStrokes(TVectorImage &vi,
                                     const LevelSelection &levelSelection) {
   struct locals {

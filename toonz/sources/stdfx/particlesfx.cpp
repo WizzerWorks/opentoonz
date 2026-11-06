@@ -6,7 +6,6 @@
 #include "tpalette.h"
 #include "tvectorimage.h"
 #include "tvectorrenderdata.h"
-#include "tflash.h"
 #include "texception.h"
 #include "trasterimage.h"
 #include "drawutil.h"
@@ -99,7 +98,9 @@ ParticlesFx::ParticlesFx()
     , foutfadecol_val(0.0)
     , source_gradation_val(false)
     , pick_color_for_every_frame_val(false)
-    , perspective_distribution_val(false) {
+    , perspective_distribution_val(false)
+    , motion_blur_val(false)
+    , motion_blur_gamma_adjust_val(0.) {
   addInputPort("Texture1", new TRasterFxPort, 0);
   addInputPort("Control1", new TRasterFxPort, 1);
 
@@ -265,6 +266,9 @@ ParticlesFx::ParticlesFx()
   bindParam(this, "source_gradation", source_gradation_val);
   bindParam(this, "pick_color_for_every_frame", pick_color_for_every_frame_val);
   bindParam(this, "perspective_distribution", perspective_distribution_val);
+  bindParam(this, "motion_blur", motion_blur_val);
+  bindParam(this, "motion_blur_gamma_adjust", motion_blur_gamma_adjust_val);
+  motion_blur_gamma_adjust_val->setValueRange(-5., 5.);
 }
 
 //------------------------------------------------------------------
@@ -487,24 +491,15 @@ void ParticlesFx::doCompute(TTile &tile, double frame,
 
   TTile tileIn;
   if (TRaster32P raster32 = tile.getRaster()) {
-    TFlash *flash = 0;
-    myEngine.render_particles(flash, &tile, part_ports, ri, p_size, p_offset,
+    myEngine.render_particles(&tile, part_ports, ri, p_size, p_offset,
                               ctrl_ports, partLevel, 1, (int)frame, 1, 0, 0, 0,
                               0, lastframe, getIdentifier());
   } else if (TRaster64P raster64 = tile.getRaster()) {
-    TFlash *flash = 0;
-    myEngine.render_particles(flash, &tile, part_ports, ri, p_size, p_offset,
+    myEngine.render_particles(&tile, part_ports, ri, p_size, p_offset,
                               ctrl_ports, partLevel, 1, (int)frame, 1, 0, 0, 0,
                               0, lastframe, getIdentifier());
   } else
     throw TException("ParticlesFx: unsupported Pixel Type");
-}
-
-//------------------------------------------------------------------
-
-void ParticlesFx::compute(TFlash &flash, int frame) {
-  // Particles is currently disabled in Flash...
-  return;
 }
 
 //------------------------------------------------------------------

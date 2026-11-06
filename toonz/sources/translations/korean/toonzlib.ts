@@ -17,22 +17,18 @@
     </message>
     <message>
         <source>Bad argument (%1): should be an Image or a Level</source>
-        <translation type="vanished">잘못된 인수(%1): 이미지 또는 레벨이어야함.</translation>
+        <translation type="vanished">잘못된 인수(%1): 이미지 또는 레벨이어야함</translation>
     </message>
 </context>
 <context>
     <name>FilePath</name>
-    <message>
-        <source>&quot;%1&quot;</source>
-        <translation type="vanished"></translation>
-    </message>
     <message>
         <source>can&apos;t concatenate an absolute path : %1</source>
         <translation type="vanished">절대 경로를 연결하세요: %1</translation>
     </message>
     <message>
         <source>%1 is not a directory</source>
-        <translation type="vanished">%1 디렉토리가 아님.</translation>
+        <translation type="vanished">%1 디렉토리가 아님</translation>
     </message>
     <message>
         <source>can&apos;t read directory %1</source>
@@ -70,15 +66,11 @@
     <name>ImageBuilder</name>
     <message>
         <source>Bad argument (%1): should be &apos;Raster&apos; or ToonzRaster&apos;</source>
-        <translation type="vanished">잘못된 인수(%1): 래스터 또는 툰즈 레스터 여야함.</translation>
+        <translation type="vanished">잘못된 인수(%1): 래스터 또는 툰즈 레스터 여야함</translation>
     </message>
     <message>
         <source>ImageBuilder(%1 image)</source>
         <translation type="vanished">이미지 빌더 (%1 이미지)</translation>
-    </message>
-    <message>
-        <source>%1 : %2</source>
-        <translation type="vanished"></translation>
     </message>
     <message>
         <source>Bad argument (%1): should be a Transformation</source>
@@ -93,7 +85,7 @@
     </message>
     <message>
         <source>Bad argument (%1). It should be FilePath or string</source>
-        <translation type="vanished">잘못된 인수(%1). 파일 경로 또는 문자열이어야함.</translation>
+        <translation type="vanished">잘못된 인수(%1). 파일 경로 또는 문자열이어야함</translation>
     </message>
     <message>
         <source>Exception loading level (%1)</source>
@@ -105,7 +97,7 @@
     </message>
     <message>
         <source>File %1 is unsupported</source>
-        <translation type="vanished">%1 파일이 지원되지 않음.</translation>
+        <translation type="vanished">%1 파일이 지원되지 않음</translation>
     </message>
     <message>
         <source>Exception reading %1</source>
@@ -164,7 +156,7 @@
     </message>
     <message>
         <source>Bad argument (%1): should be an Image or a Level</source>
-        <translation type="vanished">잘못된 인수(%1): 이미지 또는 레벨이어야함.</translation>
+        <translation type="vanished">잘못된 인수(%1): 이미지 또는 레벨이어야함</translation>
     </message>
     <message>
         <source>Invalid color : </source>
@@ -200,15 +192,15 @@
     </message>
     <message>
         <source>video width must be a multiple of %1</source>
-        <translation>비디오 너비는 %1의 배수여야함.</translation>
+        <translation>비디오 너비는 %1의 배수여야함</translation>
     </message>
     <message>
         <source>video length must be a multiple of %1</source>
-        <translation>비디오 길이는 %1으 배수 여야함.</translation>
+        <translation>비디오 길이는 %1으 배수 여야함</translation>
     </message>
     <message>
         <source>No restrictions for this codec</source>
-        <translation>이 코덱에는 제한이 없음.</translation>
+        <translation>이 코덱에는 제한이 없음</translation>
     </message>
     <message>
         <source>Resolution restrictions:</source>
@@ -308,7 +300,7 @@
     </message>
     <message>
         <source>Add Page %1 to Palette %2</source>
-        <translation>팔레트에 스타일 추가 %2</translation>
+        <translation>팔레트 %2에 %1 페이지 추가</translation>
     </message>
     <message>
         <source>Delete Page %1 from Palette %2</source>
@@ -464,7 +456,7 @@
     </message>
     <message>
         <source>The autocentering failed on the current drawing.</source>
-        <translation>현재 도면에서 자동 입력 실패</translation>
+        <translation>현재 도면에서 자동 입력 실패.</translation>
     </message>
     <message>
         <source>Move</source>
@@ -475,12 +467,12 @@
         <translation>회전 편집</translation>
     </message>
     <message>
-        <source>Move E/W</source>
-        <translation>E/W 이동</translation>
+        <source>Move X</source>
+        <translation>X 이동</translation>
     </message>
     <message>
-        <source>Move N/S</source>
-        <translation>N/S 이동</translation>
+        <source>Move Y</source>
+        <translation>Y 이동</translation>
     </message>
     <message>
         <source>Move Z</source>
@@ -532,7 +524,7 @@
     </message>
     <message>
         <source>Argument &apos;%1&apos; does not look like a FrameId</source>
-        <translation>인수 %1 Frameld 처럼 보이지 않음.</translation>
+        <translation>인수 %1 Frameld 처럼 보이지 않음</translation>
     </message>
     <message>
         <source>Bad argument (%1): should be an Image (not empty)</source>
@@ -556,7 +548,7 @@
     </message>
     <message>
         <source>%1 is not a valid color (valid color names are &apos;red&apos;, &apos;transparent&apos;, &apos;#FF8800&apos;, ecc.)</source>
-        <translation>%1은 유효한 색상이 아님(유효한 색상 이름은 &apos;red&apos;, &apos;transparent&apos;, &apos;#FF8800&apos;, ecc.)</translation>
+        <translation type="vanished">%1은 유효한 색상이 아님(유효한 색상 이름은 &apos;red&apos;, &apos;transparent&apos;, &apos;#FF8800&apos;, ecc.)</translation>
     </message>
     <message>
         <source>Can&apos;t save</source>
@@ -600,7 +592,7 @@
     </message>
     <message>
         <source>Remove Keyframe   %1 at frame %2</source>
-        <translation>프레임 %2에서 키프레임 %1을 제거하세요.</translation>
+        <translation>프레임 %2에서 키프레임 %1을 제거하세요</translation>
     </message>
     <message>
         <source>Move Center   %1  Frame %2</source>
@@ -611,6 +603,63 @@
 </source>
         <translation>다음 리소스 저장 실패:
 </translation>
+    </message>
+    <message>
+        <source>Failed to save palette.</source>
+        <translation>팔레트를 저장하지 못했습니다.</translation>
+    </message>
+    <message>
+        <source>and %1 more item(s).</source>
+        <translation>그리고 %1 더 많은 항목(s).</translation>
+    </message>
+    <message>
+        <source>Orange</source>
+        <translation>주황색</translation>
+    </message>
+    <message>
+        <source>Yellow</source>
+        <translation>노란색</translation>
+    </message>
+    <message>
+        <source>Light Green</source>
+        <translation>라이트 그린</translation>
+    </message>
+    <message>
+        <source>Light Blue</source>
+        <translation>라이트 블루</translation>
+    </message>
+    <message>
+        <source>Dark Blue</source>
+        <translation>다크 블루</translation>
+    </message>
+    <message>
+        <source>Purple</source>
+        <translation>보라색</translation>
+    </message>
+    <message>
+        <source>Pink</source>
+        <translation>분홍색</translation>
+    </message>
+    <message>
+        <source>Dark Pink</source>
+        <translation>다크 핑크</translation>
+    </message>
+    <message>
+        <source>White</source>
+        <translation>화이트</translation>
+    </message>
+    <message>
+        <source>Custom Texture</source>
+        <comment>TextureStyleChooserPage</comment>
+        <translation>사용자 지정 텍스처</translation>
+    </message>
+    <message>
+        <source>Set Current Style from #%1 to %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is not a valid color (valid color names are &apos;red&apos;, &apos;transparent&apos;, &apos;#FF8800&apos;, etc.)</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -648,7 +697,7 @@
     </message>
     <message>
         <source>Bad level type (%1): must be Vector,Raster or ToonzRaster</source>
-        <translation type="vanished">잘못된 레벨 유형(%1): 벡터, 래스터 또는 툰즈 래스터여야함.</translation>
+        <translation type="vanished">잘못된 레벨 유형(%1): 벡터, 래스터 또는 툰즈 래스터여야함</translation>
     </message>
     <message>
         <source>Can&apos;t add the level: name(%1) is already used</source>
@@ -660,7 +709,7 @@
     </message>
     <message>
         <source>Could not load level %1</source>
-        <translation type="vanished">%1 레벨을 가져올 수 없음.</translation>
+        <translation type="vanished">%1 레벨을 가져올 수 없음</translation>
     </message>
     <message>
         <source>Level is not included in the scene : %1</source>
@@ -672,7 +721,7 @@
     </message>
     <message>
         <source>Level &apos;%1&apos; is not included in the scene</source>
-        <translation type="vanished">레벨 %1 현장에 포함되지 않음.</translation>
+        <translation type="vanished">레벨 %1 현장에 포함되지 않음</translation>
     </message>
 </context>
 <context>
@@ -691,7 +740,7 @@
     </message>
     <message>
         <source>Bad argument (%1): should be an Image or a Level</source>
-        <translation>잘못된 인수(%1): 이미지 또는 레벨이어야함.</translation>
+        <translation>잘못된 인수(%1): 이미지 또는 레벨이어야함</translation>
     </message>
 </context>
 <context>
@@ -706,7 +755,7 @@
     </message>
     <message>
         <source>%1 is not a directory</source>
-        <translation>%1 디렉토리가 아님.</translation>
+        <translation>%1 디렉토리가 아님</translation>
     </message>
     <message>
         <source>can&apos;t read directory %1</source>
@@ -744,7 +793,7 @@
     <name>TScriptBinding::ImageBuilder</name>
     <message>
         <source>Bad argument (%1): should be &apos;Raster&apos; or ToonzRaster&apos;</source>
-        <translation>잘못된 인수(%1): 래스터 또는 툰즈 레스터 여야함.</translation>
+        <translation>잘못된 인수(%1): 래스터 또는 툰즈 레스터 여야함</translation>
     </message>
     <message>
         <source>ImageBuilder(%1 image)</source>
@@ -767,7 +816,7 @@
     </message>
     <message>
         <source>Bad argument (%1). It should be FilePath or string</source>
-        <translation>잘못된 인수(%1). 파일 경로 또는 문자열이어야함.</translation>
+        <translation>잘못된 인수(%1). 파일 경로 또는 문자열이어야함</translation>
     </message>
     <message>
         <source>Exception loading level (%1)</source>
@@ -779,7 +828,7 @@
     </message>
     <message>
         <source>File %1 is unsupported</source>
-        <translation>%1 파일이 지원되지 않음.</translation>
+        <translation>%1 파일이 지원되지 않음</translation>
     </message>
     <message>
         <source>Exception reading %1</source>
@@ -791,11 +840,11 @@
     </message>
     <message>
         <source>Unrecognized file type :</source>
-        <translation>인식 할 수 없는 파일 형식:</translation>
+        <translation type="vanished">인식 할 수 없는 파일 형식:</translation>
     </message>
     <message>
         <source>Can&apos;t save a %1 level to this file type : %2</source>
-        <translation>%1 레벨을 이 파일 형식에 저장하세요: %2</translation>
+        <translation type="vanished">%1 레벨을 이 파일 형식에 저장하세요: %2</translation>
     </message>
     <message>
         <source>Exception writing %1</source>
@@ -815,11 +864,31 @@
     </message>
     <message>
         <source>can not insert a %1 image into a level</source>
-        <translation>%1 이미지를 레벨에 삽입할 수 없음</translation>
+        <translation type="vanished">%1 이미지를 레벨에 삽입할 수 없음</translation>
     </message>
     <message>
         <source>can not insert a %1 image to a %2 level</source>
-        <translation>%1 이미지를 %2 레벨에 삽입할 수 없음</translation>
+        <translation type="vanished">%1 이미지를 %2 레벨에 삽입할 수 없음</translation>
+    </message>
+    <message>
+        <source>Cannot set path on empty level</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unrecognized file type: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Can&apos;t save a %1 level to this file type: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>cannot insert a %1 image into a level</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>cannot insert a %1 image to a %2 level</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -838,11 +907,15 @@
     </message>
     <message>
         <source>Bad argument (%1): should be an Image or a Level</source>
-        <translation>잘못된 인수(%1): 이미지 또는 레벨이어야함.</translation>
+        <translation>잘못된 인수(%1): 이미지 또는 레벨이어야함</translation>
     </message>
     <message>
         <source>Invalid color : </source>
-        <translation>잘못된 색상 :</translation>
+        <translation type="vanished">잘못된 색상 :</translation>
+    </message>
+    <message>
+        <source>Invalid color: %1</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -880,7 +953,7 @@
     </message>
     <message>
         <source>Bad level type (%1): must be Vector,Raster or ToonzRaster</source>
-        <translation>잘못된 레벨 유형(%1): 벡터, 래스터 또는 툰즈 래스터여야함.</translation>
+        <translation>잘못된 레벨 유형(%1): 벡터, 래스터 또는 툰즈 래스터여야함</translation>
     </message>
     <message>
         <source>Can&apos;t add the level: name(%1) is already used</source>
@@ -892,7 +965,7 @@
     </message>
     <message>
         <source>Could not load level %1</source>
-        <translation>%1 레벨을 가져올 수 없음.</translation>
+        <translation>%1 레벨을 가져올 수 없음</translation>
     </message>
     <message>
         <source>Level is not included in the scene : %1</source>
@@ -904,26 +977,26 @@
     </message>
     <message>
         <source>Level &apos;%1&apos; is not included in the scene</source>
-        <translation>레벨 %1 현장에 포함되지 않음.</translation>
+        <translation>레벨 %1 현장에 포함되지 않음</translation>
     </message>
 </context>
 <context>
     <name>TScriptBinding::ToonzRasterConverter</name>
     <message>
         <source>Can&apos;t convert a %1 level</source>
-        <translation>%1 레벨을 변환할 수 있음.</translation>
+        <translation>%1 레벨을 변환할 수 있음</translation>
     </message>
     <message>
         <source>Can&apos;t convert a level with no frames</source>
-        <translation>프레임 없이 레벨을 변환 할수 있음.</translation>
+        <translation>프레임 없이 레벨을 변환 할수 있음</translation>
     </message>
     <message>
         <source>Can&apos;t convert a %1 image</source>
-        <translation>%1 이미지를 변환할 수 있음.</translation>
+        <translation>%1 이미지를 변환할 수 있음</translation>
     </message>
     <message>
         <source>Bad argument (%1): should be a raster Level or a raster Image</source>
-        <translation>잘못된 인수(%1): 래스터 레벨 또는 래스터 이미지여야함.</translation>
+        <translation>잘못된 인수(%1): 래스터 레벨 또는 래스터 이미지여야함</translation>
     </message>
 </context>
 <context>
@@ -957,19 +1030,19 @@
     <name>ToonzRasterConverter</name>
     <message>
         <source>Can&apos;t convert a %1 level</source>
-        <translation type="vanished">%1 레벨을 변환할 수 있음.</translation>
+        <translation type="vanished">%1 레벨을 변환할 수 있음</translation>
     </message>
     <message>
         <source>Can&apos;t convert a level with no frames</source>
-        <translation type="vanished">프레임 없이 레벨을 변환 할수 있음.</translation>
+        <translation type="vanished">프레임 없이 레벨을 변환 할수 있음</translation>
     </message>
     <message>
         <source>Can&apos;t convert a %1 image</source>
-        <translation type="vanished">%1 이미지를 변환할 수 있음.</translation>
+        <translation type="vanished">%1 이미지를 변환할 수 있음</translation>
     </message>
     <message>
         <source>Bad argument (%1): should be a raster Level or a raster Image</source>
-        <translation type="vanished">잘못된 인수(%1): 래스터 레벨 또는 래스터 이미지여야함.</translation>
+        <translation type="vanished">잘못된 인수(%1): 래스터 레벨 또는 래스터 이미지여야함</translation>
     </message>
 </context>
 <context>

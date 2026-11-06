@@ -21,12 +21,12 @@ public:
   TLevelWriterGif(const TFilePath &path, TPropertyGroup *winfo);
   ~TLevelWriterGif();
   // FfmpegBridge* ffmpeg;
-  void setFrameRate(double fps);
+  void setFrameRate(double fps) override;
 
   TImageWriterP getFrameWriter(TFrameId fid) override;
   void save(const TImageP &image, int frameIndex);
 
-  void saveSoundTrack(TSoundTrack *st);
+  void saveSoundTrack(TSoundTrack *st) override;
 
   static TLevelWriter *create(const TFilePath &path, TPropertyGroup *winfo) {
     return new TLevelWriterGif(path, winfo);
@@ -37,8 +37,9 @@ private:
   int m_frameCount, m_lx, m_ly;
   // double m_fps;
   int m_scale;
-  bool m_looping = false;
-  bool m_palette = false;
+  bool m_looping  = true;
+  int m_mode      = 0;
+  int m_maxcolors = 256;
 };
 
 //===========================================================
@@ -82,6 +83,9 @@ public:
   TIntProperty m_scale;
   TBoolProperty m_looping;
   TBoolProperty m_palette;
+  TEnumProperty m_mode;
+  TIntProperty m_maxcolors;
+
   GifWriterProperties();
 
   void updateTranslation() override;
@@ -92,6 +96,6 @@ public:
 // Tiio::Reader *makeGifReader();
 // Tiio::Writer *makeGifWriter();
 
-}  // namespace
+}  // namespace Tiio
 
 #endif

@@ -52,7 +52,7 @@ inline F &get_func_b(RT *t) {
 template <>
 inline TDoubleParamP &get_func_a<TRangeParam, TDoubleParamP>(TRangeParam *t) {
   printf("get_func_a< TRangeParam, TDoubleParamP& >(TRangeParam* t)\n");
-  return std::mem_fun(&TRangeParam::getMin)(t);
+  return std::mem_fn(&TRangeParam::getMin)(t);
 }
 
 template <>
@@ -62,7 +62,7 @@ inline TDoubleParamP &get_func_b<TRangeParam, TDoubleParamP>(TRangeParam *t)
 // t)
 {
   printf("get_func_b< TRangeParam, TDoubleParamP& >(TRangeParam* t)\n");
-  return std::mem_fun(&TRangeParam::getMax)(t);
+  return std::mem_fn(&TRangeParam::getMax)(t);
 }
 
 /* TPointParam */
@@ -73,7 +73,7 @@ inline TDoubleParamP &get_func_a<TPointParam, TDoubleParamP>(TPointParam *t)
 // t)
 {
   printf("get_func_a< TPointParam, TDoubleParamP& >(TPointParam* t)\n");
-  return std::mem_fun(&TPointParam::getX)(t);
+  return std::mem_fn(&TPointParam::getX)(t);
 }
 
 template <>
@@ -83,7 +83,7 @@ inline TDoubleParamP &get_func_b<TPointParam, TDoubleParamP>(TPointParam *t)
 // t)
 {
   printf("get_func_b< TPointParam, TDoubleParamP& >(TPointParam* t)\n");
-  return std::mem_fun(&TPointParam::getY)(t);
+  return std::mem_fn(&TPointParam::getY)(t);
 }
 
 /* valuetype が集約型の場合、 スカラを取得するための関数 */
@@ -308,7 +308,7 @@ struct set_param_default_t<tpbind_str_t, std::true_type> {
 template <>
 struct set_param_default_t<tpbind_spc_t, std::true_type> {
   static bool set_param_default(Param *param, const toonz_param_desc_t *desc) {
-    /* unfortunatly, TSpectrumParam's default values must be set within the
+    /* unfortunately, TSpectrumParam's default values must be set within the
      constructor, for now.
      see param_factory_< TSpectrumParam >() */
     return false;
@@ -407,7 +407,7 @@ inline T *param_factory_(const toonz_param_desc_t *desc) {
 
 template <>
 inline TPointParam *param_factory_(const toonz_param_desc_t *desc) {
-  return new TPointParam(TPointD(), true /* instanciate from plugin */);
+  return new TPointParam(TPointD(), true /* instantiate from plugin */);
 }
 
 template <>
@@ -617,14 +617,15 @@ inline bool param_read_value_(TParam *p, const toonz_param_desc_t *desc,
                               size_t &osize) {
   /* isize は iovaluetype の size でなく count になったのでサイズチェックは無効
    */
-  // if (isize == sizeof(typename T::traittype::iovaluetype)) {
+  // TODO: Consider reintroducing input validation for safety.
+  // if (isize == sizeof(tpbind_dbl_t::traittype::iovaluetype)) {
   auto r = reinterpret_cast<typename T::realtype *>(p);
   auto v = r->getValue();
   *reinterpret_cast<typename T::traittype::iovaluetype *>(ptr) = v;
   osize                                                        = 1;
   return true;
-  //}
-  return false;
+  // }
+  // return false; // Unreachable code, removed for clarity.
 }
 
 template <>
@@ -632,14 +633,15 @@ inline bool param_read_value_<tpbind_dbl_t>(TParam *p,
                                             const toonz_param_desc_t *desc,
                                             void *ptr, double frame,
                                             size_t isize, size_t &osize) {
+  // TODO: Consider reintroducing input validation for safety.
   // if (isize == sizeof(tpbind_dbl_t::traittype::iovaluetype)) {
   auto r = reinterpret_cast<tpbind_dbl_t::realtype *>(p);
   auto v = r->getValue(frame);
   *reinterpret_cast<tpbind_dbl_t::traittype::iovaluetype *>(ptr) = v;
   osize                                                          = 1;
   return true;
-  //}
-  return false;
+  // }
+  // return false; // Unreachable code, removed for clarity.
 }
 
 template <>

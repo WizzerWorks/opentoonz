@@ -11,7 +11,7 @@
 #include <set>
 #include <iterator>
 // please do not move, it is necessary to be the last
-// to work properely with DVAPI macro
+// to work properly with DVAPI macro
 #include "ext/ExtUtil.h"
 
 // just to override assert
@@ -32,12 +32,13 @@ inline bool isWGood(double first, double w, double second, const TStroke *s) {
     return false;
 
   if (s) {
-    if (s->isSelfLoop())
+    if (s->isSelfLoop()) {
       if (first > second) {
         if ((first < w && w <= 1.0) || (0.0 <= w && w < second)) return true;
       } else if (first == second) {
         if (areAlmostEqual(w, first)) return true;
       }
+    }
   }
 
   if (first < w && w < second) return true;

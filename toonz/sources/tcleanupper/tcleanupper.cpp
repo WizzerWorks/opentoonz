@@ -22,6 +22,7 @@
 #include "toonz/txshcolumn.h"
 #include "toonz/tlog.h"
 #include "toonz/imagestyles.h"
+#include "toonz/filepathproperties.h"
 
 // TnzBase includes
 #include "tcli.h"
@@ -275,7 +276,7 @@ static void searchLevelsToCleanup(
             continue;
           }
           int ltype = sl->getType();
-          if (ltype == TZP_XSHLEVEL && sl->getScannedPath() != TFilePath() ||
+          if ((ltype == TZP_XSHLEVEL && sl->getScannedPath() != TFilePath()) ||
               ltype == OVL_XSHLEVEL || ltype == TZI_XSHLEVEL) {
             wstring levelName     = sl->getName();
             levelTable[levelName] = sl;
@@ -308,7 +309,8 @@ static void searchLevelsToCleanup(
 static void addCleanupDefaultPalette(TXshSimpleLevel *sl) {
   /*- 元となるパレットはStudioPaletteフォルダに置く -*/
   TFilePath palettePath =
-      ToonzFolder::getStudioPaletteFolder() + "cleanup_default.tpl";
+      ToonzFolder::getStudioPaletteFolder() +
+      "Global Palettes\\Default Palettes\\Cleanup_Palette.tpl ";
   TFileStatus pfs(palettePath);
 
   if (!pfs.doesExist() || !pfs.isReadable()) {
@@ -411,7 +413,10 @@ static void cleanupLevel(TXshSimpleLevel *xl, std::set<TFrameId> fidsInXsheet,
                   QString::fromStdString(fid.expand()));
       continue;
     }
-    TRasterImageP original = xl->getFrameToCleanup(fid);
+    CleanupParameters *params = scene->getProperties()->getCleanupParameters();
+    // if lines are not processed, obtain the original sampled image
+    bool toBeLineProcessed = params->m_lineProcessingMode != lpNone;
+    TRasterImageP original = xl->getFrameToCleanup(fid, toBeLineProcessed);
     if (!original) {
       string err = "    *error* missed frame";
       m_userLog.error(err);
@@ -419,11 +424,9 @@ static void cleanupLevel(TXshSimpleLevel *xl, std::set<TFrameId> fidsInXsheet,
       continue;
     }
 
-    CleanupParameters *params = scene->getProperties()->getCleanupParameters();
-
     if (params->m_lineProcessingMode == lpNone) {
-      TRasterImageP ri;
-      if (params->m_autocenterType == CleanupTypes::AUTOCENTER_NONE)
+      TRasterImageP ri(original);
+      /*if (params->m_autocenterType == CleanupTypes::AUTOCENTER_NONE)
         ri = original;
       else {
         bool autocentered;
@@ -432,7 +435,9 @@ static void cleanupLevel(TXshSimpleLevel *xl, std::set<TFrameId> fidsInXsheet,
           m_userLog.error("The autocentering failed on the current drawing.");
           cout << "The autocentering failed on the current drawing." << endl;
         }
-      }
+      }*/
+      cl->process(original, false, ri, false, true, true, nullptr,
+                  ri->getRaster());
       updater.update(fid, ri);
       continue;
     }
@@ -491,6 +496,7 @@ int main(int argc, char *argv[]) {
   // questo definisce la registry root e inizializza TEnv
   TEnv::setRootVarName(rootVarName);
   TEnv::setSystemVarPrefix(systemVarPrefix);
+  TEnv::setApplicationFileName(argv[0]);
 
   QCoreApplication::setOrganizationName("OpenToonz");
   QCoreApplication::setOrganizationDomain("");
@@ -580,8 +586,7 @@ int main(int argc, char *argv[]) {
   Tiio::defineStd();
 
   /*- プロジェクトのロード -*/
-  TProjectManager *pm = TProjectManager::instance();
-  TProjectP project   = pm->loadSceneProject(srcName);
+  auto project = TProjectManager::instance()->loadSceneProject(srcName);
 
   if (!project) {
     string err = "Couldn't find the project" + project->getName().getName();
@@ -591,6 +596,12 @@ int main(int argc, char *argv[]) {
   }
 
   cout << "project:" << project->getName() << endl;
+
+  // update TFilePath condition on loading the current project
+  FilePathProperties *fpProp = project->getFilePathProperties();
+  TFilePath::setFilePathProperties(fpProp->useStandard(),
+                                   fpProp->acceptNonAlphabetSuffix(),
+                                   fpProp->letterCountForSuffix());
 
   TFilePath fp = srcName;
 
@@ -618,13 +629,13 @@ int main(int argc, char *argv[]) {
   /*-- CleanupSettingsファイルパスを直接入力した場合 --*/
   else {
     try {
-      TProjectManager *pm    = TProjectManager::instance();
-      TProjectP sceneProject = pm->loadSceneProject(fp);
+      TProjectManager *pm = TProjectManager::instance();
+      auto sceneProject = pm->loadSceneProject(fp);
       if (!sceneProject) {
         cerr << "can't open project." << endl;
         return -3;
       }
-      scene->setProject(sceneProject.getPointer());
+      scene->setProject(sceneProject);
 
       /*- CleanupSettingsファイルに対応するTIFファイルが有るかチェック -*/
       TFilePath tifImagePath = fp.withType("tif");
@@ -843,4 +854,3 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 //------------------------------------------------------------------------
-

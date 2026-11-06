@@ -9,7 +9,6 @@
 #include "tconvert.h"
 #include "tofflinegl.h"
 #include "tpixelutils.h"
-#include "tflash.h"
 #include "tcolorstyles.h"
 
 //*****************************************************************************
@@ -51,6 +50,7 @@ TColorStyle::TColorStyle()
     , m_icon(0)
     , m_validIcon(false)
     , m_isEditedFromOriginal(false)
+    , m_hash(0)
     , m_pickedPosition() {}
 
 //-------------------------------------------------------------------
@@ -68,6 +68,7 @@ TColorStyle::TColorStyle(const TColorStyle &other)
     , m_enabled(other.m_enabled)
     , m_validIcon(false)
     , m_isEditedFromOriginal(other.m_isEditedFromOriginal)
+    , m_hash(other.m_hash)
     , m_pickedPosition(other.m_pickedPosition) {}
 
 //-------------------------------------------------------------------
@@ -81,6 +82,7 @@ TColorStyle &TColorStyle::operator=(const TColorStyle &other) {
   m_enabled              = other.m_enabled;
   m_validIcon            = false;
   m_isEditedFromOriginal = other.m_isEditedFromOriginal;
+  m_hash                 = other.m_hash;
   m_pickedPosition       = other.m_pickedPosition;
 
   return *this;
@@ -135,6 +137,13 @@ bool TColorStyle::operator==(const TColorStyle &cs) const {
   }
 
   return true;
+}
+
+//-------------------------------------------------------------------
+
+QString TColorStyle::getDescription() const {
+  assert(false);
+  return QString("");
 }
 
 //-------------------------------------------------------------------
@@ -293,13 +302,12 @@ void TColorStyle::makeIcon(const TDimension &d) {
   bbox = bbox.enlarge(TDimensionD(-10, -10));
   checkErrorsByGL;
 
-  double scx = 0.9 * d.lx / bbox.getLx();
-  double scy = 0.9 * d.ly / bbox.getLy();
-  double sc  = std::min(scx, scy);
-  double dx  = (d.lx - bbox.getLx() * sc) * 0.5;
-  double dy  = (d.ly - bbox.getLy() * sc) * 0.5;
-  TAffine aff =
-      TScale(scx, scy) * TTranslation(-bbox.getP00() + TPointD(dx, dy));
+  double scx  = 0.9 * d.lx / bbox.getLx();
+  double scy  = 0.9 * d.ly / bbox.getLy();
+  double sc   = std::min(scx, scy);
+  double dx   = (d.lx - bbox.getLx() * sc) * 0.5;
+  double dy   = (d.ly - bbox.getLy() * sc) * 0.5;
+  TAffine aff = TScale(sc) * TTranslation(-bbox.getP00() + TPointD(dx, dy));
 
   checkErrorsByGL;
   if (isRegionStyle() && !isStrokeStyle()) aff = aff * TTranslation(-10, -10);
@@ -389,7 +397,7 @@ class ColorStyleList {  // singleton
 public:
   static ColorStyleList *instance() {
     static ColorStyleList *_instance = 0;
-    if (!_instance) _instance        = new ColorStyleList();
+    if (!_instance) _instance = new ColorStyleList();
     return _instance;
   }
 
@@ -422,6 +430,23 @@ public:
     isObsolete = it->second.m_isObsolete;
 
     return it->second.m_style->clone();
+  }
+
+  TColorStyle *create(std::string brushIdName) {
+    int index = brushIdName.find(':');
+    std::string brushIdCategory =
+        (index != -1) ? brushIdName.substr(0, index) : brushIdName;
+
+    for (auto &table : m_table) {
+      std::string name = table.second.m_style->getBrushIdName();
+      int index        = name.find(':');
+      if (index != -1 && brushIdCategory == name.substr(0, index)) {
+        return table.second.m_style->clone(brushIdName);
+      } else if (index == -1 && brushIdCategory == name) {
+        return table.second.m_style->clone(brushIdName);
+      }
+    }
+    return nullptr;
   }
 
   void getAllTags(std::vector<int> &tags) {
@@ -476,43 +501,6 @@ static double computeAverageThickness(const TStroke *s, double &minThickness,
   return resThick / (s->getControlPointCount() - 4);
 }
 
-void TColorStyle::drawStroke(TFlash &flash, const TStroke *s) const {
-  bool isCenterline = false;
-  double minThickness, maxThickness = 0;
-  std::wstring quality = flash.getLineQuality();
-  double thickness     = computeAverageThickness(s, minThickness, maxThickness);
-  if (minThickness == maxThickness && minThickness == 0) return;
-  if (quality == TFlash::ConstantLines)
-    isCenterline = true;
-  else if (quality == TFlash::MixedLines &&
-           (maxThickness == 0 || minThickness / maxThickness > 0.5))
-    isCenterline = true;
-  else if (quality == TFlash::VariableLines &&
-           maxThickness - minThickness <
-               0.16)  // Quando si salva il pli, si approssima al thick.
-                      // L'errore di approx e' sempre 0.1568...
-    isCenterline = true;
-  // else	assert(false);
-
-  flash.setFillColor(getAverageColor());
-  // flash.setFillColor(TPixel::Red);
-
-  TStroke *saux = const_cast<TStroke *>(s);
-  if (isCenterline) {
-    saux->setAverageThickness(thickness);
-    flash.setThickness(s->getAverageThickness());
-    flash.setLineColor(getAverageColor());
-    flash.drawCenterline(s, false);
-  } else {
-    saux->setAverageThickness(0);
-    if (!flash.drawOutline(saux)) {
-      flash.setThickness(thickness);
-      flash.setLineColor(getAverageColor());
-      flash.drawCenterline(s, false);
-    }
-  }
-}
-
 //-----------------------------------------------------------------------------
 // Format: _123 |global name
 // _123 = flag; optional (*)
@@ -525,7 +513,7 @@ void TColorStyle::drawStroke(TFlash &flash, const TStroke *s) const {
 void TColorStyle::save(TOutputStreamInterface &os) const {
   std::wstring name = getName();
   bool numberedName =
-      !name.empty() && ('0' <= name[0] && name[0] <= '9' || name[0] == '_');
+      !name.empty() && (('0' <= name[0] && name[0] <= '9') || name[0] == '_');
 
   if (m_flags > 0 || (name.length() == 1 && numberedName))
     os << ("_" + QString::number(m_flags)).toStdString();
@@ -611,6 +599,60 @@ TColorStyle *TColorStyle::create(int tagId) {
 
 //-------------------------------------------------------------------
 
+TColorStyle *TColorStyle::create(std::string brushIdName) {
+  return ColorStyleList::instance()->create(brushIdName);
+}
+
+//-------------------------------------------------------------------
+
 void TColorStyle::getAllTags(std::vector<int> &tags) {
   ColorStyleList::instance()->getAllTags(tags);
+}
+
+//-------------------------------------------------------------------
+
+std::string TColorStyle::getBrushIdName() const {
+  assert(false);
+  return "InvalidStyle";
+}
+
+//-------------------------------------------------------------------
+
+std::size_t TColorStyle::generateHash(std::string brushIdName) {
+  std::hash<std::string> hasher;
+  std::size_t v_hash = hasher(brushIdName);
+  return v_hash;
+}
+
+//-------------------------------------------------------------------
+
+std::size_t TColorStyle::getBrushIdHash() {
+  if (m_hash) return m_hash;
+
+  std::hash<std::string> hasher;
+  std::string brushId = getBrushIdName();
+  m_hash              = hasher(brushId);
+  return m_hash;
+}
+
+//-------------------------------------------------------------------
+
+std::string TColorStyle::getBrushIdNameClass(std::string brushIdName) {
+  int index = brushIdName.find(':');
+  if (index >= 0) return brushIdName.substr(0, index);
+  return brushIdName;
+}
+
+//-------------------------------------------------------------------
+
+std::string TColorStyle::getBrushIdNameParam(std::string brushIdName) {
+  int index = brushIdName.find(':');
+  if (index < 0) return "";
+  return brushIdName.substr(index + 1);
+}
+
+//-------------------------------------------------------------------
+
+TRectD TColorStyle::getStrokeBBox(const TStroke *stroke) const {
+  return stroke->getBBox();
 }

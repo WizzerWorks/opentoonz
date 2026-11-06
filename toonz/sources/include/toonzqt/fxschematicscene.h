@@ -24,6 +24,7 @@ class FxSchematicGroupEditor;
 class FxSchematicMacroEditor;
 class TMacroFx;
 
+enum SearchDirection { Both = 0, Input, Output };
 //==================================================================
 //
 // FXSchematic
@@ -137,8 +138,8 @@ public:
   void simulateDisconnectSelection(bool disconnect);
 
   //! Updates all Group Editors containing fx.
-  //! Each fx is only in one group, but each gruop can contains othe group. All
-  //! nested Groups must be updated.
+  //! Each fx is only in one group, but each group can contains other groups.
+  //! All nested Groups must be updated.
   void updateNestedGroupEditors(FxSchematicNode *node, const QPointF &newPos);
   void closeInnerMacroEditor(int groupId);
   void resizeNodes(bool maximizedNode);
@@ -178,18 +179,44 @@ private:
   void placeNodeAndParents(TFx *fx, double x, double &maxX, double &maxY);
 
   QPointF nearestPoint(const QPointF &point);
-  void highlightLinks(FxSchematicNode *node, bool value);
+
+  void highlightLinks(FxSchematicNode *node, bool value,
+                      SearchDirection direction = Both);
+
   void updatePosition(FxSchematicNode *node, const TPointD &pos);
   void simulateInsertSelection(SchematicLink *link, bool connect);
   void updatePositionOnResize(TFx *fx, bool maximizedNode);
   void removeRetroLinks(TFx *fx, double &maxX);
 
+  bool isAnEmptyZone_withParentFx(const QRectF &rect, const TFx *parent);
+
+  // snap to neighbor nodes on dragging
+  void updateSnapTarget(QGraphicsItem *item) override;
 signals:
   void showPreview(TFxP);
   void cacheFx(TFxP);
   void doCollapse(const QList<TFxP> &);
   void doExplodeChild(const QList<TFxP> &);
   void editObject();
+
+public slots:
+  void requestDisconnectFromXSheet() { onDisconnectFromXSheet(); }
+  void requestConnectToXSheet() { onConnectToXSheet(); }
+  void requestPreview() { onPreview(); }
+  void requestCacheFx() { onCacheFx(); }
+  void requestUncacheFx() { onUncacheFx(); }
+  void requestDeleteFx() { onDeleteFx(); }
+  void requestDuplicateFx() { onDuplicateFx(); }
+  void requestUnlinkFx() { onUnlinkFx(); }
+  void requestMacroFx() { onMacroFx(); }
+  void requestExplodeMacroFx() { onExplodeMacroFx(); }
+  void requestOpenMacroFx() { onOpenMacroFx(); }
+  void requestSavePresetFx() { onSavePresetFx(); }
+  void requestActivateOutput() { onActivateOutput(); }
+  void requestInsertPaste() { onInsertPaste(); }
+  void requestAddPaste() { onAddPaste(); }
+  void requestReplacePaste() { onReplacePaste(); }
+  void requestEditGroup() { onEditGroup(); }
 
 protected slots:
   void onSelectionSwitched(TSelection *oldSel, TSelection *newSel) override;
@@ -205,7 +232,6 @@ protected slots:
   void onExplodeMacroFx();
   void onOpenMacroFx();
   void onSavePresetFx();
-  void onRemoveOutput();
   void onActivateOutput();
   void onPreview();
   void onCacheFx();

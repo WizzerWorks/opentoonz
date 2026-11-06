@@ -32,8 +32,9 @@
 
 class DVAPI LevelOptions {
 public:
-  enum DpiPolicy       //!  Describes the dpi policy used for a level.
-  { DP_ImageDpi  = 0,  //!< Level uses the natural dpi embedded in its images.
+  enum DpiPolicy  //!  Describes the dpi policy used for a level.
+  {
+    DP_ImageDpi  = 0,  //!< Level uses the natural dpi embedded in its images.
     DP_CustomDpi = 2   //!< Level uses a custom dpi set by the user.
   };
 
@@ -54,6 +55,12 @@ public:
       //!  premultiplied by Toonz for alpha compositing (because they
       //!  are not).
       m_isStopMotionLevel;
+
+  double m_colorSpaceGamma;  // gamma value to be used for converting
+                             // linear-based image file to nonlinear raster.
+                             // Currently only used in EXR image levels.
+
+  static const double DefaultColorSpaceGamma;
 
 public:
   LevelOptions();  //!< Constructs with default values.
@@ -157,7 +164,7 @@ public:
   }
 
   /*! \details  A level is forbidden if it has been created with a
-          uncompatible application version (e.g. it was created with
+          incompatible application version (e.g. it was created with
           Student and loaded with Toonz).                                     */
 
   void setIsForbidden(
@@ -173,7 +180,7 @@ public:
           image pixels are \a not already premultiplied.
 
 \details  Images with an alpha channel may or may not store pixels in
-          \a premultiplied form. See the Wikipedia entry on alhpa
+          \a premultiplied form. See the Wikipedia entry on alpha
           compositing for further information:
           http://en.wikipedia.org/wiki/Alpha_compositing
 
@@ -212,7 +219,7 @@ public:
 ie
           only \a fully white pixels will be replaced with transparent.
           This implicityl restrains its applicability to images <I>without
-          antialias</I>. This is therefore coupled with antialiasing settins.
+          antialias</I>. This is therefore coupled with antialiasing settings.
 \sa       The setDoAntialias() method.                                        */
 
   void setWhiteTransp(bool whiteTransp)  //!  Whether full white pixels should
@@ -228,6 +235,11 @@ ie
     m_options.m_isStopMotionLevel = isStopMotion;
   }
   bool isStopMotionLevel() const { return m_options.m_isStopMotionLevel; }
+
+  // gamma value to be used for converting linear-based image file (EXR) to
+  // nonlinear raster.
+  void setColorSpaceGamma(double gamma) { m_options.m_colorSpaceGamma = gamma; }
+  double colorSpaceGamma() const { return m_options.m_colorSpaceGamma; }
 
 private:
   TPointD m_imageDpi;

@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include <QApplication>
+#include <QDesktopWidget>
 #include <QTextStream>
 #include <QFile>
 
@@ -14,6 +16,7 @@
 #include "tregion.h"
 #include "tcurves.h"
 #include "tpalette.h"
+#include "tstroke.h"
 
 //=------------------------------------------------------------------------------------------------------------------------------
 //=------------------------------------------------------------------------------------------------------------------------------
@@ -24,6 +27,7 @@ namespace  // svg_parser
 {
 
 struct NSVGpath {
+  float *svgPts;
   float *pts;   // Cubic bezier points: x0,y0, [cpx1,cpx1,cpx2,cpy2,x1,y1], ...
   int npts;     // Total number of bezier points.
   char closed;  // Flag indicating if shapes should be treated as closed.
@@ -31,11 +35,18 @@ struct NSVGpath {
 };
 
 struct NSVGshape {
+  char id[50];
   unsigned int fillColor;    // Fill color
+  char hasFillNone;          // Flag indicating we have a fill = none
   unsigned int strokeColor;  // Stroke color
-  float strokeWidth;         // Stroke width (scaled)
-  char hasFill;              // Flag indicating if fill exists.
-  char hasStroke;            // Flag indicating id store exists
+  char hasStrokeNone;        // Flag indicating stroke color = none
+  float strokeWidth;         // Stroke width
+  int lineJoin;
+  int lineCap;
+  float miterLimit;
+  char hasFillInfo;          // Flag indicating if fill exists.
+  char hasStrokeInfo;        // Flag indicating id store exists
+  float xform[6];
   struct NSVGpath *paths;    // Linked list of paths in the image.
   struct NSVGshape *next;    // Pointer to next shape, or NULL if last element.
 };
@@ -189,14 +200,21 @@ int nsvg__parseXML(char *input, void (*startelCb)(void *ud, const char *el,
 
 struct NSVGAttrib {
   float xform[6];
+  char id[50];
   unsigned int fillColor;
+  char hasFillNone;
   unsigned int strokeColor;
+  char hasStrokeNone;
+  float opacity;
   float fillOpacity;
   float strokeOpacity;
   float strokeWidth;
-  char hasFill;
-  char hasStroke;
+  char hasFillInfo;
+  char hasStrokeInfo;
   char visible;
+  int lineJoin;
+  int lineCap;
+  float miterLimit;
 };
 
 struct NSVGParser {
@@ -309,14 +327,20 @@ struct NSVGParser *nsvg__createParser() {
 
   // Init style
   nsvg__xformSetIdentity(p->attr[0].xform);
-  p->attr[0].fillColor     = 0;
-  p->attr[0].strokeColor   = 0;
-  p->attr[0].fillOpacity   = 1;
-  p->attr[0].strokeOpacity = 1;
-  p->attr[0].strokeWidth   = 1;
-  p->attr[0].hasFill       = 0;
-  p->attr[0].hasStroke     = 0;
-  p->attr[0].visible       = 1;
+  strcpy(p->attr[0].id,"default");
+  p->attr[0].fillColor      = 0;
+  p->attr[0].hasFillNone    = 0;
+  p->attr[0].strokeColor    = 0;
+  p->attr[0].hasStrokeNone  = 1;
+  p->attr[0].opacity        = 1;
+  p->attr[0].fillOpacity    = 1;
+  p->attr[0].strokeOpacity  = 1;
+  p->attr[0].strokeWidth    = 0;
+  p->attr[0].lineCap        = TStroke::OutlineOptions::ROUND_CAP;
+  p->attr[0].lineJoin       = TStroke::OutlineOptions::ROUND_JOIN;
+  p->attr[0].miterLimit     = 4.0;
+  p->attr[0].hasFillInfo    = 0;
+  p->attr[0].visible        = 1;
 
   return p;
 
@@ -331,6 +355,7 @@ error:
 void nsvg__deletePaths(struct NSVGpath *path) {
   while (path) {
     struct NSVGpath *next = path->next;
+    if (path->svgPts != NULL) free(path->svgPts);
     if (path->pts != NULL) free(path->pts);
     free(path);
     path = next;
@@ -414,27 +439,36 @@ void nsvg__popAttr(struct NSVGParser *p) {
 
 void nsvg__addShape(struct NSVGParser *p) {
   struct NSVGAttrib *attr = nsvg__getAttr(p);
-  float scale             = 1.0f;
   struct NSVGshape *shape, *cur, *prev;
 
   if (p->plist == NULL) return;
 
   shape = (struct NSVGshape *)malloc(sizeof(struct NSVGshape));
-  if (shape == NULL) goto error;
+  if (shape == NULL) return;
   memset(shape, 0, sizeof(struct NSVGshape));
 
-  scale              = nsvg__maxf(fabsf(attr->xform[0]), fabsf(attr->xform[3]));
-  shape->hasFill     = attr->hasFill;
-  shape->hasStroke   = attr->hasStroke;
-  shape->strokeWidth = attr->strokeWidth * scale;
+  // Determine scale factor to apply to width
+  float scaleFactor = std::sqrt(attr->xform[0] * attr->xform[0] +
+                                attr->xform[1] * attr->xform[1]);
 
+  shape->hasFillInfo = attr->hasFillInfo;
+  shape->strokeWidth   = attr->strokeWidth * scaleFactor;
+  shape->lineCap       = attr->lineCap;
+  shape->lineJoin      = attr->lineJoin;
+  shape->miterLimit    = attr->miterLimit;
+
+  strcpy(shape->id, attr->id);
   shape->fillColor = attr->fillColor;
-  if (shape->hasFill)
-    shape->fillColor |= (unsigned int)(attr->fillOpacity * 255) << 24;
+  shape->fillColor |= (unsigned int)(attr->opacity * attr->fillOpacity * 255)
+                      << 24;
+  shape->hasFillNone = attr->hasFillNone;
 
   shape->strokeColor = attr->strokeColor;
-  if (shape->hasStroke)
-    shape->strokeColor |= (unsigned int)(attr->strokeOpacity * 255) << 24;
+  shape->strokeColor |=
+      (unsigned int)(attr->opacity * attr->strokeOpacity * 255) << 24;
+  shape->hasStrokeNone = attr->hasStrokeNone;
+
+  memcpy(shape->xform, attr->xform, sizeof(float) * 6);
 
   shape->paths = p->plist;
   p->plist     = NULL;
@@ -450,11 +484,6 @@ void nsvg__addShape(struct NSVGParser *p) {
     p->image->shapes = shape;
   else
     prev->next = shape;
-
-  return;
-
-error:
-  if (shape) free(shape);
 }
 
 void nsvg__addPath(struct NSVGParser *p, char closed) {
@@ -470,15 +499,12 @@ void nsvg__addPath(struct NSVGParser *p, char closed) {
   if (path == NULL) goto error;
   memset(path, 0, sizeof(struct NSVGpath));
 
-  path->pts = (float *)malloc(p->npts * 2 * sizeof(float));
-  if (path->pts == NULL) goto error;
+  path->svgPts = (float *)malloc(p->npts * 2 * sizeof(float));
+  if (path->svgPts == NULL) goto error;
+  memcpy(path->svgPts, p->pts, p->npts * 2 * sizeof(float));
+
   path->closed = closed;
   path->npts   = p->npts;
-
-  // Transform path.
-  for (i = 0; i < p->npts; ++i)
-    nsvg__xformPoint(&path->pts[i * 2], &path->pts[i * 2 + 1], p->pts[i * 2],
-                     p->pts[i * 2 + 1], attr->xform);
 
   path->next = p->plist;
   p->plist   = path;
@@ -487,6 +513,7 @@ void nsvg__addPath(struct NSVGParser *p, char closed) {
 
 error:
   if (path != NULL) {
+    if (path->svgPts != NULL) free(path->svgPts);
     if (path->pts != NULL) free(path->pts);
     free(path);
   }
@@ -762,6 +789,28 @@ float nsvg__parseFloat(const char *str) {
   return (float)atof(str);
 }
 
+int nsvg__parseLineCap(const char *str) {
+  while (*str == ' ') ++str;
+
+  if (strcmp("square", str) == 0)
+    return TStroke::OutlineOptions::PROJECTING_CAP;
+  else if (strcmp("butt", str) == 0)
+    return TStroke::OutlineOptions::BUTT_CAP;
+
+  return TStroke::OutlineOptions::ROUND_CAP;
+}
+
+int nsvg__parseLineJoin(const char *str) {
+  while (*str == ' ') ++str;
+
+  if (strcmp("bevel", str) == 0)
+    return TStroke::OutlineOptions::BEVEL_JOIN;
+  else if (strcmp("miter", str) == 0)
+    return TStroke::OutlineOptions::MITER_JOIN;
+
+  return TStroke::OutlineOptions::ROUND_JOIN;
+}
+
 int nsvg__parseTransformArgs(const char *str, float *args, int maxNa, int *na) {
   const char *end;
   const char *ptr;
@@ -845,7 +894,7 @@ int nsvg__parseRotate(struct NSVGParser *p, const char *str) {
   if (na == 1) args[1] = args[2] = 0.0f;
 
   if (na > 1) {
-    nsvg__xformSetTranslation(t, -args[1], -args[2]);
+    nsvg__xformSetTranslation(t, args[1], args[2]);
     nsvg__xformPremultiply(nsvg__getAttr(p)->xform, t);
   }
 
@@ -853,7 +902,7 @@ int nsvg__parseRotate(struct NSVGParser *p, const char *str) {
   nsvg__xformPremultiply(nsvg__getAttr(p)->xform, t);
 
   if (na > 1) {
-    nsvg__xformSetTranslation(t, args[1], args[2]);
+    nsvg__xformSetTranslation(t, -args[1], -args[2]);
     nsvg__xformPremultiply(nsvg__getAttr(p)->xform, t);
   }
 
@@ -885,35 +934,46 @@ int nsvg__parseAttr(struct NSVGParser *p, const char *name, const char *value) {
   struct NSVGAttrib *attr = nsvg__getAttr(p);
   if (!attr) return 0;
 
-  if (strcmp(name, "style") == 0) {
+  if (strcmp(name, "id") == 0) {
+    strcpy(attr->id, value);
+  } else if (strcmp(name, "style") == 0) {
     nsvg__parseStyle(p, value);
   } else if (strcmp(name, "display") == 0) {
     if (strcmp(value, "none") == 0)
       attr->visible = 0;
     else
       attr->visible = 1;
+  } else if (strcmp(name, "opacity") == 0) {
+    attr->opacity = nsvg__parseFloat(value);
   } else if (strcmp(name, "fill") == 0) {
+    attr->hasFillInfo = 1;
     if (strcmp(value, "none") == 0) {
-      attr->hasFill = 0;
+      attr->hasFillNone = 1;
     } else {
-      attr->hasFill   = 1;
-      attr->fillColor = nsvg__parseColor(value);
+      attr->hasFillNone = 0;
+      attr->fillColor   = nsvg__parseColor(value);
     }
   } else if (strcmp(name, "fill-opacity") == 0) {
+    attr->hasFillInfo = 1;
     attr->fillOpacity = nsvg__parseFloat(value);
   } else if (strcmp(name, "stroke") == 0) {
-    if (strcmp(value, "none") == 0) {
-      attr->hasStroke = 0;
-    } else {
-      attr->hasStroke   = 1;
-      attr->strokeColor = nsvg__parseColor(value);
+    if (strcmp(value, "none") != 0) {
+      attr->hasStrokeNone = 0;
+      attr->strokeColor   = nsvg__parseColor(value);
+      if (!attr->strokeWidth) attr->strokeWidth = 1;
     }
   } else if (strcmp(name, "stroke-width") == 0) {
-    attr->strokeWidth = nsvg__parseFloat(value);
+    attr->strokeWidth   = nsvg__parseFloat(value);
   } else if (strcmp(name, "stroke-opacity") == 0) {
     attr->strokeOpacity = nsvg__parseFloat(value);
   } else if (strcmp(name, "transform") == 0) {
     nsvg__parseTransform(p, value);
+  } else if (strcmp(name, "stroke-linecap") == 0) {
+    attr->lineCap       = nsvg__parseLineCap(value);
+  } else if (strcmp(name, "stroke-linejoin") == 0) {
+    attr->lineJoin      = nsvg__parseLineJoin(value);
+  } else if (strcmp(name, "stroke-miterlimit") == 0) {
+    attr->miterLimit    = nsvg__parseFloat(value);
   } else {
     return 0;
   }
@@ -1332,7 +1392,8 @@ void nsvg__parsePath(struct NSVGParser *p, const char **attr) {
       cpy        = 0;
       closedFlag = 0;
       nargs      = 0;
-      prev_m_exists = false;
+      prev_m_cpx = 0;
+      prev_m_cpy = 0;
 
       while (*s) {
         s = nsvg__getNextPathItem(s, item);
@@ -1344,17 +1405,10 @@ void nsvg__parsePath(struct NSVGParser *p, const char **attr) {
             case 'm':
             case 'M':
 			 
-              // If moveto is relative it relative to previous moveto point
-              if (cmd == 'm' && prev_m_exists) {
-                cpx = prev_m_cpx;
-                cpy = prev_m_cpy;
-              }
-              
               nsvg__pathMoveTo(p, &cpx, &cpy, args, cmd == 'm' ? 1 : 0);
               
               prev_m_cpx = cpx;
               prev_m_cpy = cpy;
-              prev_m_exists = true;
 
               // Moveto can be followed by multiple coordinate pairs,
               // which should be treated as linetos.
@@ -1424,6 +1478,8 @@ void nsvg__parsePath(struct NSVGParser *p, const char **attr) {
             nsvg__resetPath(p);
             closedFlag = 0;
             nargs      = 0;
+            cpx = prev_m_cpx;
+            cpy = prev_m_cpy;
           }
         }
       }
@@ -1634,11 +1690,30 @@ void nsvg__parseSVG(struct NSVGParser *p, const char **attr) {
   for (i = 0; attr[i]; i += 2) {
     if (!nsvg__parseAttr(p, attr[i], attr[i + 1])) {
       if (strcmp(attr[i], "width") == 0) {
+        float w;
+        char units[8];
+        units[0]            = '\0';
         p->image->wunits[0] = '\0';
-        sscanf(attr[i + 1], "%f%s", &p->image->width, p->image->wunits);
+        sscanf(attr[i + 1], "%f%s", &w, units);
+        if (strcmp(units, "%") != 0) {
+          p->image->width = w;
+          strcpy(p->image->wunits, units);
+        }
       } else if (strcmp(attr[i], "height") == 0) {
+        float h;
+        char units[8];
+        units[0]            = '\0';
         p->image->hunits[0] = '\0';
-        sscanf(attr[i + 1], "%f%s", &p->image->height, p->image->hunits);
+        sscanf(attr[i + 1], "%f%s", &h, units);
+        if (strcmp(units, "%") != 0) {
+          p->image->height = h;
+          strcpy(p->image->hunits, units);
+        }
+      } else if (strcmp(attr[i], "viewBox") == 0) {
+        float x, y, w, h;
+        sscanf(attr[i + 1], "%f %f %f %f", &x, &y, &w, &h);
+        if (p->image->width <= 0) p->image->width = w;
+        if (p->image->height <= 0) p->image->height = h;
       }
     }
   }
@@ -1745,7 +1820,15 @@ struct NSVGimage *nsvgParseFromFile(const char *filename) {
   char *data              = NULL;
   struct NSVGimage *image = NULL;
 
+#if defined(_WIN32)
+  wchar_t wfilename[1024];
+  if (MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfilename, 1024) > 0) {
+      fp = _wfopen(wfilename, L"rb");
+  }
+#else
   fp = fopen(filename, "rb");
+#endif
+  
   if (!fp) goto error;
   fseek(fp, 0, SEEK_END);
   size = ftell(fp);
@@ -1826,7 +1909,7 @@ TLevelWriterSvg::TLevelWriterSvg(const TFilePath &path, TPropertyGroup *winfo)
 
 static void writeRegion(TRegion *r, TPalette *plt, QTextStream &out,
                         double ly) {
-  if (r->getEdgeCount() == 0) return;
+  if (r->getEdgeCount() == 0 || !r->getStyle()) return;
   std::vector<const TQuadratic *> quadsOutline;
 
   for (int i = 0; i < (int)r->getEdgeCount(); i++) {
@@ -1870,10 +1953,10 @@ static void writeRegion(TRegion *r, TPalette *plt, QTextStream &out,
 
   out << "<path  \n";
   TPixel32 col = plt->getStyle(r->getStyle())->getMainColor();
-  if (col == TPixel::Transparent) col == TPixel::White;
+  if (col == TPixel::Transparent) col = TPixel::White;
 
   out << "style=\"fill:rgb(" << col.r << "," << col.g << "," << col.b
-      << ")\" \n";
+      << ");fill-opacity:" << (col.m / 255.0) << "\" \n";
   out << "d=\"M " << quadsOutline[0]->getP0().x << " "
       << ly - quadsOutline[0]->getP0().y << "\n";
 
@@ -1881,7 +1964,7 @@ static void writeRegion(TRegion *r, TPalette *plt, QTextStream &out,
     out << "Q " << quadsOutline[i]->getP1().x << ","
         << ly - quadsOutline[i]->getP1().y << "," << quadsOutline[i]->getP2().x
         << "," << ly - quadsOutline[i]->getP2().y << "\n";
-  out << " \" /> \n";
+  out << "Z \" /> \n";
   for (int i = 0; i < (int)r->getSubregionCount(); i++)
     writeRegion(r->getSubregion(i), plt, out, ly);
 }
@@ -1901,7 +1984,7 @@ static void writeOutlineStroke(TStroke *s, TPalette *plt, QTextStream &out,
   TPixel32 col = plt->getStyle(s->getStyle())->getMainColor();
 
   out << "style=\"fill:rgb(" << col.r << "," << col.g << "," << col.b
-      << ")\" \n";
+      << ");fill-opacity:" << (col.m / 255.0) << "\" \n";
   out << "d=\"M " << quadsOutline[0]->getP0().x << " "
       << ly - quadsOutline[0]->getP0().y << "\n";
 
@@ -1909,7 +1992,7 @@ static void writeOutlineStroke(TStroke *s, TPalette *plt, QTextStream &out,
     out << "Q " << quadsOutline[i]->getP1().x << ","
         << ly - quadsOutline[i]->getP1().y << "," << quadsOutline[i]->getP2().x
         << "," << ly - quadsOutline[i]->getP2().y << "\n";
-  out << " \" /> \n";
+  out << "Z \" /> \n";
 }
 
 //----------------------------------------------------------
@@ -1940,8 +2023,40 @@ static void writeCenterlineStroke(TStroke *s, TPalette *plt, QTextStream &out,
   out << "<path  \n";
   TPixel32 col = plt->getStyle(s->getStyle())->getMainColor();
 
+  int capStyle    = s->outlineOptions().m_capStyle;
+  QString lineCap = "";
+  switch (capStyle) {
+  case TStroke::OutlineOptions::PROJECTING_CAP:
+    lineCap = "square";
+    break;
+  case TStroke::OutlineOptions::ROUND_CAP:
+    lineCap = "round";
+    break;
+  default:
+  case TStroke::OutlineOptions::BUTT_CAP:
+    lineCap = "butt";
+    break;
+  }
+  int joinStyle    = s->outlineOptions().m_joinStyle;
+  QString lineJoin = "";
+  switch (joinStyle) {
+  case TStroke::OutlineOptions::BEVEL_JOIN:
+    lineJoin = "bevel";
+    break;
+  case TStroke::OutlineOptions::ROUND_JOIN:
+    lineJoin = "round";
+    break;
+  default:
+  case TStroke::OutlineOptions::MITER_JOIN:
+    lineJoin = "miter";
+    break;
+  }
+
   out << "style=\"stroke:rgb(" << col.r << "," << col.g << "," << col.b
-      << ")\" stroke-width=\"" << thick << " \"  \n";
+      << ");stroke-width:" << thick << ";stroke-linecap:" << lineCap
+      << ";stroke-linejoin:" << lineJoin
+      << ";stroke-miterlimit:" << s->outlineOptions().m_miterUpper
+      << ";stroke-opacity:" << (col.m / 255.0) << "\"  \n";
   out << "d=\"M " << s->getChunk(0)->getP0().x << " "
       << ly - s->getChunk(0)->getP0().y << "\n";
 
@@ -1949,7 +2064,10 @@ static void writeCenterlineStroke(TStroke *s, TPalette *plt, QTextStream &out,
     out << "Q " << s->getChunk(i)->getP1().x << ","
         << ly - s->getChunk(i)->getP1().y << "," << s->getChunk(i)->getP2().x
         << "," << ly - s->getChunk(i)->getP2().y << "\n";
-  out << " \" /> \n";
+  if (s->isSelfLoop())
+    out << "Z \" /> \n";
+  else
+    out << " \" /> \n";
 }
 
 //----------------------------------------------------------
@@ -2032,7 +2150,7 @@ void TImageWriterSvg::save(const TImageP &img) {
 
 namespace {
 int addColorToPalette(TPalette *plt, unsigned int _color) {
-  TPixel color(_color & 0xFF, (_color >> 8) & 0xFF, _color >> 16);
+  TPixel color(_color & 0xFF, (_color >> 8) & 0xFF, _color >> 16, _color >> 24);
   for (int i = 0; i < plt->getStyleCount(); i++)
     if (plt->getStyle(i)->getMainColor() == color) return i;
   TPalette::Page *page = plt->getPage(0);
@@ -2041,7 +2159,7 @@ int addColorToPalette(TPalette *plt, unsigned int _color) {
 }
 
 int findColor(TPalette *plt, unsigned int _color) {
-  TPixel color(_color & 0xFF, (_color >> 8) & 0xFF, _color >> 16);
+  TPixel color(_color & 0xFF, (_color >> 8) & 0xFF, _color >> 16, _color >> 24);
   for (int i = 0; i < plt->getStyleCount(); i++)
     if (plt->getStyle(i)->getMainColor() == color) return i;
   assert(false);
@@ -2050,15 +2168,24 @@ int findColor(TPalette *plt, unsigned int _color) {
 
 //-----------------------------------------------------------------------------
 
-TStroke *buildStroke(NSVGpath *path, float width) {
+TStroke *buildStroke(NSVGpath *path, float *xform, float width, int lineCap,
+                     int lineJoin, float miterLimit, bool autoclose) {
   assert((path->npts - 1) % 3 == 0);
+
+  path->pts = (float *)malloc(path->npts * 2 * sizeof(float));
+
+  // Transform path.
+  for (int i = 0; i < path->npts; ++i)
+    nsvg__xformPoint(&path->pts[i * 2], &path->pts[i * 2 + 1],
+                     path->svgPts[i * 2], path->svgPts[i * 2 + 1], xform);
 
   TThickPoint p0 = TThickPoint(path->pts[0], -path->pts[1], width);
   std::vector<TThickPoint> points;
 
   points.push_back(p0);
 
-  for (int i = 1; i < path->npts; i += 3) {
+  int npts = path->npts + (path->closed ? -3 : 0);
+  for (int i = 1; i < npts; i += 3) {
     std::vector<TThickQuadratic *> chunkArray;
 
     computeQuadraticsFromCubic(
@@ -2076,17 +2203,33 @@ TStroke *buildStroke(NSVGpath *path, float width) {
 
   if (points.empty()) return 0;
 
-  if (path->closed) {
-    if (points.back() != points.front()) {
+  if (path->closed || autoclose) {
+    // Compare front and back points. We'll adjust to compare to 2 decimal
+    // places only due to precision difference between absolute and relative
+    // calculations
+    if (((int)(points.back().x * 100) != (int)(points.front().x * 100)) ||
+        (int)(points.back().y * 100) != (int)(points.front().y * 100)) {
+      if (autoclose) {
+        points.push_back(points.back());
+        points.push_back(points.back());
+        points.push_back(points.back());
+      }
       points.push_back(0.5 * (points.back() + points.front()));
       points.push_back(points.front());
+      if (autoclose) points.push_back(points.front());
     } else {
       int gasp = 0;
     }
   }
   TStroke *s = new TStroke(points);
 
-  s->setSelfLoop(path->closed);
+  TStroke::OutlineOptions &options = s->outlineOptions();
+
+  options.m_capStyle   = lineCap;
+  options.m_joinStyle  = lineJoin;
+  options.m_miterUpper = miterLimit;
+
+  s->setSelfLoop(path->closed || autoclose);
 
   std::vector<TThickPoint> tpoints;
   s->getControlPoints(tpoints);
@@ -2124,32 +2267,64 @@ TImageP TImageReaderSvg::load() {
     // TPalette* appPlt = new TPalette();
     // vapp->setPalette(appPlt);
 
-    TPixel color(shape->fillColor & 0xFF, (shape->fillColor >> 8) & 0xFF,
-                 shape->fillColor >> 16);
-    if (!shape->hasFill) {
-      assert(color == TPixel::Black);
-      shape->hasFill = true;
-    }
-    if (shape->hasStroke) inkIndex = findColor(plt, shape->strokeColor);
+    bool applyFill = shape->hasFillInfo && !shape->hasFillNone;
+    bool autoclose = applyFill && !path->closed && shape->hasStrokeNone;
 
-    if (shape->hasFill) paintIndex = findColor(plt, shape->fillColor);
+    float strokeWidth = !shape->hasStrokeNone ? (shape->strokeWidth * 0.5) : 0;
+
+    inkIndex   = !shape->hasStrokeNone ? findColor(plt, shape->strokeColor) : 1;
+    paintIndex = !shape->hasFillNone ? findColor(plt, shape->fillColor) : 0;
+    if (!applyFill && !shape->hasFillNone &&
+        (!shape->hasStrokeNone || !strokeWidth)) {
+      applyFill = true;
+    }
 
     // vapp->setPalette(plt.getPointer());
     int startStrokeIndex = vimage->getStrokeCount();
+    int strokeCount      = 0;
     for (; path; path = path->next) {
-      TStroke *s = buildStroke(path, shape->hasStroke ? shape->strokeWidth : 0);
+      TStroke *s = buildStroke(path, shape->xform, strokeWidth, shape->lineCap,
+                               shape->lineJoin, shape->miterLimit, autoclose);
       if (!s) continue;
-      s->setStyle(shape->hasStroke ? inkIndex : 0);
-      vimage->addStroke(s);
+      s->setStyle(inkIndex);
+      int currentIndex = vimage->addStroke(s);
+      if (currentIndex < 0) continue;
+      strokeCount++;
+      if (s->isSelfLoop() && !shape->hasFillNone) applyFill = true;
+      // Single unconnected stroke shape with fill
+      if (!s->isSelfLoop() && !shape->hasFillNone) {
+        int x = 1;
+        // Create a connecting line for fill
+        std::vector<TThickPoint> pts;
+        pts.push_back(TThickPoint(s->getControlPoint(0), 0));
+        pts.push_back(TThickPoint(s->getControlPoint(s->getControlPointCount()), 0));
+        if (pts.front() != pts.back()) {
+          TStroke *hiddenStroke = new TStroke(pts);
+          if (vimage->addStroke(hiddenStroke) >= 0) x++;
+        }
+        // Immediately group and fill
+        vimage->group(currentIndex, x);
+        vimage->enterGroup(startStrokeIndex);
+        vimage->selectFill(TRectD(-9999999, -9999999, 9999999, 9999999), 0,
+                           paintIndex, false, true, false);
+        vimage->exitGroup();
+      }
+      vimage->findRegions();
     }
     if (startStrokeIndex == vimage->getStrokeCount()) continue;
 
-    vimage->group(startStrokeIndex,
-                  vimage->getStrokeCount() - startStrokeIndex);
-    if (shape->hasFill) {
+    if (applyFill) {
+      int c = vimage->getStrokeCount() - startStrokeIndex;
+      if (!vimage->isStrokeGrouped(startStrokeIndex) || c > 2)
+        vimage->group(startStrokeIndex, c);
       vimage->enterGroup(startStrokeIndex);
-      vimage->selectFill(TRectD(-9999999, -9999999, 9999999, 9999999), 0,
-                         paintIndex, true, true, false);
+      if (c > 1) {
+        TStroke *s = vimage->getStroke(vimage->getStrokeCount() - 1);
+        for (int i = 0; i < s->getControlPointCount(); i++)
+          vimage->fill(s->getControlPoint(i), paintIndex, false);
+      } else
+        vimage->selectFill(TRectD(-9999999, -9999999, 9999999, 9999999), 0,
+                           paintIndex, false, true, false);
       vimage->exitGroup();
     }
 
@@ -2163,6 +2338,11 @@ indexes[i] = vimage->getStrokeCount()+i;
 vimage->insertImage(vapp, indexes);*/
     // delete appPlt;
   }
+  double dx =
+      (svgImg->width > 0 ? svgImg->width : vimage->getBBox().getLx()) * 0.5;
+  double dy =
+      (svgImg->height > 0 ? svgImg->height : vimage->getBBox().getLy()) * 0.5;
+  vimage->transform(TTranslation(-dx, dy));
 
   nsvgDelete(svgImg);
   // if (m_level)
@@ -2193,9 +2373,11 @@ TLevelP TLevelReaderSvg::loadInfo() {
     if (!svgImg) continue;
 
     for (NSVGshape *shape = svgImg->shapes; shape; shape = shape->next) {
-      if (shape->hasStroke) addColorToPalette(plt, shape->strokeColor);
+      if (!shape->hasStrokeNone)
+        addColorToPalette(plt, shape->strokeColor);
 
-      if (shape->hasFill) addColorToPalette(plt, shape->fillColor);
+      if (!shape->hasFillNone)
+        addColorToPalette(plt, shape->fillColor);
     }
 
     nsvgDelete(svgImg);

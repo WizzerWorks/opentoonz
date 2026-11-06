@@ -16,6 +16,7 @@
 
 // TnzCore includes
 #include "tconvert.h"
+#include "tlevel_io.h"
 
 // Qt includes
 #include <QTreeWidget>
@@ -34,15 +35,6 @@ using namespace DVGui;
 
 //=============================================================================
 
-namespace {
-bool isMovieType(std::string type) {
-  return (type == "mov" || type == "avi" || type == "3gp" || type == "mp4" ||
-          type == "webm");
-}
-};
-
-//=============================================================================
-
 const std::vector<QAction *> &TasksViewer::getActions() const {
   return m_actions;
 }
@@ -51,13 +43,8 @@ const std::vector<QAction *> &TasksViewer::getActions() const {
 
 void TasksViewer::add(const QString &iconName, QString text, QToolBar *toolBar,
                       const char *slot, QString iconText) {
-#if QT_VERSION >= 0x050500
   QAction *action = new QAction(
-      createQIconOnOff(iconName.toLatin1().constData(), false), text, this);
-#else
-  QAction *action = new QAction(
-      createQIconOnOff(iconName.toAscii().constData(), false), text, this);
-#endif
+      createQIcon(iconName.toLatin1().constData(), false), text, this);
   action->setIconText(iconText);
   bool ret = connect(action, SIGNAL(triggered(bool)),
                      (TaskTreeModel *)m_treeView->model(), slot);
@@ -80,19 +67,19 @@ QWidget *TasksViewer::createToolBar() {
   // Create toolbar. It is an horizontal layout with three internal toolbar.
   QWidget *toolBarWidget = new QWidget(this);
   QToolBar *cmdToolbar   = new QToolBar(toolBarWidget);
-  cmdToolbar->setIconSize(QSize(21, 17));
+  cmdToolbar->setIconSize(QSize(20, 20));
   cmdToolbar->clear();
   cmdToolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-  add("start", tr("&Start"), cmdToolbar, SLOT(start(bool)), tr("Start"));
+  add("play", tr("&Start"), cmdToolbar, SLOT(start(bool)), tr("Start"));
   add("stop", tr("&Stop"), cmdToolbar, SLOT(stop(bool)), tr("Stop"));
   cmdToolbar->addSeparator();
-  add("addrender", tr("&Add Render Task"), cmdToolbar,
+  add("new_scene", tr("&Add Render Task"), cmdToolbar,
       SLOT(addRenderTask(bool)), tr("Add Render"));
-  add("addcleanup", tr("&Add Cleanup Task"), cmdToolbar,
+  add("cleanup_add", tr("&Add Cleanup Task"), cmdToolbar,
       SLOT(addCleanupTask(bool)), tr("Add Cleanup"));
 
   QToolBar *saveToolbar = new QToolBar(toolBarWidget);
-  saveToolbar->setIconSize(QSize(21, 17));
+  saveToolbar->setIconSize(QSize(20, 20));
   saveToolbar->clear();
   saveToolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
   add("save", tr("&Save Task List"), saveToolbar, SLOT(save(bool)), tr("Save"));
@@ -103,7 +90,7 @@ QWidget *TasksViewer::createToolBar() {
   add("delete", tr("&Remove"), saveToolbar, SLOT(remove(bool)), tr("Remove"));
 
   QVBoxLayout *toolbarLayout = new QVBoxLayout(toolBarWidget);
-  toolbarLayout->setMargin(0);
+  toolbarLayout->setContentsMargins(0, 0, 0, 0);
   toolbarLayout->setSpacing(0);
   {
     toolbarLayout->addWidget(cmdToolbar);
@@ -118,11 +105,7 @@ QWidget *TasksViewer::createToolBar() {
 /*! \class TasksViewer
                 Inherits \b QSplitter.
 */
-#if QT_VERSION >= 0x050500
 TasksViewer::TasksViewer(QWidget *parent, Qt::WindowFlags flags)
-#else
-TasksViewer::TasksViewer(QWidget *parent, Qt::WFlags flags)
-#endif
     : QSplitter(parent) {
   QFrame *box;
 
@@ -145,7 +128,7 @@ TasksViewer::TasksViewer(QWidget *parent, Qt::WFlags flags)
   box                  = new QFrame(this);
   QVBoxLayout *vLayout = new QVBoxLayout(box);
   box->setLayout(vLayout);
-  vLayout->setMargin(0);
+  vLayout->setContentsMargins(0, 0, 0, 0);
   vLayout->setSpacing(0);
 
   vLayout->addWidget(createToolBar());
@@ -615,7 +598,7 @@ void TaskSheet::setShrink() {
     // Update children tasks, if present.
     TFarmTaskGroup *taskGroup = dynamic_cast<TFarmTaskGroup *>(m_task);
     if (taskGroup) {
-      for (int i                        = 0; i < taskGroup->getTaskCount(); ++i)
+      for (int i = 0; i < taskGroup->getTaskCount(); ++i)
         taskGroup->getTask(i)->m_shrink = taskGroup->m_shrink;
     }
   }
@@ -643,7 +626,7 @@ void TaskSheet::setStep() {
     // Update children tasks, if present.
     TFarmTaskGroup *taskGroup = dynamic_cast<TFarmTaskGroup *>(m_task);
     if (taskGroup) {
-      for (int i                      = 0; i < taskGroup->getTaskCount(); ++i)
+      for (int i = 0; i < taskGroup->getTaskCount(); ++i)
         taskGroup->getTask(i)->m_step = taskGroup->m_step;
     }
   }
@@ -812,7 +795,7 @@ TaskSheet::TaskSheet(TasksViewer *owner) : QScrollArea(owner) {
   m_viewer = owner;
 
   QGridLayout *layout = new QGridLayout(contentWidget);
-  layout->setMargin(15);
+  layout->setContentsMargins(15, 15, 15, 15);
   layout->setSpacing(8);
   layout->setColumnStretch(3, 1);
   layout->setColumnStretch(5, 1);
@@ -854,7 +837,7 @@ TaskSheet::TaskSheet(TasksViewer *owner) : QScrollArea(owner) {
   m_boxComposer = new QFrame(contentWidget);
   m_boxComposer->setMinimumHeight(150);
   QGridLayout *layout1 = new QGridLayout(m_boxComposer);
-  layout1->setMargin(0);
+  layout1->setContentsMargins(0, 0, 0, 0);
   layout1->setSpacing(8);
   m_boxComposer->setLayout(layout1);
   ::create(m_outputPath, layout1, tr("Output:"), row1++, 4);
@@ -900,7 +883,7 @@ TaskSheet::TaskSheet(TasksViewer *owner) : QScrollArea(owner) {
   // tcleanupper Box
   m_boxCleanup         = new QFrame(contentWidget);
   QGridLayout *layout2 = new QGridLayout(m_boxCleanup);
-  layout2->setMargin(0);
+  layout2->setContentsMargins(0, 0, 0, 0);
   layout2->setSpacing(8);
   m_boxCleanup->setLayout(layout2);
   ::create(m_visible, layout2, tr("Visible Only"), 0);
@@ -1021,7 +1004,7 @@ TaskTreeView::TaskTreeView(TasksViewer *parent, TaskTreeModel *treeModel)
   if (!treeModel) treeModel = new TaskTreeModel(this);
   setModel(treeModel);
   setObjectName("taskeditortree");
-  setIconSize(QSize(21, 17));
+  setIconSize(QSize(35, 18));
 
   // connect(this, SIGNAL(pressed      (const QModelIndex &) ), this,
   // SLOT(onActivated(const QModelIndex &)));
@@ -1131,41 +1114,39 @@ QVariant TaskTreeModel::data(const QModelIndex &index, int role) const {
     case 0:
       return QVariant();
     case 1:
-      return QIcon(":Resources/farm_tasks.svg");
+      return createQIcon("tasks");
     case 2:
     case 3:
       TFarmTask *t         = item->getTask();
       bool sourceFileIsCLN = (t->m_taskFilePath.getType() == "cln");
       switch (t->m_status) {
       case Suspended:
-        return QIcon(t->m_isComposerTask
-                         ? ":Resources/render_suspended.svg"
-                         : (sourceFileIsCLN
-                                ? ":Resources/cln_suspended.svg"
-                                : ":Resources/cleanup_suspended.svg"));
+        return createQIcon(t->m_isComposerTask
+                               ? "task_render_suspended"
+                               : (sourceFileIsCLN ? "task_cln_suspended"
+                                                  : "task_cleanup_suspended"));
       case Waiting:
-        return QIcon(t->m_isComposerTask
-                         ? ":Resources/render_done_with_errors.svg"
-                         : (sourceFileIsCLN
-                                ? ":Resources/cln_done_with_errors.svg"
-                                : ":Resources/cleanup_done_with_errors.svg"));
+        return createQIcon(t->m_isComposerTask
+                               ? "task_render_completed_with_errors"
+                               : (sourceFileIsCLN
+                                      ? "task_cln_completed_with_errors"
+                                      : "task_cleanup_completed_with_errors"));
       case Running:
-        return QIcon(t->m_isComposerTask
-                         ? ":Resources/render_computing.svg"
-                         : (sourceFileIsCLN
-                                ? ":Resources/cln_computing.svg"
-                                : ":Resources/cleanup_computing.svg"));
+        return createQIcon(t->m_isComposerTask
+                               ? "task_render_computing"
+                               : (sourceFileIsCLN ? "task_cln_computing"
+                                                  : "task_cleanup_computing"));
       case Completed:
-        return QIcon(t->m_isComposerTask
-                         ? ":Resources/render_done.svg"
-                         : (sourceFileIsCLN ? ":Resources/cln_done.svg"
-                                            : ":Resources/cleanup_done.svg"));
+        return createQIcon(t->m_isComposerTask
+                               ? "task_render_completed"
+                               : (sourceFileIsCLN ? "task_cln_completed"
+                                                  : "task_cleanup_completed"));
       case Aborted:
       case TaskUnknown:
-        return QIcon(t->m_isComposerTask
-                         ? ":Resources/render_failed.svg"
-                         : (sourceFileIsCLN ? ":Resources/cln_failed.svg"
-                                            : ":Resources/cleanup_failed.svg"));
+        return createQIcon(t->m_isComposerTask
+                               ? "task_render_failed"
+                               : (sourceFileIsCLN ? "task_cln_failed"
+                                                  : "task_cleanup_failed"));
       default:
         assert(false);
       }

@@ -3,10 +3,16 @@
 #ifndef TIIO_3GP_H
 #define TIIO_3_H
 
-#ifdef x64
+#if defined(x64) || (defined(__GNUC__) && defined(_WIN32))
 #include "tiio_3gp_proxy.h"
 #else
 
+// Toonz includes
+#include "tlevel_io.h"
+#include "tthreadmessage.h"
+#include "tcommon.h"
+
+// Windows include
 #include <windows.h>
 
 namespace QuickTime {
@@ -35,9 +41,6 @@ namespace QuickTime {
 #undef QT_int_fast16_t
 #undef QT_uint_fast16_t
 }
-
-#include "tlevel_io.h"
-#include "tthreadmessage.h"
 
 using namespace QuickTime;
 

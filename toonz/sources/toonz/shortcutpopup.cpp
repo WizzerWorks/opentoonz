@@ -7,6 +7,7 @@
 #include "tapp.h"
 #include "tenv.h"
 #include "tsystem.h"
+#include "toolpresetcommandmanager.h"
 
 #include "toonz/toonzfolders.h"
 // TnzQt includes
@@ -27,7 +28,14 @@
 #include <QPushButton>
 #include <QPainter>
 #include <QAction>
+#include <QMap>
 #include <QKeyEvent>
+
+//=============================================================================
+// Static instance pointer for ShortcutPopup
+//=============================================================================
+
+ShortcutPopup *ShortcutPopup::s_instance = nullptr;
 #include <QMainWindow>
 #include <QLabel>
 #include <QLineEdit>
@@ -35,15 +43,40 @@
 #include <QApplication>
 #include <QTextStream>
 #include <QGroupBox>
+#include <QSignalBlocker>
 
 // STD includes
 #include <vector>
 
+namespace {
+
+// Persist Configure Shortcuts UI state in the user profile (.env).
+TEnv::StringVar ShortcutPopupExpandedFolders("ShortcutPopupExpandedFolders", "");
+TEnv::IntVar ShortcutPopupExpandedStateSaved("ShortcutPopupExpandedStateSaved",
+                                             0);
+TEnv::StringVar ShortcutPopupSearchText("ShortcutPopupSearchText", "");
+
+const QChar kFolderListSeparator(0x1e);
+
+QStringList expandedFoldersFromEnv() {
+  const QString stored =
+      QString::fromStdString((std::string)ShortcutPopupExpandedFolders);
+  if (stored.isEmpty()) return QStringList();
+  return stored.split(kFolderListSeparator, Qt::SkipEmptyParts);
+}
+
+void saveExpandedFoldersToEnv(const QStringList &expandedFolders) {
+  ShortcutPopupExpandedFolders =
+      expandedFolders.join(kFolderListSeparator).toStdString();
+}
+
+}  // namespace
+
 //=============================================================================
 // ShortcutItem
 // ------------
-// Lo ShortcutTree visualizza ShortcutItem (organizzati in folder)
-// ogni ShortcutItem rappresenta una QAction (e relativo Shortcut)
+// The ShortcutTree displays ShortcutItem (organized in folders)
+// each ShortcutItem represents a QAction (and its Shortcut)
 //-----------------------------------------------------------------------------
 
 class ShortcutItem final : public QTreeWidgetItem {
@@ -57,7 +90,11 @@ public:
   }
   void updateText() {
     QString text = m_action->text();
-    text.remove("&");
+    // removing accelerator key indicator
+    QRegularExpression regex("&([^& ])");
+    text = text.replace(regex, "\\1");
+    // removing doubled &s
+    text = text.replace("&&", "&");
     setText(0, text);
     QString shortcut = m_action->shortcut().toString();
     setText(1, shortcut);
@@ -69,8 +106,12 @@ public:
 // ShortcutViewer
 //-----------------------------------------------------------------------------
 
-ShortcutViewer::ShortcutViewer(QWidget *parent) : QWidget(parent), m_action(0) {
+ShortcutViewer::ShortcutViewer(QWidget *parent)
+    : QKeySequenceEdit(parent), m_action(0), m_keysPressed(0) {
+  setObjectName("ShortcutViewer");
   setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  connect(this, &ShortcutViewer::editingFinished, this,
+          &ShortcutViewer::onEditingFinished);
 }
 
 //-----------------------------------------------------------------------------
@@ -79,95 +120,119 @@ ShortcutViewer::~ShortcutViewer() {}
 
 //-----------------------------------------------------------------------------
 
-void ShortcutViewer::paintEvent(QPaintEvent *) {
-  QPainter p(this);
-  // sfondo azzurro se il widget ha il focus (e quindi si accorge dei tasti
-  // premuti)
-  p.fillRect(1, 1, width() - 1, height() - 1,
-             QBrush(hasFocus() ? QColor(171, 206, 255) : Qt::white));
-  // bordo
-  p.setPen(QColor(184, 188, 127));
-  p.drawRect(0, 0, width() - 1, height() - 1);
-  if (m_action) {
-    // lo shortcut corrente
-    p.setPen(Qt::black);
-    p.drawText(10, 13, m_action->shortcut().toString());
-  }
-}
-
-//-----------------------------------------------------------------------------
-
 void ShortcutViewer::setAction(QAction *action) {
   m_action = action;
-  update();
-  setFocus();
-}
-
-//-----------------------------------------------------------------------------
-
-bool ShortcutViewer::event(QEvent *event) {
-  // quando si vuole assegnare una combinazione che gia' assegnata bisogna
-  // evitare che lo shortcut relativo agisca.
-  if (event->type() == QEvent::ShortcutOverride) {
-    event->accept();
-    return true;
-  } else
-    return QWidget::event(event);
+  if (m_action) {
+    setEnabled(true);
+    setKeySequence(m_action->shortcut());
+    setFocus();
+  } else {
+    setEnabled(false);
+    setKeySequence(QKeySequence());
+  }
 }
 
 //-----------------------------------------------------------------------------
 
 void ShortcutViewer::keyPressEvent(QKeyEvent *event) {
-  int key = event->key();
-  if (key == Qt::Key_Control || key == Qt::Key_Shift || key == Qt::Key_Alt) {
-    event->ignore();
-    return;
-  }
+  int key                         = event->key();
   Qt::KeyboardModifiers modifiers = event->modifiers();
 
-  // Tasti che non possono essere utilizzati come shortcut
-  if ((modifiers | (Qt::CTRL | Qt::SHIFT | Qt::ALT)) !=
-          (Qt::CTRL | Qt::SHIFT | Qt::ALT) ||
-      key == Qt::Key_Home || key == Qt::Key_End || key == Qt::Key_PageDown ||
-      key == Qt::Key_PageUp || key == Qt::Key_Escape || key == Qt::Key_Print ||
-      key == Qt::Key_Pause || key == Qt::Key_ScrollLock) {
-    if (key != Qt::Key_Plus && key != Qt::Key_Minus &&
-        key != Qt::Key_Asterisk && key != Qt::Key_Slash) {
+  if (m_keysPressed == 0) {
+    if (key == Qt::Key_Home || key == Qt::Key_End || key == Qt::Key_PageDown ||
+        key == Qt::Key_PageUp || key == Qt::Key_Escape ||
+        key == Qt::Key_Print || key == Qt::Key_Pause ||
+        key == Qt::Key_ScrollLock) {
       event->ignore();
       return;
-    } else
-      modifiers = 0;
+    }
+
+    // If "Use Numpad and Tab keys for Switching Styles" option is activated,
+    // then prevent to assign such keys
+    if (Preferences::instance()->isUseNumpadForSwitchingStylesEnabled() &&
+        modifiers == 0 && (key >= Qt::Key_0 && key <= Qt::Key_9)) {
+      event->ignore();
+      return;
+    }
   }
 
-  // If "Use Numpad and Tab keys for Switching Styles" option is activated,
-  // then prevent to assign such keys
-  if (Preferences::instance()->isUseNumpadForSwitchingStylesEnabled() &&
-      modifiers == 0 && (key >= Qt::Key_0 && key <= Qt::Key_9)) {
-    event->ignore();
-    return;
+  m_keysPressed++;
+
+  QKeySequenceEdit::keyPressEvent(event);
+}
+
+//-----------------------------------------------------------------------------
+
+void ShortcutViewer::onEditingFinished() {
+  // Get the current key sequence and its string representation
+  QKeySequence keySeq = keySequence();
+  QString keyStr      = keySeq.toString();
+
+  // Reset the keys pressed counter (used for tracking multi-key sequences)
+  m_keysPressed = 0;
+
+  // Extract individual keys from the key sequence
+  QVector<int> keys;
+  for (int i = 0; i < keySeq.count(); i++) {
+    keys.append(keySeq[i]);
   }
 
+  // Check for conflicts with existing shortcuts
   if (m_action) {
     CommandManager *cm = CommandManager::instance();
-    QKeySequence keySequence(key + modifiers);
-    std::string shortcutString = keySequence.toString().toStdString();
-    QAction *oldAction =
-        cm->getActionFromShortcut(keySequence.toString().toStdString());
-    if (oldAction == m_action) return;
-    if (oldAction) {
-      QString msg = tr("%1 is already assigned to '%2'\nAssign to '%3'?")
-                        .arg(keySequence.toString())
-                        .arg(oldAction->iconText())
-                        .arg(m_action->iconText());
-      int ret = DVGui::MsgBox(msg, tr("Yes"), tr("No"), 1);
-      activateWindow();
-      if (ret == 2 || ret == 0) return;
+
+    // Iterate through the key sequence to check for partial conflicts
+    for (int i = 0; i < keys.size(); i++) {
+      // Create a partial key sequence (e.g., k1, k1+k2, k1+k2+k3, etc.)
+      QKeySequence partialSeq(keys[0], (i >= 1 ? keys[1] : 0),
+                              (i >= 2 ? keys[2] : 0), (i >= 3 ? keys[3] : 0));
+
+      // Check if the partial sequence conflicts with an existing shortcut
+      QAction *conflictingAction =
+          cm->getActionFromShortcut(partialSeq.toString().toStdString());
+
+      if (conflictingAction == m_action) return;
+
+      // If a conflict is found with another action
+      if (conflictingAction) {
+        QString msg;
+        // Check if the conflict is with the full sequence or a partial sequence
+        if (keys.size() == (i + 1)) {
+          // Conflict with the full sequence
+          msg = tr("'%1' is already assigned to '%2'\nAssign to '%3'?")
+                    .arg(partialSeq.toString())
+                    .arg(conflictingAction->iconText())
+                    .arg(m_action->iconText());
+        } else {
+          // Conflict with a partial sequence
+          msg = tr("Initial sequence '%1' is assigned to '%2' which takes "
+                   "priority.\nAssign shortcut sequence anyway?")
+                    .arg(partialSeq.toString())
+                    .arg(conflictingAction->iconText());
+        }
+
+        // Show a warning message box to the user
+        int ret = DVGui::MsgBox(msg, tr("Yes"), tr("No"), 1);
+        activateWindow();
+
+        // If the user chooses "No" or closes the dialog, reset the shortcut and
+        // exit
+        if (ret != 1) {  // 1 corresponds to "Yes"
+          setKeySequence(
+              m_action->shortcut());  // Reset to the original shortcut
+          setFocus();                 // Set focus back to the widget
+          return;
+        }
+      }
     }
-    CommandManager::instance()->setShortcut(m_action, shortcutString);
+
+    // If no conflicts are found, assign the new shortcut
+    std::string shortcutString = keySeq.toString().toStdString();
+    cm->setShortcut(m_action, shortcutString);
     emit shortcutChanged();
   }
-  event->accept();
-  update();
+
+  setKeySequence(keySeq);  // Update the displayed key sequence in the UI
 }
 
 //-----------------------------------------------------------------------------
@@ -176,7 +241,7 @@ void ShortcutViewer::removeShortcut() {
   if (m_action) {
     CommandManager::instance()->setShortcut(m_action, "", false);
     emit shortcutChanged();
-    update();
+    clear();
   }
 }
 
@@ -202,6 +267,9 @@ ShortcutTree::ShortcutTree(QWidget *parent) : QTreeWidget(parent) {
 
   setColumnCount(2);
   header()->close();
+  header()->setSectionResizeMode(0, QHeaderView::ResizeMode::Fixed);
+  header()->setSectionResizeMode(1, QHeaderView::ResizeMode::ResizeToContents);
+  header()->setDefaultSectionSize(300);
   // setStyleSheet("border-bottom:1px solid rgb(120,120,120); border-left:1px
   // solid rgb(120,120,120); border-top:1px solid rgb(120,120,120)");
 
@@ -221,26 +289,215 @@ ShortcutTree::ShortcutTree(QWidget *parent) : QTreeWidget(parent) {
   addFolder(tr("Render"), MenuRenderCommandType, menuCommandFolder);
   addFolder(tr("View"), MenuViewCommandType, menuCommandFolder);
   addFolder(tr("Windows"), MenuWindowsCommandType, menuCommandFolder);
+  QTreeWidgetItem *windowsFolder = m_subFolders.back();
+  addFolder(tr("Custom Panels"), CustomPanelCommandType, windowsFolder);
   addFolder(tr("Help"), MenuHelpCommandType, menuCommandFolder);
 
   addFolder(tr("Right-click Menu Commands"), RightClickMenuCommandType);
+  QTreeWidgetItem *rcmSubFolder = m_folders.back();
+  addFolder(tr("Cell Mark"), CellMarkCommandType, rcmSubFolder);
 
   addFolder(tr("Tools"), ToolCommandType);
   addFolder(tr("Tool Modifiers"), ToolModifierCommandType);
+  QTreeWidgetItem *toolModifiersFolder = m_folders.back();
+  addFolder(tr("Brush Presets"), BrushPresetCommandType, toolModifiersFolder);
+  addFolder(tr("Brush Sizes"), BrushSizeCommandType, toolModifiersFolder);
+  addFolder(tr("Stop Motion"), StopMotionCommandType);
   addFolder(tr("Visualization"), ZoomCommandType);
   addFolder(tr("Misc"), MiscCommandType);
   addFolder(tr("RGBA Channels"), RGBACommandType);
+  addFolder(tr("Special Modifier Keys"), SpecialModifierKeyType);
 
   sortItems(0, Qt::AscendingOrder);
 
-  connect(
-      this, SIGNAL(currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)),
-      this, SLOT(onCurrentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)));
+  restoreExpandedState();
+
+  connect(this, &ShortcutTree::currentItemChanged, this,
+          &ShortcutTree::onCurrentItemChanged);
+
+  connect(this, &ShortcutTree::clicked, this, &ShortcutTree::onItemClicked);
+
+  connect(this, &QTreeWidget::itemCollapsed, this,
+          &ShortcutTree::onItemCollapsed);
+
+  connect(this, &QTreeWidget::itemExpanded, this, [this](QTreeWidgetItem *) {
+    if (m_lastSearchTerm.isEmpty()) saveExpandedState();
+  });
+
+  connect(this, &QTreeWidget::itemCollapsed, this, [this](QTreeWidgetItem *) {
+    if (m_lastSearchTerm.isEmpty()) saveExpandedState();
+  });
 }
 
 //-----------------------------------------------------------------------------
 
 ShortcutTree::~ShortcutTree() {}
+
+//-----------------------------------------------------------------------------
+
+void ShortcutTree::saveExpandedState() {
+  saveExpandedFoldersToEnv(collectExpandedState());
+  ShortcutPopupExpandedStateSaved = 1;
+}
+
+//-----------------------------------------------------------------------------
+
+void ShortcutTree::restoreExpandedState() {
+  const bool hasSavedState = ShortcutPopupExpandedStateSaved != 0;
+  const QStringList expandedFolders = expandedFoldersFromEnv();
+  QSignalBlocker blocker(this);
+  applyExpandedState(expandedFolders, !hasSavedState);
+}
+
+//-----------------------------------------------------------------------------
+
+QStringList ShortcutTree::collectExpandedState() const {
+  QStringList expandedFolders;
+
+  // Save expanded state for all folders
+  for (QTreeWidgetItem *folder : m_folders) {
+    if (folder && folder->isExpanded()) {
+      expandedFolders.append(folder->text(0));
+    }
+  }
+
+  // Save expanded state for all subfolders (with parent path)
+  for (QTreeWidgetItem *subfolder : m_subFolders) {
+    if (subfolder && subfolder->isExpanded() && subfolder->parent()) {
+      QString path = subfolder->parent()->text(0) + "/" + subfolder->text(0);
+      expandedFolders.append(path);
+    }
+  }
+
+  return expandedFolders;
+}
+
+//-----------------------------------------------------------------------------
+
+void ShortcutTree::applyExpandedState(const QStringList &expandedFolders,
+                                      bool useDefaultIfEmpty) {
+  // Restore state for top-level folders
+  for (QTreeWidgetItem *folder : m_folders) {
+    if (folder) {
+      QString folderName = folder->text(0);
+      if (!expandedFolders.isEmpty()) {
+        folder->setExpanded(expandedFolders.contains(folderName));
+      } else if (useDefaultIfEmpty) {
+        folder->setExpanded(folderName == tr("Menu Commands"));
+      }
+    }
+  }
+
+  // Restore state for subfolders
+  for (QTreeWidgetItem *subfolder : m_subFolders) {
+    if (subfolder && subfolder->parent()) {
+      QString path = subfolder->parent()->text(0) + "/" + subfolder->text(0);
+      if (!expandedFolders.isEmpty()) {
+        subfolder->setExpanded(expandedFolders.contains(path));
+      } else if (useDefaultIfEmpty) {
+        subfolder->setExpanded(false);
+      }
+    }
+  }
+}
+
+//-----------------------------------------------------------------------------
+
+void ShortcutTree::refreshTree() {
+  // === STEP 1: Save expansion state before clearing ===
+  QMap<QString, bool> expandedState;
+
+  // Save state for top-level folders
+  for (QTreeWidgetItem *folder : m_folders) {
+    if (folder) {
+      expandedState[folder->text(0)] = folder->isExpanded();
+    }
+  }
+
+  // Save state for sub-folders
+  for (QTreeWidgetItem *subfolder : m_subFolders) {
+    if (subfolder && subfolder->parent()) {
+      QString fullPath =
+          subfolder->parent()->text(0) + "/" + subfolder->text(0);
+      expandedState[fullPath] = subfolder->isExpanded();
+    }
+  }
+
+  // === STEP 2: Clear and rebuild ===
+  m_items.clear();
+  m_folders.clear();
+  m_subFolders.clear();
+  clear();
+
+  // Rebuild the tree structure
+  QTreeWidgetItem *menuCommandFolder = new QTreeWidgetItem(this);
+  menuCommandFolder->setText(0, tr("Menu Commands"));
+  m_folders.push_back(menuCommandFolder);
+
+  addFolder(tr("Fill"), FillCommandType);
+  addFolder(tr("File"), MenuFileCommandType, menuCommandFolder);
+  addFolder(tr("Edit"), MenuEditCommandType, menuCommandFolder);
+  addFolder(tr("Scan & Cleanup"), MenuScanCleanupCommandType,
+            menuCommandFolder);
+  addFolder(tr("Level"), MenuLevelCommandType, menuCommandFolder);
+  addFolder(tr("Xsheet"), MenuXsheetCommandType, menuCommandFolder);
+  addFolder(tr("Cells"), MenuCellsCommandType, menuCommandFolder);
+  addFolder(tr("Play"), MenuPlayCommandType, menuCommandFolder);
+  addFolder(tr("Render"), MenuRenderCommandType, menuCommandFolder);
+  addFolder(tr("View"), MenuViewCommandType, menuCommandFolder);
+  addFolder(tr("Windows"), MenuWindowsCommandType, menuCommandFolder);
+  QTreeWidgetItem *windowsFolder = m_subFolders.back();
+  addFolder(tr("Custom Panels"), CustomPanelCommandType, windowsFolder);
+  addFolder(tr("Help"), MenuHelpCommandType, menuCommandFolder);
+
+  addFolder(tr("Right-click Menu Commands"), RightClickMenuCommandType);
+  QTreeWidgetItem *rcmSubFolder = m_folders.back();
+  addFolder(tr("Cell Mark"), CellMarkCommandType, rcmSubFolder);
+
+  addFolder(tr("Tools"), ToolCommandType);
+  addFolder(tr("Tool Modifiers"), ToolModifierCommandType);
+  QTreeWidgetItem *toolModifiersFolder = m_folders.back();
+  addFolder(tr("Brush Presets"), BrushPresetCommandType, toolModifiersFolder);
+  addFolder(tr("Brush Sizes"), BrushSizeCommandType, toolModifiersFolder);
+  addFolder(tr("Stop Motion"), StopMotionCommandType);
+  addFolder(tr("Visualization"), ZoomCommandType);
+  addFolder(tr("Misc"), MiscCommandType);
+  addFolder(tr("RGBA Channels"), RGBACommandType);
+  addFolder(tr("Special Modifier Keys"), SpecialModifierKeyType);
+
+  sortItems(0, Qt::AscendingOrder);
+
+  // === STEP 3: Restore expansion state ===
+  // Restore state for top-level folders (only if state exists)
+  for (QTreeWidgetItem *folder : m_folders) {
+    if (folder) {
+      QString folderName = folder->text(0);
+      if (expandedState.contains(folderName)) {
+        folder->setExpanded(expandedState[folderName]);
+      }
+      // No default behavior - keep folders collapsed if no state exists
+    }
+  }
+
+  // Restore state for sub-folders (only if state exists)
+  for (QTreeWidgetItem *subfolder : m_subFolders) {
+    if (subfolder && subfolder->parent()) {
+      QString fullPath =
+          subfolder->parent()->text(0) + "/" + subfolder->text(0);
+      if (expandedState.contains(fullPath)) {
+        subfolder->setExpanded(expandedState[fullPath]);
+      }
+      // No default behavior - keep folders collapsed if no state exists
+    }
+  }
+
+  // === STEP 4: Restore search filter if one was active ===
+  if (!m_lastSearchTerm.isEmpty()) {
+    searchItems(m_lastSearchTerm);
+  }
+
+  update();
+}
 
 //-----------------------------------------------------------------------------
 
@@ -268,24 +525,78 @@ void ShortcutTree::addFolder(const QString &title, int commandType,
 //-----------------------------------------------------------------------------
 
 void ShortcutTree::searchItems(const QString &searchWord) {
+  m_lastSearchTerm = searchWord;
+
   if (searchWord.isEmpty()) {
+    // Reset: show all items
     for (int i = 0; i < (int)m_items.size(); i++) m_items[i]->setHidden(false);
     for (int f = 0; f < m_subFolders.size(); f++) {
       m_subFolders[f]->setHidden(false);
-      m_subFolders[f]->setExpanded(false);
+      m_subFolders[f]->setExpanded(false);  // Close all subfolders
     }
     for (int f = 0; f < m_folders.size(); f++) {
       m_folders[f]->setHidden(false);
-      m_folders[f]->setExpanded(f == 0);
+      // Open only "Menu Commands"
+      m_folders[f]->setExpanded(m_folders[f]->text(0) == tr("Menu Commands"));
     }
+
+    // Clear user collapse tracking
+    m_userCollapsedDuringSearch.clear();
+
     show();
     emit searched(true);
     update();
     return;
   }
 
-  QList<QTreeWidgetItem *> foundItems =
-      findItems(searchWord, Qt::MatchContains | Qt::MatchRecursive, 0);
+  // Starting a new search: clear user collapse tracking
+  if (m_lastSearchTerm.isEmpty()) {
+    m_userCollapsedDuringSearch.clear();
+  }
+
+  // Multi-word search: split search term by spaces and match all words
+  QStringList searchWords = searchWord.split(' ', Qt::SkipEmptyParts);
+  QList<QTreeWidgetItem *> foundItems;
+
+  if (searchWords.isEmpty()) {
+    // No valid search words after splitting
+    hide();
+    emit searched(false);
+    update();
+    return;
+  }
+
+  // Find items that contain ALL search words (case-insensitive)
+  // Search in item name AND parent folder names
+  for (int i = 0; i < (int)m_items.size(); i++) {
+    QTreeWidgetItem *item = m_items[i];
+    QString itemText      = item->text(0);  // Get item name
+
+    // Build full search text: item name + parent folder name + grandparent
+    // folder name
+    QString fullSearchText  = itemText;
+    QTreeWidgetItem *parent = item->parent();
+    if (parent) {
+      fullSearchText += " " + parent->text(0);
+      QTreeWidgetItem *grandparent = parent->parent();
+      if (grandparent) {
+        fullSearchText += " " + grandparent->text(0);
+      }
+    }
+
+    bool matchesAllWords = true;
+    for (const QString &word : searchWords) {
+      if (!fullSearchText.contains(word, Qt::CaseInsensitive)) {
+        matchesAllWords = false;
+        break;
+      }
+    }
+
+    if (matchesAllWords) {
+      foundItems.append(item);
+    }
+  }
+
   if (foundItems.isEmpty()) {
     hide();
     emit searched(false);
@@ -298,7 +609,8 @@ void ShortcutTree::searchItems(const QString &searchWord) {
     m_items[i]->setHidden(!foundItems.contains(m_items[i]));
 
   // hide folders which does not contain matched items
-  // show and expand folders containing matched items
+  // show AND expand folders containing matched items (unless user manually
+  // closed them)
   bool found;
   for (int f = 0; f < m_subFolders.size(); f++) {
     QTreeWidgetItem *sf = m_subFolders.at(f);
@@ -310,7 +622,15 @@ void ShortcutTree::searchItems(const QString &searchWord) {
       }
     }
     sf->setHidden(!found);
-    sf->setExpanded(found);
+
+    // Expand only if: has results AND user hasn't manually closed it
+    if (found) {
+      QString path = sf->parent() ? sf->parent()->text(0) + "/" + sf->text(0)
+                                  : sf->text(0);
+      if (!m_userCollapsedDuringSearch.contains(path)) {
+        sf->setExpanded(true);
+      }
+    }
   }
   for (int f = 0; f < m_folders.size(); f++) {
     QTreeWidgetItem *fol = m_folders.at(f);
@@ -322,20 +642,19 @@ void ShortcutTree::searchItems(const QString &searchWord) {
       }
     }
     fol->setHidden(!found);
-    fol->setExpanded(found);
+
+    // Expand only if: has results AND user hasn't manually closed it
+    if (found) {
+      QString folderName = fol->text(0);
+      if (!m_userCollapsedDuringSearch.contains(folderName)) {
+        fol->setExpanded(true);
+      }
+    }
   }
 
   show();
   emit searched(true);
   update();
-}
-
-//-----------------------------------------------------------------------------
-
-void ShortcutTree::resizeEvent(QResizeEvent *event) {
-  header()->resizeSection(0, width() - 120);
-  header()->resizeSection(1, 120);
-  QTreeView::resizeEvent(event);
 }
 
 //-----------------------------------------------------------------------------
@@ -353,12 +672,37 @@ void ShortcutTree::onShortcutChanged() {
   for (i = 0; i < (int)m_items.size(); i++) m_items[i]->updateText();
 }
 
+//-----------------------------------------------------------------------------
+
+void ShortcutTree::onItemClicked(const QModelIndex &index) {
+  isExpanded(index) ? collapse(index) : expand(index);
+}
+
+//-----------------------------------------------------------------------------
+
+void ShortcutTree::onItemCollapsed(QTreeWidgetItem *item) {
+  // If search is active and user manually collapses a folder, remember it
+  if (!m_lastSearchTerm.isEmpty()) {
+    // Determine the path for this item
+    QString path;
+    if (item->parent()) {
+      path = item->parent()->text(0) + "/" + item->text(0);
+    } else {
+      path = item->text(0);
+    }
+    m_userCollapsedDuringSearch.insert(path);
+  }
+}
+
 //=============================================================================
 // ShortcutPopup
 //-----------------------------------------------------------------------------
 
 ShortcutPopup::ShortcutPopup()
     : Dialog(TApp::instance()->getMainWindow(), false, false, "Shortcut") {
+  // Register this instance
+  s_instance = this;
+
   setWindowTitle(tr("Configure Shortcuts"));
   m_presetChoiceCB = new QComboBox(this);
   buildPresets();
@@ -378,13 +722,13 @@ ShortcutPopup::ShortcutPopup()
   m_exportButton->setToolTip(tr("Export Current Shortcuts"));
   m_deletePresetButton = new QPushButton(tr("Delete"), this);
   m_deletePresetButton->setToolTip(tr("Delete Current Preset"));
-  m_deletePresetButton->setIcon(QIcon(":Resources/delete_on.svg"));
+  m_deletePresetButton->setIcon(createQIcon("delete"));
   m_savePresetButton = new QPushButton(tr("Save As"), this);
   m_savePresetButton->setToolTip(tr("Save Current Shortcuts as New Preset"));
-  m_savePresetButton->setIcon(QIcon(":Resources/saveas_on.svg"));
+  m_savePresetButton->setIcon(createQIcon("saveas"));
   m_loadPresetButton = new QPushButton(tr("Load"));
   m_loadPresetButton->setToolTip(tr("Use selected preset as shortcuts"));
-  m_loadPresetButton->setIcon(QIcon(":Resources/green.png"));
+  m_loadPresetButton->setIcon(createQIcon("load"));
   QGroupBox *presetBox = new QGroupBox(tr("Shortcut Presets"), this);
   presetBox->setObjectName("SolidLineFrame");
   m_clearAllShortcutsButton = new QPushButton(tr("Clear All Shortcuts"));
@@ -392,22 +736,22 @@ ShortcutPopup::ShortcutPopup()
       new QLabel(tr("Couldn't find any matching command."), this);
   noSearchResultLabel->setHidden(true);
 
-  QLineEdit *searchEdit = new QLineEdit(this);
+  m_searchEdit = new QLineEdit(this);
 
-  m_topLayout->setMargin(5);
+  m_topLayout->setContentsMargins(5, 5, 5, 5);
   m_topLayout->setSpacing(8);
   {
     QHBoxLayout *searchLay = new QHBoxLayout();
-    searchLay->setMargin(0);
+    searchLay->setContentsMargins(0, 0, 0, 0);
     searchLay->setSpacing(5);
     {
       searchLay->addWidget(new QLabel(tr("Search:"), this), 0);
-      searchLay->addWidget(searchEdit);
+      searchLay->addWidget(m_searchEdit);
     }
     m_topLayout->addLayout(searchLay, 0);
 
     QVBoxLayout *listLay = new QVBoxLayout();
-    listLay->setMargin(0);
+    listLay->setContentsMargins(0, 0, 0, 0);
     listLay->setSpacing(0);
     {
       listLay->addWidget(noSearchResultLabel, 0,
@@ -417,7 +761,7 @@ ShortcutPopup::ShortcutPopup()
     m_topLayout->addLayout(listLay, 1);
 
     QHBoxLayout *bottomLayout = new QHBoxLayout();
-    bottomLayout->setMargin(0);
+    bottomLayout->setContentsMargins(0, 0, 0, 0);
     bottomLayout->setSpacing(1);
     {
       bottomLayout->addWidget(m_sViewer, 1);
@@ -426,7 +770,7 @@ ShortcutPopup::ShortcutPopup()
     m_topLayout->addLayout(bottomLayout, 0);
     m_topLayout->addSpacing(10);
     QHBoxLayout *presetLay = new QHBoxLayout();
-    presetLay->setMargin(5);
+    presetLay->setContentsMargins(5, 5, 5, 5);
     presetLay->setSpacing(5);
     {
       presetLay->addWidget(new QLabel(tr("Preset:"), this), 0);
@@ -439,7 +783,7 @@ ShortcutPopup::ShortcutPopup()
     m_topLayout->addWidget(presetBox, 0, Qt::AlignCenter);
     m_topLayout->addSpacing(10);
     QHBoxLayout *exportLay = new QHBoxLayout();
-    exportLay->setMargin(0);
+    exportLay->setContentsMargins(0, 0, 0, 0);
     exportLay->setSpacing(5);
     {
       exportLay->addWidget(m_exportButton, 0);
@@ -449,31 +793,64 @@ ShortcutPopup::ShortcutPopup()
     // m_topLayout->addWidget(m_exportButton, 0);
   }
 
-  connect(m_list, SIGNAL(actionSelected(QAction *)), m_sViewer,
-          SLOT(setAction(QAction *)));
+  connect(m_list, &ShortcutTree::actionSelected, m_sViewer,
+          &ShortcutViewer::setAction);
 
-  connect(m_removeBtn, SIGNAL(clicked()), m_sViewer, SLOT(removeShortcut()));
+  connect(m_removeBtn, &QPushButton::clicked, m_sViewer,
+          &ShortcutViewer::removeShortcut);
 
-  connect(m_sViewer, SIGNAL(shortcutChanged()), m_list,
-          SLOT(onShortcutChanged()));
+  connect(m_sViewer, &ShortcutViewer::shortcutChanged, m_list,
+          &ShortcutTree::onShortcutChanged);
 
-  connect(m_list, SIGNAL(searched(bool)), noSearchResultLabel,
-          SLOT(setHidden(bool)));
-  connect(searchEdit, SIGNAL(textChanged(const QString &)), this,
-          SLOT(onSearchTextChanged(const QString &)));
-  connect(m_presetChoiceCB, SIGNAL(currentIndexChanged(int)),
-          SLOT(onPresetChanged(int)));
-  connect(m_exportButton, SIGNAL(clicked()), SLOT(onExportButton()));
-  connect(m_deletePresetButton, SIGNAL(clicked()), SLOT(onDeletePreset()));
-  connect(m_savePresetButton, SIGNAL(clicked()), SLOT(onSavePreset()));
-  connect(m_loadPresetButton, SIGNAL(clicked()), SLOT(onLoadPreset()));
-  connect(m_clearAllShortcutsButton, SIGNAL(clicked()),
-          SLOT(clearAllShortcuts()));
+  connect(m_list, &ShortcutTree::searched, noSearchResultLabel,
+          &QLabel::setHidden);
+
+  connect(m_searchEdit, &QLineEdit::textChanged, this,
+          &ShortcutPopup::onSearchTextChanged);
+
+  connect(m_presetChoiceCB, QOverload<int>::of(&QComboBox::currentIndexChanged),
+          this, &ShortcutPopup::onPresetChanged);
+
+  // Use a lambda to adapt the clicked() signal to the slot signature
+  connect(m_exportButton, &QPushButton::clicked, this,
+          [this]() { onExportButton(); });
+
+  connect(m_deletePresetButton, &QPushButton::clicked, this,
+          &ShortcutPopup::onDeletePreset);
+
+  connect(m_savePresetButton, &QPushButton::clicked, this,
+          &ShortcutPopup::onSavePreset);
+
+  connect(m_loadPresetButton, &QPushButton::clicked, this,
+          &ShortcutPopup::onLoadPreset);
+
+  connect(m_clearAllShortcutsButton, &QPushButton::clicked, this,
+          &ShortcutPopup::clearAllShortcuts);
 }
 
 //-----------------------------------------------------------------------------
 
-ShortcutPopup::~ShortcutPopup() {}
+ShortcutPopup::~ShortcutPopup() {
+  // Save tree expansion state before closing
+  if (m_list) {
+    m_list->saveExpandedState();
+  }
+
+  // Unregister this instance
+  if (s_instance == this) {
+    s_instance = nullptr;
+  }
+}
+
+//-----------------------------------------------------------------------------
+
+void ShortcutPopup::refreshIfOpen() {
+  // If the popup is currently open, refresh its tree to show new commands
+  if (s_instance && s_instance->m_list) {
+    s_instance->m_list->refreshTree();
+  }
+  // Note: The tree preserves expansion state and search filter automatically
+}
 
 //-----------------------------------------------------------------------------
 
@@ -487,8 +864,8 @@ void ShortcutPopup::onSearchTextChanged(const QString &text) {
 
 //-----------------------------------------------------------------------------
 
-void ShortcutPopup::onPresetChanged(int index) {
-  if (m_presetChoiceCB->currentText() == "Load from file...") {
+void ShortcutPopup::onPresetChanged() {
+  if (m_presetChoiceCB->currentData().toString() == QString("LoadFromFile")) {
     importPreset();
   }
 }
@@ -599,7 +976,10 @@ void ShortcutPopup::onExportButton(TFilePath fp) {
     if (fp == TFilePath()) return;
   }
   showDialog(tr("Saving Shortcuts"));
-  QString shortcutString = "[shortcuts]\n";
+
+  QSettings preset(toQString(fp), QSettings::IniFormat);
+  preset.beginGroup("shortcuts");
+
   for (int commandType = UndefinedCommandType; commandType <= MenuCommandType;
        commandType++) {
     std::vector<QAction *> actions;
@@ -610,24 +990,22 @@ void ShortcutPopup::onExportButton(TFilePath fp) {
       std::string shortcut =
           CommandManager::instance()->getShortcutFromAction(action);
       if (shortcut != "") {
-        shortcutString = shortcutString + QString::fromStdString(id) + "=" +
-                         QString::fromStdString(shortcut) + "\n";
+        preset.setValue(QString::fromStdString(id),
+                        QString::fromStdString(shortcut));
       }
     }
   }
-  QFile file(fp.getQString());
-  file.open(QIODevice::WriteOnly | QIODevice::Text);
-  QTextStream out(&file);
-  out << shortcutString;
-  file.close();
+
+  preset.endGroup();
+
   m_dialog->hide();
 }
 
 //-----------------------------------------------------------------------------
 
 void ShortcutPopup::onDeletePreset() {
-  // change this to 4 once RETAS shortcuts are updated
-  if (m_presetChoiceCB->currentIndex() <= 3) {
+  // change this to 5 once RETAS shortcuts are updated
+  if (m_presetChoiceCB->currentIndex() <= 4) {
     DVGui::MsgBox(DVGui::CRITICAL, tr("Included presets cannot be deleted."));
     return;
   }
@@ -641,7 +1019,7 @@ void ShortcutPopup::onDeletePreset() {
   }
   TFilePath presetDir =
       ToonzFolder::getMyModuleDir() + TFilePath("shortcutpresets");
-  QString presetName = m_presetChoiceCB->currentText();
+  QString presetName = m_presetChoiceCB->currentData().toString();
   if (TSystem::doesExistFileOrLevel(presetDir +
                                     TFilePath(presetName + ".ini"))) {
     TSystem::deleteFile(presetDir + TFilePath(presetName + ".ini"));
@@ -685,43 +1063,26 @@ void ShortcutPopup::importPreset() {
 //-----------------------------------------------------------------------------
 
 void ShortcutPopup::onLoadPreset() {
-  QString preset = m_presetChoiceCB->currentText();
-  TFilePath presetDir =
-      ToonzFolder::getMyModuleDir() + TFilePath("shortcutpresets");
-  TFilePath defaultPresetDir =
-      ToonzFolder::getProfileFolder() + TFilePath("layouts/shortcuts");
-  if (preset == "") return;
-  if (preset == "Load from file...") {
+  QString preset = m_presetChoiceCB->currentData().toString();
+  TFilePath presetDir;
+  if (m_presetChoiceCB->currentIndex() <= 4)
+    presetDir =
+        ToonzFolder::getProfileFolder() + TFilePath("layouts/shortcuts");
+  else
+    presetDir = ToonzFolder::getMyModuleDir() + TFilePath("shortcutpresets");
+
+  if (preset.isEmpty()) return;
+  if (preset == QString("LoadFromFile")) {
     importPreset();
     return;
   }
 
   if (!showConfirmDialog()) return;
   showDialog(tr("Setting Shortcuts"));
-  if (preset == "OpenToonz") {
+  TFilePath presetFilePath(preset + ".ini");
+  if (TSystem::doesExistFileOrLevel(presetDir + presetFilePath)) {
     clearAllShortcuts(false);
-    TFilePath fp = defaultPresetDir + TFilePath("defopentoonz.ini");
-    setPresetShortcuts(fp);
-    return;
-  } else if (preset == "Toon Boom Harmony") {
-    clearAllShortcuts(false);
-    TFilePath fp = defaultPresetDir + TFilePath("otharmony.ini");
-    setPresetShortcuts(fp);
-    return;
-  } else if (preset == "Adobe Animate(Flash)") {
-    clearAllShortcuts(false);
-    TFilePath fp = defaultPresetDir + TFilePath("otadobe.ini");
-    setPresetShortcuts(fp);
-    return;
-  } else if (preset == "RETAS PaintMan") {
-    clearAllShortcuts(false);
-    TFilePath fp = defaultPresetDir + TFilePath("otretas.ini");
-    setPresetShortcuts(fp);
-    return;
-  } else if (TSystem::doesExistFileOrLevel(presetDir +
-                                           TFilePath(preset + ".ini"))) {
-    clearAllShortcuts(false);
-    TFilePath fp = presetDir + TFilePath(preset + ".ini");
+    TFilePath fp = presetDir + presetFilePath;
     setPresetShortcuts(fp);
     return;
   }
@@ -730,13 +1091,16 @@ void ShortcutPopup::onLoadPreset() {
 
 //-----------------------------------------------------------------------------
 
-QStringList ShortcutPopup::buildPresets() {
-  QStringList presets;
-  presets << ""
-          << "OpenToonz"
-          //<< "RETAS PaintMan"
-          << "Toon Boom Harmony"
-          << "Adobe Animate(Flash)";
+void ShortcutPopup::buildPresets() {
+  m_presetChoiceCB->clear();
+
+  m_presetChoiceCB->addItem("", QString(""));
+  m_presetChoiceCB->addItem("OpenToonz", QString("defopentoonz"));
+  // m_presetChoiceCB->addItem("RETAS PaintMan", QString("otretas"));
+  m_presetChoiceCB->addItem("Toon Boom Harmony", QString("otharmony"));
+  m_presetChoiceCB->addItem("Adobe Animate", QString("otanimate"));
+  m_presetChoiceCB->addItem("Adobe Flash Pro", QString("otadobe"));
+
   TFilePath presetDir =
       ToonzFolder::getMyModuleDir() + TFilePath("shortcutpresets");
   if (TSystem::doesExistFileOrLevel(presetDir)) {
@@ -749,12 +1113,10 @@ QStringList ShortcutPopup::buildPresets() {
       }
     }
     customPresets.sort();
-    presets = presets + customPresets;
+    for (auto customPreset : customPresets)
+      m_presetChoiceCB->addItem(customPreset, customPreset);
   }
-  presets << tr("Load from file...");
-  m_presetChoiceCB->clear();
-  m_presetChoiceCB->addItems(presets);
-  return presets;
+  m_presetChoiceCB->addItem(tr("Load from file..."), QString("LoadFromFile"));
 }
 
 //-----------------------------------------------------------------------------
@@ -781,7 +1143,61 @@ void ShortcutPopup::onSavePreset() {
 
 //-----------------------------------------------------------------------------
 
-void ShortcutPopup::showEvent(QShowEvent *se) { getCurrentPresetPref(); }
+void ShortcutPopup::showEvent(QShowEvent *se) {
+  getCurrentPresetPref();
+
+  // Refresh brush preset and size commands to ensure they're up-to-date
+  ToolPresetCommandManager::instance()->refreshPresetCommands();
+  ToolPresetCommandManager::instance()->refreshSizeCommands();
+
+  // Restore search term from TEnv
+  const QString lastSearchTerm =
+      QString::fromStdString((std::string)ShortcutPopupSearchText);
+  // Step 1: Restore search text in the field WITHOUT triggering searchItems
+  {
+    QSignalBlocker blocker(m_searchEdit);
+    m_searchEdit->setText(lastSearchTerm);
+  }
+
+  // Step 2: Restore folder expansion state from TEnv
+  m_list->restoreExpandedState();
+
+  // Step 3: If there was a search, apply filtering WITHOUT changing expansion
+  if (!lastSearchTerm.isEmpty()) {
+    // Save current expansion state before filtering
+    QStringList expandedBeforeFilter;
+    for (int i = 0; i < m_list->topLevelItemCount(); i++) {
+      QTreeWidgetItem *item = m_list->topLevelItem(i);
+      if (item && item->isExpanded()) {
+        expandedBeforeFilter.append(item->text(0));
+      }
+    }
+
+    // Apply search filter (this will change expansion)
+    m_list->searchItems(lastSearchTerm);
+
+    // Restore the expansion state we had before filtering
+    for (int i = 0; i < m_list->topLevelItemCount(); i++) {
+      QTreeWidgetItem *item = m_list->topLevelItem(i);
+      if (item) {
+        item->setExpanded(expandedBeforeFilter.contains(item->text(0)));
+      }
+    }
+  }
+}
+
+//-----------------------------------------------------------------------------
+
+void ShortcutPopup::hideEvent(QHideEvent *he) {
+  // Save tree expansion state when hiding the popup
+  if (m_list) {
+    m_list->saveExpandedState();
+  }
+
+  // Save search text to TEnv
+  ShortcutPopupSearchText = m_searchEdit->text().toStdString();
+  DVGui::Dialog::hideEvent(he);
+}
 
 //-----------------------------------------------------------------------------
 
@@ -794,19 +1210,9 @@ void ShortcutPopup::setCurrentPresetPref(QString name) {
 
 void ShortcutPopup::getCurrentPresetPref() {
   QString name = Preferences::instance()->getShortcutPreset();
-  if (name == "DELETED")
-    m_presetChoiceCB->setCurrentText("");
-  else if (name == "defopentoonz")
-    m_presetChoiceCB->setCurrentText("OpenToonz");
-  else if (name == "otharmony")
-    m_presetChoiceCB->setCurrentText("Toon Boom Harmony");
-  else if (name == "otadobe")
-    m_presetChoiceCB->setCurrentText("Adobe Animate(Flash)");
-  else if (name == "otretas")
-    m_presetChoiceCB->setCurrentText("RETAS PaintMan");
+  if (name == "DELETED") name = "";
 
-  else
-    m_presetChoiceCB->setCurrentText(name);
+  m_presetChoiceCB->setCurrentIndex(m_presetChoiceCB->findData(name));
 }
 
 OpenPopupCommandHandler<ShortcutPopup> openShortcutPopup(MI_ShortcutPopup);

@@ -117,7 +117,7 @@ void ConvertPopup::Converter::run() {
     TFilePath sourceLevelPath = sc->decodeFilePath(m_parent->m_srcFilePaths[i]);
     QString levelName = QString::fromStdString(sourceLevelPath.getLevelName());
 
-    // check already exsistent levels
+    // check already existent levels
     TFilePath dstFilePath =
         m_parent->getDestinationFilePath(m_parent->m_srcFilePaths[i]);
 
@@ -228,10 +228,12 @@ void ConvertPopup::Converter::convertLevel(
     TPixel32 bgColor = m_parent->m_bgColorField->getColor();
     ImageUtils::convert(sourceFileFullPath, dstFileFullPath, from, to,
                         framerate, prop, m_parent->m_notifier, bgColor,
-                        m_parent->m_removeDotBeforeFrameNumber->isChecked());
+                        m_parent->m_removeDotBeforeFrameNumber->isChecked(),
+                        oprop->formatTemplateFId());
   }
 
   popup->m_notifier->notifyLevelCompleted(dstFileFullPath);
+  popup->m_convertedFileMap[sourceFileFullPath] = dstFileFullPath;
 }
 
 // to use legacy code
@@ -256,6 +258,8 @@ void ConvertPopup::Converter::convertLevelWithConvert2Tlv(
     tlvConverter->abort();
   } else {
     int count = tlvConverter->getFramesToConvertCount();
+    popup->m_progressDialog->setMinimum(0);
+    popup->m_progressDialog->setMaximum(count);
     bool stop = false;
     for (int j = 0; j < count && !stop; j++) {
       if (!tlvConverter->convertNext(errorMessage)) {
@@ -263,6 +267,8 @@ void ConvertPopup::Converter::convertLevelWithConvert2Tlv(
         DVGui::warning(QString::fromStdString(errorMessage));
       }
       if (popup->m_progressDialog->wasCanceled()) stop = true;
+
+      popup->m_notifier->notifyFrameCompleted(j);
     }
     if (stop) tlvConverter->abort();
 
@@ -401,11 +407,11 @@ ConvertPopup::ConvertPopup(bool specifyInput)
   m_progressDialog->setWindowModality(Qt::WindowModal);
 
   //----layout
-  m_topLayout->setMargin(5);
+  m_topLayout->setContentsMargins(5, 5, 5, 5);
   m_topLayout->setSpacing(5);
   {
     QGridLayout *upperLay = new QGridLayout();
-    upperLay->setMargin(0);
+    upperLay->setContentsMargins(0, 0, 0, 0);
     upperLay->setSpacing(5);
     {
       int row = 0;
@@ -457,7 +463,7 @@ ConvertPopup::ConvertPopup(bool specifyInput)
     m_topLayout->addWidget(m_tlvFrame);
   }
 
-  m_buttonLayout->setMargin(0);
+  m_buttonLayout->setContentsMargins(0, 0, 0, 0);
   m_buttonLayout->setSpacing(20);
   {
     m_buttonLayout->addWidget(m_okBtn);
@@ -507,6 +513,8 @@ ConvertPopup::ConvertPopup(bool specifyInput)
     ret = ret && connect(m_convertFileFld, SIGNAL(pathChanged()), this,
                          SLOT(onFileInChanged()));
 
+  // resize the dialog
+  onFormatSelected(m_fileFormat->currentText());
   // update unable/enable of checkboxes
   onTlvModeSelected(m_tlvMode->currentText());
 
@@ -581,7 +589,8 @@ QFrame *ConvertPopup::createTlvSettings() {
   m_dpiMode = new QComboBox();
   m_dpiFld  = new DVGui::DoubleLineEdit();
 
-  m_unpaintedFolder->setFileMode(QFileDialog::DirectoryOnly);
+  m_unpaintedFolder->setFileMode(
+      QFileDialog::Directory);  // implies ShowDirsOnly
   m_unpaintedSuffix->setMaximumWidth(40);
   QStringList items1;
   items1 << tr("Keep Original Antialiasing")
@@ -597,7 +606,7 @@ QFrame *ConvertPopup::createTlvSettings() {
 
   m_appendDefaultPalette->setToolTip(
       tr("When activated, styles of the default "
-         "palette\n($TOONZSTUDIOPALETTE\\cleanup_default.tpl) will \nbe "
+         "palette\n($TOONZSTUDIOPALETTE\\Global Palettes\\Default Palettes\\Cleanup_Palette.tpl) will \nbe "
          "appended to the palette after conversion in \norder to save the "
          "effort of creating styles \nbefore color designing."));
 
@@ -660,11 +669,11 @@ QFrame *ConvertPopup::createTlvSettings() {
 
   bool ret = true;
   ret      = ret && connect(m_antialias, SIGNAL(currentIndexChanged(int)), this,
-                       SLOT(onAntialiasSelected(int)));
-  ret = ret && connect(m_palettePath, SIGNAL(pathChanged()), this,
-                       SLOT(onPalettePathChanged()));
-  ret = ret && connect(m_dpiMode, SIGNAL(currentIndexChanged(int)), this,
-                       SLOT(onDpiModeSelected(int)));
+                            SLOT(onAntialiasSelected(int)));
+  ret      = ret && connect(m_palettePath, SIGNAL(pathChanged()), this,
+                            SLOT(onPalettePathChanged()));
+  ret      = ret && connect(m_dpiMode, SIGNAL(currentIndexChanged(int)), this,
+                            SLOT(onDpiModeSelected(int)));
 
   assert(ret);
 
@@ -703,8 +712,7 @@ void ConvertPopup::onAntialiasSelected(int index) {
 void ConvertPopup::onFileInChanged() {
   assert(m_convertFileFld);
   std::vector<TFilePath> fps;
-  TProject *project =
-      TProjectManager::instance()->getCurrentProject().getPointer();
+  auto project = TProjectManager::instance()->getCurrentProject();
   ToonzScene *scene = TApp::instance()->getCurrentScene()->getScene();
   fps.push_back(scene->decodeFilePath(
       TFilePath(m_convertFileFld->getPath().toStdString())));
@@ -758,6 +766,11 @@ void ConvertPopup::onFormatSelected(const QString &format) {
     m_saveBackupToNopaint->setEnabled(m_tlvMode->currentText() ==
                                       TlvMode_Unpainted);
   }
+  // For unknown reasons, calling adjustSize twice is needed to
+  // prevent the dialog from remaining large size when the current
+  // format is switched from tlv to another format.
+  adjustSize();
+  adjustSize();
 }
 
 //------------------------------------------------------------------
@@ -821,11 +834,12 @@ void ConvertPopup::setFiles(const std::vector<TFilePath> &fps) {
   m_imageDpi = 0.0;
 
   if (m_srcFilePaths.size() == 1) {
-    setWindowTitle(tr("Convert 1 Level"));
-    m_fromFld->setEnabled(true);
-    m_toFld->setEnabled(true);
+    setWindowTitle(tr("Convert 1 Level : %1")
+        .arg(QString::fromStdString(fps[0].getName())));
     m_fileNameFld->setEnabled(true);
 
+    m_fromFld->setEnabled(false);
+    m_toFld->setEnabled(false);
     m_fromFld->setText("");
     m_toFld->setText("");
     TLevelP levelTmp;
@@ -836,10 +850,12 @@ void ConvertPopup::setFiles(const std::vector<TFilePath> &fps) {
       if (!t->empty()) {
         TFrameId start = t->begin()->first;
         TFrameId end   = t->rbegin()->first;
-        if (start.getNumber() > 0)
+        if (start.getNumber() >= 0 && end.getNumber() >= 0) {
+          m_fromFld->setEnabled(true);
+          m_toFld->setEnabled(true);
           m_fromFld->setText(QString::number(start.getNumber()));
-        if (end.getNumber() > 0)
           m_toFld->setText(QString::number(end.getNumber()));
+        }
       }
 
       // use the image dpi for the converted tlv
@@ -871,6 +887,11 @@ void ConvertPopup::setFiles(const std::vector<TFilePath> &fps) {
   // m_fileFormat->setCurrentIndex(areFullcolor?0:m_fileFormat->findText("tif"));
 }
 
+void ConvertPopup::setFormat(QString format){
+    m_fileFormat->setDisabled(true);
+    m_fileFormat->setCurrentIndex(m_fileFormat->findText(format));
+}
+
 //-------------------------------------------------------------------
 
 Convert2Tlv *ConvertPopup::makeTlvConverter(const TFilePath &sourceFilePath) {
@@ -891,7 +912,8 @@ Convert2Tlv *ConvertPopup::makeTlvConverter(const TFilePath &sourceFilePath) {
         sourceFilePath.withParentDir(unpaintedFolder).withName(basename));
   }
   int from = -1, to = -1;
-  if (m_srcFilePaths.size() > 1) {
+  if (m_srcFilePaths.size() == 1 && m_fromFld->isEnabled() &&
+      m_toFld->isEnabled()) {
     from = m_fromFld->getValue();
     to   = m_toFld->getValue();
   }
@@ -1032,12 +1054,11 @@ TFilePath ConvertPopup::getDestinationFilePath(
     const TFilePath &sourceFilePath) {
   // Build the DECODED output folder path
   TFilePath destFolder = sourceFilePath.getParentDir();
+  ToonzScene *scene    = TApp::instance()->getCurrentScene()->getScene();
 
   if (!m_saveInFileFld->getPath().isEmpty()) {
     TFilePath dir(m_saveInFileFld->getPath().toStdWString());
-
-    ToonzScene *scene = TApp::instance()->getCurrentScene()->getScene();
-    destFolder        = scene->decodeFilePath(dir);
+    destFolder = scene->decodeFilePath(dir);
   }
 
   // Build the output level name
@@ -1052,10 +1073,11 @@ TFilePath ConvertPopup::getDestinationFilePath(
   TFilePath destName = TFilePath(name).withType(ext);
 
   if (TFileType::isLevelFilePath(sourceFilePath) &&
-      !TFileType::isLevelExtension(ext))
-    destName = destName.withFrame(TFrameId::EMPTY_FRAME);  // use the '..'
-                                                           // format to denote
-                                                           // an output level
+      !TFileType::isLevelExtension(ext)) {
+    // add ".." or "_." according to the output settings' frame format template.
+    TOutputProperties *prop = scene->getProperties()->getOutputProperties();
+    destName                = destName.withFrame(prop->formatTemplateFId());
+  }
 
   // Merge the two
   return destFolder + destName;
@@ -1109,10 +1131,10 @@ void ConvertPopup::getFrameRange(const TFilePath &sourceFilePath,
     TFrameId fid;
     bool ok;
 
-    fid                        = TFrameId(m_fromFld->text().toInt(&ok));
+    fid = TFrameId(m_fromFld->text().toInt(&ok));
     if (ok && fid > from) from = tcrop(fid, firstFrame, lastFrame);
 
-    fid                    = TFrameId(m_toFld->text().toInt(&ok));
+    fid = TFrameId(m_toFld->text().toInt(&ok));
     if (ok && fid < to) to = tcrop(fid, firstFrame, lastFrame);
   }
 }
@@ -1178,13 +1200,8 @@ void ConvertPopup::apply() {
   QApplication::setOverrideCursor(Qt::WaitCursor);
 
   m_converter = new Converter(this);
-#if QT_VERSION >= 0x050000
   bool ret =
       connect(m_converter, SIGNAL(finished()), this, SLOT(onConvertFinished()));
-#else
-  int ret =
-      connect(m_converter, SIGNAL(finished()), this, SLOT(onConvertFinished()));
-#endif
   Q_ASSERT(ret);
 
   // TODO: salvare il vecchio stato
@@ -1249,6 +1266,7 @@ QString::number(m_srcFilePaths.size()-skipped)).arg(QString::number(m_srcFilePat
 
 void ConvertPopup::onLevelConverted(const TFilePath &fullPath) {
   IconGenerator::instance()->invalidate(fullPath);
+  
 }
 
 //-------------------------------------------------------------------
@@ -1266,9 +1284,13 @@ void ConvertPopup::onOptionsClicked() {
   std::string ext       = m_fileFormat->currentText().toStdString();
   TPropertyGroup *props = getFormatProperties(ext);
 
-  openFormatSettingsPopup(this, ext, props, m_srcFilePaths.size() == 1
-                                                ? m_srcFilePaths[0]
-                                                : TFilePath());
+  // use output settings' frame format.
+  ToonzScene *scene       = TApp::instance()->getCurrentScene()->getScene();
+  TOutputProperties *prop = scene->getProperties()->getOutputProperties();
+
+  openFormatSettingsPopup(
+      this, ext, props, &prop->formatTemplateFId(), false,
+      m_srcFilePaths.size() == 1 ? m_srcFilePaths[0] : TFilePath());
 }
 
 //-------------------------------------------------------------------
@@ -1297,9 +1319,8 @@ void ConvertPopup::onPalettePathChanged() {
 bool ConvertPopup::isSaveTlvBackupToNopaintActive() {
   return m_fileFormat->currentText() ==
              TlvExtension /*-- tlvが選択されている --*/
-         &&
-         m_tlvMode->currentText() ==
-             TlvMode_Unpainted /*-- Unpainted Tlvが選択されている --*/
+         && m_tlvMode->currentText() ==
+                TlvMode_Unpainted /*-- Unpainted Tlvが選択されている --*/
          && m_saveBackupToNopaint->isChecked(); /*-- Save Backup to "nopaint"
                                                    Folder オプションが有効 --*/
 }

@@ -56,7 +56,7 @@ SVNDeleteDialog::SVNDeleteDialog(QWidget *parent, const QString &workingDir,
 
   QVBoxLayout *mainLayout = new QVBoxLayout;
   mainLayout->setAlignment(Qt::AlignHCenter);
-  mainLayout->setMargin(0);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
 
   QHBoxLayout *hLayout = new QHBoxLayout;
 
@@ -100,7 +100,7 @@ SVNDeleteDialog::SVNDeleteDialog(QWidget *parent, const QString &workingDir,
   formLayout->setLabelAlignment(Qt::AlignRight);
   formLayout->setFormAlignment(Qt::AlignHCenter | Qt::AlignTop);
   formLayout->setSpacing(10);
-  formLayout->setMargin(0);
+  formLayout->setContentsMargins(0, 0, 0, 0);
 
   m_commentTextEdit = new QPlainTextEdit;
   m_commentTextEdit->setMaximumHeight(50);
@@ -161,7 +161,7 @@ SVNDeleteDialog::SVNDeleteDialog(QWidget *parent, const QString &workingDir,
 
   addButtonBarWidget(m_deleteLocalButton, m_deleteServerButton, m_cancelButton);
 
-  // 0. Connect for svn errors (that may occurs)
+  // 0. Connect for svn errors (that may occur)
   connect(&m_thread, SIGNAL(error(const QString &)), this,
           SLOT(onError(const QString &)));
 }
@@ -175,7 +175,7 @@ void SVNDeleteDialog::showEvent(QShowEvent *e) {
     int height = 50;
     if (m_treeWidget->isVisible()) height += (m_files.size() * 50);
 
-    setMinimumSize(300, min(height, 350));
+    setMinimumSize(300, std::min(height, 350));
   }
   QDialog::showEvent(e);
 }
@@ -270,7 +270,7 @@ void SVNDeleteDialog::onDeleteServerButtonClicked() {
 
   int height = 175;
   if (m_treeWidget->isVisible()) height += (m_files.size() * 50);
-  setMinimumSize(300, min(height, 350));
+  setMinimumSize(300, std::min(height, 350));
 
   m_textLabel->setText(
       tr("You are deleting items also on repository. Are you sure ?"));

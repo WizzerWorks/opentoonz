@@ -65,6 +65,7 @@ set(HEADERS
     sandor_fxs/patternmap.h
     sandor_fxs/toonz4_6staff.h
     ../include/convert2tlv.h
+    ../include/thirdparty.h
     ../include/orientation.h
     ../include/toonz/Naa2TlvConverter.h
     ../include/toonz/autoclose.h
@@ -108,7 +109,6 @@ set(HEADERS
     ../include/toonz/scenefx.h
     ../include/toonz/sceneproperties.h
     ../include/toonz/sceneresources.h
-    ../include/toonz/screensavermaker.h
     ../include/toonz/skeleton.h
     ../include/toonz/stage.h
     ../include/toonz/stage2.h
@@ -161,6 +161,10 @@ set(HEADERS
     ../include/toonz/vectorizerparameters.h
     ../include/toutputproperties.h
     ../include/toonz/preferencesitemids.h
+    ../include/toonz/txsheetcolumnchange.h
+    ../include/toonz/expressionreferencemonitor.h
+    ../include/toonz/filepathproperties.h
+    ../include/toonz/navigationtags.h
 )
 
 set(SOURCES
@@ -168,7 +172,6 @@ set(SOURCES
     autoclose.cpp
     autopos.cpp
     captureparameters.cpp
-	cellpositionratio.cpp
     childstack.cpp
     cleanupcolorstyles.cpp
     cleanuppalette.cpp
@@ -210,7 +213,6 @@ set(SOURCES
     scenefx.cpp
     sceneproperties.cpp
     sceneresources.cpp
-    screensavermaker.cpp
     scriptbinding.cpp
     scriptbinding_centerline_vectorizer.cpp
     scriptbinding_files.cpp
@@ -246,6 +248,7 @@ set(SOURCES
     tcolumnfxset.cpp
     tdistort.cpp
     texturemanager.cpp
+    thirdparty.cpp
     tlog.cpp
     tnewoutlinevectorize.cpp
     toonzfolders.cpp
@@ -321,6 +324,8 @@ set(SOURCES
     txshmeshcolumn.cpp
     textureutils.cpp
     boardsettings.cpp
+    filepathproperties.cpp
+    navigationtags.cpp
 )
 
 if(BUILD_TARGET_WIN)
@@ -329,13 +334,17 @@ if(BUILD_TARGET_WIN)
     )
 endif()
 
-add_translation(toonzlib ${HEADERS} ${SOURCES})
-
 qt5_wrap_cpp(SOURCES ${MOC_HEADERS})
 
 add_library(toonzlib SHARED ${HEADERS} ${SOURCES})
+
+if(WITH_TRANSLATION)
+    add_translation(toonzlib ${HEADERS} ${SOURCES})
+    add_compile_translations_command(toonzlib toonzlib)
+endif()
+
 if(BUILD_ENV_APPLE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-install_name,@rpath/libtoonzlib.dylib")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-install_name,@executable_path/libtoonzlib.dylib")
     add_dependencies(toonzlib tnzcore tnzbase tnzext)
 endif()
 
@@ -345,6 +354,12 @@ add_definitions(
 
 message("subdir: toonzlib")
 message("Bin: " ${CMAKE_CURRENT_BINARY_DIR})
+
+if(GLEW_FOUND)
+    include_directories(${GLEW_INCLUDE_DIRS})
+else()
+    include_directories(${SDKROOT}/glew/glew-1.9.0/include)
+endif()
 
 include_directories(
     SYSTEM
@@ -357,7 +372,7 @@ include_directories(
 if(BUILD_ENV_MSVC)
     target_link_libraries(toonzlib
         Qt5::Core Qt5::Gui Qt5::OpenGL Qt5::Script Qt5::Multimedia
-        ${GLUT_LIB} ${GL_LIB} ${MYPAINT_LIB_LDFLAGS} vfw32.lib
+        ${GLUT_LIB} ${GL_LIB} ${MYPAINT_LIB_LDFLAGS} ${GLEW_LIB} vfw32.lib
         tnzcore tnzbase tnzext
     )
 elseif(BUILD_ENV_APPLE)
@@ -369,7 +384,7 @@ elseif(BUILD_ENV_APPLE)
         ${MYPAINT_LIB_LDFLAGS}
     )
 
-    target_link_libraries(toonzlib Qt5::Core Qt5::Gui Qt5::OpenGL Qt5::Script Qt5::Multimedia ${GLUT_LIB} ${GL_LIB} ${EXTRA_LIBS})
+    target_link_libraries(toonzlib Qt5::Core Qt5::Gui Qt5::OpenGL Qt5::Script Qt5::Multimedia ${GLUT_LIB} ${GL_LIB} ${GLEW_LIB} ${EXTRA_LIBS})
 elseif(BUILD_ENV_UNIXLIKE)
     _find_toonz_library(EXTRA_LIBS "tnzcore;tnzbase;tnzext")
 
@@ -377,5 +392,5 @@ elseif(BUILD_ENV_UNIXLIKE)
         set(EXTRA_LIBS ${EXTRA_LIBS} -lvfw32)
     endif()
 
-    target_link_libraries(toonzlib Qt5::Core Qt5::Gui Qt5::OpenGL Qt5::Script Qt5::Multimedia ${GLUT_LIB} ${GL_LIB} ${EXTRA_LIBS} ${MYPAINT_LIB_LDFLAGS})
+    target_link_libraries(toonzlib Qt5::Core Qt5::Gui Qt5::OpenGL Qt5::Script Qt5::Multimedia ${GLUT_LIB} ${GL_LIB} ${GLEW_LIB} ${EXTRA_LIBS} ${MYPAINT_LIB_LDFLAGS})
 endif()

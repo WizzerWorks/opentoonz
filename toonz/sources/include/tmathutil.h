@@ -7,6 +7,7 @@
 #include "texception.h"
 
 #include <numeric>
+#include <complex>
 
 #ifndef __sgi
 #include <cmath>
@@ -46,7 +47,7 @@ public:
   \par A array of coeff
   \par n size of matrix
   \par indx array with permutation from pivoting
-  \par d +1/-1 and depend wheter the number of row interchanges (even or odd)
+  \par d +1/-1 and depend whether the number of row interchanges (even or odd)
   \note If error a TException is thrown.
   \include mathutils_ex2.cpp
  */
@@ -72,7 +73,7 @@ DVAPI void tbackSubstitution(double *A, int n, int *indx, double *b);
 /*!
   Solve the system A*x=b.
   It`s needed to insert b in res.
-  A and res are modifyed in the routine.
+  A and res are modified in the routine.
   \par A matrix
   \par n size of matrix
   \note A is square [n x n]
@@ -85,7 +86,7 @@ DVAPI void tsolveSistem(double *A, int n, double *res);
 /*!
   Solve the system A*x=b.
   It`s needed to insert b in res.
-  A and res are modifyed in the routine.
+  A and res are modified in the routine.
   \note A is square [n x n]
   \include mathutils_ex1.cpp
  */
@@ -128,6 +129,48 @@ DVAPI int rootFinding(const std::vector<double> &poly,
 //-----------------------------------------------------------------------------
 
 /*!
+  Find complex roots of a quadratic equation
+    a*x^2 + b*x + c = 0
+  \ret count of roots found:
+    0 if a and b are almost zero
+    1 if a is almost zero
+    2 if a is not almost zero
+    roots may have duplicates, count depends only from type of equation
+ */
+DVAPI int solveEquation2(std::complex<double> *roots, double a, double b, double c);
+
+//-----------------------------------------------------------------------------
+
+/*!
+  Find complex roots of a cubic equation:
+    a*x^3 + b*x^2 + c*x + d = 0
+  \ret count of roots found:
+    0 if a, b and c are almost zero
+    1 if a and b are almost zero
+    2 if a is almost zero
+    3 if a is not almost zero
+    roots may have duplicates, count depends only from type of equation
+ */
+DVAPI int solveEquation3(std::complex<double> *roots, double a, double b, double c, double d);
+
+//-----------------------------------------------------------------------------
+
+/*!
+  Find complex roots of a power of four equation:
+    a*x^4 + b*x^3 + c*x^2 + d*x + e = 0
+  \ret count of roots found:
+    0 if a, b, c and d are almost zero
+    1 if a, b and c are almost zero
+    2 if a and b are almost zero
+    3 if a is almost zero
+    4 if a is not almost zero
+    roots may have duplicates, count depends only from type of equation
+ */
+DVAPI int solveEquation4(std::complex<double> *roots, double a, double b, double c, double d, double e);
+
+//-----------------------------------------------------------------------------
+
+/*!
   Check if val is nearest to epsilon.
   \par val value to test
   \par eps tolerance required
@@ -136,6 +179,19 @@ DVAPI int rootFinding(const std::vector<double> &poly,
 inline bool isAlmostZero(double val, double eps = TConsts::epsilon) {
   return -eps < val && val < eps;
 }
+
+//-----------------------------------------------------------------------------
+
+/*!
+  Check if complex val is nearest to epsilon.
+  \par val value to test
+  \par eps tolerance required
+  \ret true if value is nearest to zero
+ */
+inline bool isAlmostZero(std::complex<double> val, double eps = TConsts::epsilon) {
+  return val.real()*val.real() + val.imag()*val.imag() < eps*eps;
+}
+
 
 //-----------------------------------------------------------------------------
 

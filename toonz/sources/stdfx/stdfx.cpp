@@ -34,6 +34,7 @@ public:
     bindParam(this, "value", m_value);
 
     addInputPort("Source", m_input);
+    enableComputeInFloat(true);
   };
 
   ~FadeFx(){};
@@ -69,13 +70,17 @@ public:
 
 class SpiralFx final : public TStandardZeraryFx {
   FX_PLUGIN_DECLARATION(SpiralFx)
+  TIntEnumParamP m_type;
   TDoubleParamP m_freq;
   TDoubleParamP m_phase;
   TSpectrumParamP m_spectrum;
 
+  enum SpiralType { Archimedean, Logarithmic };
+
 public:
   SpiralFx()
-      : m_freq(0.1)   // args, "Freq")
+      : m_type(new TIntEnumParam(Archimedean, "Archimedean"))
+      , m_freq(0.1)   // args, "Freq")
       , m_phase(0.0)  // args, "Phase")
   {
     // m_freq->setDefaultValue(0.1);
@@ -97,6 +102,8 @@ TPixel32 colors[] = {
         TSpectrum::ColorKey(1, transparent)};
     m_spectrum = TSpectrumParamP(colors);
 
+    m_type->addItem(Logarithmic, "Logarithmic");
+    bindParam(this, "type", m_type);
     bindParam(this, "colors", m_spectrum);
     bindParam(this, "freq", m_freq);
     bindParam(this, "phase", m_phase);
@@ -122,7 +129,8 @@ TPixel32 colors[] = {
 namespace {
 template <class T>
 void doComputeT(TRasterPT<T> raster, TPointD posTrasf, const TAffine &aff,
-                const TSpectrumT<T> &spectrum, double freq, double phase) {
+                const TSpectrumT<T> &spectrum, double freq, double phase,
+                bool isLogarithmic) {
   raster->lock();
   for (int y = 0; y < raster->getLy(); y++) {
     TPointD posAux = posTrasf;
@@ -131,6 +139,7 @@ void doComputeT(TRasterPT<T> raster, TPointD posTrasf, const TAffine &aff,
       double ang = 0.0;
       if (posAux.x != 0 || posAux.y != 0) ang = atan2(posAux.y, posAux.x);
       double r = sqrt(posAux.x * posAux.x + posAux.y * posAux.y);
+      if (isLogarithmic) r = std::log(r) * 30.0;
       double v = 0.5 * (1 + sin(r * freq + ang + phase));
       *pix++   = spectrum.getPremultipliedValue(v);
       posAux.x += aff.a11;
@@ -146,18 +155,19 @@ void doComputeT(TRasterPT<T> raster, TPointD posTrasf, const TAffine &aff,
 //==================================================================
 
 void SpiralFx::doCompute(TTile &tile, double frame, const TRenderSettings &ri) {
-  double phase = m_phase->getValue(frame);
-  double freq  = m_freq->getValue(frame);
+  double phase       = m_phase->getValue(frame);
+  double freq        = m_freq->getValue(frame);
+  bool isLogarithmic = SpiralType(m_type->getValue()) == Logarithmic;
 
   TAffine aff      = ri.m_affine.inv();
   TPointD posTrasf = aff * tile.m_pos;
 
   if (TRaster32P ras32 = tile.getRaster())
     doComputeT<TPixel32>(ras32, posTrasf, aff, m_spectrum->getValue(frame),
-                         freq, phase);
+                         freq, phase, isLogarithmic);
   else if (TRaster64P ras64 = tile.getRaster())
     doComputeT<TPixel64>(ras64, posTrasf, aff, m_spectrum->getValue64(frame),
-                         freq, phase);
+                         freq, phase, isLogarithmic);
   else
     throw TException("SpiralFx: unsupported Pixel Type");
 }
@@ -212,6 +222,7 @@ public:
     m_count->setValueRange(0, (std::numeric_limits<double>::max)());
     m_period->setMeasureName("fxLength");
     m_wave_amplitude->setMeasureName("fxLength");
+    enableComputeInFloat(true);
   }
   ~MultiLinearGradientFx(){};
 
@@ -279,6 +290,7 @@ public:
     m_wave_amplitude->setValueRange(0, std::numeric_limits<double>::max());
     m_period->setMeasureName("fxLength");
     m_wave_amplitude->setMeasureName("fxLength");
+    enableComputeInFloat(true);
   }
   ~LinearGradientFx(){};
 
@@ -349,7 +361,8 @@ void doComputeT(TRasterPT<T> ras, TPointD posTrasf,
 
 void LinearGradientFx::doCompute(TTile &tile, double frame,
                                  const TRenderSettings &ri) {
-  assert((TRaster32P)tile.getRaster() || (TRaster64P)tile.getRaster());
+  assert((TRaster32P)tile.getRaster() || (TRaster64P)tile.getRaster() ||
+         (TRasterFP)tile.getRaster());
 
   double period      = m_period->getValue(frame) / ri.m_shrinkX;
   double count       = 1.0;
@@ -389,7 +402,8 @@ throw TException("MultiLinearGradientFx: unsupported Pixel Type");
 
 void MultiLinearGradientFx::doCompute(TTile &tile, double frame,
                                       const TRenderSettings &ri) {
-  assert((TRaster32P)tile.getRaster() || (TRaster64P)tile.getRaster());
+  assert((TRaster32P)tile.getRaster() || (TRaster64P)tile.getRaster() ||
+         (TRasterFP)tile.getRaster());
 
   double period      = m_period->getValue(frame) / ri.m_shrinkX;
   double count       = m_count->getValue(frame);
@@ -455,6 +469,8 @@ public:
     bindParam(this, "curveType", m_curveType);
     m_period->setValueRange(0.0, std::numeric_limits<double>::max());
     m_innerperiod->setValueRange(0.0, std::numeric_limits<double>::max());
+
+    enableComputeInFloat(true);
   }
   ~RadialGradientFx(){};
 
@@ -523,6 +539,8 @@ public:
     m_period->setValueRange(0, (std::numeric_limits<double>::max)());
     m_cycle->setValueRange(0, (std::numeric_limits<double>::max)());
     m_count->setValueRange(0, (std::numeric_limits<double>::max)());
+
+    enableComputeInFloat(true);
   }
   ~MultiRadialGradientFx(){};
 
@@ -552,7 +570,8 @@ public:
 
 void MultiRadialGradientFx::doCompute(TTile &tile, double frame,
                                       const TRenderSettings &ri) {
-  assert((TRaster32P)tile.getRaster() || (TRaster64P)tile.getRaster());
+  assert((TRaster32P)tile.getRaster() || (TRaster64P)tile.getRaster() ||
+         (TRasterFP)tile.getRaster());
   double period = m_period->getValue(frame) / ri.m_shrinkX;
   double count  = m_count->getValue(frame);
   double cycle  = m_cycle->getValue(frame) / ri.m_shrinkX;
@@ -567,7 +586,8 @@ void MultiRadialGradientFx::doCompute(TTile &tile, double frame,
 
 void RadialGradientFx::doCompute(TTile &tile, double frame,
                                  const TRenderSettings &ri) {
-  assert((TRaster32P)tile.getRaster() || (TRaster64P)tile.getRaster());
+  assert((TRaster32P)tile.getRaster() || (TRaster64P)tile.getRaster() ||
+         (TRasterFP)tile.getRaster());
   double period      = m_period->getValue(frame) / ri.m_shrinkX;
   double innerperiod = m_innerperiod->getValue(frame) / ri.m_shrinkX;
   double count       = 1.0;

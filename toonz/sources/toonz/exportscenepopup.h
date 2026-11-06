@@ -5,6 +5,7 @@
 
 #include "toonzqt/dvdialog.h"
 #include "toonzqt/lineedit.h"
+#include "toonzqt/filefield.h"
 #include "tfilepath.h"
 #include "filebrowsermodel.h"
 #include "dvdirtreeview.h"
@@ -163,7 +164,15 @@ class ExportScenePopup final : public DVGui::Dialog {
   QRadioButton *m_newProjectButton;
   QRadioButton *m_chooseProjectButton;
 
-  bool m_createNewProject;
+  QLabel *m_newProPathFieldLabel;
+  DVGui::FileField *m_projectLocationFld;
+  
+  // 0,1,2
+  UINT m_mode;
+
+  QRadioButton *m_lonelyModeButton;
+  QLabel *m_lonelyModePathLabel;
+  DVGui::FileField *m_lonelyModePathFld;
 
 public:
   ExportScenePopup(std::vector<TFilePath> scenes);
@@ -177,6 +186,7 @@ protected slots:
   void switchMode(int id);
   void onProjectTreeViweFocusIn();
   void onProjectNameFocusIn();
+  void onLonelyModeFocusIn();
   void onExport();
 
 protected:

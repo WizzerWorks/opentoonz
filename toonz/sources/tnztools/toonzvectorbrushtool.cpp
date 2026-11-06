@@ -6,6 +6,7 @@
 #include "tools/toolhandle.h"
 #include "tools/toolutils.h"
 #include "tools/tooloptions.h"
+#include "tools/replicator.h"
 #include "bluredbrush.h"
 
 // TnzQt includes
@@ -29,6 +30,9 @@
 #include "toonz/stage2.h"
 #include "toonz/preferences.h"
 #include "toonz/tonionskinmaskhandle.h"
+#include "toonz/tscenehandle.h"
+#include "toonz/toonzscene.h"
+#include "toonz/tcamera.h"
 
 // TnzCore includes
 #include "tstream.h"
@@ -51,13 +55,15 @@ TEnv::DoubleVar V_VectorBrushMaxSize("InknpaintVectorBrushMaxSize", 5);
 TEnv::IntVar V_VectorCapStyle("InknpaintVectorCapStyle", 1);
 TEnv::IntVar V_VectorJoinStyle("InknpaintVectorJoinStyle", 1);
 TEnv::IntVar V_VectorMiterValue("InknpaintVectorMiterValue", 4);
-TEnv::DoubleVar V_BrushAccuracy("InknpaintBrushAccuracy", 20);
-TEnv::DoubleVar V_BrushSmooth("InknpaintBrushSmooth", 0);
+TEnv::DoubleVar V_BrushAccuracy("InknpaintBrushAccuracy", 100);
+TEnv::DoubleVar V_BrushSmooth("InknpaintBrushSmooth", 0.5);
+TEnv::IntVar V_BrushDrawOrder("InknpaintVectorDrawOrder", 2);
 TEnv::IntVar V_BrushBreakSharpAngles("InknpaintBrushBreakSharpAngles", 0);
 TEnv::IntVar V_BrushPressureSensitivity("InknpaintBrushPressureSensitivity", 1);
 TEnv::IntVar V_VectorBrushFrameRange("VectorBrushFrameRange", 0);
 TEnv::IntVar V_VectorBrushSnap("VectorBrushSnap", 0);
 TEnv::IntVar V_VectorBrushSnapSensitivity("VectorBrushSnapSensitivity", 0);
+TEnv::IntVar V_VectorBrushAssistants("VectorBrushAssistants", 1);
 TEnv::StringVar V_VectorBrushPreset("VectorBrushPreset", "<custom>");
 
 //-------------------------------------------------------------------
@@ -335,11 +341,29 @@ static void findMaxCurvPoints(TStroke *stroke, const float &angoloLim,
   }
 }
 
+namespace {
+
+enum DrawOrder { OverAll = 0, UnderAll, PaletteOrder };
+
+void getAboveStyleIdSet(int styleId, TPaletteP palette,
+                        QSet<int> &aboveStyles) {
+  if (!palette) return;
+  for (int p = 0; p < palette->getPageCount(); p++) {
+    TPalette::Page *page = palette->getPage(p);
+    for (int s = 0; s < page->getStyleCount(); s++) {
+      int tmpId = page->getStyleId(s);
+      if (tmpId == styleId) return;
+      if (tmpId != 0) aboveStyles.insert(tmpId);
+    }
+  }
+}
+}  // namespace
+
 static void addStroke(TTool::Application *application, const TVectorImageP &vi,
-                      TStroke *stroke, bool breakAngles, bool autoGroup,
+                      TStroke *stroke, DrawOrder drawOrder, bool breakAngles, bool autoGroup,
                       bool autoFill, bool frameCreated, bool levelCreated,
                       TXshSimpleLevel *sLevel = NULL,
-                      TFrameId fid = TFrameId::NO_FRAME) {
+                      TFrameId fid            = TFrameId::NO_FRAME) {
   QMutexLocker lock(vi->getMutex());
 
   if (application->getCurrentObject()->isSpline()) {
@@ -380,7 +404,20 @@ static void addStroke(TTool::Application *application, const TVectorImageP &vi,
       ImageUtils::getFillingInformationOverlappingArea(vi, *fillInformation,
                                                        stroke->getBBox());
       TStroke *str = new TStroke(*strokes[i]);
-      vi->addStroke(str);
+      switch (drawOrder) { 
+      default:
+      case OverAll:
+        vi->addStroke(str, true, false);
+        break;
+      case UnderAll:
+        vi->addStroke(str, true, false);
+        break;
+      case PaletteOrder:
+        QSet<int> aboveStyles;
+        getAboveStyleIdSet(str->getStyle(), vi->getPalette(), aboveStyles);
+        vi->addStrokeBelow(str, aboveStyles);
+        break;
+      }
       TUndoManager::manager()->add(new UndoPencil(str, fillInformation, sl, id,
                                                   frameCreated, levelCreated,
                                                   autoGroup, autoFill));
@@ -392,7 +429,21 @@ static void addStroke(TTool::Application *application, const TVectorImageP &vi,
     ImageUtils::getFillingInformationOverlappingArea(vi, *fillInformation,
                                                      stroke->getBBox());
     TStroke *str = new TStroke(*stroke);
-    vi->addStroke(str);
+    switch (drawOrder) {
+    default:
+    case OverAll:
+      vi->addStroke(str, true, false);
+      break;
+    case UnderAll:
+      vi->addStroke(str, true, true);
+      break;
+    case PaletteOrder:
+      QSet<int> aboveStyles;
+      getAboveStyleIdSet(str->getStyle(), vi->getPalette(), aboveStyles);
+      vi->addStrokeBelow(str, aboveStyles);
+      break;
+    }
+
     TUndoManager::manager()->add(new UndoPencil(str, fillInformation, sl, id,
                                                 frameCreated, levelCreated,
                                                 autoGroup, autoFill));
@@ -443,44 +494,28 @@ namespace {
 //-------------------------------------------------------------------
 
 void addStrokeToImage(TTool::Application *application, const TVectorImageP &vi,
-                      TStroke *stroke, bool breakAngles, bool autoGroup,
-                      bool autoFill, bool frameCreated, bool levelCreated,
-                      TXshSimpleLevel *sLevel = NULL,
+                      TStroke *stroke, DrawOrder drawOrder, bool breakAngles,
+                      bool autoGroup, bool autoFill, bool frameCreated,
+                      bool levelCreated, TXshSimpleLevel *sLevel = NULL,
                       TFrameId id = TFrameId::NO_FRAME) {
   QMutexLocker lock(vi->getMutex());
-  addStroke(application, vi.getPointer(), stroke, breakAngles, autoGroup,
-            autoFill, frameCreated, levelCreated, sLevel, id);
+  addStroke(application, vi.getPointer(), stroke, drawOrder, breakAngles,
+            autoGroup, autoFill, frameCreated, levelCreated, sLevel, id);
   // la notifica viene gia fatta da addStroke!
   // getApplication()->getCurrentTool()->getTool()->notifyImageChanged();
-}
-
-//---------------------------------------------------------------------------------------------------------
-
-enum DrawOrder { OverAll = 0, UnderAll, PaletteOrder };
-
-void getAboveStyleIdSet(int styleId, TPaletteP palette,
-                        QSet<int> &aboveStyles) {
-  if (!palette) return;
-  for (int p = 0; p < palette->getPageCount(); p++) {
-    TPalette::Page *page = palette->getPage(p);
-    for (int s = 0; s < page->getStyleCount(); s++) {
-      int tmpId = page->getStyleId(s);
-      if (tmpId == styleId) return;
-      if (tmpId != 0) aboveStyles.insert(tmpId);
-    }
-  }
 }
 
 //=========================================================================================================
 
 double computeThickness(double pressure, const TDoublePairProperty &property,
-                        bool isPath) {
+                        bool enablePressure, bool isPath ) {
   if (isPath) return 0.0;
+  if (!enablePressure) return property.getValue().second * 0.5;
   double t      = pressure * pressure * pressure;
   double thick0 = property.getValue().first;
   double thick1 = property.getValue().second;
   if (thick1 < 0.0001) thick0 = thick1 = 0.0;
-  return (thick0 + (thick1 - thick0) * t) * 0.5;
+  return (thick0 + (thick1 - thick0) * t) * 0.5;  
 }
 
 }  // namespace
@@ -493,39 +528,54 @@ double computeThickness(double pressure, const TDoublePairProperty &property,
 
 ToonzVectorBrushTool::ToonzVectorBrushTool(std::string name, int targetType)
     : TTool(name)
-    , m_thickness("Size", 0, 1000, 0, 5)
+    , m_thickness("Size", 0, 1000, 1, 5)
     , m_accuracy("Accuracy:", 1, 100, 20)
     , m_smooth("Smooth:", 0, 50, 0)
+    , m_drawOrder("Draw Order")
     , m_preset("Preset:")
     , m_breakAngles("Break", true)
     , m_pressure("Pressure", true)
+    , m_snap("Snap", false)
+    , m_frameRange("Range:")
+    , m_snapSensitivity("Sensitivity:")
     , m_capStyle("Cap")
     , m_joinStyle("Join")
     , m_miterJoinLimit("Miter:", 0, 100, 4)
-    , m_rasterTrack(0)
-    , m_styleId(0)
-    , m_modifiedRegion()
-    , m_bluredBrush(0)
-    , m_active(false)
-    , m_enabled(false)
-    , m_isPrompting(false)
-    , m_firstTime(true)
-    , m_firstFrameRange(true)
-    , m_presetsLoaded(false)
-    , m_frameRange("Range:")
-    , m_snap("Snap", false)
-    , m_snapSensitivity("Sensitivity:")
+    , m_assistants("Assistants", true)
+    , m_styleId()
+    , m_minThick()
+    , m_maxThick()
+    , m_col()
+    , m_firstFrame()
+    , m_veryFirstFrame()
+    , m_veryFirstCol()
     , m_targetType(targetType)
-    , m_workingFrameId(TFrameId()) {
+    , m_pixelSize()
+    , m_minDistance2()
+    , m_snapped()
+    , m_snappedSelf()
+    , m_active()
+    , m_firstTime(true)
+    , m_isPath()
+    , m_presetsLoaded()
+    , m_firstFrameRange(true)
+    , m_propertyUpdating()
+{
   bind(targetType);
 
   m_thickness.setNonLinearSlider();
+  m_smooth.setNonLinearSlider();
 
   m_prop[0].bind(m_thickness);
   m_prop[0].bind(m_accuracy);
   m_prop[0].bind(m_smooth);
+  m_prop[0].bind(m_drawOrder);
   m_prop[0].bind(m_breakAngles);
   m_prop[0].bind(m_pressure);
+
+  m_drawOrder.addValue(L"Over All");
+  m_drawOrder.addValue(L"Under All");
+  m_drawOrder.addValue(L"Palette Order");
 
   m_prop[0].bind(m_frameRange);
   m_frameRange.addValue(L"Off");
@@ -540,6 +590,8 @@ ToonzVectorBrushTool::ToonzVectorBrushTool(std::string name, int targetType)
   m_snapSensitivity.addValue(LOW_WSTR);
   m_snapSensitivity.addValue(MEDIUM_WSTR);
   m_snapSensitivity.addValue(HIGH_WSTR);
+
+  m_prop[0].bind(m_assistants);
 
   m_prop[0].bind(m_preset);
   m_preset.addValue(CUSTOM_WSTR);
@@ -556,7 +608,8 @@ ToonzVectorBrushTool::ToonzVectorBrushTool(std::string name, int targetType)
   m_joinStyle.addValue(BEVEL_WSTR, QString::fromStdWString(BEVEL_WSTR));
 
   m_prop[1].bind(m_miterJoinLimit);
-
+  
+  m_drawOrder.setId("DrawOrder");
   m_breakAngles.setId("BreakSharpAngles");
   m_frameRange.setId("FrameRange");
   m_snap.setId("Snap");
@@ -566,8 +619,37 @@ ToonzVectorBrushTool::ToonzVectorBrushTool(std::string name, int targetType)
   m_capStyle.setId("Cap");
   m_joinStyle.setId("Join");
   m_miterJoinLimit.setId("Miter");
+  m_assistants.setId("Assistants");
+
+  m_inputmanager.setHandler(this);
+  m_modifierLine               = new TModifierLine();
+  m_modifierTangents           = new TModifierTangents();
+  m_modifierAssistants         = new TModifierAssistants();
+  m_modifierSegmentation       = new TModifierSegmentation();
+  m_modifierSmoothSegmentation = new TModifierSegmentation(TPointD(1, 1), 3);
+  for(int i = 0; i < 3; ++i)
+    m_modifierSmooth[i]        = new TModifierSmooth();
+  m_modifierSimplify           = new TModifierSimplify();
+#ifndef NDEBUG
+  m_modifierTest = new TModifierTest();
+#endif
+
+  m_inputmanager.addModifier(
+      TInputModifierP(m_modifierAssistants.getPointer()));
 }
 
+//-------------------------------------------------------------------------------------------------------
+
+unsigned int ToonzVectorBrushTool::getToolHints() const {
+  unsigned int h = TTool::getToolHints() & ~HintAssistantsAll;
+  if (m_assistants.getValue()) {
+    h |= HintReplicators;
+    h |= HintReplicatorsPoints;
+    h |= HintReplicatorsEnabled;
+  }
+  return h;
+}
+  
 //-------------------------------------------------------------------------------------------------------
 
 ToolOptionsBox *ToonzVectorBrushTool::createOptionsBox() {
@@ -583,6 +665,10 @@ void ToonzVectorBrushTool::updateTranslation() {
   m_thickness.setQStringName(tr("Size"));
   m_accuracy.setQStringName(tr("Accuracy:"));
   m_smooth.setQStringName(tr("Smooth:"));
+  m_drawOrder.setQStringName(tr("Draw Order:"));
+  m_drawOrder.setItemUIName(L"Over All", tr("Over All"));
+  m_drawOrder.setItemUIName(L"Under All", tr("Under All"));
+  m_drawOrder.setItemUIName(L"Palette Order", tr("Palette Order"));
   m_preset.setQStringName(tr("Preset:"));
   m_preset.setItemUIName(CUSTOM_WSTR, tr("<custom>"));
   m_breakAngles.setQStringName(tr("Break"));
@@ -593,6 +679,7 @@ void ToonzVectorBrushTool::updateTranslation() {
   m_frameRange.setQStringName(tr("Range:"));
   m_snap.setQStringName(tr("Snap"));
   m_snapSensitivity.setQStringName("");
+  m_assistants.setQStringName(tr("Assistants"));
   m_frameRange.setItemUIName(L"Off", tr("Off"));
   m_frameRange.setItemUIName(LINEAR_WSTR, tr("Linear"));
   m_frameRange.setItemUIName(EASEIN_WSTR, tr("In"));
@@ -619,12 +706,15 @@ void ToonzVectorBrushTool::onActivate() {
         QString::fromStdString(V_VectorBrushPreset.getValue()).toStdWString();
     if (wpreset != CUSTOM_WSTR) {
       initPresets();
+      if (!m_preset.isValue(wpreset)) wpreset = CUSTOM_WSTR;
       m_preset.setValue(wpreset);
+      V_VectorBrushPreset = m_preset.getValueAsString();
       loadPreset();
     } else
       loadLastBrush();
   }
   resetFrameRange();
+  updateModifiers();
   // TODO:app->editImageOrSpline();
 }
 
@@ -632,27 +722,423 @@ void ToonzVectorBrushTool::onActivate() {
 
 void ToonzVectorBrushTool::onDeactivate() {
   /*---
-   * ドラッグ中にツールが切り替わった場合に備え、onDeactivateにもMouseReleaseと同じ処理を行う
+   * 繝峨Λ繝�繧ｰ荳ｭ縺ｫ繝�繝ｼ繝ｫ縺悟��繧頑崛繧上▲縺溷ｴ蜷医↓蛯吶∴縲｛nDeactivate縺ｫ繧�MouseRelease縺ｨ蜷後§蜃ｦ逅�繧定｡後≧
    * ---*/
 
   // End current stroke.
-  if (m_active && m_enabled) {
-    leftButtonUp(m_lastDragPos, m_lastDragEvent);
+  m_inputmanager.finishTracks();
+  resetFrameRange();
+}
+
+//--------------------------------------------------------------------------------------------------
+
+void ToonzVectorBrushTool::inputMouseMove(
+  const TPointD &position, const TInputState &state )
+{
+  struct Locals {
+    ToonzVectorBrushTool *m_this;
+
+    void setValue(TDoublePairProperty &prop,
+                  const TDoublePairProperty::Value &value) {
+      prop.setValue(value);
+
+      m_this->onPropertyChanged(prop.getName());
+      TTool::getApplication()->getCurrentTool()->notifyToolChanged();
+    }
+
+    void addMinMax(TDoublePairProperty &prop, double min, double max) {
+      if (min == 0.0 && max == 0.0) return;
+      const TDoublePairProperty::Range &range = prop.getRange();
+
+      TDoublePairProperty::Value value = prop.getValue();
+      value.first += min;
+      value.second += max;
+      if (value.first > value.second) value.first = value.second;
+      value.first  = tcrop(value.first, range.first, range.second);
+      value.second = tcrop(value.second, range.first, range.second);
+
+      setValue(prop, value);
+    }
+
+  } locals = {this};
+
+  TPointD halfThick(m_maxThick * 0.5, m_maxThick * 0.5);
+  TRectD invalidateRect(m_brushPos - halfThick, m_brushPos + halfThick);
+
+  bool alt     = state.isKeyPressed(TInputState::Key::alt);
+  bool shift   = state.isKeyPressed(TInputState::Key::shift);
+  bool control = state.isKeyPressed(TInputState::Key::control);
+  
+  if ( alt && control && !shift
+    && Preferences::instance()->useCtrlAltToResizeBrushEnabled() )
+  {
+    // Resize the brush if CTRL+ALT is pressed and the preference is enabled.
+    const TPointD &diff = position - m_mousePos;
+    double max          = diff.x / 2;
+    double min          = diff.y / 2;
+
+    locals.addMinMax(m_thickness, min, max);
+
+    double radius = m_thickness.getValue().second * 0.5;
+    halfThick = TPointD(radius, radius);
+  } else {
+    m_brushPos = m_mousePos = position;
+  }
+  
+  invalidateRect += TRectD(m_brushPos - halfThick, m_brushPos + halfThick);
+
+  if (m_minThick == 0 && m_maxThick == 0) {
+    m_minThick = m_thickness.getValue().first;
+    m_maxThick = m_thickness.getValue().second;
   }
 
-  if (m_tileSaver && !m_isPath) {
-    m_enabled = false;
+  invalidate(invalidateRect.enlarge(10));
+}
+
+//--------------------------------------------------------------------------------------------------
+
+void ToonzVectorBrushTool::deleteStrokes(StrokeList &strokes) {
+  for(StrokeList::iterator i = strokes.begin(); i != strokes.end(); ++i)
+    delete *i;
+  strokes.clear();
+}
+
+//--------------------------------------------------------------------------------------------------
+
+void ToonzVectorBrushTool::copyStrokes(StrokeList &dst, const StrokeList &src) {
+  deleteStrokes(dst);
+  dst.reserve(src.size());
+  for(StrokeList::const_iterator i = src.begin(); i != src.end(); ++i)
+    dst.push_back(new TStroke(**i));
+}
+
+//--------------------------------------------------------------------------------------------------
+
+void ToonzVectorBrushTool::inputSetBusy(bool busy) {
+  if (m_active == busy) return;
+  
+  if (busy) {
+    
+    // begin painting //////////////////////////
+    
+    m_styleId = 0;
+    m_tracks.clear();
+    
+    TTool::Application *app = TTool::getApplication();
+    if (!app)
+      return;
+
+    m_isPath = app->getCurrentObject()->isSpline();
+    if (m_isPath) {
+      m_currentColor = TPixel32::Red;
+      m_active = true;
+      return;
+    }
+    
+    // todo: gestire autoenable
+    if ( app->getCurrentColumn()->getColumnIndex() < 0
+      && !app->getCurrentFrame()->isEditingLevel() )
+      return;
+    if (!getImage(true))// Image is touched in preLeftButtonDown
+      return;
+    if (!app->getCurrentLevel()->getLevel())
+      return;
+
+    // nel caso che il colore corrente sia un cleanup/studiopalette color
+    // oppure il colore di un colorfield
+    if (TColorStyle *cs = app->getCurrentLevelStyle()) {
+      TRasterStyleFx *rfx = cs->getRasterStyleFx();
+      if (!cs->isStrokeStyle() && (!rfx || !rfx->isInkStyle()))
+        return;
+      m_styleId = app->getCurrentLevelStyleIndex();
+      m_currentColor = cs->getAverageColor();
+      m_currentColor.m = 255;
+    } else {
+      m_styleId = 1;
+      m_currentColor = TPixel32::Black;
+    }
+    
+    m_active = true;
+    
+    return; // painting has begun
   }
-  m_workRas   = TRaster32P();
-  m_backupRas = TRasterCM32P();
-  resetFrameRange();
+  
+  
+  // end painting //////////////////////////
+  
+  m_active = false;
+  
+  // clear tracks automatically when return from this function
+  struct Cleanup {
+    ToonzVectorBrushTool &owner;
+    inline ~Cleanup() { owner.m_tracks.clear(); owner.invalidate(); }
+  } cleanup = {*this};
+
+  // remove empty tracks
+  for(TrackList::iterator i = m_tracks.begin(); i != m_tracks.end(); )
+    if (i->isEmpty()) i = m_tracks.erase(i); else ++i;
+  
+  if (m_tracks.empty())
+    return;
+  
+  // make motion path (if need)
+    
+  if (m_isPath) {
+    double error = 20.0 * m_pixelSize;
+
+    m_tracks.resize(1);
+    TStroke *stroke = m_tracks.front().makeStroke(error);
+
+    TVectorImageP vi = getImage(true);
+
+    if (!isJustCreatedSpline(vi.getPointer())) {
+      m_currentColor = TPixel32::Green;
+      invalidate();
+      int ret = DVGui::MsgBox(
+        QString("Are you sure you want to replace the motion path?"),
+        QObject::tr("Yes"), QObject::tr("No"), 0 );
+      if (ret != 1)
+        return; // 1 here means "Yes" button
+    }
+
+    QMutexLocker lock(vi->getMutex());
+
+    TUndo *undo = new UndoPath(
+      getXsheet()->getStageObject(getObjectId())->getSpline() );
+
+    while(vi->getStrokeCount() > 0) vi->deleteStroke(0);
+    vi->addStroke(stroke, false);
+
+    notifyImageChanged();
+    TUndoManager::manager()->add(undo);
+
+    return; // done with motion path
+  }
+  
+  // paint regular strokes
+  
+  TVectorImageP vi = getImage(true);
+  QMutexLocker lock(vi->getMutex());
+  TTool::Application *app = TTool::getApplication();
+  
+  // prepare strokes
+    
+  StrokeList strokes;
+  strokes.reserve(m_tracks.size());
+  for(TrackList::iterator i = m_tracks.begin(); i != m_tracks.end(); ++i) {
+    StrokeGenerator &track = *i;
+    
+    track.filterPoints();
+    double error = 30.0/(1 + 0.5 * m_accuracy.getValue())*m_pixelSize;
+    TStroke *stroke = track.makeStroke(error);
+    
+    stroke->setStyle(m_styleId);
+    
+    TStroke::OutlineOptions &options = stroke->outlineOptions();
+    options.m_capStyle   = m_capStyle.getIndex();
+    options.m_joinStyle  = m_joinStyle.getIndex();
+    options.m_miterUpper = m_miterJoinLimit.getValue();
+
+    if ( stroke->getControlPointCount() == 3
+      && stroke->getControlPoint(0) != stroke->getControlPoint(2) )
+                                        // gli stroke con solo 1 chunk vengono
+                                        // fatti dal tape tool...e devono venir
+                                        // riconosciuti come speciali di
+                                        // autoclose proprio dal fatto che
+                                        // hanno 1 solo chunk.
+      stroke->insertControlPoints(0.5);
+    
+    if (!m_frameRange.getIndex() && track.getLoop())
+      stroke->setSelfLoop(true);
+    
+    strokes.push_back(stroke);
+  }
+
+  // add stroke to image
+  
+  if (m_frameRange.getIndex()) {
+    // frame range stroke
+    if (m_firstFrameId == -1) {
+      // remember strokes for first srame
+      copyStrokes(m_firstStrokes, strokes);
+      m_firstFrameId = getFrameId();
+      m_rangeTracks  = m_tracks;
+      
+      if (app) {
+        m_col        = app->getCurrentColumn()->getColumnIndex();
+        m_firstFrame = app->getCurrentFrame()->getFrame();
+      }
+      
+      if (m_firstFrameRange) {
+        m_veryFirstCol     = m_col;
+        m_veryFirstFrame   = m_firstFrame;
+        m_veryFirstFrameId = m_firstFrameId;
+      }
+    } else
+    if (m_firstFrameId == getFrameId()) {
+      // painted of first frame again, so
+      // just replace the remembered strokes for first frame
+      copyStrokes(m_firstStrokes, strokes);
+      m_rangeTracks = m_tracks;
+    } else {
+      // paint frame range strokes
+      TFrameId currentId = getFrameId();
+      int curCol   = app ? app->getCurrentColumn()->getColumnIndex() : 0;
+      int curFrame = app ? app->getCurrentFrame()->getFrame()        : 0;
+      
+      if (size_t count = std::min(m_firstStrokes.size(), strokes.size())) {
+        TUndoManager::manager()->beginBlock();
+        for(size_t i = 0; i < count; ++i)
+          doFrameRangeStrokes(
+              m_firstFrameId, m_firstStrokes[i], getFrameId(), strokes[i],
+              m_frameRange.getIndex(), m_breakAngles.getValue(), false, false,
+              m_firstFrameRange );
+        TUndoManager::manager()->endBlock();
+      }
+      
+      if (m_inputmanager.state.isKeyPressed(TInputState::Key::control)) {
+        if (app && m_firstFrameId > currentId) {
+          if (app->getCurrentFrame()->isEditingScene()) {
+            app->getCurrentColumn()->setColumnIndex(curCol);
+            app->getCurrentFrame()->setFrame(curFrame);
+          } else {
+            app->getCurrentFrame()->setFid(currentId);
+          }
+        }
+        
+        resetFrameRange();
+        copyStrokes(m_firstStrokes, strokes);
+        m_rangeTracks     = m_tracks;
+        m_firstFrameId    = currentId;
+        m_firstFrameRange = false;
+      } else {
+        if (app) {
+          if (app->getCurrentFrame()->isEditingScene()) {
+            app->getCurrentColumn()->setColumnIndex(m_veryFirstCol);
+            app->getCurrentFrame()->setFrame(m_veryFirstFrame);
+          } else {
+            app->getCurrentFrame()->setFid(m_veryFirstFrameId);
+          }
+        }
+        resetFrameRange();
+      }
+    }
+  } else {
+    // regular paint strokes
+    TUndoManager::manager()->beginBlock();
+    for(StrokeList::iterator i = strokes.begin(); i != strokes.end(); ++i) {
+      TStroke *stroke = *i;
+      addStrokeToImage(app, vi, stroke, (DrawOrder)m_drawOrder.getIndex(),
+                       m_breakAngles.getValue(),
+                      false, false, m_isFrameCreated, m_isLevelCreated);
+
+      if ((Preferences::instance()->getGuidedDrawingType() == 1 ||
+          Preferences::instance()->getGuidedDrawingType() == 2) &&
+          Preferences::instance()->getGuidedAutoInbetween())
+      {
+        TFrameId fId = getFrameId();
+        doGuidedAutoInbetween(fId, vi, stroke, m_breakAngles.getValue(), false,
+                              false, false);
+        if (app->getCurrentFrame()->isEditingScene())
+          app->getCurrentFrame()->setFrame( app->getCurrentFrame()->getFrameIndex() );
+        else
+          app->getCurrentFrame()->setFid(fId);
+      }
+    }
+    TUndoManager::manager()->endBlock();
+  }
+  
+  deleteStrokes(strokes);
+}
+
+//--------------------------------------------------------------------------------------------------
+
+void ToonzVectorBrushTool::inputPaintTracks(const TTrackList &tracks) {
+  if (tracks.empty()) return;
+
+  TRectD invalidateRect;
+
+  size_t count = m_isPath ? 1 : tracks.size();
+  m_tracks.resize(count);
+  for(size_t i = 0; i < count; ++i) {
+    const TTrack &track = *tracks[i];
+    StrokeGenerator &gen = m_tracks[i];
+    
+    while(track.pointsRemoved) {
+      gen.pop();
+      --track.pointsRemoved;
+    }
+    
+    while(track.pointsAdded) {
+      const TTrackPoint &p = track.current();
+      double t = computeThickness(p.pressure, m_thickness, m_pressure.getValue(), m_isPath);
+      gen.add(TThickPoint(p.position, t * Stage::inch / m_cameraDpi), 0);
+      --track.pointsAdded;
+    }
+    
+    bool loop = m_snappedSelf
+            && track.fixedFinished()
+            && !track.empty()
+            && areAlmostEqual(track.front().position, track.back().position);
+    gen.setLoop(loop);
+    
+    invalidateRect += gen.getLastModifiedRegion();
+    if (!i) {
+      TPointD halfThick(m_maxThick * 0.5, m_maxThick * 0.5);
+      invalidateRect += TRectD(m_brushPos - halfThick, m_brushPos + halfThick);
+      m_brushPos = m_mousePos = track.current().position;
+      invalidateRect += TRectD(m_brushPos - halfThick, m_brushPos + halfThick);
+    }
+  }
+  
+  if (!invalidateRect.isEmpty()) {
+    if (m_isPath) {
+      if (getViewer()) getViewer()->GLInvalidateRect(invalidateRect);
+    } else {
+      invalidate(invalidateRect.enlarge(10));
+    }
+  }
+}
+
+//--------------------------------------------------------------------------------------------------
+
+void ToonzVectorBrushTool::updateModifiers() {
+  m_pixelSize = getPixelSize();
+  m_cameraDpi = getApplication()->getCurrentScene()->getScene()->getCurrentCamera()->getDpi().x;
+  int smoothRadius = (int)round(m_smooth.getValue());
+  m_modifierAssistants->magnetism = m_assistants.getValue() ? 1 : 0;
+  m_modifierSegmentation->setStep(TPointD(m_pixelSize, m_pixelSize));
+  m_modifierSmoothSegmentation->setStep(TPointD(2*m_pixelSize, 2*m_pixelSize));
+  m_modifierSimplify->step = 2*m_pixelSize;
+  m_inputmanager.drawPreview = false;
+
+  m_modifierReplicate.clear();
+  if (m_assistants.getValue())
+    TReplicator::scanReplicators(this, nullptr, &m_modifierReplicate, false, true, false, false, nullptr);
+  
+  m_inputmanager.clearModifiers();
+  m_inputmanager.addModifier(TInputModifierP(m_modifierTangents.getPointer()));
+  if (smoothRadius > 0) {
+    m_inputmanager.addModifier(TInputModifierP(m_modifierSmoothSegmentation.getPointer()));
+    for(int i = 0; i < 3; ++i) {
+      m_modifierSmooth[i]->radius = smoothRadius;
+      m_inputmanager.addModifier(TInputModifierP(m_modifierSmooth[i].getPointer()));
+    }
+  }
+  m_inputmanager.addModifier(TInputModifierP(m_modifierAssistants.getPointer()));
+#ifndef NDEBUG
+  m_inputmanager.addModifier(TInputModifierP(m_modifierTest.getPointer()));
+#endif
+  m_inputmanager.addModifiers(m_modifierReplicate);
+  m_inputmanager.addModifier(TInputModifierP(m_modifierSegmentation.getPointer()));
+  m_inputmanager.addModifier(TInputModifierP(m_modifierSimplify.getPointer()));
 }
 
 //--------------------------------------------------------------------------------------------------
 
 bool ToonzVectorBrushTool::preLeftButtonDown() {
   if (getViewer() && getViewer()->getGuidedStrokePickerMode()) return false;
-
+  updateModifiers();
   touchImage();
   if (m_isFrameCreated) {
     // When the xsheet frame is selected, whole viewer will be updated from
@@ -665,353 +1151,84 @@ bool ToonzVectorBrushTool::preLeftButtonDown() {
 
 //--------------------------------------------------------------------------------------------------
 
-void ToonzVectorBrushTool::leftButtonDown(const TPointD &pos,
-                                          const TMouseEvent &e) {
-  TTool::Application *app = TTool::getApplication();
-  if (!app) return;
+void ToonzVectorBrushTool::handleMouseEvent(MouseEventType type,
+                                          const TPointD &pos,
+                                          const TMouseEvent &e)
+{
+  TTimerTicks t = TToolTimer::ticks();
+  bool alt      = e.getModifiersMask() & TMouseEvent::ALT_KEY;
+  bool shift    = e.getModifiersMask() & TMouseEvent::SHIFT_KEY;
+  bool control  = e.getModifiersMask() & TMouseEvent::CTRL_KEY;
 
-  if (getViewer() && getViewer()->getGuidedStrokePickerMode()) {
-    getViewer()->doPickGuideStroke(pos);
-    return;
+  if (shift && type == ME_DOWN && e.button() == Qt::LeftButton && !m_active) {
+    m_modifierAssistants->magnetism = 0;
+    m_inputmanager.clearModifiers();
+    m_inputmanager.addModifier(TInputModifierP(m_modifierLine.getPointer()));
+    m_inputmanager.addModifier(TInputModifierP(m_modifierAssistants.getPointer()));
+    m_inputmanager.addModifiers(m_modifierReplicate);
+    m_inputmanager.addModifier(TInputModifierP(m_modifierSegmentation.getPointer()));
+    m_inputmanager.addModifier(TInputModifierP(m_modifierSimplify.getPointer()));
+    m_inputmanager.drawPreview = true;
   }
 
-  int col   = app->getCurrentColumn()->getColumnIndex();
-  m_isPath  = app->getCurrentObject()->isSpline();
-  m_enabled = col >= 0 || m_isPath || app->getCurrentFrame()->isEditingLevel();
-  // todo: gestire autoenable
-  if (!m_enabled) return;
-  if (!m_isPath) {
-    m_currentColor = TPixel32::Black;
-    m_active       = !!getImage(true);
-    if (!m_active) {
-      m_active = !!touchImage();
-    }
-    if (!m_active) return;
+  if (alt != m_inputmanager.state.isKeyPressed(TKey::alt))
+    m_inputmanager.keyEvent(alt, TKey::alt, t, nullptr);
+  if (shift != m_inputmanager.state.isKeyPressed(TKey::shift))
+    m_inputmanager.keyEvent(shift, TKey::shift, t, nullptr);
+  if (control != m_inputmanager.state.isKeyPressed(TKey::control))
+    m_inputmanager.keyEvent(control, TKey::control, t, nullptr);
 
-    if (m_active) {
-      // nel caso che il colore corrente sia un cleanup/studiopalette color
-      // oppure il colore di un colorfield
-      m_styleId       = app->getCurrentLevelStyleIndex();
-      TColorStyle *cs = app->getCurrentLevelStyle();
-      if (cs) {
-        TRasterStyleFx *rfx = cs ? cs->getRasterStyleFx() : 0;
-        m_active =
-            cs != 0 && (cs->isStrokeStyle() || (rfx && rfx->isInkStyle()));
-        m_currentColor   = cs->getAverageColor();
-        m_currentColor.m = 255;
-      } else {
-        m_styleId      = 1;
-        m_currentColor = TPixel32::Black;
-      }
-    }
-  } else {
-    m_currentColor = TPixel32::Red;
-    m_active       = true;
-  }
-  // assert(0<=m_styleId && m_styleId<2);
-  m_track.clear();
-  double thickness = (m_pressure.getValue() || m_isPath)
-                         ? computeThickness(e.m_pressure, m_thickness, m_isPath)
-                         : m_thickness.getValue().second * 0.5;
-
-  /*--- ストロークの最初にMaxサイズの円が描かれてしまう不具合を防止する ---*/
-  if (m_pressure.getValue() && e.m_pressure == 1.0)
-    thickness = m_thickness.getValue().first * 0.5;
-  m_currThickness = thickness;
-  m_smoothStroke.beginStroke(m_smooth.getValue());
-
-  if (m_foundFirstSnap) {
-    addTrackPoint(TThickPoint(m_firstSnapPoint, thickness),
-                  getPixelSize() * getPixelSize());
+  TPointD snappedPos = pos;
+  bool pickerMode = getViewer() && getViewer()->getGuidedStrokePickerMode();
+  bool snapInvert = alt && (!control || type == ME_MOVE || type == ME_DOWN);
+  bool snapEnabled = !pickerMode && (snapInvert != m_snap.getValue());
+  snap(pos, snapEnabled, m_active);
+  if (m_snapped)
+    snappedPos = m_snapPoint;
+  if (m_snappedSelf && type == ME_UP)
+    snappedPos = m_snapPointSelf;
+  
+  if (type == ME_MOVE) {
+    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    THoverList hovers(1, snappedPos);
+    m_inputmanager.hoverEvent(hovers);
   } else
-    addTrackPoint(TThickPoint(pos, thickness), getPixelSize() * getPixelSize());
-  TRectD invalidateRect = m_track.getLastModifiedRegion();
-  invalidate(invalidateRect.enlarge(2));
-
-  // updating m_brushPos is needed to refresh viewer properly
-  m_brushPos = m_mousePos = pos;
-}
-
-//-------------------------------------------------------------------------------------------------------------
-
-void ToonzVectorBrushTool::leftButtonDrag(const TPointD &pos,
-                                          const TMouseEvent &e) {
-  if (!m_enabled || !m_active) {
-    m_brushPos = m_mousePos = pos;
-    return;
-  }
-
-  m_lastDragPos   = pos;
-  m_lastDragEvent = e;
-
-  double thickness = (m_pressure.getValue() || m_isPath)
-                         ? computeThickness(e.m_pressure, m_thickness, m_isPath)
-                         : m_thickness.getValue().second * 0.5;
-
-  TRectD invalidateRect;
-  TPointD halfThick(m_maxThick * 0.5, m_maxThick * 0.5);
-  TPointD snapThick(6.0 * m_pixelSize, 6.0 * m_pixelSize);
-
-  // In order to clear the previous brush tip
-  invalidateRect += TRectD(m_brushPos - halfThick, m_brushPos + halfThick);
-
-  // In order to clear the previous snap indicator
-  if (m_foundLastSnap)
-    invalidateRect +=
-        TRectD(m_lastSnapPoint - snapThick, m_lastSnapPoint + snapThick);
-
-  m_currThickness = thickness;
-
-  m_mousePos       = pos;
-  m_lastSnapPoint  = pos;
-  m_foundLastSnap  = false;
-  m_foundFirstSnap = false;
-  m_snapSelf       = false;
-  m_altPressed     = e.isAltPressed() && !e.isCtrlPressed();
-
-  checkStrokeSnapping(false, m_altPressed);
-  checkGuideSnapping(false, m_altPressed);
-  m_brushPos = m_lastSnapPoint;
-
-  if (m_foundLastSnap)
-    invalidateRect +=
-        TRectD(m_lastSnapPoint - snapThick, m_lastSnapPoint + snapThick);
-
-  if (e.isShiftPressed()) {
-    m_smoothStroke.clearPoints();
-    m_track.add(TThickPoint(m_brushPos, thickness),
-                getPixelSize() * getPixelSize());
-    m_track.removeMiddlePoints();
-    invalidateRect += m_track.getModifiedRegion();
-  } else if (m_dragDraw) {
-    addTrackPoint(TThickPoint(pos, thickness), getPixelSize() * getPixelSize());
-    invalidateRect += m_track.getLastModifiedRegion();
-  }
-
-  // In order to draw the current brush tip
-  invalidateRect += TRectD(m_brushPos - halfThick, m_brushPos + halfThick);
-
-  if (!invalidateRect.isEmpty()) {
-    // for motion path, call the invalidate function directry to ignore dpi of
-    // the current level
-    if (m_isPath)
-      m_viewer->GLInvalidateRect(invalidateRect.enlarge(2));
-    else
-      invalidate(invalidateRect.enlarge(2));
+  if (pickerMode) {
+    if (type == ME_DOWN) getViewer()->doPickGuideStroke(pos);
+  } else {
+    int    deviceId    = e.isTablet() ? 1 : 0;
+    bool   hasPressure = e.isTablet();
+    double pressure    = hasPressure ? e.m_pressure : 1.0;
+    bool   final       = type == ME_UP;
+    m_inputmanager.trackEvent(
+      deviceId, 0, snappedPos, pressure, TPointD(), hasPressure, false, final, t);
+    m_inputmanager.processTracks();
   }
 }
 
-//---------------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 
-void ToonzVectorBrushTool::leftButtonUp(const TPointD &pos,
+void ToonzVectorBrushTool::leftButtonDown(const TPointD &pos,
                                         const TMouseEvent &e) {
-  bool isValid = m_enabled && m_active;
-  m_enabled    = false;
-
-  if (!isValid) {
-    // in case the current frame is moved to empty cell while dragging
-    if (!m_track.isEmpty()) {
-      m_track.clear();
-      invalidate();
-    }
-    return;
-  }
-
-  if (m_isPath) {
-    double error = 20.0 * getPixelSize();
-
-    TStroke *stroke;
-    if (e.isShiftPressed()) {
-      m_track.removeMiddlePoints();
-      stroke = m_track.makeStroke(0);
-    } else {
-      flushTrackPoint();
-      stroke = m_track.makeStroke(error);
-    }
-    int points = stroke->getControlPointCount();
-
-    TVectorImageP vi = getImage(true);
-    struct Cleanup {
-      ToonzVectorBrushTool *m_this;
-      ~Cleanup() { m_this->m_track.clear(), m_this->invalidate(); }
-    } cleanup = {this};
-
-    if (!isJustCreatedSpline(vi.getPointer())) {
-      m_isPrompting = true;
-
-      QString question("Are you sure you want to replace the motion path?");
-      int ret =
-          DVGui::MsgBox(question, QObject::tr("Yes"), QObject::tr("No"), 0);
-
-      m_isPrompting = false;
-
-      if (ret == 2 || ret == 0) return;
-    }
-
-    QMutexLocker lock(vi->getMutex());
-
-    TUndo *undo =
-        new UndoPath(getXsheet()->getStageObject(getObjectId())->getSpline());
-
-    while (vi->getStrokeCount() > 0) vi->deleteStroke(0);
-    vi->addStroke(stroke, false);
-
-    notifyImageChanged();
-    TUndoManager::manager()->add(undo);
-
-    return;
-  }
-
-  TVectorImageP vi = getImage(true);
-  if (m_track.isEmpty()) {
-    m_styleId = 0;
-    m_track.clear();
-    return;
-  }
-
-  if (vi && (m_snap.getValue() != m_altPressed) && m_foundLastSnap) {
-    addTrackPoint(TThickPoint(m_lastSnapPoint, m_currThickness),
-                  getPixelSize() * getPixelSize());
-  }
-  m_strokeIndex1   = -1;
-  m_strokeIndex2   = -1;
-  m_w1             = -1;
-  m_w2             = -2;
-  m_foundFirstSnap = false;
-  m_foundLastSnap  = false;
-
-  m_track.filterPoints();
-  double error = 30.0 / (1 + 0.5 * m_accuracy.getValue());
-  error *= getPixelSize();
-
-  TStroke *stroke;
-  if (e.isShiftPressed()) {
-    m_track.removeMiddlePoints();
-    stroke = m_track.makeStroke(0);
-  } else {
-    flushTrackPoint();
-    stroke = m_track.makeStroke(error);
-  }
-  stroke->setStyle(m_styleId);
-  {
-    TStroke::OutlineOptions &options = stroke->outlineOptions();
-    options.m_capStyle               = m_capStyle.getIndex();
-    options.m_joinStyle              = m_joinStyle.getIndex();
-    options.m_miterUpper             = m_miterJoinLimit.getValue();
-  }
-  m_styleId = 0;
-
-  QMutexLocker lock(vi->getMutex());
-  if (stroke->getControlPointCount() == 3 &&
-      stroke->getControlPoint(0) !=
-          stroke->getControlPoint(2))  // gli stroke con solo 1 chunk vengono
-                                       // fatti dal tape tool...e devono venir
-                                       // riconosciuti come speciali di
-                                       // autoclose proprio dal fatto che
-                                       // hanno 1 solo chunk.
-    stroke->insertControlPoints(0.5);
-  if (m_frameRange.getIndex()) {
-    if (m_firstFrameId == -1) {
-      m_firstStroke                   = new TStroke(*stroke);
-      m_firstFrameId                  = getFrameId();
-      TTool::Application *application = TTool::getApplication();
-      if (application) {
-        m_col        = application->getCurrentColumn()->getColumnIndex();
-        m_firstFrame = application->getCurrentFrame()->getFrame();
-      }
-      m_rangeTrack = m_track;
-      if (m_firstFrameRange) {
-        m_veryFirstCol     = m_col;
-        m_veryFirstFrame   = m_firstFrame;
-        m_veryFirstFrameId = m_firstFrameId;
-      }
-    } else if (m_firstFrameId == getFrameId()) {
-      if (m_firstStroke) {
-        delete m_firstStroke;
-        m_firstStroke = 0;
-      }
-      m_firstStroke = new TStroke(*stroke);
-      m_rangeTrack  = m_track;
-    } else {
-      TFrameId currentId = getFrameId();
-      int curCol = 0, curFrame = 0;
-      TTool::Application *application = TTool::getApplication();
-      if (application) {
-        curCol   = application->getCurrentColumn()->getColumnIndex();
-        curFrame = application->getCurrentFrame()->getFrame();
-      }
-      bool success = doFrameRangeStrokes(
-          m_firstFrameId, m_firstStroke, getFrameId(), stroke,
-          m_frameRange.getIndex(), m_breakAngles.getValue(), false, false,
-          m_firstFrameRange);
-      if (e.isCtrlPressed()) {
-        if (application) {
-          if (m_firstFrameId > currentId) {
-            if (application->getCurrentFrame()->isEditingScene()) {
-              application->getCurrentColumn()->setColumnIndex(curCol);
-              application->getCurrentFrame()->setFrame(curFrame);
-            } else
-              application->getCurrentFrame()->setFid(currentId);
-          }
-        }
-        resetFrameRange();
-        m_firstStroke     = new TStroke(*stroke);
-        m_rangeTrack      = m_track;
-        m_firstFrameId    = currentId;
-        m_firstFrameRange = false;
-      }
-
-      if (application && !e.isCtrlPressed()) {
-        if (application->getCurrentFrame()->isEditingScene()) {
-          application->getCurrentColumn()->setColumnIndex(m_veryFirstCol);
-          application->getCurrentFrame()->setFrame(m_veryFirstFrame);
-        } else
-          application->getCurrentFrame()->setFid(m_veryFirstFrameId);
-      }
-
-      if (!e.isCtrlPressed()) {
-        resetFrameRange();
-      }
-    }
-    invalidate();
-  } else {
-    if (m_snapSelf) {
-      stroke->setSelfLoop(true);
-      m_snapSelf = false;
-    }
-
-    addStrokeToImage(getApplication(), vi, stroke, m_breakAngles.getValue(),
-                     false, false, m_isFrameCreated, m_isLevelCreated);
-    TRectD bbox = stroke->getBBox().enlarge(2) + m_track.getModifiedRegion();
-
-    invalidate();  // should use bbox?
-
-    if ((Preferences::instance()->getGuidedDrawingType() == 1 ||
-         Preferences::instance()->getGuidedDrawingType() == 2) &&
-        Preferences::instance()->getGuidedAutoInbetween()) {
-      int fidx     = getApplication()->getCurrentFrame()->getFrameIndex();
-      TFrameId fId = getFrameId();
-
-      doGuidedAutoInbetween(fId, vi, stroke, m_breakAngles.getValue(), false,
-                            false, false);
-
-      if (getApplication()->getCurrentFrame()->isEditingScene())
-        getApplication()->getCurrentFrame()->setFrame(fidx);
-      else
-        getApplication()->getCurrentFrame()->setFid(fId);
-    }
-  }
-  assert(stroke);
-  m_track.clear();
-  m_altPressed = false;
+  handleMouseEvent(ME_DOWN, pos, e);
+}
+void ToonzVectorBrushTool::leftButtonDrag(const TPointD &pos,
+                                        const TMouseEvent &e) {
+  handleMouseEvent(ME_DRAG, pos, e);
+}
+void ToonzVectorBrushTool::leftButtonUp(const TPointD &pos,
+                                      const TMouseEvent &e) {
+  handleMouseEvent(ME_UP, pos, e);
+}
+void ToonzVectorBrushTool::mouseMove(const TPointD &pos, const TMouseEvent &e) {
+  handleMouseEvent(ME_MOVE, pos, e);
 }
 
 //--------------------------------------------------------------------------------------------------
 
 bool ToonzVectorBrushTool::keyDown(QKeyEvent *event) {
-  if (event->key() == Qt::Key_Escape) {
+  if (event->key() == Qt::Key_Escape)
     resetFrameRange();
-  }
   return false;
 }
 
@@ -1029,14 +1246,14 @@ bool ToonzVectorBrushTool::doFrameRangeStrokes(
   TVectorImageP firstImage = new TVectorImage();
   TVectorImageP lastImage  = new TVectorImage();
 
-  *first       = *firstStroke;
-  *last        = *lastStroke;
-  bool swapped = false;
-  if (firstFrameId > lastFrameId) {
+  bool swapped = firstFrameId > lastFrameId;
+  if (swapped) {
     std::swap(firstFrameId, lastFrameId);
-    *first  = *lastStroke;
-    *last   = *firstStroke;
-    swapped = true;
+    *first = *lastStroke;
+    *last  = *firstStroke;
+  } else {
+    *first = *firstStroke;
+    *last  = *lastStroke;
   }
 
   firstImage->addStroke(first, false);
@@ -1056,9 +1273,9 @@ bool ToonzVectorBrushTool::doFrameRangeStrokes(
   assert(m > 0);
 
   if (withUndo) TUndoManager::manager()->beginBlock();
-  int row = getApplication()->getCurrentFrame()->isEditingScene()
-                ? getApplication()->getCurrentFrame()->getFrameIndex()
-                : -1;
+  int row       = getApplication()->getCurrentFrame()->isEditingScene()
+                      ? getApplication()->getCurrentFrame()->getFrameIndex()
+                      : -1;
   TFrameId cFid = getApplication()->getCurrentFrame()->getFid();
   for (int i = 0; i < m; ++i) {
     TFrameId fid = fids[i];
@@ -1089,12 +1306,14 @@ bool ToonzVectorBrushTool::doFrameRangeStrokes(
       if (!swapped && !drawFirstStroke) {
       } else
         addStrokeToImage(getApplication(), img, firstImage->getStroke(0),
+                         (DrawOrder)m_drawOrder.getIndex(),
                          breakAngles, autoGroup, autoFill, m_isFrameCreated,
                          m_isLevelCreated, sl, fid);
     } else if (t == 1) {
       if (swapped && !drawFirstStroke) {
       } else if (drawLastStroke)
         addStrokeToImage(getApplication(), img, lastImage->getStroke(0),
+                         (DrawOrder)m_drawOrder.getIndex(),
                          breakAngles, autoGroup, autoFill, m_isFrameCreated,
                          m_isLevelCreated, sl, fid);
     } else {
@@ -1102,7 +1321,8 @@ bool ToonzVectorBrushTool::doFrameRangeStrokes(
       assert(lastImage->getStrokeCount() == 1);
       TVectorImageP vi = TInbetween(firstImage, lastImage).tween(s);
       assert(vi->getStrokeCount() == 1);
-      addStrokeToImage(getApplication(), img, vi->getStroke(0), breakAngles,
+      addStrokeToImage(getApplication(), img, vi->getStroke(0),
+                       (DrawOrder)m_drawOrder.getIndex(), breakAngles,
                        autoGroup, autoFill, m_isFrameCreated, m_isLevelCreated,
                        sl, fid);
     }
@@ -1137,7 +1357,7 @@ bool ToonzVectorBrushTool::doGuidedAutoInbetween(
   bool resultBack            = false;
   bool resultFront           = false;
   TFrameId oFid;
-  int cStrokeIdx   = cvi->getStrokeCount();
+  int cStrokeIdx = cvi->getStrokeCount();
   if (!drawStroke) cStrokeIdx--;
 
   TUndoManager::manager()->beginBlock();
@@ -1146,7 +1366,7 @@ bool ToonzVectorBrushTool::doGuidedAutoInbetween(
       TXsheet *xsh = app->getCurrentXsheet()->getXsheet();
       int col      = app->getCurrentColumn()->getColumnIndex();
       if (xsh && col >= 0) {
-        TXshCell cell             = xsh->getCell(osBack, col);
+        TXshCell cell = xsh->getCell(osBack, col);
         if (!cell.isEmpty()) oFid = cell.getFrameId();
       }
     } else
@@ -1165,7 +1385,8 @@ bool ToonzVectorBrushTool::doGuidedAutoInbetween(
 
       bool frameCreated = m_isFrameCreated;
       m_isFrameCreated  = false;
-      resultBack        = doFrameRangeStrokes(
+      touchImage();
+      resultBack = doFrameRangeStrokes(
           oFid, fStroke, cFid, cStroke,
           Preferences::instance()->getGuidedInterpolation(), breakAngles,
           autoGroup, autoFill, false, drawStroke, false);
@@ -1180,7 +1401,7 @@ bool ToonzVectorBrushTool::doGuidedAutoInbetween(
       TXsheet *xsh = app->getCurrentXsheet()->getXsheet();
       int col      = app->getCurrentColumn()->getColumnIndex();
       if (xsh && col >= 0) {
-        TXshCell cell             = xsh->getCell(osFront, col);
+        TXshCell cell = xsh->getCell(osFront, col);
         if (!cell.isEmpty()) oFid = cell.getFrameId();
       }
     } else
@@ -1199,7 +1420,8 @@ bool ToonzVectorBrushTool::doGuidedAutoInbetween(
 
       bool frameCreated = m_isFrameCreated;
       m_isFrameCreated  = false;
-      resultFront       = doFrameRangeStrokes(
+      touchImage();
+      resultFront = doFrameRangeStrokes(
           cFid, cStroke, oFid, fStroke,
           Preferences::instance()->getGuidedInterpolation(), breakAngles,
           autoGroup, autoFill, drawFirstStroke, false, false);
@@ -1213,311 +1435,152 @@ bool ToonzVectorBrushTool::doGuidedAutoInbetween(
 
 //--------------------------------------------------------------------------------------------------
 
-void ToonzVectorBrushTool::addTrackPoint(const TThickPoint &point,
-                                         double pixelSize2) {
-  m_smoothStroke.addPoint(point);
-  std::vector<TThickPoint> pts;
-  m_smoothStroke.getSmoothPoints(pts);
-  for (size_t i = 0; i < pts.size(); ++i) {
-    m_track.add(pts[i], pixelSize2);
-  }
-}
-
-//--------------------------------------------------------------------------------------------------
-
-void ToonzVectorBrushTool::flushTrackPoint() {
-  m_smoothStroke.endStroke();
-  std::vector<TThickPoint> pts;
-  m_smoothStroke.getSmoothPoints(pts);
-  double pixelSize2 = getPixelSize() * getPixelSize();
-  for (size_t i = 0; i < pts.size(); ++i) {
-    m_track.add(pts[i], pixelSize2);
-  }
-}
-
-//---------------------------------------------------------------------------------------------------------------
-
-void ToonzVectorBrushTool::mouseMove(const TPointD &pos, const TMouseEvent &e) {
-  qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
-
-  struct Locals {
-    ToonzVectorBrushTool *m_this;
-
-    void setValue(TDoublePairProperty &prop,
-                  const TDoublePairProperty::Value &value) {
-      prop.setValue(value);
-
-      m_this->onPropertyChanged(prop.getName());
-      TTool::getApplication()->getCurrentTool()->notifyToolChanged();
-    }
-
-    void addMinMax(TDoublePairProperty &prop, double add) {
-      if (add == 0.0) return;
-      const TDoublePairProperty::Range &range = prop.getRange();
-
-      TDoublePairProperty::Value value = prop.getValue();
-      value.first  = tcrop(value.first + add, range.first, range.second);
-      value.second = tcrop(value.second + add, range.first, range.second);
-
-      setValue(prop, value);
-    }
-
-    void addMinMaxSeparate(TDoublePairProperty &prop, double min, double max) {
-      if (min == 0.0 && max == 0.0) return;
-      const TDoublePairProperty::Range &range = prop.getRange();
-
-      TDoublePairProperty::Value value = prop.getValue();
-      value.first += min;
-      value.second += max;
-      if (value.first > value.second) value.first = value.second;
-      value.first  = tcrop(value.first, range.first, range.second);
-      value.second = tcrop(value.second, range.first, range.second);
-
-      setValue(prop, value);
-    }
-
-  } locals = {this};
-
-  TPointD halfThick(m_maxThick * 0.5, m_maxThick * 0.5);
-  TRectD invalidateRect(m_brushPos - halfThick, m_brushPos + halfThick);
-
-  if (e.isCtrlPressed() && e.isAltPressed() && !e.isShiftPressed()) {
-    const TPointD &diff = pos - m_mousePos;
-    double max          = diff.x / 2;
-    double min          = diff.y / 2;
-
-    locals.addMinMaxSeparate(m_thickness, min, max);
-
-    double radius = m_thickness.getValue().second * 0.5;
-    invalidateRect += TRectD(m_brushPos - TPointD(radius, radius),
-                             m_brushPos + TPointD(radius, radius));
-
-  } else {
-    m_mousePos = pos;
-    m_brushPos = pos;
-
-    TPointD snapThick(6.0 * m_pixelSize, 6.0 * m_pixelSize);
-    // In order to clear the previous snap indicator
-    if (m_foundFirstSnap)
-      invalidateRect +=
-          TRectD(m_firstSnapPoint - snapThick, m_firstSnapPoint + snapThick);
-
-    m_firstSnapPoint = pos;
-    m_foundFirstSnap = false;
-    m_altPressed     = e.isAltPressed() && !e.isCtrlPressed();
-    checkStrokeSnapping(true, m_altPressed);
-    checkGuideSnapping(true, m_altPressed);
-    m_brushPos = m_firstSnapPoint;
-    // In order to draw the snap indicator
-    if (m_foundFirstSnap)
-      invalidateRect +=
-          TRectD(m_firstSnapPoint - snapThick, m_firstSnapPoint + snapThick);
-
-    invalidateRect += TRectD(pos - halfThick, pos + halfThick);
-  }
-
-  invalidate(invalidateRect.enlarge(2));
-
-  if (m_minThick == 0 && m_maxThick == 0) {
-    m_minThick = m_thickness.getValue().first;
-    m_maxThick = m_thickness.getValue().second;
-  }
-}
-
-//-------------------------------------------------------------------------------------------------------------
-
-void ToonzVectorBrushTool::checkStrokeSnapping(bool beforeMousePress,
-                                               bool invertCheck) {
-  if (Preferences::instance()->getVectorSnappingTarget() == 1) return;
-
-  TVectorImageP vi(getImage(false));
-  bool checkSnap = m_snap.getValue();
-  if (invertCheck) checkSnap = !checkSnap;
-  if (vi && checkSnap) {
-    m_dragDraw          = true;
+void ToonzVectorBrushTool::snap(const TPointD &pos, bool snapEnabled, bool withSelfSnap) {
+  bool oldSnapped      = m_snapped;
+  bool oldSnappedSelf  = m_snappedSelf;
+  TPointD oldPoint     = m_snapPoint;
+  TPointD oldPointSelf = m_snapPointSelf;
+  
+  m_snapped = m_snappedSelf = false;
+  
+  if (snapEnabled) { // snapping is active
     double minDistance2 = m_minDistance2;
-    if (beforeMousePress)
-      m_strokeIndex1 = -1;
-    else
-      m_strokeIndex2 = -1;
-    int i, strokeNumber = vi->getStrokeCount();
-    TStroke *stroke;
-    double distance2, outW;
-    bool snapFound = false;
-    TThickPoint point1;
+    
+    // 0 - strokes, 1 - guides, 2 - all
+    int target = Preferences::instance()->getVectorSnappingTarget();
 
-    for (i = 0; i < strokeNumber; i++) {
-      stroke = vi->getStroke(i);
-      if (stroke->getNearestW(m_mousePos, outW, distance2) &&
-          distance2 < minDistance2) {
-        minDistance2                      = distance2;
-        beforeMousePress ? m_strokeIndex1 = i : m_strokeIndex2 = i;
-        if (areAlmostEqual(outW, 0.0, 1e-3))
-          beforeMousePress ? m_w1 = 0.0 : m_w2 = 0.0;
-        else if (areAlmostEqual(outW, 1.0, 1e-3))
-          beforeMousePress ? m_w1 = 1.0 : m_w2 = 1.0;
-        else
-          beforeMousePress ? m_w1 = outW : m_w2 = outW;
+    // snap to guides
+    if (target != 0) {
+      if (TToolViewer *viewer = getViewer()) {
+        // find nearest vertical guide
+        int cnt = viewer->getVGuideCount();
+        for(int i = 0; i < cnt; ++i) {
+          double guide = viewer->getVGuide(i);
+          double d2 = guide - pos.y;
+          d2 *= d2; // we work with square of the distance
+          if (d2 < minDistance2) {
+            m_snapped = true;
+            m_snapPoint.x = pos.x;
+            m_snapPoint.y = guide;
+            minDistance2 = d2;
+          }
+        }
 
-        beforeMousePress ? point1 = stroke->getPoint(m_w1)
-                         : point1 = stroke->getPoint(m_w2);
-        snapFound                 = true;
-      }
-    }
-    // compare to first point of current stroke
-    if (beforeMousePress && snapFound) {
-      m_firstSnapPoint = TPointD(point1.x, point1.y);
-      m_foundFirstSnap = true;
-    } else if (!beforeMousePress) {
-      if (!snapFound) {
-        TPointD tempPoint        = m_track.getFirstPoint();
-        double distanceFromStart = tdistance2(m_mousePos, tempPoint);
-
-        if (distanceFromStart < m_minDistance2) {
-          point1     = tempPoint;
-          distance2  = distanceFromStart;
-          snapFound  = true;
-          m_snapSelf = true;
+        // find nearest horizontal guide
+        cnt = viewer->getHGuideCount();
+        for(int i = 0; i < cnt; ++i) {
+          double guide = viewer->getHGuide(i);
+          double d2 = guide - pos.x;
+          d2 *= d2; // we work with square of the distance
+          if (d2 < minDistance2) {
+            m_snapped = true;
+            m_snapPoint.x = guide;
+            m_snapPoint.y = pos.y;
+            minDistance2 = d2;
+          }
         }
       }
-      if (snapFound) {
-        m_lastSnapPoint = TPointD(point1.x, point1.y);
-        m_foundLastSnap = true;
-        if (distance2 < 2.0) m_dragDraw = false;
+    }
+
+    // snap to strokes
+    if (target != 1) {
+      if (TVectorImageP vi = getImage(false)) {
+        int count = vi->getStrokeCount();
+        for(int i = 0; i < count; ++i) {
+          double w, d2;
+          TStroke *stroke = vi->getStroke(i);
+          if (!stroke->getNearestW(pos, w, d2) || d2 >= minDistance2)
+            continue;
+          minDistance2 = d2;
+          w = w > 0.001 ? (w < 0.999 ? w : 1.0) : 0.0;
+          m_snapped = true;
+          m_snapPoint = stroke->getPoint(w);
+        }
+      }
+    
+      // finally snap to first point of track (self snap)
+      if (withSelfSnap && !m_tracks.empty() && !m_tracks.front().isEmpty()) {
+        TPointD p = m_tracks.front().getFirstPoint();
+        double d2 = tdistance2(pos, p);
+        if (d2 < minDistance2) {
+          m_snappedSelf = true;
+          m_snapPointSelf = p;
+        }
       }
     }
+  } // snapping is active
+  
+  // invalidate rect
+  TRectD invalidateRect;
+  double radius = 8.0*m_pixelSize;
+  TPointD halfSize(radius, radius);
+
+  if ( oldSnapped != m_snapped
+    || !areAlmostEqual(oldPoint, m_snapPoint) )
+  {
+    if (oldSnapped) invalidateRect += TRectD(oldPoint - halfSize, oldPoint + halfSize);
+    if (m_snapped)  invalidateRect += TRectD(m_snapPoint - halfSize, m_snapPoint + halfSize);
   }
-}
-
-//-------------------------------------------------------------------------------------------------------------
-
-void ToonzVectorBrushTool::checkGuideSnapping(bool beforeMousePress,
-                                              bool invertCheck) {
-  if (Preferences::instance()->getVectorSnappingTarget() == 0) return;
-  bool foundSnap;
-  TPointD snapPoint;
-  beforeMousePress ? foundSnap = m_foundFirstSnap : foundSnap = m_foundLastSnap;
-  beforeMousePress ? snapPoint = m_firstSnapPoint : snapPoint = m_lastSnapPoint;
-
-  bool checkSnap = m_snap.getValue();
-  if (invertCheck) checkSnap = !checkSnap;
-
-  if (checkSnap) {
-    // check guide snapping
-    int vGuideCount = 0, hGuideCount = 0;
-    double guideDistance  = sqrt(m_minDistance2);
-    TTool::Viewer *viewer = getViewer();
-    if (viewer) {
-      vGuideCount = viewer->getVGuideCount();
-      hGuideCount = viewer->getHGuideCount();
-    }
-    double distanceToVGuide = -1.0, distanceToHGuide = -1.0;
-    double vGuide, hGuide;
-    bool useGuides = false;
-    if (vGuideCount) {
-      for (int j = 0; j < vGuideCount; j++) {
-        double guide        = viewer->getVGuide(j);
-        double tempDistance = abs(guide - m_mousePos.y);
-        if (tempDistance < guideDistance &&
-            (distanceToVGuide < 0 || tempDistance < distanceToVGuide)) {
-          distanceToVGuide = tempDistance;
-          vGuide           = guide;
-          useGuides        = true;
-        }
-      }
-    }
-    if (hGuideCount) {
-      for (int j = 0; j < hGuideCount; j++) {
-        double guide        = viewer->getHGuide(j);
-        double tempDistance = abs(guide - m_mousePos.x);
-        if (tempDistance < guideDistance &&
-            (distanceToHGuide < 0 || tempDistance < distanceToHGuide)) {
-          distanceToHGuide = tempDistance;
-          hGuide           = guide;
-          useGuides        = true;
-        }
-      }
-    }
-    if (useGuides && foundSnap) {
-      double currYDistance = abs(snapPoint.y - m_mousePos.y);
-      double currXDistance = abs(snapPoint.x - m_mousePos.x);
-      double hypotenuse =
-          sqrt(pow(currYDistance, 2.0) + pow(currXDistance, 2.0));
-      if ((distanceToVGuide >= 0 && distanceToVGuide < hypotenuse) ||
-          (distanceToHGuide >= 0 && distanceToHGuide < hypotenuse)) {
-        useGuides  = true;
-        m_snapSelf = false;
-      } else
-        useGuides = false;
-    }
-    if (useGuides) {
-      assert(distanceToHGuide >= 0 || distanceToVGuide >= 0);
-      if (distanceToHGuide < 0 ||
-          (distanceToVGuide <= distanceToHGuide && distanceToVGuide >= 0)) {
-        snapPoint.y = vGuide;
-        snapPoint.x = m_mousePos.x;
-
-      } else {
-        snapPoint.y = m_mousePos.y;
-        snapPoint.x = hGuide;
-      }
-      beforeMousePress ? m_foundFirstSnap = true : m_foundLastSnap = true;
-      beforeMousePress ? m_firstSnapPoint                          = snapPoint
-                       : m_lastSnapPoint                           = snapPoint;
-    }
+  
+  if ( oldSnappedSelf != m_snappedSelf
+    || !areAlmostEqual(oldPointSelf, m_snapPointSelf) )
+  {
+    if (oldSnappedSelf) invalidateRect += TRectD(oldPointSelf - halfSize, oldPointSelf + halfSize);
+    if (m_snappedSelf)  invalidateRect += TRectD(m_snapPointSelf - halfSize, m_snapPointSelf + halfSize);
   }
+  
+  if (!invalidateRect.isEmpty())
+    invalidate(invalidateRect);
 }
 
 //-------------------------------------------------------------------------------------------------------------
 
 void ToonzVectorBrushTool::draw() {
-  /*--ショートカットでのツール切り替え時に赤点が描かれるのを防止する--*/
+  m_pixelSize = getPixelSize();
+  m_inputmanager.draw();
+  
+  /*--繧ｷ繝ｧ繝ｼ繝医き繝�繝医〒縺ｮ繝�繝ｼ繝ｫ蛻�繧頑崛縺域凾縺ｫ襍､轤ｹ縺梧緒縺九ｌ繧九�ｮ繧帝亟豁｢縺吶ｋ--*/
   if (m_minThick == 0 && m_maxThick == 0 &&
       !Preferences::instance()->getShow0ThickLines())
     return;
 
-  TImageP img = getImage(false, 1);
-
-  // Draw track
-  tglColor(m_isPrompting ? TPixel32::Green : m_currentColor);
-  m_track.drawAllFragments();
-
-  // snapping
-  TVectorImageP vi = img;
-  if (m_snap.getValue() != m_altPressed) {
-    m_pixelSize  = getPixelSize();
-    double thick = 6.0 * m_pixelSize;
-    if (m_foundFirstSnap) {
-      tglColor(TPixelD(0.1, 0.9, 0.1));
-      tglDrawCircle(m_firstSnapPoint, thick);
-    }
-
-    TThickPoint point2;
-
-    if (m_foundLastSnap) {
-      tglColor(TPixelD(0.1, 0.9, 0.1));
-      tglDrawCircle(m_lastSnapPoint, thick);
-    }
+  // draw track
+  tglColor(m_currentColor);
+  for(TrackList::iterator i = m_tracks.begin(); i != m_tracks.end(); ++i)
+    i->drawAllFragments();
+  
+  // draw snapping
+  double snapMarkRadius = 6.0 * m_pixelSize;
+  if (m_snapped) {
+    tglColor(TPixelD(0.1, 0.9, 0.1));
+    tglDrawCircle(m_snapPoint, snapMarkRadius);
+  }
+  if (m_snappedSelf) {
+    tglColor(TPixelD(0.9, 0.9, 0.1));
+    tglDrawCircle(m_snapPointSelf, snapMarkRadius);
   }
 
   // frame range
-  if (m_firstStroke) {
+  for(TrackList::iterator i = m_rangeTracks.begin(); i != m_rangeTracks.end(); ++i) {
+    if (i->isEmpty()) continue;
+    TPointD offset1 = TPointD(5, 5);
+    TPointD offset2 = TPointD(-offset1.x, offset1.y);
+    TPointD point = i->getFirstPoint();
     glColor3d(1.0, 0.0, 0.0);
-    m_rangeTrack.drawAllFragments();
+    i->drawAllFragments();
     glColor3d(0.0, 0.6, 0.0);
-    TPointD firstPoint        = m_rangeTrack.getFirstPoint();
-    TPointD topLeftCorner     = TPointD(firstPoint.x - 5, firstPoint.y - 5);
-    TPointD topRightCorner    = TPointD(firstPoint.x + 5, firstPoint.y - 5);
-    TPointD bottomLeftCorner  = TPointD(firstPoint.x - 5, firstPoint.y + 5);
-    TPointD bottomRightCorner = TPointD(firstPoint.x + 5, firstPoint.y + 5);
-    tglDrawSegment(topLeftCorner, bottomRightCorner);
-    tglDrawSegment(topRightCorner, bottomLeftCorner);
+    tglDrawSegment(point - offset1, point + offset1);
+    tglDrawSegment(point - offset2, point + offset2);
   }
 
   if (getApplication()->getCurrentObject()->isSpline()) return;
 
+  if (Preferences::instance()->isUseStrokeEndCursor())
+    ToolUtils::drawCursor(m_viewer ,this, m_brushPos, ToolCursor::PenCursor);
+
   // If toggled off, don't draw brush outline
-  if (!Preferences::instance()->isCursorOutlineEnabled()) return;
+  if (!Preferences::instance()->isCursorOutlineEnabled())
+      return;
 
   // Don't draw brush outline if picking guiding stroke
   if (getViewer()->getGuidedStrokePickerMode()) return;
@@ -1532,31 +1595,15 @@ void ToonzVectorBrushTool::draw() {
   else
     glColor3d(1.0, 0.0, 0.0);
 
-  tglDrawCircle(m_brushPos, 0.5 * m_minThick);
-  tglDrawCircle(m_brushPos, 0.5 * m_maxThick);
+  tglDrawCircle(m_brushPos, 0.5 * m_minThick * Stage::inch / m_cameraDpi);
+  tglDrawCircle(m_brushPos, 0.5 * m_maxThick * Stage::inch / m_cameraDpi);
 }
 
 //--------------------------------------------------------------------------------------------------------------
 
 void ToonzVectorBrushTool::onEnter() {
-  TImageP img = getImage(false);
-
   m_minThick = m_thickness.getValue().first;
   m_maxThick = m_thickness.getValue().second;
-
-  Application *app = getApplication();
-
-  m_styleId       = app->getCurrentLevelStyleIndex();
-  TColorStyle *cs = app->getCurrentLevelStyle();
-  if (cs) {
-    TRasterStyleFx *rfx = cs->getRasterStyleFx();
-    m_active            = cs->isStrokeStyle() || (rfx && rfx->isInkStyle());
-    m_currentColor      = cs->getAverageColor();
-    m_currentColor.m    = 255;
-  } else {
-    m_currentColor = TPixel32::Black;
-  }
-  m_active = img;
 }
 
 //----------------------------------------------------------------------------------------------------------
@@ -1570,19 +1617,15 @@ void ToonzVectorBrushTool::onLeave() {
 
 TPropertyGroup *ToonzVectorBrushTool::getProperties(int idx) {
   if (!m_presetsLoaded) initPresets();
-
   return &m_prop[idx];
 }
 
 //------------------------------------------------------------------
 
 void ToonzVectorBrushTool::resetFrameRange() {
-  m_rangeTrack.clear();
+  m_rangeTracks.clear();
   m_firstFrameId = -1;
-  if (m_firstStroke) {
-    delete m_firstStroke;
-    m_firstStroke = 0;
-  }
+  deleteStrokes(m_firstStrokes);
   m_firstFrameRange = true;
 }
 
@@ -1608,57 +1651,63 @@ bool ToonzVectorBrushTool::onPropertyChanged(std::string propertyName) {
     return true;
   }
 
-  /*--- Divide the process according to the changed Property ---*/
-
-  /*--- determine which type of brush to be modified ---*/
-  if (propertyName == m_thickness.getName()) {
-    V_VectorBrushMinSize = m_thickness.getValue().first;
-    V_VectorBrushMaxSize = m_thickness.getValue().second;
-    m_minThick           = m_thickness.getValue().first;
-    m_maxThick           = m_thickness.getValue().second;
-  } else if (propertyName == m_accuracy.getName()) {
-    V_BrushAccuracy = m_accuracy.getValue();
-  } else if (propertyName == m_smooth.getName()) {
-    V_BrushSmooth = m_smooth.getValue();
-  } else if (propertyName == m_breakAngles.getName()) {
-    V_BrushBreakSharpAngles = m_breakAngles.getValue();
-  } else if (propertyName == m_pressure.getName()) {
-    V_BrushPressureSensitivity = m_pressure.getValue();
-  } else if (propertyName == m_capStyle.getName()) {
-    V_VectorCapStyle = m_capStyle.getIndex();
-  } else if (propertyName == m_joinStyle.getName()) {
-    V_VectorJoinStyle = m_joinStyle.getIndex();
-  } else if (propertyName == m_miterJoinLimit.getName()) {
-    V_VectorMiterValue = m_miterJoinLimit.getValue();
-  } else if (propertyName == m_frameRange.getName()) {
-    int index               = m_frameRange.getIndex();
-    V_VectorBrushFrameRange = index;
-    if (index == 0) resetFrameRange();
-  } else if (propertyName == m_snap.getName()) {
-    V_VectorBrushSnap = m_snap.getValue();
-  } else if (propertyName == m_snapSensitivity.getName()) {
-    int index                    = m_snapSensitivity.getIndex();
-    V_VectorBrushSnapSensitivity = index;
-    switch (index) {
-    case 0:
-      m_minDistance2 = SNAPPING_LOW;
-      break;
-    case 1:
-      m_minDistance2 = SNAPPING_MEDIUM;
-      break;
-    case 2:
-      m_minDistance2 = SNAPPING_HIGH;
-      break;
-    }
-  }
-
-  if (propertyName == m_joinStyle.getName()) notifyTool = true;
-
-  if (m_preset.getValue() != CUSTOM_WSTR) {
+  // Switch to <custom> only if it's a preset property change
+  if (m_preset.getValue() != CUSTOM_WSTR &&
+      (propertyName == m_thickness.getName() ||
+       propertyName == m_accuracy.getName() ||
+       propertyName == m_smooth.getName() ||
+       propertyName == m_drawOrder.getName() ||
+       propertyName == m_breakAngles.getName() ||
+       propertyName == m_pressure.getName() ||
+       propertyName == m_capStyle.getName() ||
+       propertyName == m_joinStyle.getName() ||
+       propertyName == m_miterJoinLimit.getName())) {
     m_preset.setValue(CUSTOM_WSTR);
     V_VectorBrushPreset = m_preset.getValueAsString();
     notifyTool          = true;
   }
+
+  // Properties tracked with preset. Update only on <custom>
+  if (m_preset.getValue() == CUSTOM_WSTR) {
+    V_VectorBrushMinSize       = m_thickness.getValue().first;
+    V_VectorBrushMaxSize       = m_thickness.getValue().second;
+    V_BrushAccuracy            = m_accuracy.getValue();
+    V_BrushSmooth              = m_smooth.getValue();
+    V_BrushDrawOrder           = m_drawOrder.getIndex();
+    V_BrushBreakSharpAngles    = m_breakAngles.getValue();
+    V_BrushPressureSensitivity = m_pressure.getValue();
+    V_VectorCapStyle           = m_capStyle.getIndex();
+    V_VectorJoinStyle          = m_joinStyle.getIndex();
+    V_VectorMiterValue         = m_miterJoinLimit.getValue();
+  }
+
+  // Properties not tracked with preset
+  int frameIndex               = m_frameRange.getIndex();
+  V_VectorBrushFrameRange      = frameIndex;
+  V_VectorBrushSnap            = m_snap.getValue();
+  int snapSensitivityIndex     = m_snapSensitivity.getIndex();
+  V_VectorBrushSnapSensitivity = snapSensitivityIndex;
+  V_VectorBrushAssistants      = m_assistants.getValue();
+
+  // Recalculate/reset based on changed settings
+  m_minThick = m_thickness.getValue().first;
+  m_maxThick = m_thickness.getValue().second;
+
+  if (frameIndex == 0) resetFrameRange();
+
+  switch (snapSensitivityIndex) {
+  case 0:
+    m_minDistance2 = SNAPPING_LOW;
+    break;
+  case 1:
+    m_minDistance2 = SNAPPING_MEDIUM;
+    break;
+  case 2:
+    m_minDistance2 = SNAPPING_HIGH;
+    break;
+  }
+
+  if (propertyName == m_joinStyle.getName()) notifyTool = true;
 
   if (notifyTool) {
     m_propertyUpdating = true;
@@ -1706,12 +1755,16 @@ void ToonzVectorBrushTool::loadPreset() {
         TDoublePairProperty::Value(preset.m_min, preset.m_max));
     m_accuracy.setValue(preset.m_acc, true);
     m_smooth.setValue(preset.m_smooth, true);
+    m_drawOrder.setIndex(preset.m_drawOrder);
     m_breakAngles.setValue(preset.m_breakAngles);
     m_pressure.setValue(preset.m_pressure);
     m_capStyle.setIndex(preset.m_cap);
     m_joinStyle.setIndex(preset.m_join);
     m_miterJoinLimit.setValue(preset.m_miter);
 
+    // Recalculate based on updated presets
+    m_minThick = m_thickness.getValue().first;
+    m_maxThick = m_thickness.getValue().second;
   } catch (...) {
   }
 }
@@ -1727,6 +1780,7 @@ void ToonzVectorBrushTool::addPreset(QString name) {
 
   preset.m_acc         = m_accuracy.getValue();
   preset.m_smooth      = m_smooth.getValue();
+  preset.m_drawOrder   = m_drawOrder.getIndex();
   preset.m_breakAngles = m_breakAngles.getValue();
   preset.m_pressure    = m_pressure.getValue();
   preset.m_cap         = m_capStyle.getIndex();
@@ -1741,6 +1795,7 @@ void ToonzVectorBrushTool::addPreset(QString name) {
 
   // Set the value to the specified one
   m_preset.setValue(preset.m_name);
+  V_VectorBrushPreset = m_preset.getValueAsString();
 }
 
 //------------------------------------------------------------------
@@ -1754,26 +1809,34 @@ void ToonzVectorBrushTool::removePreset() {
 
   // No parameter change, and set the preset value to custom
   m_preset.setValue(CUSTOM_WSTR);
+  V_VectorBrushPreset = m_preset.getValueAsString();
 }
 
 //------------------------------------------------------------------
 
 void ToonzVectorBrushTool::loadLastBrush() {
+  // Properties tracked with preset
   m_thickness.setValue(
       TDoublePairProperty::Value(V_VectorBrushMinSize, V_VectorBrushMaxSize));
-
   m_capStyle.setIndex(V_VectorCapStyle);
   m_joinStyle.setIndex(V_VectorJoinStyle);
   m_miterJoinLimit.setValue(V_VectorMiterValue);
   m_breakAngles.setValue(V_BrushBreakSharpAngles ? 1 : 0);
   m_accuracy.setValue(V_BrushAccuracy);
-
   m_pressure.setValue(V_BrushPressureSensitivity ? 1 : 0);
   m_smooth.setValue(V_BrushSmooth);
+  m_drawOrder.setIndex(V_BrushDrawOrder);
 
+  // Properties not tracked with preset
   m_frameRange.setIndex(V_VectorBrushFrameRange);
-  m_snap.setValue(V_VectorBrushSnap);
+  m_snap.setValue(V_VectorBrushSnap ? 1 : 0);
   m_snapSensitivity.setIndex(V_VectorBrushSnapSensitivity);
+  m_assistants.setValue(V_VectorBrushAssistants ? 1 : 0);
+
+  // Recalculate based on prior values
+  m_minThick = m_thickness.getValue().first;
+  m_maxThick = m_thickness.getValue().second;
+
   switch (V_VectorBrushSnapSensitivity) {
   case 0:
     m_minDistance2 = SNAPPING_LOW;
@@ -1788,7 +1851,7 @@ void ToonzVectorBrushTool::loadLastBrush() {
 }
 
 //------------------------------------------------------------------
-/*!	Brush、PaintBrush、EraserToolがPencilModeのときにTrueを返す
+/*!	Brush縲￣aintBrush縲・raserTool縺訓encilMode縺ｮ縺ｨ縺阪↓True繧定ｿ斐☆
  */
 bool ToonzVectorBrushTool::isPencilModeActive() { return false; }
 
@@ -1809,6 +1872,7 @@ VectorBrushData::VectorBrushData()
     , m_max(0.0)
     , m_acc(0.0)
     , m_smooth(0.0)
+    , m_drawOrder(PaletteOrder)
     , m_breakAngles(false)
     , m_pressure(false)
     , m_cap(0)
@@ -1823,6 +1887,7 @@ VectorBrushData::VectorBrushData(const std::wstring &name)
     , m_max(0.0)
     , m_acc(0.0)
     , m_smooth(0.0)
+    , m_drawOrder(PaletteOrder)
     , m_breakAngles(false)
     , m_pressure(false)
     , m_cap(0)
@@ -1843,6 +1908,9 @@ void VectorBrushData::saveData(TOStream &os) {
   os.closeChild();
   os.openChild("Smooth");
   os << m_smooth;
+  os.closeChild();
+  os.openChild("Draw_Order");
+  os << m_drawOrder;
   os.closeChild();
   os.openChild("Break_Sharp_Angles");
   os << (int)m_breakAngles;
@@ -1876,6 +1944,8 @@ void VectorBrushData::loadData(TIStream &is) {
       is >> m_acc, is.matchEndTag();
     else if (tagName == "Smooth")
       is >> m_smooth, is.matchEndTag();
+    else if (tagName == "Draw_Order")
+      is >> m_drawOrder, is.matchEndTag();
     else if (tagName == "Break_Sharp_Angles")
       is >> val, m_breakAngles = val, is.matchEndTag();
     else if (tagName == "Pressure_Sensitivity")
@@ -1937,7 +2007,7 @@ void VectorBrushPresetManager::save() {
   TOStream os(m_fp);
 
   os.openChild("version");
-  os << 1 << 20;
+  os << 1 << 21;
   os.closeChild();
 
   os.openChild("brushes");

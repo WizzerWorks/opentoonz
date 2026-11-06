@@ -47,9 +47,10 @@ const static QString l_typeNames[ShaderInterface::TYPESCOUNT] = {
     "int", "ivec2", "ivec3", "ivec4", "rgba", "rgb"};
 
 const static QString l_conceptNames[ShaderInterface::CONCEPTSCOUNT] = {
-    "none",      "percent",  "length",   "angle",    "point",
-    "radius_ui", "width_ui", "angle_ui", "point_ui", "xy_ui",
-    "vector_ui", "polar_ui", "size_ui",  "quad_ui",  "rect_ui"};
+    "none",       "percent",        "length",   "angle",    "point",
+    "radius_ui",  "width_ui",       "angle_ui", "point_ui", "xy_ui",
+    "vector_ui",  "polar_ui",       "size_ui",  "quad_ui",  "rect_ui",
+    "compass_ui", "compass_spin_ui"};
 
 const static QString l_hwtNames[ShaderInterface::HWTCOUNT] = {"none", "any",
                                                               "isotropic"};
@@ -509,6 +510,8 @@ void ShaderInterface::Parameter::saveData(TOStream &os) {
     os << (int)m_default.m_rgb[0] << (int)m_default.m_rgb[1]
        << (int)m_default.m_rgb[2];
     break;
+  default:
+    break;
   }
 
   os.closeChild();
@@ -551,6 +554,8 @@ void ShaderInterface::Parameter::saveData(TOStream &os) {
        << m_range[0].m_ivec4[1] << m_range[1].m_ivec4[1]
        << m_range[0].m_ivec4[2] << m_range[1].m_ivec4[2]
        << m_range[0].m_ivec4[3] << m_range[1].m_ivec4[3];
+    break;
+  default:
     break;
   }
 
@@ -597,15 +602,14 @@ void ShaderInterface::Parameter::loadData(TIStream &is) {
         (std::numeric_limits<GLfloat>::max)();
     break;
   case VEC3:
-    m_default.m_vec3[0] = m_default.m_vec3[1] = m_default.m_vec3[1] = 0.0;
+    m_default.m_vec3[0] = m_default.m_vec3[1] = m_default.m_vec3[2] = 0.0;
     m_range[0].m_vec3[0] = m_range[0].m_vec3[1] = m_range[0].m_vec3[2] =
         -(std::numeric_limits<GLfloat>::max)();
     m_range[1].m_vec3[0] = m_range[1].m_vec3[1] = m_range[1].m_vec3[2] =
         (std::numeric_limits<GLfloat>::max)();
     break;
   case VEC4:
-    m_default.m_vec4[0] = m_default.m_vec4[1] = m_default.m_vec4[1] =
-        m_default.m_vec4[1]                   = 0.0;
+    m_default.m_vec4[0] = m_default.m_vec4[1] = m_default.m_vec4[2] = m_default.m_vec4[3] = 0.0;
     m_range[0].m_vec4[0] = m_range[0].m_vec4[1] = m_range[0].m_vec4[2] =
         m_range[0].m_vec4[3] = -(std::numeric_limits<GLfloat>::max)();
     m_range[1].m_vec4[0] = m_range[1].m_vec4[1] = m_range[1].m_vec4[2] =
@@ -624,15 +628,14 @@ void ShaderInterface::Parameter::loadData(TIStream &is) {
         (std::numeric_limits<GLint>::max)();
     break;
   case IVEC3:
-    m_default.m_ivec3[0] = m_default.m_ivec3[1] = m_default.m_ivec3[1] = 0;
+    m_default.m_ivec3[0] = m_default.m_ivec3[1] = m_default.m_ivec3[2] = 0;
     m_range[0].m_ivec3[0] = m_range[0].m_ivec3[1] = m_range[0].m_ivec3[2] =
         -(std::numeric_limits<GLint>::max)();
     m_range[1].m_ivec3[0] = m_range[1].m_ivec3[1] = m_range[1].m_ivec3[2] =
         (std::numeric_limits<GLint>::max)();
     break;
   case IVEC4:
-    m_default.m_ivec4[0] = m_default.m_ivec4[1] = m_default.m_ivec4[1] =
-        m_default.m_ivec4[1]                    = 0;
+    m_default.m_ivec4[0] = m_default.m_ivec4[1] = m_default.m_ivec4[2] = m_default.m_ivec4[3] = 0;
     m_range[0].m_ivec4[0] = m_range[0].m_ivec4[1] = m_range[0].m_ivec4[2] =
         m_range[0].m_ivec4[3] = -(std::numeric_limits<GLint>::max)();
     m_range[1].m_ivec4[0] = m_range[1].m_ivec4[1] = m_range[1].m_ivec4[2] =
@@ -644,6 +647,8 @@ void ShaderInterface::Parameter::loadData(TIStream &is) {
     break;
   case RGB:
     m_default.m_rgb[0] = m_default.m_rgb[1] = m_default.m_rgb[2] = 255;
+    break;
+  default:
     break;
   }
 
@@ -723,6 +728,8 @@ void ShaderInterface::Parameter::loadData(TIStream &is) {
         is >> val, m_default.m_rgb[2] = val;
         break;
       }
+      default:
+        break;
       }
 
       is.closeChild();
@@ -788,6 +795,8 @@ void ShaderInterface::Parameter::loadData(TIStream &is) {
             m_range[0].m_ivec4[1] >> m_range[1].m_ivec4[1] >>
             m_range[0].m_ivec4[2] >> m_range[1].m_ivec4[2] >>
             m_range[0].m_ivec4[3] >> m_range[1].m_ivec4[3];
+        break;
+      default:
         break;
       }
 

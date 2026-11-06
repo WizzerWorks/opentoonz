@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g id="reload_level">
+        <rect id="bg" x="0.001" y="-0.04" width="16" height="16" style="fill:#878787;fill-opacity:0;"/>
+        <path d="M7.062,10.954c0.292,-1.584 1.598,-2.814 3.218,-2.994l0,0.022c0.002,0 0.003,-0 0.005,-0l0,1.657c-0.807,0.16 -1.444,0.795 -1.608,1.6l1.599,0l-2.451,3.279l-2.451,-3.279l1.645,0c0.011,-0.096 0.025,-0.191 0.043,-0.285Zm5.636,1.082l-1.598,0l2.45,-3.279l2.451,3.279l-1.645,0c-0.011,0.096 -0.025,0.191 -0.043,0.285c-0.292,1.584 -1.597,2.815 -3.218,2.994l0,-0.022c-0.031,0.003 -0.062,0.006 -0.094,0.009l0,-1.65c0.849,-0.13 1.527,-0.781 1.697,-1.616Z"/>
+        <path d="M5.907,14.96l-3.906,-0l0,-14l8,-0l4,4l0,1.905c-0.138,-0.07 -0.292,-0.108 -0.451,-0.108c-0.197,0 -0.388,0.059 -0.549,0.165l0,-1.962l-3,-0l0,-3l-7,-0l0,12l2.158,-0l0.748,1Z"/>
+    </g>
+</svg>

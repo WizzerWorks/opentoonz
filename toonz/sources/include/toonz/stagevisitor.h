@@ -7,12 +7,14 @@
 #include "timage.h"
 #include "trastercm.h"
 #include "tgl.h"
+#include <string>
 
 // TnzExt includes
 #include "ext/plasticvisualsettings.h"
 
 // TnzLib includes
 #include "toonz/imagepainter.h"
+#include "stageplayer.h"
 
 #undef DVAPI
 #undef DVVAR
@@ -33,7 +35,6 @@ class TXsheet;
 class TXshSimpleLevel;
 class TXshLevel;
 class TFrameId;
-class TFlash;
 class OnionSkinMask;
 class TFx;
 class TXshColumn;
@@ -43,7 +44,7 @@ class TToonzImage;
 class TMeshImage;
 class QPainter;
 class QPolygon;
-class QMatrix;
+class QTransform;
 
 namespace Stage {
 class Player;
@@ -99,6 +100,8 @@ public:
   virtual void onImage(
       const Player &player) = 0;  //!< The \a visitation function.
 
+  virtual void onRasterImage(TRasterImage *ri, const Stage::Player &data) = 0;
+
   // I've not checked the actual meaning of the methods below. They are unused
   // in Toonz, but *are*
   // used in Toonz derivative works such as Tab or LineTest. They deal with
@@ -135,6 +138,12 @@ struct DVAPI VisitArgs {
   int m_isGuidedDrawingEnabled;
   int m_guidedFrontStroke;
   int m_guidedBackStroke;
+#if defined(x64)
+  TRasterImageP m_liveViewImage = 0;
+  TRasterImageP m_lineupImage   = 0;
+  Stage::Player m_liveViewPlayer;
+  Stage::Player m_lineupPlayer;
+#endif
 
 public:
   VisitArgs()
@@ -252,6 +261,7 @@ private:
   int m_maskLevel;
   bool m_singleColumnEnabled;
   bool m_checkFlags;
+  std::string m_currentImageId; // Used to update the autoClose cache
 
   // darken blended view mode for viewing the non-cleanuped and stacked drawings
   bool m_doRasterDarkenBlendedView;
@@ -265,7 +275,7 @@ public:
 
   void onImage(const Stage::Player &data) override;
   void onVectorImage(TVectorImage *vi, const Stage::Player &data);
-  void onRasterImage(TRasterImage *ri, const Stage::Player &data);
+  void onRasterImage(TRasterImage *ri, const Stage::Player &data) override;
   void onToonzImage(TToonzImage *ri, const Stage::Player &data);
 
   void beginMask() override;
@@ -276,7 +286,7 @@ public:
   int getNodesCount();
   void clearNodes();
 
-  TRasterP getRaster(int index, QMatrix &matrix);
+  TRasterP getRaster(int index, QTransform &matrix);
 
   void flushRasterImages();
   void drawRasterImages(QPainter &p, QPolygon cameraRect);
@@ -285,7 +295,7 @@ public:
   bool isSingleColumnEnabled() const { return m_singleColumnEnabled; }
 
   void setRasterDarkenBlendedView(bool on) { m_doRasterDarkenBlendedView = on; }
-
+  void setCurrentImageId(std::string id) { m_currentImageId = id; }
   std::vector<TStroke *> &getGuidedStrokes() { return m_guidedStrokes; }
 };
 
@@ -296,16 +306,19 @@ class DVAPI Picker final : public Visitor {
   TPointD m_point;
   TAffine m_viewAff;
   double m_minDist2;
+  int m_devPixRatio;
 
   int m_currentColumnIndex = -1;
 
 public:
   Picker(const TAffine &viewAff, const TPointD &p,
-         const ImagePainter::VisualSettings &vs);
+         const ImagePainter::VisualSettings &vs, int devPixRatio = 1);
 
-  void setDistance(double d);
+  // minimum distance to pick thin vector strokes.
+  void setMinimumDistance(double d);
 
   void onImage(const Stage::Player &data) override;
+  void onRasterImage(TRasterImage *ri, const Stage::Player &data) override{};
   void beginMask() override;
   void endMask() override;
   void enableMask() override;
@@ -344,7 +357,7 @@ public:
 
   void onImage(const Stage::Player &data) override;
   void onVectorImage(TVectorImage *vi, const Stage::Player &data);
-  void onRasterImage(TRasterImage *ri, const Stage::Player &data);
+  void onRasterImage(TRasterImage *ri, const Stage::Player &data) override;
   void onToonzImage(TToonzImage *ti, const Stage::Player &data);
 
   void beginMask() override;

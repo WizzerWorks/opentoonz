@@ -13,6 +13,7 @@
 #include <QDateTime>
 #include <QFontMetricsF>
 #include <QMap>
+#include <QLocale>
 
 namespace {
 QMap<BoardItem::Type, std::wstring> strs = {
@@ -91,10 +92,10 @@ QString BoardItem::getContentText(ToonzScene *scene) {
            QString::number(ff).rightJustified(2, '0');
   } break;
   case CurrentDate:
-    return QDate::currentDate().toString(Qt::DefaultLocaleLongDate);
+    return QLocale::system().toString(QDate::currentDate());
     break;
   case CurrentDateTime:
-    return QDateTime::currentDateTime().toString(Qt::DefaultLocaleLongDate);
+    return QLocale::system().toString(QDateTime::currentDateTime());
     break;
   case UserName:
     return TSystem::getUserName();
@@ -106,13 +107,19 @@ QString BoardItem::getContentText(ToonzScene *scene) {
     return scene->decodeFilePath(scene->getScenePath()).getQString();
     break;
   case MoviePath_Aliased: {
-    TOutputProperties *oprop = scene->getProperties()->getOutputProperties();
-    return scene->codeFilePath(oprop->getPath()).getQString();
+    TFilePath fp = scene->getProperties()->getOutputProperties()->getPath();
+    if (fp.getWideName() == L"")
+      fp = fp.withName(scene->getScenePath().getName());
+    return scene->codeFilePath(fp).getQString();
   } break;
   case MoviePath_Full: {
-    TOutputProperties *oprop = scene->getProperties()->getOutputProperties();
-    return scene->decodeFilePath(oprop->getPath()).getQString();
+    TFilePath fp = scene->getProperties()->getOutputProperties()->getPath();
+    if (fp.getWideName() == L"")
+      fp = fp.withName(scene->getScenePath().getName());
+    return scene->decodeFilePath(fp).getQString();
   } break;
+  default:
+    break;
   }
   return QString();
 }
@@ -170,22 +177,23 @@ void BoardItem::drawItem(QPainter &p, QSize imgSize, int shrink,
     isInRect = true;
   else
     isInRect = false;
-  while (1) {
-    fontSize += (isInRect) ? 1 : -1;
-    if (fontSize <= 0)  // cannot draw
-      return;
-    tmpFont.setPixelSize(fontSize);
-    tmpFm = QFontMetricsF(tmpFont);
-    tmpBounding =
-        tmpFm.boundingRect(itemRect, Qt::AlignLeft | Qt::AlignTop, contentText);
+  if (fontSize < m_maximumFontSize)
+    while (1) {
+      fontSize += (isInRect) ? 1 : -1;
+      if (fontSize <= 0)  // cannot draw
+        return;
+      tmpFont.setPixelSize(fontSize);
+      tmpFm       = QFontMetricsF(tmpFont);
+      tmpBounding = tmpFm.boundingRect(itemRect, Qt::AlignLeft | Qt::AlignTop,
+                                       contentText);
 
-    bool newIsInRect = (itemRect.width() >= tmpBounding.width() &&
-                        itemRect.height() >= tmpBounding.height());
-    if (isInRect != newIsInRect) {
-      if (isInRect) fontSize--;
-      break;
+      bool newIsInRect = (itemRect.width() >= tmpBounding.width() &&
+                          itemRect.height() >= tmpBounding.height());
+      if (isInRect != newIsInRect) {
+        if (isInRect) fontSize--;
+        break;
+      }
     }
-  }
 
   //----
   fontSize = std::min(fontSize, m_maximumFontSize / shrink);
@@ -279,7 +287,7 @@ void BoardItem::loadData(TIStream &is) {
 
 //======================================================================================
 
-BoardSettings::BoardSettings() {
+BoardSettings::BoardSettings() : m_fileNameSuffix("board") {
   // add one item as an example
   m_items.push_back(BoardItem());
 }
@@ -330,11 +338,12 @@ void BoardSettings::removeItem(int index) {
   m_items.removeAt(index);
 }
 
-void BoardSettings::swapItems(int i, int j) { m_items.swap(i, j); }
+void BoardSettings::swapItems(int i, int j) { m_items.swapItemsAt(i, j); }
 
 void BoardSettings::saveData(TOStream &os, bool forPreset) {
   if (!forPreset) os.child("active") << (int)((m_active) ? 1 : 0);
   os.child("duration") << m_duration;
+  os.child("fileNameSuffix") << m_fileNameSuffix;
   if (!m_items.isEmpty()) {
     os.openChild("boardItems");
     for (int i = 0; i < getItemCount(); i++) {
@@ -355,6 +364,8 @@ void BoardSettings::loadData(TIStream &is) {
       setActive(val == 1);
     } else if (tagName == "duration") {
       is >> m_duration;
+    } else if (tagName == "fileNameSuffix") {
+      is >> m_fileNameSuffix;
     } else if (tagName == "boardItems") {
       m_items.clear();
       while (is.matchTag(tagName)) {

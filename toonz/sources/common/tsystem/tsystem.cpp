@@ -2,11 +2,12 @@
 
 #include "tsystem.h"
 
-using namespace std;
-
 #include <set>
+#include <atomic>
 #include "tfilepath_io.h"
 #include "tconvert.h"
+
+#include <cwctype>  // Include the header for towlower
 
 #ifndef TNZCORE_LIGHT
 
@@ -22,7 +23,7 @@ using namespace std;
 #include <QUrl>
 #include <QCoreApplication>
 #include <QUuid>
-
+#include <QRegularExpression>
 #include <QDesktopServices>
 #include <QHostInfo>
 
@@ -38,14 +39,24 @@ inline QString toQString(const TFilePath &path) {
   return QString::fromStdWString(path.getWideString());
 }
 
-int HasMainLoop = -1;
+std::atomic<int> HasMainLoop{-1};  // Changed to atomic for thread safety
 
 }  // namespace
 //-----------------------------------------------------------------------------------
 
-TFileStatus::TFileStatus(const TFilePath &path) {
-  m_fileInfo = QFileInfo(QString::fromStdWString(path.getWideString()));
-  m_exist    = m_fileInfo.exists();
+TFileStatus::TFileStatus(const TFilePath &path)
+    : m_fileInfo(QString::fromStdWString(path.getWideString()))
+    , m_exist(false)  // safe default value; see NOTE below
+// During static init (e.g., EnvGlobals) before QCoreApplication exists.
+// m_exist defaults to false. Proper fix requires refactoring init order in
+// tenv.cpp, tcontenthistory.cpp, etc. to create QCoreApplication first.
+// Workaround avoids crashes.
+{
+  if (QCoreApplication::instance() == nullptr) {
+    return;  // avoids premature exists() doesn't crash during static
+             // initialization
+  }
+  m_exist = m_fileInfo.exists();
 }
 
 //-----------------------------------------------------------------------------------
@@ -87,13 +98,13 @@ QDateTime TFileStatus::getLastModificationTime() const {
 
 QDateTime TFileStatus::getCreationTime() const {
   if (!m_exist) return QDateTime();
-  return m_fileInfo.created();
+  return m_fileInfo.birthTime();
 }
 
 //-----------------------------------------------------------------------------------
 
 QFile::Permissions TFileStatus::getPermissions() const {
-  if (!m_exist) return 0;
+  if (!m_exist) return QFileDevice::Permissions();
   return m_fileInfo.permissions();
 }
 
@@ -111,16 +122,32 @@ bool TFileStatus::isLink() const { return m_fileInfo.isSymLink(); }
 //-----------------------------------------------------------------------------------
 
 bool TSystem::doHaveMainLoop() {
-  if (HasMainLoop == -1)
-    assert(!"you MUST call the TSystem::hasMainLoop function in the main of the program!");
-  return HasMainLoop == 1;
+  int current = HasMainLoop.load(std::memory_order_acquire);
+
+  if (current == -1) {
+#ifdef QT_DEBUG
+    qFatal("TSystem::hasMainLoop was not called");
+#else
+    qWarning("Main loop not initialized");
+#endif
+    return false;
+  }
+  return current == 1;
 }
 
 //-----------------------------------------------------------------------------------
 
 void TSystem::hasMainLoop(bool state) {
-  assert(HasMainLoop == -1);
-  HasMainLoop = state ? 1 : 0;
+  int expected = -1;
+  int desired  = state ? 1 : 0;
+
+  if (!HasMainLoop.compare_exchange_strong(expected, desired,
+                                           std::memory_order_acq_rel,
+                                           std::memory_order_acquire)) {
+#ifdef QT_DEBUG
+    qWarning("TSystem::hasMainLoop called multiple times (debug check)");
+#endif
+  }
 }
 
 //-----------------------------------------------------------------------------------
@@ -131,8 +158,7 @@ QString TSystem::getHostName() { return QHostInfo::localHostName(); }
 
 QString TSystem::getUserName() {
   QStringList list = QProcess::systemEnvironment();
-  int j;
-  for (j = 0; j < list.size(); j++) {
+  for (int j = 0; j < list.size(); j++) {
     QString value = list.at(j);
     QString user;
 #ifdef _WIN32
@@ -153,24 +179,24 @@ TFilePath TSystem::getTempDir() {
 
 //------------------------------------------------------------
 
-TFilePath TSystem::getTestDir(string name) {
+TFilePath TSystem::getTestDir(std::string name) {
   return TFilePath("C:") + TFilePath(name);
 }
 
 //------------------------------------------------------------
 
 QString TSystem::getSystemValue(const TFilePath &name) {
-  QStringList strlist = toQString(name).split("\\", QString::SkipEmptyParts);
+  QStringList strlist = toQString(name).split("\\", Qt::SkipEmptyParts);
 
-  assert(strlist.size() > 3);
-  assert(strlist.at(0) == "SOFTWARE");
+  if (strlist.size() <= 3 || strlist.at(0) != "SOFTWARE") {
+    qWarning("Invalid system value path format");
+    return QString();
+  }
 
   QSettings qs(QSettings::SystemScope, strlist.at(1), strlist.at(2));
 
-  int i;
   QString varName;
-
-  for (i = 3; i < strlist.size(); i++) {
+  for (int i = 3; i < strlist.size(); i++) {
     varName += strlist.at(i);
     if (i < strlist.size() - 1) varName += "//";
   }
@@ -193,12 +219,10 @@ TFilePath TSystem::getDllDir() { return getBinDir(); }
 
 TFilePath TSystem::getUniqueFile(QString field) {
   QString uuid = QUuid::createUuid()
-                     .toString()
-                     .replace("-", "")
+                     .toString(QUuid::Id128)
                      .replace("{", "")
                      .replace("}", "")
-                     .toLatin1()
-                     .data();
+                     .replace("-", "");
 
   QString path = QDir::tempPath() + QString("\\") + field + uuid;
 
@@ -222,19 +246,22 @@ TFilePathSet getPathsToCreate(const TFilePath &path) {
 
 void setPathsPermissions(const TFilePathSet &pathSet,
                          QFile::Permissions permissions) {
-  TFilePathSet::const_iterator it;
-  for (it = pathSet.begin(); it != pathSet.end(); it++) {
-    QFile f(toQString(*it));
+  for (const auto &path : pathSet) {
+    QFile f(toQString(path));
     f.setPermissions(permissions);
   }
 }
-}
+}  // namespace
 
-// gestire exception
+// handle exception
 void TSystem::mkDir(const TFilePath &path) {
   TFilePathSet pathSet = getPathsToCreate(path);
   QString qPath        = toQString(path);
-  assert(!qPath.contains("+"));
+
+  if (qPath.contains("+")) {
+    throw TSystemException(path, "Invalid character '+' in path!");
+  }
+
   if (!QDir::current().mkpath(qPath))
     throw TSystemException(path, "can't create folder!");
 
@@ -245,7 +272,7 @@ void TSystem::mkDir(const TFilePath &path) {
 }
 
 //------------------------------------------------------------
-// gestire exception
+// handle exception
 void TSystem::rmDir(const TFilePath &path) {
   if (!QDir(toQString(path.getParentDir()))
            .rmdir(QString::fromStdString(path.getName())))
@@ -258,10 +285,8 @@ void TSystem::rmDir(const TFilePath &path) {
 
 namespace {
 void rmDirTree(const QString &path) {
-  int i;
   QFileInfoList fil = QDir(path).entryInfoList();
-  for (i = 0; i < fil.size(); i++) {
-    QFileInfo fi = fil.at(i);
+  for (const QFileInfo &fi : fil) {
     if (fi.fileName() == QString(".") || fi.fileName() == QString(".."))
       continue;
     QString son = fi.absoluteFilePath();
@@ -288,9 +313,7 @@ void TSystem::copyDir(const TFilePath &dst, const TFilePath &src) {
 
   QDir::current().mkdir(toQString(dst));
 
-  int i;
-  for (i = 0; i < fil.size(); i++) {
-    QFileInfo fi = fil.at(i);
+  for (const QFileInfo &fi : fil) {
     if (fi.fileName() == QString(".") || fi.fileName() == QString(".."))
       continue;
     if (fi.isDir()) {
@@ -304,60 +327,97 @@ void TSystem::copyDir(const TFilePath &dst, const TFilePath &src) {
   }
 }
 
-//------------------------------------------------------------
 /*
+
 void TSystem::touchFile(const TFilePath &path)
+
 {
+
 QFile f(toQString(path));
 
+
 if (!f.open(QIODevice::ReadWrite))
+
   throw TSystemException(path, "can't touch file!");
+
 else
+
   f.close();
+
 }
+
 */
+
 //------------------------------------------------------------
+
 /*
+
 #ifdef _WIN32
 
-wstring getFormattedMessage(DWORD lastError)
+
+std::wstring getFormattedMessage(DWORD lastError)
+
 {
+
 LPVOID lpMsgBuf;
+
 FormatMessage(
+
     FORMAT_MESSAGE_ALLOCATE_BUFFER |
+
     FORMAT_MESSAGE_FROM_SYSTEM |
+
     FORMAT_MESSAGE_IGNORE_INSERTS,
+
     NULL,
+
     lastError,
+
     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
+
     (LPTSTR) &lpMsgBuf,
+
     0,
+
     NULL
+
 );
 
+
 int wSize = MultiByteToWideChar(0,0,(char*)lpMsgBuf,-1,0,0);
+
 if(!wSize)
-  return wstring();
+
+  return std::wstring();
+
 
 wchar_t* wBuffer = new wchar_t [wSize+1];
+
 MultiByteToWideChar(0,0,(char*)lpMsgBuf,-1,wBuffer,wSize);
+
 wBuffer[wSize]='\0';
-wstring wmsg(wBuffer);
+
+std::wstring wmsg(wBuffer);
+
 
 delete []wBuffer;
+
 LocalFree(lpMsgBuf);
+
 return wmsg;
+
 }
 
-//------------------------------------------------------------
 
 #endif
+
 */
-//------------------------------------------------------------
 
 void TSystem::copyFile(const TFilePath &dst, const TFilePath &src,
                        bool overwrite) {
-  assert(dst != TFilePath());
+  if (dst.isEmpty()) {
+    throw TSystemException(dst, "Destination path is empty!");
+  }
 
   if (dst == src) return;
 
@@ -365,7 +425,10 @@ void TSystem::copyFile(const TFilePath &dst, const TFilePath &src,
   touchParentDir(dst);
 
   const QString &qDst = toQString(dst);
-  if (overwrite && QFile::exists(qDst)) QFile::remove(qDst);
+  if (overwrite && QFile::exists(qDst)) {
+    if (!QFile::remove(qDst))
+      throw TSystemException(dst, "can't remove existing file!");
+  }
 
   if (!QFile::copy(toQString(src), qDst))
     throw TSystemException(dst, "can't copy file!");
@@ -375,12 +438,17 @@ void TSystem::copyFile(const TFilePath &dst, const TFilePath &src,
 
 void TSystem::renameFile(const TFilePath &dst, const TFilePath &src,
                          bool overwrite) {
-  assert(dst != TFilePath());
+  if (dst.isEmpty()) {
+    throw TSystemException(dst, "Destination path is empty!");
+  }
 
   if (dst == src) return;
 
   const QString &qDst = toQString(dst);
-  if (overwrite && QFile::exists(qDst)) QFile::remove(qDst);
+  if (overwrite && QFile::exists(qDst)) {
+    if (!QFile::remove(qDst))
+      throw TSystemException(dst, "can't remove existing file!");
+  }
 
   if (!QFile::rename(toQString(src), qDst))
     throw TSystemException(dst, "can't rename file!");
@@ -388,7 +456,7 @@ void TSystem::renameFile(const TFilePath &dst, const TFilePath &src,
 
 //------------------------------------------------------------
 
-// gestire gli errori con GetLastError?
+// handle errors with GetLastError?
 void TSystem::deleteFile(const TFilePath &fp) {
   if (!QFile::remove(toQString(fp)))
     throw TSystemException(fp, "can't delete file!");
@@ -408,29 +476,31 @@ void TSystem::hideFile(const TFilePath &fp) {
 
 //------------------------------------------------------------
 
-class CaselessFilepathLess final
-    : public std::binary_function<TFilePath, TFilePath, bool> {
+class CaselessFilepathLess final {
 public:
   bool operator()(const TFilePath &a, const TFilePath &b) const {
     // Perform case sensitive compare, fallback to case insensitive.
-    const wstring a_str = a.getWideString();
-    const wstring b_str = b.getWideString();
+    const std::wstring a_str = a.getWideString();
+    const std::wstring b_str = b.getWideString();
 
-    unsigned int i   = 0;
-    int case_compare = -1;
-    while (a_str[i] || b_str[i]) {
-      if (a_str[i] != b_str[i]) {
-        const wchar_t a_wchar = towlower(a_str[i]);
-        const wchar_t b_wchar = towlower(b_str[i]);
+    size_t i            = 0;
+    int case_compare    = -1;
+    const size_t maxLen = std::max(a_str.size(), b_str.size());
+    for (size_t i = 0; i < maxLen; ++i) {
+      wchar_t a_char = (i < a_str.size()) ? a_str[i] : L'\0';
+      wchar_t b_char = (i < b_str.size()) ? b_str[i] : L'\0';
+
+      if (a_char != b_char) {
+        const wchar_t a_wchar = towlower(a_char);
+        const wchar_t b_wchar = towlower(b_char);
         if (a_wchar < b_wchar) {
           return true;
         } else if (a_wchar > b_wchar) {
           return false;
         } else if (case_compare == -1) {
-          case_compare = a_str[i] < b_str[i];
+          case_compare = (a_char < b_char) ? 1 : 0;
         }
       }
-      i++;
     }
     return (case_compare == 1);
   }
@@ -438,7 +508,7 @@ public:
 
 //------------------------------------------------------------
 /*! return the folder path list which is readable and executable
-*/
+ */
 void TSystem::readDirectory_Dir_ReadExe(TFilePathSet &dst,
                                         const TFilePath &path) {
   QStringList dirItems;
@@ -460,14 +530,19 @@ void TSystem::readDirectory_DirItems(QStringList &dst, const TFilePath &path) {
   QDir dir(toQString(path));
 
 #ifdef _WIN32
+  QString pathStr = toQString(path);
+  if (pathStr.startsWith("\\\\") || pathStr.startsWith("//")) {
+    dst = dir.entryList(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Readable,
+                        QDir::Name | QDir::LocaleAware);
+    return;
+  }
+
   // equivalent to sorting with QDir::LocaleAware
-  struct strCompare {
-    bool operator()(const QString &s1, const QString &s2) {
-      return QString::localeAwareCompare(s1, s2) < 0;
-    }
+  auto const strCompare = [](const QString &s1, const QString &s2) {
+    return QString::localeAwareCompare(s1, s2) < 0;
   };
 
-  std::set<QString, strCompare> entries;
+  std::set<QString, decltype(strCompare)> entries(strCompare);
 
   WIN32_FIND_DATA find_dir_data;
   QString dir_search_path = dir.absolutePath() + "\\*";
@@ -485,9 +560,12 @@ void TSystem::readDirectory_DirItems(QStringList &dst, const TFilePath &path) {
   HANDLE hFind =
       FindFirstFile((const wchar_t *)dir_search_path.utf16(), &find_dir_data);
   if (hFind != INVALID_HANDLE_VALUE) {
-    addEntry();
-    while (FindNextFile(hFind, &find_dir_data)) addEntry();
+    do {
+      addEntry();
+    } while (FindNextFile(hFind, &find_dir_data));
+    FindClose(hFind);  // FIXED: Added FindClose
   }
+
   for (const QString &name : entries) dst.push_back(QString(name));
 
 #else
@@ -498,7 +576,7 @@ void TSystem::readDirectory_DirItems(QStringList &dst, const TFilePath &path) {
 
 //------------------------------------------------------------
 /*! to retrieve the both lists with groupFrames option = on and off.
-*/
+ */
 void TSystem::readDirectory(TFilePathSet &groupFpSet, TFilePathSet &allFpSet,
                             const TFilePath &path) {
   if (!TFileStatus(path).isDirectory())
@@ -525,27 +603,28 @@ void TSystem::readDirectory(TFilePathSet &groupFpSet, TFilePathSet &allFpSet,
   HANDLE hFind =
       FindFirstFile((const wchar_t *)dir_search_path.utf16(), &find_dir_data);
   if (hFind != INVALID_HANDLE_VALUE) {
-    addEntry();
-    while (FindNextFile(hFind, &find_dir_data)) addEntry();
+    do {
+      addEntry();
+    } while (FindNextFile(hFind, &find_dir_data));
+    FindClose(hFind);  // FIXED: Added FindClose
   }
 #else
   fil = QDir(toQString(path))
             .entryList(QDir::Files | QDir::NoDotAndDotDot | QDir::Readable);
 #endif
-  if (fil.size() == 0) return;
 
-  for (int i = 0; i < fil.size(); i++) {
-    QString fi = fil.at(i);
+  if (fil.empty()) return;
 
+  for (const QString &fi : fil) {
     TFilePath son = path + TFilePath(fi.toStdWString());
 
     // store all file paths
     fileSet_all.insert(son);
 
-    // in case of the sequencial files
+    // in case of the sequential files
     if (son.getDots() == "..") son = son.withFrame();
 
-    // store the group. insersion avoids duplication of the item
+    // store the group. insertion avoids duplication of the item
     fileSet_group.insert(son);
   }
 
@@ -569,15 +648,16 @@ void TSystem::readDirectory(TFilePathSet &dst, const QDir &dir,
 
   // store name filters
   bool hasNameFilter = false;
-  QList<QRegExp> nameFilters;
+  QList<QRegularExpression> nameFilters;
   for (const QString &nameFilter : dir.nameFilters()) {
     if (nameFilter == "*") {
       hasNameFilter = false;
       break;
     }
-    QRegExp regExp(nameFilter);
-    regExp.setPatternSyntax(QRegExp::Wildcard);
-    nameFilters.append(regExp);
+    // Convert wildcard pattern to regular expression
+    QString pattern =
+        QRegularExpression::wildcardToRegularExpression(nameFilter);
+    nameFilters.append(QRegularExpression(pattern));
     hasNameFilter = true;
   }
 
@@ -603,8 +683,9 @@ void TSystem::readDirectory(TFilePathSet &dst, const QDir &dir,
       // name filter
       if (hasNameFilter) {
         bool matched = false;
-        for (const QRegExp &regExp : nameFilters) {
-          if (regExp.exactMatch(fileName)) {
+        for (const QRegularExpression &regExp : nameFilters) {
+          QRegularExpressionMatch match = regExp.match(fileName);
+          if (match.hasMatch()) {
             matched = true;
             break;
           }
@@ -618,20 +699,21 @@ void TSystem::readDirectory(TFilePathSet &dst, const QDir &dir,
   HANDLE hFind =
       FindFirstFile((const wchar_t *)dir_search_path.utf16(), &find_dir_data);
   if (hFind != INVALID_HANDLE_VALUE) {
-    addEntry();
-    while (FindNextFile(hFind, &find_dir_data)) addEntry();
+    do {
+      addEntry();
+    } while (FindNextFile(hFind, &find_dir_data));
+    FindClose(hFind);  // FIXED: Added FindClose
   }
 #else
-  entries    = (dir.entryList(dir.filter() | QDir::NoDotAndDotDot));
+  entries = (dir.entryList(dir.filter() | QDir::NoDotAndDotDot));
 #endif
 
   TFilePath dirPath(dir.path().toStdWString());
 
   std::set<TFilePath, CaselessFilepathLess> fpSet;
 
-  int e, eCount = entries.size();
-  for (e = 0; e != eCount; ++e) {
-    TFilePath path(dirPath + TFilePath(entries.at(e).toStdWString()));
+  for (const QString &entry : entries) {
+    TFilePath path(dirPath + TFilePath(entry.toStdWString()));
 
     if (groupFrames && path.getDots() == "..") path = path.withFrame();
 
@@ -661,9 +743,8 @@ void TSystem::readDirectory(TFilePathSet &dst, const TFilePath &path,
 void TSystem::readDirectory(TFilePathSet &dst, const TFilePathSet &pathSet,
                             bool groupFrames, bool onlyFiles,
                             bool getHiddenFiles) {
-  for (TFilePathSet::const_iterator it = pathSet.begin(); it != pathSet.end();
-       it++)
-    readDirectory(dst, *it, groupFrames, onlyFiles);
+  for (const auto &path : pathSet)
+    readDirectory(dst, path, groupFrames, onlyFiles, getHiddenFiles);
 }
 
 //------------------------------------------------------------
@@ -692,28 +773,33 @@ void TSystem::readDirectoryTree(TFilePathSet &dst, const TFilePath &path,
   if (!TFileStatus(path).isDirectory())
     throw TSystemException(path, " is not a directory");
 
+  std::set<TFilePath, CaselessFilepathLess> fpSet;
+
   QFileInfoList fil = QDir(toQString(path)).entryInfoList();
-  int i;
-  for (i = 0; i < fil.size(); i++) {
-    QFileInfo fi = fil.at(i);
+  for (const QFileInfo &fi : fil) {
     if (fi.fileName() == QString(".") || fi.fileName() == QString(".."))
       continue;
     TFilePath son = TFilePath(fi.filePath().toStdWString());
     if (TFileStatus(son).isDirectory()) {
       if (!onlyFiles) dst.push_back(son);
       readDirectoryTree(dst, son, groupFrames, onlyFiles);
-    } else
-      dst.push_back(son);
+    } else {
+      if (groupFrames && son.getDots() == "..") {
+        son = son.withFrame();
+      }
+      fpSet.insert(son);
+    }
   }
+
+  dst.insert(dst.end(), fpSet.begin(), fpSet.end());
 }
 
 //------------------------------------------------------------
 
 void TSystem::readDirectoryTree(TFilePathSet &dst, const TFilePathSet &pathSet,
                                 bool groupFrames, bool onlyFiles) {
-  for (TFilePathSet::const_iterator it = pathSet.begin(); it != pathSet.end();
-       it++)
-    readDirectoryTree(dst, *it, groupFrames, onlyFiles);
+  for (const auto &path : pathSet)
+    readDirectoryTree(dst, path, groupFrames, onlyFiles);
 }
 
 //------------------------------------------------------------
@@ -738,14 +824,12 @@ TFilePathSet TSystem::readDirectoryTree(const TFilePathSet &pathSet,
 
 TFilePathSet TSystem::packLevelNames(const TFilePathSet &fps) {
   std::set<TFilePath> tmpSet;
-  TFilePathSet::const_iterator cit;
-  for (cit = fps.begin(); cit != fps.end(); ++cit)
-    tmpSet.insert(cit->getParentDir() + cit->getLevelName());
+  for (const auto &fp : fps)
+    tmpSet.insert(fp.getParentDir() + fp.getLevelName());
 
   TFilePathSet fps2;
-  for (std::set<TFilePath>::const_iterator c_sit = tmpSet.begin();
-       c_sit != tmpSet.end(); ++c_sit) {
-    fps2.push_back(*c_sit);
+  for (const auto &fp : tmpSet) {
+    fps2.push_back(fp);
   }
   return fps2;
 }
@@ -755,9 +839,8 @@ TFilePathSet TSystem::packLevelNames(const TFilePathSet &fps) {
 TFilePathSet TSystem::getDisks() {
   TFilePathSet filePathSet;
   QFileInfoList fil = QDir::drives();
-  int i;
-  for (i = 0; i < fil.size(); i++)
-    filePathSet.push_back(TFilePath(fil.at(i).filePath().toStdWString()));
+  for (const QFileInfo &fi : fil)
+    filePathSet.push_back(TFilePath(fi.filePath().toStdWString()));
 
   return filePathSet;
 }
@@ -767,9 +850,10 @@ TFilePathSet TSystem::getDisks() {
 class LocalThread final : public QThread {
 public:
   static LocalThread *currentThread() {
-    return (LocalThread *)QThread::currentThread();
+    QThread *current = QThread::currentThread();
+    return dynamic_cast<LocalThread *>(current);  // Safer cast
   }
-  void sleep(TINT64 delay) { msleep(delay); }
+  void sleep(TINT64 delay) { msleep(static_cast<unsigned long>(delay)); }
 };
 
 void TSystem::sleep(TINT64 delay) {
@@ -793,23 +877,33 @@ bool TSystem::doesExistFileOrLevel(const TFilePath &fp) {
     try {
       files = TSystem::readDirectory(parentDir, false, true, true);
     } catch (...) {
+      return false;
     }
 
-    TFilePathSet::iterator it, end = files.end();
-    for (it = files.begin(); it != end; ++it) {
-      if (it->getLevelNameW() == fp.getLevelNameW()) return true;
+    for (const auto &file : files) {
+      if (file.getLevelNameW() == fp.getLevelNameW()) return true;
     }
   } else if (fp.getType() == "psd") {
     QString name(QString::fromStdWString(fp.getWideName()));
     name.append(QString::fromStdString(fp.getDottedType()));
 
-    int sepPos                               = name.indexOf("#");
-    int dotPos                               = name.indexOf(".", sepPos);
-    int removeChars                          = dotPos - sepPos;
-    int doubleUnderscorePos                  = name.indexOf("__", sepPos);
-    if (doubleUnderscorePos > 0) removeChars = doubleUnderscorePos - sepPos;
+    int sepPos = name.indexOf("#");
+    if (sepPos >= 0) {
+      int dotPos              = name.indexOf(".", sepPos);
+      int doubleUnderscorePos = name.indexOf("__", sepPos);
 
-    name.remove(sepPos, removeChars);
+      int removeChars = 0;
+      if (dotPos > sepPos) {
+        removeChars = dotPos - sepPos;
+      }
+      if (doubleUnderscorePos > 0 && doubleUnderscorePos < dotPos) {
+        removeChars = doubleUnderscorePos - sepPos;
+      }
+
+      if (removeChars > 0) {
+        name.remove(sepPos, removeChars);
+      }
+    }
 
     TFilePath psdpath(fp.getParentDir() + TFilePath(name.toStdWString()));
     if (TFileStatus(psdpath).doesExist()) return true;
@@ -826,20 +920,50 @@ void TSystem::copyFileOrLevel_throw(const TFilePath &dst,
     TFilePathSet files;
     files = TSystem::readDirectory(src.getParentDir(), false);
 
-    TFilePathSet::iterator it, end = files.end();
-    for (it = files.begin(); it != end; ++it) {
-      if (it->getLevelNameW() == src.getLevelNameW()) {
-        TFilePath src1 = *it;
-        TFilePath dst1 = dst.withFrame(it->getFrame());
+    for (const auto &file : files) {
+      if (file.getLevelNameW() == src.getLevelNameW()) {
+        TFilePath src1 = file;
+        TFilePath dst1 = dst.withFrame(file.getFrame());
 
         TSystem::copyFile(dst1, src1);
       }
     }
-  } else
+  } else {
     TSystem::copyFile(dst, src);
+  }
 }
 
 //--------------------------------------------------------------
+
+bool TSystem::renameImageSequence(const TFilePathSet &files,
+                                  const TFilePath &levelPath,
+                                  int prefixLength) {
+  std::string levelBaseName = levelPath.withoutParentDir().getName();
+  if (files.empty() || !files.begin()->isAbsolute() ||
+      !levelPath.isAbsolute()) {
+    return false;
+  }
+
+  std::wstring wstr;
+  TFilePath dst;
+
+  for (const TFilePath &file : files) {
+    wstr = file.getWideName();
+    if (wstr.size() > static_cast<size_t>(prefixLength))
+      wstr = wstr.substr(prefixLength);
+    else
+      wstr.clear();
+
+    dst = file.getParentDir() + (levelBaseName + "." + TFrameId(wstr).expand() +
+                                 file.getDottedType());
+    try {
+      TSystem::renameFile(dst, file, false);
+    } catch (...) {
+      return false;
+    }
+  }
+  return true;
+}
 
 void TSystem::renameFileOrLevel_throw(const TFilePath &dst,
                                       const TFilePath &src,
@@ -847,8 +971,7 @@ void TSystem::renameFileOrLevel_throw(const TFilePath &dst,
   if (renamePalette && ((src.getType() == "tlv") || (src.getType() == "tzp") ||
                         (src.getType() == "tzu"))) {
     // Special case: since renames cannot be 'grouped' in the UI, palettes are
-    // automatically
-    // renamed here if required
+    // automatically renamed here if required
     const char *type = (src.getType() == "tlv") ? "tpl" : "plt";
 
     TFilePath srcpltname(src.withNoFrame().withType(type));
@@ -863,16 +986,17 @@ void TSystem::renameFileOrLevel_throw(const TFilePath &dst,
     TFilePathSet files;
     files = TSystem::readDirectory(src.getParentDir(), false);
 
-    for (TFilePathSet::iterator it = files.begin(); it != files.end(); it++) {
-      if (it->getLevelName() == src.getLevelName()) {
-        TFilePath src1 = *it;
-        TFilePath dst1 = dst.withFrame(it->getFrame());
+    for (const auto &file : files) {
+      if (file.getLevelName() == src.getLevelName()) {
+        TFilePath src1 = file;
+        TFilePath dst1 = dst.withFrame(file.getFrame());
 
         TSystem::renameFile(dst1, src1);
       }
     }
-  } else
+  } else {
     TSystem::renameFile(dst, src);
+  }
 }
 
 //--------------------------------------------------------------
@@ -882,12 +1006,12 @@ void TSystem::removeFileOrLevel_throw(const TFilePath &fp) {
     TFilePathSet files;
     files = TSystem::readDirectory(fp.getParentDir(), false, true, true);
 
-    TFilePathSet::iterator it, end = files.end();
-    for (it = files.begin(); it != end; ++it) {
-      if (it->getLevelName() == fp.getLevelName()) TSystem::deleteFile(*it);
+    for (const auto &file : files) {
+      if (file.getLevelName() == fp.getLevelName()) TSystem::deleteFile(file);
     }
-  } else
+  } else {
     TSystem::deleteFile(fp);
+  }
 }
 
 //--------------------------------------------------------------
@@ -897,12 +1021,12 @@ void TSystem::hideFileOrLevel_throw(const TFilePath &fp) {
     TFilePathSet files;
     files = TSystem::readDirectory(fp.getParentDir(), false);
 
-    TFilePathSet::iterator it, end = files.end();
-    for (it = files.begin(); it != end; ++it) {
-      if (it->getLevelNameW() == fp.getLevelNameW()) TSystem::hideFile(*it);
+    for (const auto &file : files) {
+      if (file.getLevelNameW() == fp.getLevelNameW()) TSystem::hideFile(file);
     }
-  } else
+  } else {
     TSystem::hideFile(fp);
+  }
 }
 
 //--------------------------------------------------------------
@@ -912,13 +1036,13 @@ void TSystem::moveFileOrLevelToRecycleBin_throw(const TFilePath &fp) {
     TFilePathSet files;
     files = TSystem::readDirectory(fp.getParentDir(), false, true, true);
 
-    TFilePathSet::iterator it, end = files.end();
-    for (it = files.begin(); it != end; ++it) {
-      if (it->getLevelNameW() == fp.getLevelNameW())
-        TSystem::moveFileToRecycleBin(*it);
+    for (const auto &file : files) {
+      if (file.getLevelNameW() == fp.getLevelNameW())
+        TSystem::moveFileToRecycleBin(file);
     }
-  } else
+  } else {
     TSystem::moveFileToRecycleBin(fp);
+  }
 }
 
 //--------------------------------------------------------------
@@ -998,47 +1122,53 @@ bool TSystem::touchParentDir(const TFilePath &fp) {
 
 bool TSystem::showDocument(const TFilePath &path) {
 #ifdef _WIN32
-  int ret = (int)ShellExecuteW(0, L"open", path.getWideString().c_str(), 0, 0,
-                               SW_SHOWNORMAL);
-  if (ret <= 32) {
+  HINSTANCE ret = ShellExecuteW(0, L"open", path.getWideString().c_str(), 0, 0,
+                                SW_SHOWNORMAL);
+
+  // ShellExecute returns a value greater than 32 if successful
+  if (reinterpret_cast<intptr_t>(ret) <= 32) {
+    qWarning("Can't open document: %ls", path.getWideString().c_str());
     return false;
-    throw TSystemException(path, "Can't open");
   }
   return true;
 #else
-  string cmd = "open ";
-  string thePath(::to_string(path));
-  UINT pos = 0, count = 0;
-  // string newPath;
-  char newPath[2048];
-
-  while (pos < thePath.size()) {
-    char c                         = thePath[pos];
-    if (c == ' ') newPath[count++] = '\\';
-
-    newPath[count++] = c;
-    ++pos;
+  // Use QDesktopServices for cross-platform support
+  QUrl url = QUrl::fromLocalFile(toQString(path));
+  if (!QDesktopServices::openUrl(url)) {
+    qWarning("Can't open document: %s", toQString(path).toUtf8().constData());
+    return false;
   }
-  newPath[count] = 0;
-
-  cmd = cmd + string(newPath);
-  system(cmd.c_str());
   return true;
 #endif
+}
+
+bool TSystem::isDLLBlackListed(QString dllFile) {
+  static const QStringList dllBlackList = {"lvcod64.dll", "ff_vfw.dll",
+                                           "tsccvid64.dll", "hapcodec.dll"};
+
+  for (const QString &blacklisted : dllBlackList) {
+    if (dllFile.contains(blacklisted, Qt::CaseInsensitive)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 #else
 
 #include <windows.h>
 
-void TSystem::sleep(TINT64 delay) { Sleep((DWORD)delay); }
+void TSystem::sleep(TINT64 delay) { Sleep(static_cast<DWORD>(delay)); }
 
-// gestire gli errori con GetLastError?
-void TSystem::deleteFile(const TFilePath &fp) { assert(false); }
+// handle errors with GetLastError?
+void TSystem::deleteFile(const TFilePath &fp) {
+  // Empty implementation for light version
+}
 
-void TSystem::rmDirTree(const TFilePath &path) { assert(false); }
-
-//------------------------------------------------------------
+void TSystem::rmDirTree(const TFilePath &path) {
+  // Empty implementation for light version
+}
 
 //------------------------------------------------------------
 
@@ -1060,7 +1190,8 @@ TSystemException::TSystemException(const TFilePath &fname,
     : m_fname(fname), m_err(-1), m_msg(::to_wstring(msg)) {}
 //--------------------------------------------------------------
 
-TSystemException::TSystemException(const TFilePath &fname, const wstring &msg)
+TSystemException::TSystemException(const TFilePath &fname,
+                                   const std::wstring &msg)
     : m_fname(fname), m_err(-1), m_msg(msg) {}
 
 //--------------------------------------------------------------
@@ -1069,5 +1200,5 @@ TSystemException::TSystemException(const std::string &msg)
     : m_fname(""), m_err(-1), m_msg(::to_wstring(msg)) {}
 //--------------------------------------------------------------
 
-TSystemException::TSystemException(const wstring &msg)
+TSystemException::TSystemException(const std::wstring &msg)
     : m_fname(""), m_err(-1), m_msg(msg) {}

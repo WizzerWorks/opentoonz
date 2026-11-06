@@ -8,11 +8,7 @@
 #include <stdlib.h>
 #else  //_WIN32
 
-#if defined(__APPLE_CC__)
 #include <unistd.h>
-#else
-#include <sys/unistd.h>
-#endif
 #include <limits.h>
 #include <sys/times.h>
 #include <sys/types.h>
@@ -28,8 +24,8 @@ extern "C" long sysconf(int);
 #endif
 #endif
 
-#define MAXSWNAMELENGHT 40
-#define MAXSWTIMELENGHT 12
+#define MAXSWNAMELENGTH 40
+#define MAXSWTIMELENGTH 12
 
 TStopWatch TStopWatch::StopWatch[10];
 

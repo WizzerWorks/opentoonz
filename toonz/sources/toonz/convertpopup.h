@@ -49,22 +49,24 @@ class FrameTaskNotifier;
 //*****************************************************************************
 
 /*!
-  \brief    Window class used in the convertion of levels between different
+  \brief    Window class used in the conversion of levels between different
             file formats.
 */
 
 class ConvertPopup : public DVGui::Dialog {
-  Q_OBJECT
+    Q_OBJECT
 
 public:
   ConvertPopup(bool specifyInput = false);
   ~ConvertPopup();
 
   void setFiles(const std::vector<TFilePath> &fps);
+  void setFormat(QString format);
   bool isConverting() const { return m_isConverting; }
 
   void convertToTlv(bool toPainted);
-
+  TFilePath getConvertedPath(TFilePath path) 
+  {return m_convertedFileMap[path];};
   QString getDestinationType() const;
   QString getTlvMode() const;
   QString TlvMode_Unpainted;
@@ -77,7 +79,7 @@ public:
 
 public slots:
 
-  void apply();  //!< Starts the convertion.
+  void apply();  //!< Starts the conversion.
   void onOptionsClicked();
   void onConvertFinished();
   void onTlvModeSelected(const QString &tlvMode);
@@ -127,6 +129,7 @@ private:
   DVGui::ProgressDialog *m_progressDialog;
 
   std::vector<TFilePath> m_srcFilePaths;
+  std::map<TFilePath, TFilePath> m_convertedFileMap;
   static QMap<std::string, TPropertyGroup *> m_formatProperties;
 
   bool m_isConverting;

@@ -1,3 +1,5 @@
+
+
 #include <memory>
 
 #include "tmachine.h"
@@ -7,6 +9,8 @@
 #include "tsound_t.h"
 #include "toonz/preferences.h"
 #include "toonz/toonzfolders.h"
+#include "thirdparty.h"
+
 #include <QDir>
 #include <QProcess>
 
@@ -18,8 +22,8 @@ TSoundTrackReaderMp3::TSoundTrackReaderMp3(const TFilePath &fp)
 //------------------------------------------------------------------------------
 
 TSoundTrackP TSoundTrackReaderMp3::load() {
-  FfmpegAudio *ffmepegAudio = new FfmpegAudio();
-  TFilePath tempFile        = ffmepegAudio->getRawAudio(m_path);
+  std::unique_ptr<FfmpegAudio> ffmepegAudio = std::make_unique<FfmpegAudio>();
+  TFilePath tempFile                        = ffmepegAudio->getRawAudio(m_path);
 
   Tifstream is(tempFile);
 
@@ -36,28 +40,6 @@ TSoundTrackP TSoundTrackReaderMp3::load() {
   return track;
 }
 
-bool FfmpegAudio::checkFfmpeg() {
-  // check the user defined path in preferences first
-  QString path = Preferences::instance()->getFfmpegPath() + "/ffmpeg";
-#if defined(_WIN32)
-  path = path + ".exe";
-#endif
-  if (TSystem::doesExistFileOrLevel(TFilePath(path))) return true;
-
-  // check the OpenToonz root directory next
-  path = QDir::currentPath() + "/ffmpeg";
-#if defined(_WIN32)
-  path = path + ".exe";
-#endif
-  if (TSystem::doesExistFileOrLevel(TFilePath(path))) {
-    Preferences::instance()->setValue(ffmpegPath, QDir::currentPath());
-    return true;
-  }
-
-  // give up
-  return false;
-}
-
 TFilePath FfmpegAudio::getFfmpegCache() {
   QString cacheRoot = ToonzFolder::getCacheRootFolder().getQString();
   if (!TSystem::doesExistFileOrLevel(TFilePath(cacheRoot + "/ffmpeg"))) {
@@ -70,14 +52,27 @@ TFilePath FfmpegAudio::getFfmpegCache() {
 
 void FfmpegAudio::runFfmpeg(QStringList args) {
   // write the file
-  QString m_ffmpegPath      = Preferences::instance()->getFfmpegPath();
-  std::string strFfmpegPath = m_ffmpegPath.toStdString();
   QProcess ffmpeg;
-  ffmpeg.start(m_ffmpegPath + "/ffmpeg", args);
+  ThirdParty::runFFmpeg(ffmpeg, args);
   ffmpeg.waitForFinished(30000);
+
+  // Check if process completed successfully
+  if (ffmpeg.exitStatus() != QProcess::NormalExit) {
+    throw TException(L"FFmpeg process did not exit normally");
+  }
+
   QString results = ffmpeg.readAllStandardError();
   results += ffmpeg.readAllStandardOutput();
+
+  // Check exit code for errors (0 means success)
   int exitCode = ffmpeg.exitCode();
+  if (exitCode != 0) {
+    std::string errorMsg = results.toStdString();
+    throw TException(L"FFmpeg failed with exit code: " +
+                     std::to_wstring(exitCode) + L"\n" +
+                     QString::fromStdString(errorMsg).toStdWString());
+  }
+
   ffmpeg.close();
   std::string strResults = results.toStdString();
 }
@@ -87,6 +82,12 @@ TFilePath FfmpegAudio::getRawAudio(TFilePath path) {
   TFilePath outPath      = getFfmpegCache() + TFilePath(name + ".raw");
   std::string strPath    = path.getQString().toStdString();
   std::string strOutPath = outPath.getQString().toStdString();
+
+  // Check if file already exists in cache
+  if (TSystem::doesExistFileOrLevel(outPath)) {
+    TSystem::deleteFile(outPath);
+  }
+
   QStringList args;
   args << "-i";
   args << path.getQString();
@@ -98,6 +99,14 @@ TFilePath FfmpegAudio::getRawAudio(TFilePath path) {
   args << "44100";
   args << "-y";
   args << outPath.getQString();
+
   runFfmpeg(args);
+
+  // Verify the output file was created
+  if (!TSystem::doesExistFileOrLevel(outPath)) {
+    throw TException(L"FFmpeg failed to create output file: " +
+                     outPath.getWideString());
+  }
+
   return outPath;
 }

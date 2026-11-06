@@ -66,7 +66,7 @@ namespace {
 bool myLess(const TFilePath &l, const TFilePath &r) {
   return l.getFrame() < r.getFrame();
 }
-}
+}  // namespace
 
 //-----------------------------------------------------------
 
@@ -116,22 +116,16 @@ TLevelP TLevelReader::loadInfo() {
     TFilePath ln(it->getLevelName());
     // cout << "try " << *it << "  " << it->getLevelName() <<  endl;
     if (levelName == TFilePath(it->getLevelName())) {
-      try {
-        level->setFrame(it->getFrame(), TImageP());
-        data.push_back(*it);
-      } catch (TMalformedFrameException tmfe) {
-        // skip frame named incorrectly warning to the user in the message
-        // center.
-        DVGui::warning(QString::fromStdWString(
-            tmfe.getMessage() + L": " +
-            QObject::tr("Skipping frame.").toStdWString()));
-        continue;
-      }
+      level->setFrame(it->getFrame(), TImageP());
+      data.push_back(*it);
     }
   }
   if (!data.empty()) {
     std::vector<TFilePath>::iterator it =
         std::min_element(data.begin(), data.end(), myLess);
+
+    m_frameFormat = (*it).getFrame().getCurrentFormat();
+    /*
     TFilePath fr = (*it).withoutParentDir().withName("").withType("");
     wstring ws   = fr.getWideString();
     if (ws.length() == 5) {
@@ -150,7 +144,7 @@ TLevelP TLevelReader::loadInfo() {
       else
         m_frameFormat = TFrameId::UNDERSCORE_NO_PAD;
     }
-
+    */
   } else
     m_frameFormat = TFrameId::FOUR_ZEROS;
 
@@ -183,8 +177,9 @@ TLevelWriter::TLevelWriter(const TFilePath &path, TPropertyGroup *prop)
     : TSmartObject(m_classCode)
     , m_path(path)
     , m_properties(prop)
-    , m_contentHistory(0) {
-  string ext              = path.getType();
+    , m_contentHistory(0)
+    , m_frameFormatTemplateFId(TFrameId::NO_FRAME) {
+  string ext = path.getType();
   if (!prop) m_properties = Tiio::makeWriterProperties(ext);
 }
 
@@ -247,6 +242,12 @@ void TLevelWriter::getSupportedFormats(QStringList &names,
 //-----------------------------------------------------------
 
 TImageWriterP TLevelWriter::getFrameWriter(TFrameId fid) {
+  // change the frame format with the template
+  if (!m_frameFormatTemplateFId.isNoFrame()) {
+    fid.setZeroPadding(m_frameFormatTemplateFId.getZeroPadding());
+    fid.setStartSeqInd(m_frameFormatTemplateFId.getStartSeqInd());
+  }
+
   TImageWriterP iw(m_path.withFrame(fid));
   iw->setProperties(m_properties);
   return iw;
@@ -282,8 +283,12 @@ void TLevelWriter::renumberFids(const std::map<TFrameId, TFrameId> &table) {
           QString::fromStdWString(m_path.getParentDir().getWideString()));
       parentDir.setFilter(QDir::Files);
 
-      QStringList nameFilters(QString::fromStdWString(m_path.getWideName()) +
-                              ".*." + QString::fromStdString(m_path.getType()));
+      QStringList nameFilters;
+      // check for both period and underscore
+      nameFilters << QString::fromStdWString(m_path.getWideName()) + ".*." +
+                         QString::fromStdString(m_path.getType())
+                  << QString::fromStdWString(m_path.getWideName()) + "_*." +
+                         QString::fromStdString(m_path.getType());
       parentDir.setNameFilters(nameFilters);
 
       TFilePathSet fpset;
@@ -344,7 +349,7 @@ void TLevelReader::define(QString extension, int reader,
                           TLevelReaderCreateProc *proc) {
   LevelReaderKey key(extension, reader);
   LevelReaderTable[key] = proc;
-  // cout << "LevelReader " << extension << " registred" << endl;
+  // cout << "LevelReader " << extension << " registered" << endl;
 }
 
 //-----------------------------------------------------------
@@ -353,5 +358,5 @@ void TLevelWriter::define(QString extension, TLevelWriterCreateProc *proc,
                           bool isRenderFormat) {
   LevelWriterTable[extension] =
       std::pair<TLevelWriterCreateProc *, bool>(proc, isRenderFormat);
-  // cout << "LevelWriter " << extension << " registred" << endl;
+  // cout << "LevelWriter " << extension << " registered" << endl;
 }

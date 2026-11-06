@@ -166,6 +166,18 @@ QStringList getMonitorNames() {
 
 //-----------------------------------------------------------------------------
 
+LutCalibrator::LutCalibrator() {
+  LutManager::instance()->registerCalibrator(this);
+}
+
+//-----------------------------------------------------------------------------
+
+LutCalibrator::~LutCalibrator() {
+  LutManager::instance()->removeCalibrator(this);
+}
+
+//-----------------------------------------------------------------------------
+
 void LutCalibrator::initialize() {
   initializeOpenGLFunctions();
   m_isInitialized = true;
@@ -185,8 +197,6 @@ void LutCalibrator::initialize() {
   assignLutTexture();
 
   m_isValid = true;
-
-  return;
 }
 
 //-----------------------------------------------------------------------------
@@ -246,7 +256,7 @@ bool LutCalibrator::initializeLutTextureShader() {
       "#version 330 core \n"
       "// Interpolated values from the vertex shaders \n"
       "in vec2 UV; \n"
-      "// Ouput data \n"
+      "// Output data \n"
       "out vec4 color; \n"
       "// Values that stay constant for the whole mesh. \n"
       "uniform sampler2D tex; \n"
@@ -369,6 +379,7 @@ void LutCalibrator::onEndDraw(QOpenGLFramebufferObject* fbo) {
 
 void LutCalibrator::assignLutTexture() {
   assert(glGetError() == GL_NO_ERROR);
+  if (m_lutTex) delete m_lutTex;
   int meshSize = LutManager::instance()->meshSize();
   m_lutTex     = new QOpenGLTexture(QOpenGLTexture::Target3D);
   m_lutTex->setSize(meshSize, meshSize, meshSize);
@@ -385,6 +396,13 @@ void LutCalibrator::assignLutTexture() {
   assert(glGetError() == GL_NO_ERROR);
 }
 
+//-----------------------------------------------------------------------------
+
+void LutCalibrator::update(bool textureChanged) {
+  m_isValid = LutManager::instance()->isValid();
+  if (textureChanged) assignLutTexture();
+}
+
 //=============================================================================
 
 LutManager* LutManager::instance() {
@@ -394,7 +412,7 @@ LutManager* LutManager::instance() {
 
 //-----------------------------------------------------------------------------
 
-LutManager::LutManager() {
+LutManager::LutManager() : m_isValid(false), m_currentLutPath() {
   // check whether preference enables color calibration
   if (!Preferences::instance()->isColorCalibrationEnabled()) return;
 
@@ -410,8 +428,8 @@ LutManager::LutManager() {
   // check existence of the 3dlut file
   // load 3dlut data
   if (!loadLutFile(lutPath)) return;
-
-  m_isValid = true;
+  m_currentLutPath = lutPath;
+  m_isValid        = true;
 }
 
 //-----------------------------------------------------------------------------
@@ -466,7 +484,7 @@ bool LutManager::loadLutFile(const QString& fp) {
 
   //---- read the 3DLUT files
 
-  // The first line shoud start from "3DMESH" keyword (case sensitive)
+  // The first line should start from "3DMESH" keyword (case sensitive)
   line = locals::readDataLine(stream);
   if (line != "3DMESH") {
     file.close();
@@ -495,12 +513,13 @@ bool LutManager::loadLutFile(const QString& fp) {
 
   // The third line is corrections of values at each LUT grid
   line = locals::readDataLine(stream);
-  list = line.split(" ", QString::SkipEmptyParts);
+  list = line.split(" ", Qt::SkipEmptyParts);
   if (list.size() != m_lut.meshSize) {
     file.close();
     return execWarning(QObject::tr("Failed to Load 3DLUT File."));
   }
 
+  if (m_lut.data) delete[] m_lut.data;
   m_lut.data = new float[m_lut.meshSize * m_lut.meshSize * m_lut.meshSize * 3];
 
   for (int k = 0; k < m_lut.meshSize; ++k)  // r
@@ -510,7 +529,7 @@ bool LutManager::loadLutFile(const QString& fp) {
       for (int i = 0; i < m_lut.meshSize; ++i)  // b
       {
         line = locals::readDataLine(stream);
-        list = line.split(" ", QString::SkipEmptyParts);
+        list = line.split(" ", Qt::SkipEmptyParts);
         if (list.size() != 3) {
           file.close();
           delete[] m_lut.data;
@@ -547,13 +566,16 @@ void LutManager::convert(float& r, float& g, float& b) {
   float ratio[3];   // RGB軸
   int index[3][2];  // rgb インデックス
   float rawVal[3] = {r, g, b};
+  // clamp values (for HDR image)
+  for (int c = 0; c < 3; c++)
+    rawVal[c] = (rawVal[c] < 0.f) ? 0.f : (rawVal[c] > 1.f) ? 1.f : rawVal[c];
 
-  float vertex_color[2][2][2][3];  //補間用の１ボクセルの頂点色
+  float vertex_color[2][2][2][3];  // 補間用の１ボクセルの頂点色
 
   for (int c = 0; c < 3; c++) {
     float val   = rawVal[c] * (float)(m_lut.meshSize - 1);
     index[c][0] = (int)val;
-    // boundary condition: if rawVal == 1 the value will not be interporated
+    // boundary condition: if rawVal == 1 the value will not be interpolated
     index[c][1] = (rawVal[c] >= 1.0f) ? index[c][0] : index[c][0] + 1;
     ratio[c]    = val - (float)index[c][0];
   }
@@ -596,9 +618,7 @@ void LutManager::convert(QColor& col) {
   float g = col.greenF();
   float b = col.blueF();
   convert(r, g, b);
-  // 0.5 offset is necessary for converting to 255 grading
-  col = QColor((int)(r * 255.0 + 0.5), (int)(g * 255.0 + 0.5),
-               (int)(b * 255.0 + 0.5), col.alpha());
+  col = QColor::fromRgbF(r, g, b, col.alphaF());
 }
 
 //-----------------------------------------------------------------------------
@@ -611,4 +631,42 @@ void LutManager::convert(TPixel32& col) {
   convert(r, g, b);
   col = TPixel32((int)(r * 255.0 + 0.5), (int)(g * 255.0 + 0.5),
                  (int)(b * 255.0 + 0.5), col.m);
+}
+
+//-----------------------------------------------------------------------------
+
+void LutManager::registerCalibrator(LutCalibrator* calibrator) {
+  assert(!m_calibrators.contains(calibrator));
+  m_calibrators.insert(calibrator);
+}
+
+//-----------------------------------------------------------------------------
+
+void LutManager::removeCalibrator(LutCalibrator* calibrator) {
+  assert(m_calibrators.contains(calibrator));
+  m_calibrators.remove(calibrator);
+}
+
+//-----------------------------------------------------------------------------
+
+void LutManager::update() {
+  m_isValid           = false;
+  bool textureChanged = false;
+  if (Preferences::instance()->isColorCalibrationEnabled()) {
+    // obtain current monitor name
+    QString monitorName = getMonitorName();
+    // obtain 3dlut path associated to the monitor name
+    QString lutPath =
+        Preferences::instance()->getColorCalibrationLutPath(monitorName);
+    if (m_currentLutPath == lutPath)
+      m_isValid = true;
+    else if (loadLutFile(lutPath)) {
+      m_isValid        = true;
+      m_currentLutPath = lutPath;
+      textureChanged   = true;
+    }
+  }
+
+  // update textures for all calibrators
+  for (auto calibrator : m_calibrators) calibrator->update(textureChanged);
 }

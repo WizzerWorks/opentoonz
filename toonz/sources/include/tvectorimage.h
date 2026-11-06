@@ -82,7 +82,7 @@ public:
   void validateRegions(bool state = false);
   //! Get valid regions flags
   /*! Call validateRegions() after region/stroke changes
-*/
+   */
   bool areValidRegions();
 
   //! Return a clone of image
@@ -225,27 +225,31 @@ get the stroke nearest at point
 
   //! Add a stroke at the end of the vector; returns position of the stroke (or
   //! -1 if not added)
-  int addStroke(TStroke *, bool discardPoints = true);
+  int addStroke(TStroke *, bool discardPoints = true, bool underAll = false);
+  int addStrokeBelow(TStroke *, const QSet<int> &aboveStyles, bool discardPoints = true);
   int addStrokeToGroup(TStroke *stroke, int strokeIndex);
   //! Replace the stroke at index \b index with \b newStroke
   void replaceStroke(int index, TStroke *newStroke);
+  void reOrderStrokes(const std::vector<int> &oldIndexes,
+               const std::vector<int> &newIndexes);
 
   //! Insert a \b VIStroke \b vs at index \b strokeIndex
   void insertStrokeAt(VIStroke *vs, int strokeIndex,
-                      bool recomputeRegions = true);  //! Move \b count strokes
-                                                      //! starting from \b
-                                                      //! fromIndex before the
-                                                      //! stroke identified by
-                                                      //! the \b moveBefore
-                                                      //! index.
+                      bool recomputeRegions = true);  
+  //! Move \b count strokes
+  //! starting from \b
+  //! fromIndex before the
+  //! stroke identified by
+  //! the \b moveBefore
+  //! index.
   void moveStrokes(int fromIndex, int count, int moveBefore);
   //! Find regions of a \b TVectorImage
-  void findRegions(bool fromSwf = false);
+  void findRegions();
 
 // Gmt. VA TOLTO IL PRIMA POSSIBILE.
 // E' una pessima cosa rendere platform dependent l'interfaccia pubblica di una
 // classe cosi' importante come la VectorImage
-#if defined(LINUX) || defined(MACOSX)
+#if defined(LINUX) || defined(FREEBSD) || defined(MACOSX)
   void render(const TVectorRenderData &rd, TRaster32P &ras);
 #endif
 
@@ -299,29 +303,29 @@ get the stroke nearest at point
 
   /*! Includes a (transformed) copy of imgs in this. If setSelected==true then
      selects imported strokes.
-          It also includes the color informations.
+          It also includes the color information.
           Try to assign the same stroke ids (if unused)
   */
   void enableRegionComputing(bool enabled, bool notIntersectingStrokes);
 
   /*! if enabled, region edges are joined together when possible. for flash
    * render, should be disabled!
-*/
+   */
   void enableMinimizeEdges(bool enabled);
   /*! Creates a new Image using the selected strokes. If removeFlag==true then
      removes selected strokes
-      It includes (in the new image) the color informations too.
-          It mantains stroke ids.
+      It includes (in the new image) the color information too.
+          It maintains stroke ids.
   */
   TVectorImageP splitSelected(bool removeFlag);
 
   //! Merge the image with the \b img.
-  void mergeImage(const TVectorImageP &img, const TAffine &affine,
-                  bool sameStrokeId = true);
+  int mergeImage(const TVectorImageP &img, const TAffine &affine,
+                 bool sameStrokeId = true);
 
-  void mergeImage(const TVectorImageP &img, const TAffine &affine,
-                  const std::map<int, int> &styleTable,
-                  bool sameStrokeId = true);
+  int mergeImage(const TVectorImageP &img, const TAffine &affine,
+                 const std::map<int, int> &styleTable,
+                 bool sameStrokeId = true);
   //! Merge the image with the vector of image \b images.
   void mergeImage(const std::vector<const TVectorImage *> &images);
 
@@ -361,12 +365,13 @@ get the stroke nearest at point
 regions. only ending parts are removed.
 If the entire stroke is not bounding any region, it is kept entitely.
 it returns the original stroke (for undo)*/
-  TStroke *removeEndpoints(int strokeIndex);
+
+  TStroke *removeEndpoints(int strokeIndex, double *offset=NULL);
 
   /*! this method replaces  the stroke at index with oldstroke. Oldstroke is
-supposed to contain
+  supposed to contain
 existing stroke. this method is used for undoing removeEndpoints . */
-  void restoreEndpoints(int index, TStroke *oldStroke);
+  void restoreEndpoints(int index, TStroke *oldStroke, double offset);
 
   //! Set the autoclose tolerance to the specified value.
   void setAutocloseTolerance(double val);
@@ -428,7 +433,7 @@ public:
 //-----------------------------------------------------------------------------
 
 // GMT: DA TOGLIERE. vedi sopra
-#ifdef LINUX
+#if defined(LINUX) || defined(FREEBSD)
 DVAPI void hardRenderVectorImage(const TVectorRenderData &rd, TRaster32P &r,
                                  const TVectorImageP &vimg);
 #endif

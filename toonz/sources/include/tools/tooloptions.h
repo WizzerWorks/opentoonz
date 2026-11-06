@@ -109,7 +109,7 @@ protected:
   QHBoxLayout *m_layout;
 
 public:
-  ToolOptionsBox(QWidget *parent, bool isScrollable = false);
+  ToolOptionsBox(QWidget *parent, bool isScrollable = true);
   ~ToolOptionsBox();
 
   virtual void
@@ -154,15 +154,15 @@ private:
   QHBoxLayout *hLayout() { return m_panel->hLayout(); }
   QLabel *addLabel(TProperty *p);
 
-  void visit(TDoubleProperty *p);
-  void visit(TDoublePairProperty *p);
-  void visit(TIntPairProperty *p);
-  void visit(TIntProperty *p);
-  void visit(TBoolProperty *p);
-  void visit(TStringProperty *p);
-  void visit(TEnumProperty *p);
-  void visit(TStyleIndexProperty *p);
-  void visit(TPointerProperty *p);
+  void visit(TDoubleProperty *p) override;
+  void visit(TDoublePairProperty *p) override;
+  void visit(TIntPairProperty *p) override;
+  void visit(TIntProperty *p) override;
+  void visit(TBoolProperty *p) override;
+  void visit(TStringProperty *p) override;
+  void visit(TEnumProperty *p) override;
+  void visit(TStyleIndexProperty *p) override;
+  void visit(TPointerProperty *p) override;
 };
 
 //***********************************************************************************************
@@ -172,7 +172,8 @@ private:
 class GenericToolOptionsBox : public ToolOptionsBox {
 public:
   GenericToolOptionsBox(QWidget *parent, TTool *tool, TPaletteHandle *pltHandle,
-                        int propertyGroupIdx = 0, ToolHandle *toolHandle = 0);
+                        int propertyGroupIdx = 0, ToolHandle *toolHandle = 0,
+                        bool scrollable = true);
 };
 
 //=============================================================================
@@ -194,6 +195,7 @@ class ArrowToolOptionsBox final : public ToolOptionsBox {
   TXsheetHandle *m_xshHandle;
 
   QWidget **m_axisOptionWidgets;
+  QWidget **m_axisIcons;
   QWidget *m_pickWidget;
 
   // General
@@ -253,6 +255,10 @@ class ArrowToolOptionsBox final : public ToolOptionsBox {
 
   ToolOptionCheckbox *m_globalKey;
 
+  // Flip buttons
+  QPushButton *m_hFlipButton, *m_vFlipButton, *m_leftRotateButton,
+      *m_rightRotateButton;
+
   // enables adjusting value by dragging on the label
   void connectLabelAndField(ClickableLabel *label, MeasuredValueField *field);
 
@@ -275,12 +281,17 @@ protected slots:
   void onFrameSwitched() { updateStatus(); }
   // update the object list in combobox
   void updateStageObjectComboItems();
-  // syncronize the current item in the combobox to the selected stage object
+  // synchronize the current item in the combobox to the selected stage object
   void syncCurrentStageObjectComboItem();
   // change the current stage object when user changes it via combobox by hand
   void onCurrentStageObjectComboActivated(int index);
 
   void onCurrentAxisChanged(int);
+
+  void onFlipHorizontal();
+  void onFlipVertical();
+  void onRotateLeft();
+  void onRotateRight();
 };
 
 //=============================================================================
@@ -292,7 +303,7 @@ protected slots:
 class DraggableIconView : public QWidget {
   Q_OBJECT
 public:
-  DraggableIconView(QWidget *parent = 0) : QWidget(parent){};
+  DraggableIconView(QWidget *parent = 0) : QWidget(parent) {};
 
 protected:
   // these are used for dragging on the icon to
@@ -330,8 +341,6 @@ protected:
       QPixmap RotationPixmap READ getRotationPixmap WRITE setRotationPixmap);
   Q_PROPERTY(
       QPixmap PositionPixmap READ getPositionPixmap WRITE setPositionPixmap);
-  Q_PROPERTY(
-      QPixmap ThicknessPixmap READ getThicknessPixmap WRITE setThicknessPixmap);
 
 public:
   IconViewField(QWidget *parent = 0, IconType iconType = Icon_ScalePeg);
@@ -347,10 +356,6 @@ public:
   QPixmap getPositionPixmap() const { return m_pm[Icon_Position]; }
   void setPositionPixmap(const QPixmap &pixmap) {
     m_pm[Icon_Position] = pixmap;
-  }
-  QPixmap getThicknessPixmap() const { return m_pm[Icon_Thickness]; }
-  void setThicknessPixmap(const QPixmap &pixmap) {
-    m_pm[Icon_Thickness] = pixmap;
   }
 
 protected:
@@ -383,6 +388,9 @@ class SelectionToolOptionsBox final : public ToolOptionsBox,
   ToolOptionPopupButton *m_joinStyle;
   ToolOptionIntSlider *m_miterField;
 
+  QPushButton *m_hFlipButton, *m_vFlipButton, *m_leftRotateButton,
+      *m_rightRotateButton;
+
 public:
   SelectionToolOptionsBox(QWidget *parent, TTool *tool,
                           TPaletteHandle *pltHandle, ToolHandle *toolHandle);
@@ -396,6 +404,10 @@ protected slots:
   void onScaleXValueChanged(bool addToUndo = true);
   void onScaleYValueChanged(bool addToUndo = true);
   void onSetSaveboxCheckboxChanged(bool);
+  void onFlipHorizontal();
+  void onFlipVertical();
+  void onRotateLeft();
+  void onRotateRight();
 };
 
 //=============================================================================
@@ -415,9 +427,11 @@ class GeometricToolOptionsBox final : public ToolOptionsBox {
   ToolOptionCombo *m_shapeField;
   ToolOptionCheckbox *m_pencilMode;
   ToolOptionIntSlider *m_miterField;
-  ToolOptionCheckbox *m_snapCheckbox;
+  ToolOptionCheckbox *m_snapCheckbox, *m_smoothCheckbox;
   ToolOptionCombo *m_snapSensitivityCombo;
   TTool *m_tool;
+
+  void filterControls();
 
 public:
   GeometricToolOptionsBox(QWidget *parent, TTool *tool,
@@ -463,6 +477,10 @@ class PaintbrushToolOptionsBox final : public ToolOptionsBox {
 
   ToolOptionCombo *m_colorMode;
   ToolOptionCheckbox *m_selectiveMode;
+  ToolOptionCheckbox* m_emptyOnlyMode;
+
+  ToolOptionCheckbox *m_lockAlphaMode;
+  ToolOptionCheckbox *m_FillingMode;
 
 public:
   PaintbrushToolOptionsBox(QWidget *parent, TTool *tool,
@@ -501,9 +519,11 @@ class FillToolOptionsBox final : public ToolOptionsBox {
   int m_targetType;
   QLabel *m_fillDepthLabel;
   ToolOptionCombo *m_colorMode, *m_toolType;
-  ToolOptionCheckbox *m_selectiveMode, *m_segmentMode, *m_onionMode,
-      *m_multiFrameMode, *m_autopaintMode;
+  ToolOptionCheckbox *m_emptyOnly, *m_segmentMode, *m_onionMode,
+      *m_multiFrameMode, *m_autopaintMode,*m_referFill, * m_closeGap,
+      *m_extendFill;
   ToolOptionPairSlider *m_fillDepthField;
+  ToolOptionIntSlider* m_gapCloseDistance;
 
 public:
   FillToolOptionsBox(QWidget *parent, TTool *tool, TPaletteHandle *pltHandle,
@@ -581,6 +601,27 @@ public:
 protected slots:
   void onPencilModeToggled(bool);
   void onToolTypeChanged(int);
+  void onColorModeChanged(int);
+};
+
+//=============================================================================
+//
+// FingerToolOptionsBox
+//
+//=============================================================================
+
+class FingerToolOptionsBox final : public ToolOptionsBox {
+  Q_OBJECT
+
+  ToolOptionCombo *m_colorMode;
+  ToolOptionCheckbox *m_invertMode;
+  ToolOptionCheckbox *m_selectiveMode;
+
+public:
+  FingerToolOptionsBox(QWidget *parent, TTool *tool, TPaletteHandle *pltHandle,
+                       ToolHandle *toolHandle);
+
+protected slots:
   void onColorModeChanged(int);
 };
 
@@ -701,7 +742,7 @@ class ShiftTraceToolOptionBox final : public ToolOptionsBox {
   void resetGhost(int index);
 
 protected:
-  void showEvent(QShowEvent *);
+  void showEvent(QShowEvent *) override;
   void hideEvent(QShowEvent *);
 
 public:
@@ -762,7 +803,6 @@ public:
 class DVAPI ToolOptions final : public QFrame {
   Q_OBJECT
 
-  int m_width, m_height;
   std::map<TTool *, ToolOptionsBox *> m_panels;
   QWidget *m_panel;
 
@@ -779,6 +819,7 @@ protected:
 public slots:
 
   void onToolSwitched();
+  void onToolOptionsBoxChanged();
   void onToolChanged();
   void onStageObjectChange();
 

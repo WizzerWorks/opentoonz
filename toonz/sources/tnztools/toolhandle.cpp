@@ -5,8 +5,10 @@
 #include "tools/tool.h"
 #include "tools/toolcommandids.h"
 #include "timage.h"
-//#include "tapp.h"
+// #include "tapp.h"
 #include "toonzqt/menubarcommand.h"
+#include "toonz/preferences.h"
+#include <QGuiApplication>
 #include <QAction>
 #include <QMap>
 #include <QDebug>
@@ -41,7 +43,7 @@ void ToolHandle::setTool(QString name) {
 
   if (m_tool) m_tool->onDeactivate();
 
-  // Camera test uses the automaticly activated CameraTestTool
+  // Camera test uses the automatically activated CameraTestTool
   if (name != "T_CameraTest" && CameraTestCheck::instance()->isEnabled())
     CameraTestCheck::instance()->setIsEnabled(false);
 
@@ -63,18 +65,32 @@ void ToolHandle::setTool(QString name) {
 //-----------------------------------------------------------------------------
 
 void ToolHandle::storeTool() {
-  m_storedToolName = m_toolName;
-  m_storedToolTime.start();
+  // navigation tools will not be stored
+  if (!isViewerNavigationToolSelected()) {
+    m_storedToolName = m_toolName;
+    m_storedToolTime.start();
+  }
 }
 
 //-----------------------------------------------------------------------------
 
 void ToolHandle::restoreTool() {
   // qDebug() << m_storedToolTime.elapsed();
+  // navigation tools will always return to the stored one even if the key press
+  // time is short
   if (m_storedToolName != m_toolName && m_storedToolName != "" &&
-      m_storedToolTime.elapsed() > 500) {
+      (m_storedToolTime.elapsed() >
+           Preferences::instance()->getTempToolSwitchTimer() ||
+       isViewerNavigationToolSelected())) {
     setTool(m_storedToolName);
   }
+}
+
+//-----------------------------------------------------------------------------
+
+bool ToolHandle::isViewerNavigationToolSelected() {
+  return m_toolName == T_RotateView || m_toolName == T_ZoomView ||
+         m_toolName == T_HandView;
 }
 
 //-----------------------------------------------------------------------------
@@ -115,7 +131,7 @@ void ToolHandle::changeTool(QAction* action)
 //-----------------------------------------------------------------------------
 
 void ToolHandle::onImageChanged(TImage::Type imageType) {
-  TTool::ToolTargetType targetType = TTool::NoTarget;
+  TTool::ToolTargetType targetType = TTool::EmptyTarget;
 
   switch (imageType) {
   case TImage::RASTER:
@@ -124,12 +140,17 @@ void ToolHandle::onImageChanged(TImage::Type imageType) {
   case TImage::TOONZ_RASTER:
     targetType = TTool::ToonzImage;
     break;
-  case TImage::VECTOR:
-  default:
-    targetType = TTool::VectorImage;
-    break;
   case TImage::MESH:
     targetType = TTool::MeshImage;
+    break;
+  case TImage::META:
+    targetType = TTool::MetaImage;
+    break;
+  case TImage::VECTOR:
+    targetType = TTool::VectorImage;
+    break;
+  default:
+    targetType = TTool::EmptyTarget;
     break;
   }
 

@@ -90,10 +90,10 @@ std::string fidsToString(const std::vector<TFrameId> &fids) {
 // convert loaded string to refLevelFids
 std::vector<TFrameId> strToFids(std::string fidsStr) {
   std::vector<TFrameId> ret;
-  QString str        = QString::fromStdString(fidsStr);
-  QStringList chunks = str.split(',', QString::SkipEmptyParts);
+  QString str = QString::fromStdString(fidsStr);
+  QStringList chunks = str.split(',', Qt::SkipEmptyParts);
   for (const auto &chunk : chunks) {
-    QStringList nums = chunk.split('-', QString::SkipEmptyParts);
+    QStringList nums = chunk.split('-', Qt::SkipEmptyParts);
     assert(nums.count() > 0 && nums.count() <= 2);
     if (nums.count() == 1)
       ret.push_back(TFrameId(nums[0].toInt()));
@@ -607,7 +607,7 @@ public:
   }
 
   /*!
-\details  Explicitly ovverrides the stream's version, returning m_version.
+\details  Explicitly overrides the stream's version, returning m_version.
         This is necessary since palettes have their \a own version number,
         which is \a not the TIStream's file one.
 */
@@ -727,7 +727,7 @@ void TPalette::saveData(TOStream &os) {
     os.closeChild();
   }
 
-  // salvo gli shortcuts solo se sono non standard
+  // save the shortcuts only if they are non-standard
   int i;
   for (i = 0; i < 10; ++i)
     if (getShortcutValue('0' + i) != i) break;
@@ -784,7 +784,7 @@ void TPalette::loadData(TIStream &is) {
     } else if (tagName == "stylepages") {
       while (!is.eos()) {
         if (!is.openChild(tagName) || tagName != "page")
-          throw TException("palette, expected tag <stylepage>");
+          throw TException("palette, expected tag <page>");
         {
           std::wstring pageName;
 
@@ -864,14 +864,6 @@ void TPalette::loadData(TIStream &is) {
         }
         is.closeChild();
       }
-    } else if (tagName == "stylepages") {
-      int key = '0';
-      while (!is.eos()) {
-        int styleId = 0;
-        is >> styleId;
-
-        if (key <= '9') setShortcutValue(key, styleId);
-      }
     } else if (tagName == "shortcuts") {
       for (int i = 0; i < 10; ++i) {
         int v;
@@ -896,7 +888,7 @@ void TPalette::loadData(TIStream &is) {
  * original names.
  */
 void TPalette::assign(const TPalette *src, bool isFromStudioPalette) {
-  if (src == this) return;
+  if (!src || src == this) return;
   int i;
   m_isCleanupPalette = src->isCleanupPalette();
   // for(i=0;i<getStyleCount();i++) delete getStyle(i);
@@ -907,9 +899,9 @@ void TPalette::assign(const TPalette *src, bool isFromStudioPalette) {
     TColorStyle *srcStyle = src->getStyle(i);
     TColorStyle *dstStyle = srcStyle->clone();
     dstStyle->setName(
-        srcStyle->getName());  // per un baco del TColorStyle::clone()
+        srcStyle->getName());  // due to a bug in TColorStyle::clone()
     dstStyle->setGlobalName(
-        srcStyle->getGlobalName());  // per un baco del TColorStyle::clone()
+        srcStyle->getGlobalName());  // due to a bug in TColorStyle::clone()
 
     // if the style is copied from studio palette, put its name to the original
     // name.
@@ -1070,7 +1062,7 @@ void TPalette::setFrame(int frame) {
     TColorStyle *cs = getStyle(styleId);
     assert(cs);
 
-    // Buid the keyframes interval containing frame
+    // Build the keyframes interval containing frame
     StyleAnimation::iterator j0, j1;
 
     j1 = animation.lower_bound(

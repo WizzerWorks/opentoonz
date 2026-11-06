@@ -132,7 +132,11 @@ public:
   void setColorParamValue(int index, const TPixel32 &color) override;
 
   TColorStyle *clone() const override;
+  TColorStyle *clone(std::string brushIdName) const override;
+
   QString getDescription() const override;
+  std::string getBrushIdName() const override;
+  static std::string staticBrushIdName(std::wstring texturePath);
 
   bool hasMainColor() const override { return true; }
   TPixel32 getMainColor() const override { return m_averageColor; }
@@ -145,10 +149,8 @@ public:
                   TRegionOutline &outline) const override;
   // void drawRegion( const TVectorRenderData &rd, TRegionOutline &boundary )
   // const;
-  void drawRegion(TFlash &flash, const TRegion *r) const override;
   void drawStroke(const TColorFunction *cf, TStrokeOutline *outline,
                   const TStroke *stroke) const override;
-  // void drawStroke(TFlash& flash, const TStroke* s) const;
 
   TRasterStyleFx *getRasterStyleFx() override { return this; }
 
@@ -165,7 +167,6 @@ public:
   int getTagId() const override;
 
   // static TRaster32P loadTexture(const TFilePath &path);
-  void setFill(TFlash &flash) const override;
 
   bool isPaintStyle() const override { return true; }
   bool isInkStyle() const override { return true; }

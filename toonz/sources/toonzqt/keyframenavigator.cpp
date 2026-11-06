@@ -38,46 +38,50 @@ using namespace std;
 KeyframeNavigator::KeyframeNavigator(QWidget *parent, TFrameHandle *frameHandle)
     : QToolBar(parent), m_frameHandle(frameHandle), m_panel(0) {
   setLayoutDirection(Qt::LeftToRight);
-
-  setIconSize(QSize(18, 18));
-
+  setIconSize(QSize(20, 20));
   setObjectName("keyFrameNavigator");
 
-  QPixmap emptyPrevPixmap(
-      23, 23);  // set transparent icon to show button's background
-  emptyPrevPixmap.fill(Qt::transparent);
-  QIcon emptyPrevIcon(emptyPrevPixmap);
-
-  m_actPreviewKey = new QAction(emptyPrevIcon, tr("Previous Key"), this);
+  // Previous key button
+  QIcon prevKeyIcon = createQIcon("prevkey");
+  m_actPreviewKey   = new QAction(prevKeyIcon, tr("Previous Key"), this);
   connect(m_actPreviewKey, SIGNAL(triggered()), SLOT(togglePrevKeyAct()));
   addAction(m_actPreviewKey);
-  QWidget *prevWidget = widgetForAction(
-      m_actPreviewKey);  // obtain a widget generated from QAction
+  QWidget *prevWidget = widgetForAction(m_actPreviewKey);
   prevWidget->setObjectName("PreviousKey");
 
-  m_actKeyNo = new QAction(createQIcon("key_no"), tr("Set Key"), this);
+  // Key buttons with proper icon states
+  // Note: We're using one createQIcon call and making the actions checkable
+  QIcon keyIcon = createQIcon("keyframe");
+  m_actKeyNo    = new QAction(keyIcon, tr("Set Key"), this);
+  m_actKeyNo->setCheckable(true);
   connect(m_actKeyNo, SIGNAL(triggered()), SLOT(toggleKeyAct()));
   addAction(m_actKeyNo);
+  QWidget *keyNoWidget = widgetForAction(m_actKeyNo);
+  keyNoWidget->setObjectName("KeyNo");
 
-  m_actKeyPartial =
-      new QAction(createQIcon("key_partial"), tr("Set Key"), this);
+  QIcon keyPartialIcon = createQIcon("keyframe_partial");
+  m_actKeyPartial      = new QAction(keyPartialIcon, tr("Set Key"), this);
+  m_actKeyPartial->setCheckable(true);
   connect(m_actKeyPartial, SIGNAL(triggered()), SLOT(toggleKeyAct()));
   addAction(m_actKeyPartial);
+  QWidget *keyPartialWidget = widgetForAction(m_actKeyPartial);
+  keyPartialWidget->setObjectName("KeyPartial");
 
-  m_actKeyTotal = new QAction(createQIcon("key_total"), tr("Set Key"), this);
+  QIcon keyTotalIcon = createQIcon(
+      "keyframe");  // Same as keyNo but will be set to checked state
+  m_actKeyTotal = new QAction(keyTotalIcon, tr("Set Key"), this);
+  m_actKeyTotal->setCheckable(true);
   connect(m_actKeyTotal, SIGNAL(triggered()), SLOT(toggleKeyAct()));
   addAction(m_actKeyTotal);
+  QWidget *keyTotalWidget = widgetForAction(m_actKeyTotal);
+  keyTotalWidget->setObjectName("KeyTotal");
 
-  QPixmap emptyNextPixmap(
-      23, 23);  // set transparent icon to show button's background
-  emptyNextPixmap.fill(Qt::transparent);
-  QIcon emptyNextIcon(emptyNextPixmap);
-
-  m_actNextKey = new QAction(emptyNextIcon, tr("Next Key"), this);
+  // Next key button
+  QIcon nextKeyIcon = createQIcon("nextkey");
+  m_actNextKey      = new QAction(nextKeyIcon, tr("Next Key"), this);
   connect(m_actNextKey, SIGNAL(triggered()), SLOT(toggleNextKeyAct()));
   addAction(m_actNextKey);
-  QWidget *nextWidget =
-      widgetForAction(m_actNextKey);  // obtain a widget generated from QAction
+  QWidget *nextWidget = widgetForAction(m_actNextKey);
   nextWidget->setObjectName("NextKey");
 }
 
@@ -85,38 +89,33 @@ KeyframeNavigator::KeyframeNavigator(QWidget *parent, TFrameHandle *frameHandle)
 
 void KeyframeNavigator::update() {
   // Prev button
-  if (hasPrev())
-    m_actPreviewKey->setDisabled(false);
-  else
-    m_actPreviewKey->setDisabled(true);
+  m_actPreviewKey->setDisabled(!hasPrev());
 
   bool isFullKey = isFullKeyframe();
   bool isKey     = isKeyframe();
 
+  // Hide all key buttons first
+  m_actKeyNo->setVisible(false);
+  m_actKeyPartial->setVisible(false);
+  m_actKeyTotal->setVisible(false);
+
+  // Show the appropriate button based on the current state
   if (isKey && !isFullKey) {
-    m_actKeyNo->setVisible(false);
-    m_actKeyTotal->setVisible(false);
     m_actKeyPartial->setVisible(true);
-    m_actKeyPartial->setDisabled(false);
-  }
-  if (isFullKey) {
-    m_actKeyNo->setVisible(false);
-    m_actKeyPartial->setVisible(false);
+    // Set the action to checked to use the "On" icon state
+    m_actKeyPartial->setChecked(true);
+  } else if (isFullKey) {
     m_actKeyTotal->setVisible(true);
-    m_actKeyTotal->setDisabled(false);
-  }
-  if (!isKey && !isFullKey) {
-    m_actKeyPartial->setVisible(false);
-    m_actKeyTotal->setVisible(false);
+    // Set the action to checked to use the "On" icon state
+    m_actKeyTotal->setChecked(true);
+  } else {  // !isKey && !isFullKey
     m_actKeyNo->setVisible(true);
-    m_actKeyNo->setDisabled(false);
+    // Make sure it's unchecked to use the "Off" icon state
+    m_actKeyNo->setChecked(false);
   }
 
   // Next button
-  if (hasNext())
-    m_actNextKey->setDisabled(false);
-  else
-    m_actNextKey->setDisabled(true);
+  m_actNextKey->setDisabled(!hasNext());
 }
 
 //-----------------------------------------------------------------------------
@@ -595,7 +594,7 @@ void FxKeyframeNavigator::toggle() {
   if (!isKeyframe) isFullKeyframe = false;
 
   // modifico lo stato: nokeyframe->full, full->no, partial->full
-  bool on = !isKeyframe || isKeyframe && !isFullKeyframe;
+  bool on = (!isKeyframe || (isKeyframe && !isFullKeyframe));
   for (i = 0; i < fx->getParams()->getParamCount();
        i++) {  // TODO. spostare questo codice in TParam
     TParamP param = fx->getParams()->getParam(i);

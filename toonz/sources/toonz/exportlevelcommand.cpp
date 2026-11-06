@@ -43,7 +43,6 @@
 
 // Qt includes
 #include <QApplication>
-
 #include "exportlevelcommand.h"
 
 using namespace DVGui;
@@ -333,10 +332,11 @@ TToonzImageP ImageExporter::exportedToonzImage(TVectorImageP vi) {
   const TDimensionD &size = camera.getSize();
   const TDimension &res   = camera.getRes();
 
-  const TPointD pos(-0.5 * size.lx, -0.5 * size.ly);
+  //const TPointD pos(-0.5 * size.lx, -0.5 * size.ly);
 
-  // Render to toonz image
-  TToonzImageP ti = ToonzImageUtils::vectorToToonzImage(vi, aff, plt, pos, res);
+  // Render to toonz image keep the same with the converter in drawingdata.cpp
+  TToonzImageP ti = ToonzImageUtils::vectorToToonzImage(vi, aff, plt, 
+      TPointD(), res, 0 ,true);
   ti->setPalette(plt);
 
   if (m_opts.m_noAntialias) {
@@ -442,8 +442,15 @@ bool IoCmd::exportLevel(const TFilePath &path, TXshSimpleLevel *sl,
               QString::fromStdString(m_sl->index2fid(i).expand()) + "." +
               QString::fromStdString(m_path.getType());
           fpout = TFilePath(pathOut.toStdString());
-        } else
-          fpout = TFilePath(m_path.withFrame(m_sl->index2fid(i)));
+        } else {
+          // change frame format for saving
+          TFrameId formattedFId(m_sl->index2fid(i));
+          formattedFId.setZeroPadding(
+              m_opts.m_formatTemplateFId.getZeroPadding());
+          formattedFId.setStartSeqInd(
+              m_opts.m_formatTemplateFId.getStartSeqInd());
+          fpout = TFilePath(m_path.withFrame(formattedFId));
+        }
 
         // Ask for overwrite permission in case a level with the built path
         // already exists
@@ -543,7 +550,7 @@ bool IoCmd::exportLevel(const TFilePath &path, TXshSimpleLevel *sl,
 
   // Initialize variables
   Locals locals = {path, sl, opts, overwriteCB, progressCB};
-
+  
   progressCB->setProcessedName(QString::fromStdWString(path.getWideString()));
   progressCB->setRange(0, sl->getFrameCount());
 

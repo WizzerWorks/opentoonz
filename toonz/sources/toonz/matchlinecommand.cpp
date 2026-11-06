@@ -101,7 +101,7 @@ MergeCmappedDialog::MergeCmappedDialog(TFilePath &levelPath)
 //    MergeColumns  command
 //*****************************************************************************
 
-bool isVectorColumn(const std::set<int> &columns) {
+static bool isVectorColumn(const std::set<int> &columns) {
   TXsheet *xsh = TApp::instance()->getCurrentXsheet()->getXsheet();
   std::set<int>::const_iterator column = columns.begin();
   int start, end;
@@ -335,10 +335,7 @@ void doCloneLevelNoSave(const TCellSelection::Range &range,
       fid = cell.getFrameId();
 
       if (cell.getSimpleLevel() == 0 ||
-          cell.getSimpleLevel()->getPath().getType() == "psd" ||
-          cell.getSimpleLevel()->getPath().getType() == "gif" ||
-          cell.getSimpleLevel()->getPath().getType() == "mp4" ||
-          cell.getSimpleLevel()->getPath().getType() == "webm")
+          cell.getSimpleLevel()->getPath().isUneditable())
         continue;
 
       std::map<TXshSimpleLevel *, TXshLevelP>::iterator it =

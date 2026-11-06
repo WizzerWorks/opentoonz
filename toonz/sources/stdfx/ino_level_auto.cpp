@@ -3,8 +3,9 @@
 #include "stdfx.h"
 
 #include "ino_common.h"
+#include "globalcontrollablefx.h"
 //------------------------------------------------------------
-class ino_level_auto final : public TStandardRasterFx {
+class ino_level_auto final : public GlobalControllableFx {
   FX_PLUGIN_DECLARATION(ino_level_auto)
   TRasterFxPort m_input;
   TDoubleParamP m_in_min_shift;
@@ -38,6 +39,7 @@ public:
                                    1.0 * ino::param_range());
     this->m_gamma->setValueRange(0.1 * ino::param_range(),
                                  10.0 * ino::param_range()); /* gamma値 */
+    enableComputeInFloat(true);
   }
   bool doGetBBox(double frame, TRectD &bBox,
                  const TRenderSettings &info) override {
@@ -64,8 +66,9 @@ void fx_(TRasterP in_ras, bool *act_sw, double *in_min_shift,
          const int camera_h) {
   TRasterGR8P in_gr8(in_ras->getLy(),
                      in_ras->getLx() * ino::channels() *
-                         ((TRaster64P)in_ras ? sizeof(unsigned short)
-                                             : sizeof(unsigned char)));
+                         ((TRaster64P)in_ras   ? sizeof(unsigned short)
+                          : (TRaster32P)in_ras ? sizeof(unsigned char)
+                                               : sizeof(float)));
   in_gr8->lock();
   ino::ras_to_arr(in_ras, ino::channels(), in_gr8->getRawData());
 
@@ -86,7 +89,7 @@ void fx_(TRasterP in_ras, bool *act_sw, double *in_min_shift,
   ino::arr_to_ras(in_gr8->getRawData(), ino::channels(), in_ras, 0);
   in_gr8->unlock();
 }
-}
+}  // namespace
 //------------------------------------------------------------
 void ino_level_auto::doCompute(TTile &tile, double frame,
                                const TRenderSettings &rend_sets) {
@@ -97,7 +100,8 @@ void ino_level_auto::doCompute(TTile &tile, double frame,
   }
 
   /* ------ サポートしていないPixelタイプはエラーを投げる --- */
-  if (!((TRaster32P)tile.getRaster()) && !((TRaster64P)tile.getRaster())) {
+  if (!((TRaster32P)tile.getRaster()) && !((TRaster64P)tile.getRaster()) &&
+      !((TRasterFP)tile.getRaster())) {
     throw TRopException("unsupported input pixel type");
   }
 
@@ -133,7 +137,7 @@ void ino_level_auto::doCompute(TTile &tile, double frame,
   if ((0 <= margin_h && 0 < margin_w)    /* 横方向のみ余白あり */
       || (0 < margin_h && 0 <= margin_w) /* 縦方向のみ余白あり */
       || (0 < margin_h && 0 < margin_w)  /* 縦横両方に余白あり */
-      ) {
+  ) {
     /*camera_x = static_cast<int>(ceil((double)margin_w / 2.));
     camera_y = static_cast<int>(ceil((double)margin_h / 2.));*/
     camera_x = margin_w / 2;

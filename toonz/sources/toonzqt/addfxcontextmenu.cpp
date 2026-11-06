@@ -123,7 +123,6 @@ TFx *createMacroFxByPath(TFilePath path, TXsheet *xsheet) {
 TFx *createFx(QAction *action, TXsheetHandle *xshHandle) {
   TXsheet *xsh = xshHandle->getXsheet();
   QString text = action->data().toString();
-
   if (text.isEmpty()) return 0;
 
   TFx *fx = 0;
@@ -416,7 +415,7 @@ bool AddFxContextMenu::loadPreset(const std::string &name, QMenu *insertFxGroup,
 
       // This is a workaround to set the bold style to the first element of this
       // menu
-      // Setting a font directly to a QAction is not enought; style sheet
+      // Setting a font directly to a QAction is not enough; style sheet
       // definitions
       // preval over QAction font settings.
       inserMenu->setObjectName("fxMenu");
@@ -557,23 +556,25 @@ void AddFxContextMenu::onAddFx(QAction *action) {
       m_currentCursorScenePos.setY(0);
     }
 
-    TFxCommand::addFx(fx, fxs, m_app,
-                      m_app->getCurrentColumn()->getColumnIndex(),
+    int colId = m_app->getCurrentColumn()->getColumnIndex();
+    // prevent crash when the camera column is selected
+    if (colId < 0) colId = 0;
+
+    // the signal xsheetChanged is to be emitted in this function
+    TFxCommand::addFx(fx, fxs, m_app, colId,
                       m_app->getCurrentFrame()->getFrameIndex());
 
     // move the zerary fx node to the clicked position
     if (fx->isZerary() &&
         fx->getAttributes()->getDagNodePos() != TConst::nowhere) {
-      TXsheet *xsh = m_app->getCurrentXsheet()->getXsheet();
-      TXshZeraryFxColumn *column =
-          xsh->getColumn(m_app->getCurrentColumn()->getColumnIndex())
-              ->getZeraryFxColumn();
+      TXsheet *xsh               = m_app->getCurrentXsheet()->getXsheet();
+      TXshZeraryFxColumn *column = xsh->getColumn(colId)->getZeraryFxColumn();
       if (column)
         column->getZeraryColumnFx()->getAttributes()->setDagNodePos(
             fx->getAttributes()->getDagNodePos());
+      m_app->getCurrentXsheet()->notifyXsheetChanged();
     }
 
-    m_app->getCurrentXsheet()->notifyXsheetChanged();
     // memorize the latest operation
     m_app->getCurrentFx()->setPreviousActionString(QString("A ") +
                                                    action->data().toString());
@@ -607,7 +608,7 @@ void AddFxContextMenu::onFxPresetHandled() {
 
 //---------------------------------------------------
 /*! repeat the last fx creation command done in the schematic.
-    arrgument "command" is sum of the ids of available commands(Insert, Add,
+    argument "command" is sum of the ids of available commands(Insert, Add,
    Replace)
 */
 QAction *AddFxContextMenu::getAgainCommand(int command) {
@@ -638,34 +639,31 @@ QAction *AddFxContextMenu::getAgainCommand(int command) {
       commandStr +
       QString::fromStdWString(TStringTable::translate(fxStr.toStdString()));
   // return the action if the command is the exactly same
-  if (m_againCommand && translatedCommandName == m_againCommand->text())
+  if (m_againCommand && commandName == m_againCommand->data().toString())
     return m_againCommand;
 
   // create an action
   if (!m_againCommand) {
-    m_againCommand = new QAction(translatedCommandName, 0);
-    m_againCommand->setData(QVariant(fxStr));
+    m_againCommand = new QAction();
     connect(m_againCommand, SIGNAL(triggered()), this, SLOT(onAgainCommand()));
   }
-  // compare the m_againCommand's name and commandName
-  else if (translatedCommandName != m_againCommand->text()) {
-    // change the action name
-    m_againCommand->setText(translatedCommandName);
-    m_againCommand->setData(QVariant(fxStr));
-  }
+  // set the action name
+  m_againCommand->setText(translatedCommandName);
+  m_againCommand->setData(commandName);
   return m_againCommand;
 }
 
 //---------------------------------------------------
 /*! change the command behavior according to the command name
-*/
+ */
 void AddFxContextMenu::onAgainCommand() {
-  // TODO: 日本語インタフェースの場合、対応が必要 2016/1/8 shun_iwasawa
-  if (m_againCommand->text().startsWith("Insert")) {
+  QString commandName = m_againCommand->data().toString();
+  m_againCommand->setData(commandName.right(commandName.size() - 2));
+  if (commandName.startsWith("I ")) {
     onInsertFx(m_againCommand);
-  } else if (m_againCommand->text().startsWith("Add")) {
+  } else if (commandName.startsWith("A ")) {
     onAddFx(m_againCommand);
-  } else if (m_againCommand->text().startsWith("Replace")) {
+  } else if (commandName.startsWith("R ")) {
     onReplaceFx(m_againCommand);
   }
 }

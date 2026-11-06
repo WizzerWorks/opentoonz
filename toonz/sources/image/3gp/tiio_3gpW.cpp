@@ -1,6 +1,6 @@
 
 
-#ifndef x64
+#if !defined(x64) && !(defined(__GNUC__) && defined(_WIN32))
 
 #include <cstdint>
 
@@ -8,12 +8,19 @@
 #include "tsound.h"
 #include "tconvert.h"
 #include "tpropertytype.h"
-#include "../mov/tiio_mov.h"
-#include "movsettings.h"
 #include "trasterimage.h"
 #include "tsystem.h"
 
+// movesettings deps, must be included before QuickTime includes
+#include "texception.h"
+#include "tpropertytype.h"
+#include "tproperty.h"
+
+// following includes may include QuickTime
+#include "../mov/tiio_mov.h"
 #include "tiio_3gp.h"
+
+#include "movsettings.h"
 
 namespace {
 
@@ -81,7 +88,7 @@ enum QTLibError {
   QTUnableToSetMovieBox,
 };
 
-string buildQTErrorString(int ec) {
+std::string buildQTErrorString(int ec) {
   switch (ec) {
   case QTNotInstalled:
     return "Can't create; ensure that quicktime is correctly installed on your "
@@ -109,7 +116,9 @@ string buildQTErrorString(int ec) {
   case QTUnableToSetMovieBox:
     return "unable to set movie box";
 
-  default: { return "unknown error ('" + std::to_string(ec) + "')"; }
+  default: {
+    return "unknown error ('" + std::to_string(ec) + "')";
+  }
   }
 }
 
@@ -175,8 +184,8 @@ TFilePath getLegalName(const TFilePath &name) {
 
 //--------------------------`----------------------------------------------------
 
-string long2fourchar(TINT32 fcc) {
-  string s;
+std::string long2fourchar(TINT32 fcc) {
+  std::string s;
   s += (char((fcc & 0xff000000) >> 24));
   s += (char((fcc & 0x00ff0000) >> 16));
   s += (char((fcc & 0x0000ff00) >> 8));
@@ -276,7 +285,7 @@ void copy(TRasterP rin, PixelXRGB *bufout, int lx, int ly) {
   }
   rin->unlock();
 }
-};
+};  // namespace
 
 //-----------------------------------------------------------
 void TImageWriter3gp::save(const TImageP &img) {
@@ -287,7 +296,7 @@ void TImageWriter3gp::save(const TImageP &img) {
 
 void TLevelWriter3gp::save(const TImageP &img, int frameIndex) {
   if (m_cancelled) return;
-  string msg;
+  std::string msg;
   QMutexLocker sl(&m_mutex);
 
   TRasterImageP image(img);
@@ -500,14 +509,18 @@ TLevelWriter3gp::TLevelWriter3gp(const TFilePath &path, TPropertyGroup *winfo)
 #define FailWithAction(cond, action, handler)                                  \
   if (cond) {                                                                  \
     DebugStr((ConstStr255Param) #cond " goto " #handler);                      \
-    { action; }                                                                \
+    {                                                                          \
+      action;                                                                  \
+    }                                                                          \
     goto handler;                                                              \
   } else                                                                       \
     0
 #else
 #define FailWithAction(cond, action, handler)                                  \
   if (cond) {                                                                  \
-    { action; }                                                                \
+    {                                                                          \
+      action;                                                                  \
+    }                                                                          \
     goto handler;                                                              \
   } else                                                                       \
     0
@@ -564,7 +577,7 @@ void TLevelWriter3gp::saveSoundTrack(TSoundTrack *st) {
   myMedia = NewTrackMedia(theTrack, SoundMediaType, st->getSampleRate(),
                           m_soundDataRef,
                           HandleDataHandlerSubType);  // track->rate >> 16
-  myErr = GetMoviesError();
+  myErr   = GetMoviesError();
   FailIf(myErr != noErr, Exit);
 
   // start a media editing session
@@ -741,7 +754,7 @@ TImageWriterP TLevelWriter3gp::getFrameWriter(TFrameId fid) {
   if (m_cancelled) return 0;
 
   if (m_IOError) throw TImageException(m_path, buildQTErrorString(m_IOError));
-  if (fid.getLetter() != 0) return TImageWriterP(0);
+  if (!fid.getLetter().isEmpty()) return TImageWriterP(0);
   int index = fid.getNumber() - 1;
 
   TImageWriter3gp *iwm = new TImageWriter3gp(m_path, index, this);
@@ -1010,7 +1023,7 @@ TImageReaderP TLevelReader3gp::getFrameReader(TFrameId fid) {
   if (m_IOError != QTNoError)
     throw TImageException(m_path, buildQTErrorString(m_IOError));
 
-  if (fid.getLetter() != 0) return TImageReaderP(0);
+  if (!fid.getLetter().isEmpty()) return TImageReaderP(0);
   int index = fid.getNumber() - 1;
 
   TImageReader3gp *irm = new TImageReader3gp(m_path, index, this);

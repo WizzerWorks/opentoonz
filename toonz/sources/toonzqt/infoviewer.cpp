@@ -61,13 +61,14 @@ public:
     eFrameCount,
     eLevelCount,
     eOutputPath,
-    eEndianess,
+    eEndianness,
 
     // sound info
     eLength,
     eChannels,
     eSampleRate,
     eSampleSize,
+    eSampleType,
     eHowMany
   };
 
@@ -215,13 +216,14 @@ InfoViewerImp::InfoViewerImp()
   create(eFrameCount, QObject::tr("Number of Frames: "));
   create(eLevelCount, QObject::tr("Number of Levels: "));
   create(eOutputPath, QObject::tr("Output Path:      "));
-  create(eEndianess, QObject::tr("Endianess:      "));
+  create(eEndianness, QObject::tr("Endianness:      "));
 
   // sound info
   create(eLength, QObject::tr("Length:       "));
   create(eChannels, QObject::tr("Channels: "));
   create(eSampleRate, QObject::tr("Sample Rate: "));
   create(eSampleSize, QObject::tr("Sample Size:      "));
+  create(eSampleType, QObject::tr("Sample Type: "));
 
   m_historyLabel.setStyleSheet("color: rgb(0, 0, 200);");
   m_history.setStyleSheet("font-size: 12px; font-family: \"courier\";");
@@ -275,10 +277,13 @@ QString InfoViewerImp::getTypeString() {
     return "Tab Scene";
   else if (ext == "plt")
     return "Toonz Palette";
-  else if (ext == "wav" || ext == "aiff" || ext == "mp3")
+  else if (ext == "wav" || ext == "aiff" || ext == "aif" || ext == "raw" ||
+           ext == "mp3" || ext == "ogg" || ext == "flac")
     return "Audio File";
   else if (ext == "mesh")
     return "Toonz Mesh Level";
+  else if (ext == "tzm")
+    return "Toonz Meta Level";
   else if (ext == "pic")
     return "Pic File";
   else if (Tiio::makeReader(ext.toStdString()))
@@ -299,7 +304,7 @@ void InfoViewerImp::setGeneralFileInfo(const TFilePath &path) {
   setVal(eFileType, getTypeString());
   if (fi.owner() != "") setVal(eOwner, fi.owner());
   setVal(eSize, fileSizeString(fi.size()));
-  setVal(eCreated, fi.created().toString());
+  setVal(eCreated, fi.birthTime().toString());
   setVal(eModified, fi.lastModified().toString());
   setVal(eLastAccess, fi.lastRead().toString());
   m_separator1.show();
@@ -364,7 +369,7 @@ void InfoViewerImp::setImageInfo() {
       setLabel(pg, eCodec, "Codec");
       setLabel(pg, eAlphaChannel, "Alpha Channel");
       setLabel(pg, eByteOrdering, "Byte Ordering");
-      setLabel(pg, eEndianess, "Endianess");
+      setLabel(pg, eEndianness, "Endianness");
     }
   } else
     m_separator1.hide();
@@ -448,6 +453,22 @@ void InfoViewerImp::setSoundInfo() {
 
   label = QString::number(sndTrack->getBitPerSample()) + " bit";
   setVal(eSampleSize, label);
+
+  switch (sndTrack->getSampleType()) {
+  case TSound::INT:
+    label = "Signed integer";
+    break;
+  case TSound::UINT:
+    label = "Unsigned integer";
+    break;
+  case TSound::FLOAT:
+    label = "Floating-point";
+    break;
+  default:
+    label = "Unknown";
+    break;
+  }
+  setVal(eSampleType, label);
 }
 
 //----------------------------------------------------------------

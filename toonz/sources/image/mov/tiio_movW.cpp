@@ -1,6 +1,6 @@
 
 
-#ifndef x64
+#if !defined(x64) && !(defined(__GNUC__) && defined(_WIN32))
 
 #include "texception.h"
 #include "tsound.h"
@@ -11,6 +11,12 @@
 #include "../avi/tiio_avi.h"
 #include "trasterimage.h"
 
+// movesettings deps, must be included before QuickTime includes
+#include "texception.h"
+#include "tpropertytype.h"
+#include "tproperty.h"
+
+// following includes may include QuickTime
 #include "tiio_mov.h"
 #include "movsettings.h"
 
@@ -86,7 +92,7 @@ enum QTLibError {
   QTUnableToSetMovieBox,
 };
 
-string buildQTErrorString(int ec) {
+std::string buildQTErrorString(int ec) {
   switch (ec) {
   case QTNotInstalled:
     return "Can't create; ensure that quicktime is correctly installed on your "
@@ -114,7 +120,9 @@ string buildQTErrorString(int ec) {
   case QTUnableToSetMovieBox:
     return "unable to set movie box";
 
-  default: { return "unknown error ('" + std::to_string(ec) + "')"; }
+  default: {
+    return "unknown error ('" + std::to_string(ec) + "')";
+  }
   }
 }
 
@@ -180,8 +188,8 @@ TFilePath getLegalName(const TFilePath &name) {
 
 //-------------------------------------------------------------------------------
 
-string long2fourchar(TINT32 fcc) {
-  string s;
+std::string long2fourchar(TINT32 fcc) {
+  std::string s;
   s += (char((fcc & 0xff000000) >> 24));
   s += (char((fcc & 0x00ff0000) >> 16));
   s += (char((fcc & 0x0000ff00) >> 8));
@@ -267,7 +275,7 @@ void copy(TRasterP rin, PixelXRGB *bufout, int lx, int ly) {
   }
   rin32->unlock();
 }
-};
+};  // namespace
 
 //-----------------------------------------------------------
 /*
@@ -538,8 +546,7 @@ throw TImageException(getFilePath(), "can't compress image");
                             100,  // 100 matches the length of 1 frame
                             (SampleDescriptionHandle)
                                 img_descr,  // in the movie/media's timeScale
-                            1,
-                            0, &sampleTime)) != noErr)
+                            1, 0, &sampleTime)) != noErr)
     throw TImageException(getFilePath(), "can't add image to movie media");
 
   if ((err = EndMediaEdits(m_videoMedia)) != noErr)
@@ -611,14 +618,18 @@ TLevelWriterMov::TLevelWriterMov(const TFilePath &path, TPropertyGroup *winfo)
 #define FailWithAction(cond, action, handler)                                  \
   if (cond) {                                                                  \
     DebugStr((ConstStr255Param) #cond " goto " #handler);                      \
-    { action; }                                                                \
+    {                                                                          \
+      action;                                                                  \
+    }                                                                          \
     goto handler;                                                              \
   } else                                                                       \
     0
 #else
 #define FailWithAction(cond, action, handler)                                  \
   if (cond) {                                                                  \
-    { action; }                                                                \
+    {                                                                          \
+      action;                                                                  \
+    }                                                                          \
     goto handler;                                                              \
   } else                                                                       \
     0
@@ -748,7 +759,7 @@ void TLevelWriterMov::saveSoundTrack(TSoundTrack *st) {
   myErr = EndMediaEdits(m_soundMedia);
   FailIf(myErr != noErr, MediaErr);
 
-// NOTE: Sound media is inserted into the movie track only at destruction
+  // NOTE: Sound media is inserted into the movie track only at destruction
 
 ConverterErr:  // Multiple bailout labels just to
 NoDest:        // separate debugging strings, it seems.
@@ -821,16 +832,14 @@ TLevelWriterMov::~TLevelWriterMov() {
 
     QTMetaDataRef metaDataRef;
     if ((mderr = QTCopyMovieMetaData(m_movie, &metaDataRef)) != noErr)
-      throw TImageException(getFilePath(),
-                            "can't access metadata informations");
+      throw TImageException(getFilePath(), "can't access metadata information");
 
     if ((mderr = QTMetaDataAddItem(
              metaDataRef, kQTMetaDataStorageFormatUserData,
              kQTMetaDataKeyFormatUserData, (const UInt8 *)firstFrameKey.c_str(),
              firstFrameKeySize, (const UInt8 *)(&m_firstFrame), sizeof(int),
              kQTMetaDataTypeUnsignedIntegerBE, 0)) != noErr)
-      throw TImageException(getFilePath(),
-                            "can't insert metadata informations");
+      throw TImageException(getFilePath(), "can't insert metadata information");
 
     QTMetaDataRelease(metaDataRef);
   }
@@ -864,7 +873,7 @@ TLevelWriterMov::~TLevelWriterMov() {
 
 TImageWriterP TLevelWriterMov::getFrameWriter(TFrameId fid) {
   if (m_IOError) throw TImageException(m_path, buildQTErrorString(m_IOError));
-  if (fid.getLetter() != 0) return TImageWriterP(0);
+  if (!fid.getLetter().isEmpty()) return TImageWriterP(0);
   int index = fid.getNumber() - 1;
 
   TImageWriterMov *iwm = new TImageWriterMov(m_path, index, this);
@@ -940,8 +949,8 @@ TLevelReaderMov::TLevelReaderMov(const TFilePath &path)
 
   // Retrieve the timecode media handler
   {
-    Track tcTrack = GetMovieIndTrackType(m_movie, 1, TimeCodeMediaType,
-                                         movieTrackMediaType);
+    Track tcTrack     = GetMovieIndTrackType(m_movie, 1, TimeCodeMediaType,
+                                             movieTrackMediaType);
     Media tcMedia     = GetTrackMedia(tcTrack);
     m_timecodeHandler = GetMediaHandler(tcMedia);
   }
@@ -1096,7 +1105,7 @@ TLevelP TLevelReaderMov::loadToonzOutputFormatInfo() {
   // atom.
   QTMetaDataRef metaDataRef;
   if ((mderr = QTCopyMovieMetaData(m_movie, &metaDataRef)) != noErr)
-    throw TImageException(m_path, "can't access metadata informations");
+    throw TImageException(m_path, "can't access metadata information");
 
   QTMetaDataItem firstFrameItem;
 
@@ -1114,7 +1123,7 @@ TLevelP TLevelReaderMov::loadToonzOutputFormatInfo() {
     if ((mderr = QTMetaDataGetItemValue(metaDataRef, firstFrameItem,
                                         (UInt8 *)(&firstFrame), sizeof(int),
                                         0) != noErr))
-      throw TImageException(m_path, "can't read metadata informations");
+      throw TImageException(m_path, "can't read metadata information");
   }
 
   mderr = 0;
@@ -1354,7 +1363,7 @@ TImageReaderP TLevelReaderMov::getFrameReader(TFrameId fid) {
   if (m_IOError != QTNoError)
     throw TImageException(m_path, buildQTErrorString(m_IOError));
 
-  if (fid.getLetter() != 0) return TImageReaderP(0);
+  if (!fid.getLetter().isEmpty()) return TImageReaderP(0);
   int index = fid.getNumber() - 1;
 
   TImageReaderMov *irm = new TImageReaderMov(m_path, index, this, m_info);

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1">
+<TS version="2.1" language="it" sourcelanguage="en">
 <context>
     <name>ArtisticSolidColor</name>
     <message>
@@ -18,6 +18,29 @@
     <message>
         <source>Noise</source>
         <translation>Rumore</translation>
+    </message>
+</context>
+<context>
+    <name>FlowLineStrokeStyle</name>
+    <message>
+        <source>Density</source>
+        <translation type="unfinished">Densità</translation>
+    </message>
+    <message>
+        <source>Extension</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Width Scale</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Straighten Ends</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Flow Line</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>

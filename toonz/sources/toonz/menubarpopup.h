@@ -13,6 +13,7 @@
 class Room;
 class QXmlStreamReader;
 class QXmlStreamWriter;
+class CommandListTree;
 
 //=============================================================================
 // MenuBarTree
@@ -28,7 +29,14 @@ class MenuBarTree final : public QTreeWidget {
   void saveMenuRecursive(QXmlStreamWriter& writer, QTreeWidgetItem* parentItem);
 
 public:
-  MenuBarTree(TFilePath& path, QWidget* parent = 0);
+  explicit MenuBarTree(TFilePath& path, QWidget* parent = nullptr);
+
+  // Prohibit copying and moving
+  MenuBarTree(const MenuBarTree&)            = delete;
+  MenuBarTree& operator=(const MenuBarTree&) = delete;
+  MenuBarTree(MenuBarTree&&)                 = delete;
+  MenuBarTree& operator=(MenuBarTree&&)      = delete;
+
   void saveMenuTree();
 
 protected:
@@ -36,27 +44,11 @@ protected:
                     Qt::DropAction action) override;
   QStringList mimeTypes() const override;
   void contextMenuEvent(QContextMenuEvent* event) override;
+
 protected slots:
   void insertMenu();
   void removeItem();
   void onItemChanged(QTreeWidgetItem*, int);
-};
-
-//=============================================================================
-// CommandListTree
-//-----------------------------------------------------------------------------
-
-class CommandListTree final : public QTreeWidget {
-  Q_OBJECT
-
-  void addFolder(const QString& title, int commandType,
-                 QTreeWidgetItem* parentFolder = 0);
-
-public:
-  CommandListTree(QWidget* parent = 0);
-
-protected:
-  void mousePressEvent(QMouseEvent*) override;
 };
 
 //=============================================================================
@@ -65,13 +57,23 @@ protected:
 
 class MenuBarPopup final : public DVGui::Dialog {
   Q_OBJECT
-  CommandListTree* m_commandListTree;
-  MenuBarTree* m_menuBarTree;
+
+  CommandListTree* m_commandListTree = nullptr;
+  MenuBarTree* m_menuBarTree         = nullptr;
+  bool m_searchBusy                  = false;  // prevent reentrant search
 
 public:
-  MenuBarPopup(Room* room);
+  explicit MenuBarPopup(Room* room);
+
+  // Prohibit copying and moving
+  MenuBarPopup(const MenuBarPopup&)            = delete;
+  MenuBarPopup& operator=(const MenuBarPopup&) = delete;
+  MenuBarPopup(MenuBarPopup&&)                 = delete;
+  MenuBarPopup& operator=(MenuBarPopup&&)      = delete;
+
 protected slots:
   void onOkPressed();
+  void onSearchTextChanged(const QString& text);
 };
 
 #endif

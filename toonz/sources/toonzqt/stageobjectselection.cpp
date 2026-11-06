@@ -108,7 +108,7 @@ public:
   }
   int getHistoryType() override { return HistoryType::Schematic; }
 };
-}
+}  // namespace
 
 //======================================================================
 //
@@ -153,9 +153,10 @@ void StageObjectSelection::enableCommands() {
 //-------------------------------------------------------
 
 void StageObjectSelection::deleteSelection() {
-  TStageObjectCmd::deleteSelection(
-      m_selectedObjects.toVector().toStdVector(), m_selectedLinks.toStdList(),
-      m_selectedSplines.toStdList(), m_xshHandle, m_objHandle, m_fxHandle);
+  emit doDelete();
+  // TStageObjectCmd::deleteSelection(
+  //    m_selectedObjects.toVector().toStdVector(), m_selectedLinks.toStdList(),
+  //    m_selectedSplines.toStdList(), m_xshHandle, m_objHandle, m_fxHandle);
 }
 
 //-------------------------------------------------------
@@ -330,7 +331,9 @@ void StageObjectSelection::copySelection() {
   StageObjectsData *data = new StageObjectsData();
   bool pegSelected       = false;
   data->storeObjects(
-      m_selectedObjects.toVector().toStdVector(), m_xshHandle->getXsheet(),
+      std::vector<TStageObjectId>(m_selectedObjects.begin(),
+                                  m_selectedObjects.end()),
+      m_xshHandle->getXsheet(),
       StageObjectsData::eDoClone | StageObjectsData::eResetFxDagPositions);
   std::set<int> columnIndexes;
   int i;
@@ -341,7 +344,8 @@ void StageObjectSelection::copySelection() {
       columnIndexes, m_xshHandle->getXsheet(),
       StageObjectsData::eDoClone | StageObjectsData::eResetFxDagPositions);
   data->storeSplines(
-      m_selectedSplines.toStdList(), m_xshHandle->getXsheet(),
+      std::list<int>(m_selectedSplines.begin(), m_selectedSplines.end()),
+      m_xshHandle->getXsheet(),
       StageObjectsData::eDoClone | StageObjectsData::eResetFxDagPositions);
 
   if (!data->isEmpty())
@@ -364,6 +368,21 @@ void StageObjectSelection::pasteSelection() {
   std::vector<TStageObjectId> ids = objData->restoreObjects(
       indexes, restoredSplineIds, m_xshHandle->getXsheet(),
       StageObjectsData::eDoClone, m_pastePosition);
+
+  // make sure that the levels contained in the pasted column nodes are
+  // registered in the scene cast it may rename the level if there is another
+  // level with the same name
+  QList<TXshColumnP> pastedColumns;
+  for (auto c : indexes) {
+    TXshColumnP column = m_xshHandle->getXsheet()->getColumn(c);
+    if (!column || column->isEmpty()) continue;
+    pastedColumns.append(column);
+  }
+  if (!pastedColumns.isEmpty()) {
+    TUndoManager::manager()->beginBlock();
+    emit columnPasted(pastedColumns);
+  }
+
   StageObjectsData *undoData = new StageObjectsData();
   undoData->storeObjects(ids, m_xshHandle->getXsheet(), 0);
   undoData->storeColumnFxs(indexes, m_xshHandle->getXsheet(), 0);
@@ -373,6 +392,8 @@ void StageObjectSelection::pasteSelection() {
       m_objHandle, m_fxHandle));
   m_xshHandle->notifyXsheetChanged();
   m_pastePosition = TConst::nowhere;
+
+  if (!pastedColumns.isEmpty()) TUndoManager::manager()->endBlock();
 }
 
 //-------------------------------------------------------

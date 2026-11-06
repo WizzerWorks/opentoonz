@@ -35,7 +35,7 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 
 // Diagnostics include
-//#define DIAGNOSTICS
+// #define DIAGNOSTICS
 #ifdef DIAGNOSTICS
 #include "diagnostics.h"
 #endif
@@ -131,7 +131,8 @@ static const TParamUIConcept::Type
         TParamUIConcept::ANGLE,   TParamUIConcept::POINT,
         TParamUIConcept::POINT_2, TParamUIConcept::VECTOR,
         TParamUIConcept::POLAR,   TParamUIConcept::SIZE,
-        TParamUIConcept::QUAD,    TParamUIConcept::RECT};
+        TParamUIConcept::QUAD,    TParamUIConcept::RECT,
+        TParamUIConcept::COMPASS, TParamUIConcept::COMPASS_SPIN};
 
 // Functions
 
@@ -310,6 +311,8 @@ Suggestions are welcome as this is a tad beyond ridiculous...
             "This system configuration does not support OpenGL Shader "
             "Programs. Shader Fxs will not be able to render."));
         break;
+      default:
+        break;
       }
 
       sentMsg = true;
@@ -398,7 +401,7 @@ void ShaderFx::initialize() {
         TParamUIConcept &uiConcept = m_this->m_uiConcepts.back();
         uiConcept.m_type           = ::l_conceptTypes[siParam.m_concept.m_type -
                                             ShaderInterface::UI_CONCEPTS];
-        uiConcept.m_label = siParam.m_concept.m_label.toStdString();
+        uiConcept.m_label          = siParam.m_concept.m_label.toStdString();
         uiConcept.m_params.push_back(param);
       }
     }
@@ -471,6 +474,8 @@ void ShaderFx::initialize() {
       case ShaderInterface::ANGLE_UI:
         param->setMeasureName(l_measureNames[ANGLE]);
         break;
+      default:
+        break;
       }
 
       m_params.push_back(param);
@@ -510,6 +515,8 @@ void ShaderFx::initialize() {
       case ShaderInterface::ANGLE_UI:
         param->getX()->setMeasureName(l_measureNames[ANGLE]);
         param->getY()->setMeasureName(l_measureNames[ANGLE]);
+        break;
+      default:
         break;
       }
 
@@ -552,6 +559,8 @@ void ShaderFx::initialize() {
                 *boost::unsafe_any_cast<TPixelParamP>(&m_params.back()));
       break;
     }
+    default:
+      break;
     }
   }
 
@@ -780,6 +789,8 @@ void ShaderFx::bindParameters(QOpenGLShaderProgram *program, double frame) {
           (GLfloat)value.m / 255.0f);
       break;
     }
+    default:
+      break;
     }
   }
 }
@@ -788,8 +799,7 @@ void ShaderFx::bindParameters(QOpenGLShaderProgram *program, double frame) {
 
 void ShaderFx::bindWorldTransform(QOpenGLShaderProgram *program,
                                   const TAffine &worldToDst) {
-// Bind transformation affine
-#if QT_VERSION >= 0x050500
+  // Bind transformation affine
   float qwToD[9] = {static_cast<float>(worldToDst.a11),
                     static_cast<float>(worldToDst.a12),
                     static_cast<float>(worldToDst.a13),
@@ -799,34 +809,18 @@ void ShaderFx::bindWorldTransform(QOpenGLShaderProgram *program,
                     0.0f,
                     0.0f,
                     1.0f};
-#else
-  qreal qwToD[9] = {worldToDst.a11,
-                    worldToDst.a12,
-                    worldToDst.a13,
-                    worldToDst.a21,
-                    worldToDst.a22,
-                    worldToDst.a23,
-                    0.0,
-                    0.0,
-                    1.0};
-#endif
   program->setUniformValue("worldToOutput", QMatrix3x3(qwToD));
 
   const TAffine &dToW = worldToDst.inv();
-#if QT_VERSION >= 0x050500
-  float qdToW[9] = {static_cast<float>(dToW.a11),
-                    static_cast<float>(dToW.a12),
-                    static_cast<float>(dToW.a13),
-                    static_cast<float>(dToW.a21),
-                    static_cast<float>(dToW.a22),
-                    static_cast<float>(dToW.a23),
-                    0.0f,
-                    0.0f,
-                    1.0f};
-#else
-  qreal qdToW[9] = {dToW.a11, dToW.a12, dToW.a13, dToW.a21, dToW.a22,
-                    dToW.a23, 0.0,      0.0,      1.0};
-#endif
+  float qdToW[9]      = {static_cast<float>(dToW.a11),
+                         static_cast<float>(dToW.a12),
+                         static_cast<float>(dToW.a13),
+                         static_cast<float>(dToW.a21),
+                         static_cast<float>(dToW.a22),
+                         static_cast<float>(dToW.a23),
+                         0.0f,
+                         0.0f,
+                         1.0f};
   program->setUniformValue("outputToWorld", QMatrix3x3(qdToW));
 }
 
@@ -889,9 +883,9 @@ void ShaderFx::getInputData(const TRectD &rect, double frame,
 #else
     std::vector<const GLchar *> varyingNames(
         boost::make_transform_iterator(varyingStrings.begin(),
-                                       std::mem_fun_ref(&std::string::c_str)),
+                                       std::mem_fn(&std::string::c_str)),
         boost::make_transform_iterator(varyingStrings.end(),
-                                       std::mem_fun_ref(&std::string::c_str)));
+                                       std::mem_fn(&std::string::c_str)));
 #endif
     prog = touchShaderProgram(sd, context, int(varyingNames.size()),
                               &varyingNames[0]);
@@ -1048,9 +1042,9 @@ void ShaderFx::doCompute(TTile &tile, double frame,
 
     // Input tiles are NOT supplied to OpenGL here - but rather just before
     // drawing.
-    // It's probably beacuse a uniform integer variable must have already been
+    // It's probably because a uniform integer variable must have already been
     // bound
-    // to prepare the associated sampler variable in the linkes program...
+    // to prepare the associated sampler variable in the linked program...
   }
 
   // Perform the actual fragment shading
@@ -1084,7 +1078,6 @@ void ShaderFx::doCompute(TTile &tile, double frame,
 
           TAffine sToI(iToS.inv());
 
-#if QT_VERSION >= 0x050500
           float qiToS[9] = {static_cast<float>(iToS.a11),
                             static_cast<float>(iToS.a12),
                             static_cast<float>(iToS.a13),
@@ -1103,13 +1096,6 @@ void ShaderFx::doCompute(TTile &tile, double frame,
                             0.0f,
                             0.0f,
                             1.0f};
-#else
-          qreal qiToS[9] = {iToS.a11, iToS.a12, iToS.a13, iToS.a21, iToS.a22,
-                            iToS.a23, 0.0,      0.0,      1.0};
-
-          qreal qsToI[9] = {sToI.a11, sToI.a12, sToI.a13, sToI.a21, sToI.a22,
-                            sToI.a23, 0.0,      0.0,      1.0};
-#endif
           inputs[p] = p, screenToInput[p] = QMatrix3x3(qsToI),
           inputToScreen[p] = QMatrix3x3(qiToS);
         }

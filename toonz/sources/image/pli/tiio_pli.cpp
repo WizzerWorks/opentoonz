@@ -25,11 +25,11 @@ namespace {
 
 //---------------------------------------------------------------------------
 
-class PliOuputStream final : public TOutputStreamInterface {
+class PliOutputStream final : public TOutputStreamInterface {
   std::vector<TStyleParam> *m_stream;
 
 public:
-  PliOuputStream(std::vector<TStyleParam> *stream) : m_stream(stream) {}
+  PliOutputStream(std::vector<TStyleParam> *stream) : m_stream(stream) {}
   TOutputStreamInterface &operator<<(double x) override {
     m_stream->push_back(TStyleParam(x));
     return *this;
@@ -160,7 +160,7 @@ void buildPalette(ParsedPli *pli, const TImageP img) {
   assert(vPalette->getPageCount());
 
   std::vector<TStyleParam> pageNames(vPalette->getPageCount());
-  for (i         = 0; i < pageNames.size(); i++)
+  for (i = 0; i < pageNames.size(); i++)
     pageNames[i] = TStyleParam(::to_string(vPalette->getPage(i)->getName()));
   StyleTag *pageNamesTag =
       new StyleTag(0, 0, pageNames.size(), pageNames.data());
@@ -183,7 +183,7 @@ pli->m_idWrittenColorsArray[0]=true;
 
     // TColorStyle*style = tempVecImg->getPalette()->getStyle(styleId);
     std::vector<TStyleParam> stream;
-    PliOuputStream chan(&stream);
+    PliOutputStream chan(&stream);
     style->save(chan);  // viene riempito lo stream;
 
     assert(pageIndex >= 0 && pageIndex <= 65535);
@@ -216,7 +216,7 @@ pli->m_idWrittenColorsArray[0]=true;
 
           // TColorStyle*style = tempVecImg->getPalette()->getStyle(styleId);
           std::vector<TStyleParam> stream;
-          PliOuputStream chan(&stream);
+          PliOutputStream chan(&stream);
           style->save(chan);  // viene riempito lo stream;
 
           assert(pageIndex >= 0 && pageIndex <= 65535);
@@ -400,7 +400,7 @@ TImageP TImageReaderPli::doLoad() {
       strokeData.m_options =
           ((StrokeOutlineOptionsTag *)imageTag->m_object[i])->m_options;
       break;
-    case PliTag::AUTOCLOSE_TOLERANCE_GOBJ:
+    case PliTag::AUTOCLOSE_TOLERANCE_GOBJ: {
       // aggiunge curve quadratiche con spessore costante
       AutoCloseToleranceTag *toleranceTag =
           (AutoCloseToleranceTag *)imageTag->m_object[i];
@@ -408,21 +408,24 @@ TImageP TImageReaderPli::doLoad() {
       outVectImage->setAutocloseTolerance(
           ((double)toleranceTag->m_autoCloseTolerance) / 1000);
       break;
+    }
+    default:
+      break;
     }  // switch(groupTag->m_object[j]->m_type)
   }    // for (i=0; i<imageTag->m_numObjects; i++)
 
-//} // try
+  //} // try
 
-// catch(...) // cosi' e' inutile o raccolgo qualcosa prima di rilanciare o lo
-// elimino
-//{
-//  throw;
-// }
+  // catch(...) // cosi' e' inutile o raccolgo qualcosa prima di rilanciare o lo
+  // elimino
+  //{
+  //  throw;
+  // }
 
-//  if (regionsComputed) //WARNING !!! la seedFill mette il flag a ValidRegion a
-//  TRUE
-//    outVectImage->seedFill(); //le vecchie immagini hanno il seed
-//    (version<3.1)
+  //  if (regionsComputed) //WARNING !!! la seedFill mette il flag a ValidRegion
+  //  a TRUE
+  //    outVectImage->seedFill(); //le vecchie immagini hanno il seed
+  //    (version<3.1)
 
 #ifdef _DEBUG
   outVectImage->checkIntersections();
@@ -561,6 +564,9 @@ solo nel costruttore)
     PliTag *tag = new PrecisionScaleTag(precisionScale);
     tags.push_back((PliObjectTag *)tag);
   }
+
+  // update the format version if multiple suffixes is supported0
+  if (!TFilePath::useStandard()) pli->setVersion(150, 0);
   // Store the auto close tolerance
   double pliTolerance = m_lwp->m_pli->getAutocloseTolerance();
   // write the tag if the frame's tolerance has been changed or
@@ -741,7 +747,7 @@ TPalette *readPalette(GroupTag *paletteTag, int majorVersion,
                  // caricarli!
 
     std::vector<TStyleParam> params(styleTag->m_numParams);
-    for (int j  = 0; j < styleTag->m_numParams; j++)
+    for (int j = 0; j < styleTag->m_numParams; j++)
       params[j] = styleTag->m_param[j];
 
     PliInputStream chan(&params, majorVersion, minorVersion);
@@ -805,7 +811,17 @@ TLevelP TLevelReaderPli::loadInfo() {
         (majorVersionNumber != 5 || minorVersionNumber < 5))
       return m_level;
     TPalette *palette = 0;
-    m_pli->loadInfo(m_readPalette, palette, m_contentHistory);
+        try {
+      m_pli->loadInfo(m_readPalette, palette, m_contentHistory);
+    } catch (TException &e) {
+      QString msg = QString::fromStdString(::to_string(e.getMessage()));
+      if (msg.contains("Not all frames loaded"))
+        m_level->setPartialLoad(true);
+      else
+        throw e;
+    } catch (...) {
+      throw;
+    }
     if (palette) m_level->setPalette(palette);
 
     for (int i = 0; i < m_pli->getFrameCount(); i++)
@@ -813,7 +829,7 @@ TLevelP TLevelReaderPli::loadInfo() {
   } catch (std::exception &e) {
     TSystem::outputDebug(e.what());
 
-    throw TImageException(getFilePath(), "Unknow error on reading file");
+    throw TImageException(getFilePath(), "Unknown error on reading file");
   } catch (...) {
     throw;
   }

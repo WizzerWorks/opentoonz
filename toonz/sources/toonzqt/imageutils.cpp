@@ -1,11 +1,16 @@
 
 
 // TnzQt includes
+#include "toonzqt/seethroughwindow.h"
 #include "toonzqt/menubarcommand.h"
 #include "toonzqt/viewcommandids.h"
 #include "toonzqt/imageutils.h"
 #include "toonzqt/dvdialog.h"
 #include "toonzqt/gutil.h"
+
+// Qt Includes:
+#include <QScreen>
+#include <QWindow>
 
 // TnzLib includes
 #include "toonz/preferences.h"
@@ -47,6 +52,8 @@
 
 // boost includes
 #include <boost/iterator/transform_iterator.hpp>
+
+#include <unordered_map>
 
 //**********************************************************************************
 //    Local namespace  stuff
@@ -145,8 +152,7 @@ TFilePath duplicate(const TFilePath &levelPath) {
   NameBuilder *nameBuilder =
       NameBuilder::getBuilder(::to_wstring(levelPath.getName()));
   std::wstring levelNameOut;
-  do
-    levelNameOut = nameBuilder->getNext();
+  do levelNameOut = nameBuilder->getNext();
   while (TSystem::doesExistFileOrLevel(levelPath.withName(levelNameOut)));
 
   TFilePath levelPathOut = levelPath.withName(levelNameOut);
@@ -430,7 +436,7 @@ static void convertFromVI(const TLevelReaderP &lr, const TPaletteP &plt,
   maxBbox = maxBbox.enlarge(2);
   TAffine aff;
   if (width)  // calcolo l'affine
-    aff   = TScale((double)width / maxBbox.getLx());
+    aff = TScale((double)width / maxBbox.getLx());
   maxBbox = aff * maxBbox;
 
   for (i = 0; i < (int)images.size(); i++) {
@@ -467,9 +473,8 @@ static void convertFromFullRaster(
     const TRop::ResampleFilterType &resType, FrameTaskNotifier *frameNotifier,
     const TPixel &bgColor, bool removeDotBeforeFrameNumber = false) {
   std::vector<TFrameId> frames = _frames;
-  if (frames.empty() &&
-      lr->loadInfo()->getFrameCount() ==
-          1)  // e' una immagine singola, non un livello
+  if (frames.empty() && lr->loadInfo()->getFrameCount() ==
+                            1)  // e' una immagine singola, non un livello
     frames.push_back(TFrameId());
 
   for (int i = 0; i < (int)frames.size(); i++) {
@@ -589,7 +594,8 @@ static void convertFromVector(const TLevelReaderP &lr, const TLevelWriterP &lw,
 void convert(const TFilePath &source, const TFilePath &dest,
              const TFrameId &from, const TFrameId &to, double framerate,
              TPropertyGroup *prop, FrameTaskNotifier *frameNotifier,
-             const TPixel &bgColor, bool removeDotBeforeFrameNumber) {
+             const TPixel &bgColor, bool removeDotBeforeFrameNumber,
+             const TFrameId &tmplFId) {
   std::string dstExt = dest.getType(), srcExt = source.getType();
 
   // Load source level structure
@@ -618,13 +624,14 @@ void convert(const TFilePath &source, const TFilePath &dest,
   // Write the destination level
   TLevelWriterP lw(dest, prop);
   lw->setFrameRate(framerate);
+  lw->setFrameFormatTemplateFId(tmplFId);
 
   if (srcExt == "tlv")
     convertFromCM(lr, level->getPalette(), lw, frames, TAffine(),
                   TRop::Triangle, frameNotifier, bgColor,
                   removeDotBeforeFrameNumber);
   else if (srcExt == "pli")
-    // assert(!"Conversion from pli files is currently diabled");
+    // assert(!"Conversion from pli files is currently disabled");
     convertFromVector(lr, lw, frames, frameNotifier);
   else
     convertFromFullRaster(lr, lw, frames, TAffine(), TRop::Triangle,
@@ -633,11 +640,72 @@ void convert(const TFilePath &source, const TFilePath &dest,
 
 //=============================================================================
 
+bool isAAImage(TFilePath path) {
+  QImage img(path.getQString());
+  if (img.isNull()) return false;
+
+  uint16_t width            = img.width();
+  uint16_t height           = img.height();
+  uint32_t lonelyPixelCount = 0;
+  uint32_t totalPixels      = width * height;
+
+  std::unordered_map<uint32_t, uint32_t> colorCount;
+
+  const QRgb *imgData = reinterpret_cast<const QRgb *>(img.bits());
+
+  for (int y = 0; y < height; ++y) {
+    for (int x = 0; x < width; ++x) {
+      QRgb color = imgData[y * width + x];
+      colorCount[color]++;
+    }
+  }
+
+  uint32_t maxCount    = 0;
+  QRgb mostCommonColor = 0;
+  for (const auto &pair : colorCount) {
+    if (pair.second > maxCount) {
+      maxCount        = pair.second;
+      mostCommonColor = pair.first;
+    }
+  }
+
+  for (int y = 1; y < height - 1; ++y) {
+    int xcount = 0;
+    for (int x = 1; x < width - 1; ++x) {
+      QRgb centerColor = imgData[y * width + x];
+
+      if (centerColor == mostCommonColor) {
+        ++xcount;
+        continue;
+      }
+
+      int diffCount = 0;
+
+      if (imgData[y * width + (x - 1)] != centerColor) ++diffCount;
+      if (imgData[y * width + (x + 1)] != centerColor) ++diffCount;
+      if (imgData[(y - 1) * width + x] != centerColor) ++diffCount;
+      if (imgData[(y + 1) * width + x] != centerColor) ++diffCount;
+
+      if (diffCount == 4) {
+        lonelyPixelCount++;
+      }
+    }
+    if (xcount == width - 2) totalPixels -= width;
+  }
+
+  double ratio = double(lonelyPixelCount) / (totalPixels + 1);
+
+  const double value = 0.05 / 100;
+  return ratio > value;
+}
+
 void convertNaa2Tlv(const TFilePath &source, const TFilePath &dest,
                     const TFrameId &from, const TFrameId &to,
                     FrameTaskNotifier *frameNotifier, TPalette *palette,
                     bool removeUnusedStyles, double dpi) {
-  std::string dstExt = dest.getType(), srcExt = source.getType();
+  // std::string dstExt = dest.getType(), srcExt = source.getType();
+  if (TSystem::doesExistFileOrLevel(dest.withType("tpl")))
+    TSystem::deleteFile(dest.withType("tpl"));
 
   // Load source level structure
   TLevelReaderP lr(source);
@@ -803,8 +871,8 @@ namespace {
 
 void getViewerShortcuts(int &zoomIn, int &zoomOut, int &viewReset, int &zoomFit,
                         int &showHideFullScreen, int &actualPixelSize,
-                        int &flipX, int &flipY, int &zoomReset,
-                        int &rotateReset, int &positionReset) {
+                        int &flipX, int &flipY, int &rotateL, int &rotateR,
+                        int &zoomReset, int &rotateReset, int &positionReset) {
   CommandManager *cManager = CommandManager::instance();
 
   zoomIn = cManager->getKeyFromShortcut(cManager->getShortcutFromId(V_ZoomIn));
@@ -820,6 +888,10 @@ void getViewerShortcuts(int &zoomIn, int &zoomOut, int &viewReset, int &zoomFit,
       cManager->getShortcutFromId(V_ActualPixelSize));
   flipX = cManager->getKeyFromShortcut(cManager->getShortcutFromId(V_FlipX));
   flipY = cManager->getKeyFromShortcut(cManager->getShortcutFromId(V_FlipY));
+  rotateL =
+      cManager->getKeyFromShortcut(cManager->getShortcutFromId(V_RotateLeft));
+  rotateR =
+      cManager->getKeyFromShortcut(cManager->getShortcutFromId(V_RotateRight));
   zoomReset =
       cManager->getKeyFromShortcut(cManager->getShortcutFromId(V_ZoomReset));
   rotateReset =
@@ -841,43 +913,33 @@ ShortcutZoomer::ShortcutZoomer(QWidget *zoomingWidget)
 
 bool ShortcutZoomer::exec(QKeyEvent *event) {
   int zoomInKey, zoomOutKey, viewResetKey, zoomFitKey, showHideFullScreenKey,
-      actualPixelSize, flipX, flipY, zoomReset, rotateReset, positionReset;
+      actualPixelSize, flipX, flipY, rotateL, rotateR, zoomReset, rotateReset,
+      positionReset;
   getViewerShortcuts(zoomInKey, zoomOutKey, viewResetKey, zoomFitKey,
                      showHideFullScreenKey, actualPixelSize, flipX, flipY,
-                     zoomReset, rotateReset, positionReset);
+                     rotateL, rotateR, zoomReset, rotateReset, positionReset);
 
   int key = event->key();
   if (key == Qt::Key_Control || key == Qt::Key_Shift || key == Qt::Key_Alt)
     return false;
 
-  key =
-      key |
-      event->modifiers() & (~0xf0000000);  // Ignore if the key is a numpad key
+  key = key | event->modifiers() &
+                  (~0xf0000000);  // Ignore if the key is a numpad key
 
-  return (key == showHideFullScreenKey)
-             ? toggleFullScreen()
-             : (key == Qt::Key_Escape)
-                   ? toggleFullScreen(true)
-                   : (key == actualPixelSize)
-                         ? setActualPixelSize()
-                         : (key == zoomFitKey)
-                               ? fit()
-                               : (key == zoomInKey || key == zoomOutKey ||
-                                  key == viewResetKey)
-                                     ? zoom(key == zoomInKey,
-                                            key == viewResetKey)
-                                     : (key == flipX)
-                                           ? setFlipX()
-                                           : (key == flipY)
-                                                 ? setFlipY()
-                                                 : (key == zoomReset)
-                                                       ? resetZoom()
-                                                       : (key == rotateReset)
-                                                             ? resetRotation()
-                                                             : (key ==
-                                                                positionReset)
-                                                                   ? resetPosition()
-                                                                   : false;
+  return (key == showHideFullScreenKey) ? toggleFullScreen()
+         : (key == Qt::Key_Escape)      ? toggleFullScreen(true)
+         : (key == actualPixelSize)     ? setActualPixelSize()
+         : (key == zoomFitKey)          ? fit()
+         : (key == zoomInKey || key == zoomOutKey || key == viewResetKey)
+             ? zoom(key == zoomInKey, key == viewResetKey)
+         : (key == flipX)         ? setFlipX()
+         : (key == flipY)         ? setFlipY()
+         : (key == rotateL)       ? rotateLeft()
+         : (key == rotateR)       ? rotateRight()
+         : (key == zoomReset)     ? resetZoom()
+         : (key == rotateReset)   ? resetRotation()
+         : (key == positionReset) ? resetPosition()
+                                  : false;
   ;
 }
 
@@ -887,16 +949,14 @@ bool ShortcutZoomer::exec(QKeyEvent *event) {
 
 FullScreenWidget::FullScreenWidget(QWidget *parent) : QWidget(parent) {
   QHBoxLayout *layout = new QHBoxLayout(this);
-  layout->setMargin(0);
+  layout->setContentsMargins(0, 0, 0, 0);
   layout->setSpacing(0);
 
-  setLayout(layout);
+  // Attach see-through window signal so this can detect opacity changes
+  connect(SeeThroughWindowMode::instance(), SIGNAL(opacityChanged(int, bool &)),
+          this, SLOT(opacityChanged(int, bool &)));
 
-#ifdef _WIN32
-  // http://doc.qt.io/qt-5/windows-issues.html#fullscreen-opengl-based-windows
-  winId();
-  QWindowsWindowFunctions::setHasBorderInFullScreen(windowHandle(), true);
-#endif
+  setLayout(layout);
 }
 
 //---------------------------------------------------------------------------------
@@ -908,23 +968,163 @@ void FullScreenWidget::setWidget(QWidget *widget) {
   if ((m_widget = widget)) layout->addWidget(m_widget);
 }
 
-//---------------------------------------------------------------------------------
+//=============================================================
+bool FullScreenWidget::toggleFullScreen(
+    //=============================================================
 
-bool FullScreenWidget::toggleFullScreen(bool quit) {
-  if (windowState() & Qt::WindowFullScreen) {
-    hide();
-    setWindowFlags(windowFlags() & ~(Qt::Window | Qt::WindowStaysOnTopHint));
-    showNormal();
-    m_widget->setFocus();
-    return true;
-  } else if (!quit) {
-    setWindowFlags(windowFlags() | Qt::Window | Qt::WindowStaysOnTopHint);
-    showFullScreen();
+    const bool kfApplicationQuitInProgress)  // Indicates whether the
+                                             // application is quitting.
 
-    return true;
+/*
+ *  DESCRIPTION:
+ *
+ * Sets the size and location of the widget to either full screen or normal.
+ *
+ * Entering full screen has to be done manually in order to avoid having the
+ * window placed on the wrong monitor on systems running X11 with multiple
+ * monitors.
+ */
+{
+  // Initialize the return value.
+  bool fFullScreenStateToggled = false;
+
+  // Define some constants for setting and clearing window flags.
+  const Qt::WindowFlags kwfFullScreenWidgetFlags =
+      Qt::Window |              // <-- Make the widget become a window.
+      Qt::FramelessWindowHint;  // <-- Full screen windows have no border.
+
+  const Qt::WindowFlags kwfFullScreenWidgetExcludedFlagsMask =
+      (Qt::WindowFlags)~Qt::WindowTitleHint;  // <-- Full screen windows have no
+                                              // titlebar.
+
+  // Determine whether to enter or leave full screen mode
+  if (this->windowState() & Qt::WindowFullScreen) {
+    this->hide();
+
+    this->setWindowFlags(this->windowFlags() & ~kwfFullScreenWidgetFlags);
+
+    this->showNormal();
+
+    this->m_widget->setFocus();
+
+    // Set the return value to indicate that the full screen mode has been
+    // changed.
+    fFullScreenStateToggled = true;
+
+    // Refresh see-through window opacity
+    SeeThroughWindowMode::instance()->refreshOpacity();
+  } else {
+    // There's no point to switching into full screen if the
+    // application is in the process of quitting.
+    if (!kfApplicationQuitInProgress) {
+      //==============================================================
+      //
+      //  NOTE:
+      //
+      //    This new way of going into full screen mode does things manually in
+      //    order to bypass Qt's incorrect policy of always relocating a widget
+      //    to desktop coordinates (0,0) when the widget becomes a window via
+      //    setting the Qt::Window flag.
+      //
+      //    This makes full screen mode work MUCH better on X11 systems with
+      //    multiple displays.
+      //
+      //==============================================================
+      //
+      //  STRATEGY:
+      //
+      //    1.    Obtain the rectangle of the screen that the widgets host
+      //    window is on. This has to be done first, otherwise the CORRECT
+      //    screen info can potentially become unavailable in the following
+      //    steps.
+      //
+      //    2.    Manually set all the necessary flags for the full screen
+      //    window attributes and state. Qt WILL hide the widget/window when
+      //    this is done.
+      //
+      //    3.    Set the window geometry/rect to be the same as the screen from
+      //    Step 1.
+      //
+      //    4.    Make the window visible again.
+      //
+      //---------------------------------------------------
+      // STEP 1:
+
+      // Get the window widget that contains this widget.
+      QWidget *ptrWindowWidget = this->window();
+      if (ptrWindowWidget) {
+        // Get the access to the QWindow object of the containing window.
+        QWindow *ptrContainingQWindow = ptrWindowWidget->windowHandle();
+        if (ptrContainingQWindow) {
+          // Get access to the screen the window is on.
+          QScreen *ptrScreenThisWindowIsOn = ptrContainingQWindow->screen();
+          if (ptrScreenThisWindowIsOn) {
+#if !defined(_WIN32)
+            // Get the geometry rect for the correct screen.
+            QRect qrcScreen = ptrScreenThisWindowIsOn->geometry();
+
+            //---------------------------------------------------
+            // STEP 2:
+
+            // Set the window flags to be frameless and with no titlebar.
+            //
+            // This call will turn the widget into a "window", and HIDE it. This
+            // is because Qt always hides a widget when it transforms a widget
+            //  into a window, or turns a window into a widget.
+            //
+            this->setWindowFlags(
+                (this->windowFlags() & kwfFullScreenWidgetExcludedFlagsMask) |
+                kwfFullScreenWidgetFlags);
+
+            // Set the window state flag to indicate that it's now in fullscreen
+            // mode.
+            // If this state flag isn't set, the test for whether to enter or
+            // leave full screen mode won't work correctly.
+            this->setWindowState(Qt::WindowFullScreen);
+
+            //---------------------------------------------------
+            // STEP 3:
+
+            // Set the window to the geometry rect of the correct screen.
+            this->setGeometry(qrcScreen);
+
+            //---------------------------------------------------
+            // STEP 4:
+
+            // Make the window visible. This also causes all the changes to the
+            // widget's flags, state and geometry that was just set to take
+            // effect.
+            this->show();
+#else
+            this->setWindowFlags(this->windowFlags() | Qt::Window);
+            this->window()->windowHandle()->setScreen(ptrScreenThisWindowIsOn);
+
+            // http://doc.qt.io/qt-5/windows-issues.html#fullscreen-opengl-based-windows
+            this->winId();
+            QWindowsWindowFunctions::setHasBorderInFullScreen(
+                this->windowHandle(), true);
+
+            this->showFullScreen();
+#endif
+          }
+        }
+      }
+
+      // Set the return value to indicate that the full screen mode has been
+      // changed.
+      fFullScreenStateToggled = true;
+
+      // Refresh see-through window opacity
+      SeeThroughWindowMode::instance()->refreshOpacity();
+    }
   }
 
-  return false;
+  return (fFullScreenStateToggled);
 }
 
-}  // imageutils
+void FullScreenWidget::opacityChanged(int value, bool &hideMain) {
+  this->setWindowOpacity((double)value / 100);
+  if (this->windowState() & Qt::WindowFullScreen) hideMain = true;
+}
+
+}  // namespace ImageUtils

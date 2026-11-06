@@ -1,22 +1,23 @@
 
 
 #include "tcurves.h"
-//#include "tpalette.h"
+// #include "tpalette.h"
 #include "tvectorimage.h"
 #include "tvectorimageP.h"
 #include "tstroke.h"
-//#include "tgl.h"
+// #include "tgl.h"
 #include "tvectorrenderdata.h"
 #include "tmathutil.h"
-//#include "tdebugmessage.h"
+// #include "tdebugmessage.h"
 #include "tofflinegl.h"
-//#include "tcolorstyles.h"
+// #include "tcolorstyles.h"
 #include "tpaletteutil.h"
 #include "tthreadmessage.h"
 #include "tsimplecolorstyles.h"
 #include "tcomputeregions.h"
 
 #include <memory>
+#include <QSet>
 
 //=============================================================================
 typedef TVectorImage::IntersectionBranch IntersectionBranch;
@@ -147,7 +148,7 @@ int TVectorImage::addStrokeToGroup(TStroke *stroke, int strokeIndex) {
 
 //-----------------------------------------------------------------------------
 
-int TVectorImage::addStroke(TStroke *stroke, bool discardPoints) {
+int TVectorImage::addStroke(TStroke *stroke, bool discardPoints, bool underAll) {
   if (discardPoints) {
     TRectD bBox = stroke->getBBox();
     if (bBox.x0 == bBox.x1 && bBox.y0 == bBox.y1)  // empty stroke: discard
@@ -158,9 +159,19 @@ int TVectorImage::addStroke(TStroke *stroke, bool discardPoints) {
     int i;
     for (i = m_imp->m_strokes.size() - 1; i >= 0; i--)
       if (m_imp->m_insideGroup.isParentOf(m_imp->m_strokes[i]->m_groupId)) {
-        m_imp->insertStrokeAt(
-            new VIStroke(stroke, m_imp->m_strokes[i]->m_groupId), i + 1);
-        return i + 1;
+        if (underAll) {
+          int j = 0;
+          for (j = i - 1; j >= 0 && m_imp->m_insideGroup.isParentOf(
+                                        m_imp->m_strokes[j]->m_groupId);
+               j--);
+          m_imp->insertStrokeAt(
+              new VIStroke(stroke, m_imp->m_strokes[j + 1]->m_groupId), j + 1);
+          return j + 1;
+        } else {
+          m_imp->insertStrokeAt(
+              new VIStroke(stroke, m_imp->m_strokes[i]->m_groupId), i + 1);
+          return i + 1;
+        }
       }
   }
 
@@ -170,10 +181,59 @@ int TVectorImage::addStroke(TStroke *stroke, bool discardPoints) {
     gid = TGroupId(this, true);
   else
     gid = m_imp->m_strokes.back()->m_groupId;
+  
+  if (underAll) {
+    m_imp->insertStrokeAt(new VIStroke(stroke, gid), 0);
+    m_imp->m_areValidRegions = false;
+    return 0;
+  } else {
+    m_imp->m_areValidRegions = false;
+    m_imp->m_strokes.push_back(new VIStroke(stroke, gid));
+    return m_imp->m_strokes.size() - 1;
+  }
+}
 
-  m_imp->m_strokes.push_back(new VIStroke(stroke, gid));
+int TVectorImage::addStrokeBelow(TStroke *stroke, const QSet<int> &aboveStyles,
+                                 bool discardPoints) {
+  if (aboveStyles.isEmpty())
+    return addStroke(stroke, discardPoints);
+  if (discardPoints) {
+    TRectD bBox = stroke->getBBox();
+    if (bBox.x0 == bBox.x1 && bBox.y0 == bBox.y1)  // empty stroke: discard
+      return -1;
+  }
+
+  if (m_imp->m_insideGroup != TGroupId()) {
+    int i;
+    for (i = m_imp->m_strokes.size() - 1; i >= 0; i--)
+      if (m_imp->m_insideGroup.isParentOf(m_imp->m_strokes[i]->m_groupId)) {
+        int j = 0;
+        for (j = i - 1;
+             j >= 0 &&
+             m_imp->m_insideGroup.isParentOf(m_imp->m_strokes[j]->m_groupId) &&
+             aboveStyles.contains(m_imp->m_strokes[j]->m_s->getStyle());
+             j--);
+        m_imp->insertStrokeAt(
+            new VIStroke(stroke, m_imp->m_strokes[j + 1]->m_groupId), j + 1);
+        return j + 1;
+      }
+  }
+
+  TGroupId gid;
+  if (m_imp->m_strokes.empty() ||
+      m_imp->m_strokes.back()->m_groupId.isGrouped() != 0)
+    gid = TGroupId(this, true);
+  else
+      gid = m_imp->m_strokes.back()->m_groupId;
+
+  int i;
+  for (i = m_imp->m_strokes.size() - 1;
+       i >= 0 && !isStrokeGrouped(i) &&
+       aboveStyles.contains(m_imp->m_strokes[i]->m_s->getStyle());
+       i--);
+  m_imp->insertStrokeAt(new VIStroke(stroke, gid), i + 1);
   m_imp->m_areValidRegions = false;
-  return m_imp->m_strokes.size() - 1;
+  return i + 1;
 }
 
 //-----------------------------------------------------------------------------
@@ -572,16 +632,14 @@ TRectD TVectorImage::getBBox() const {
   TRectD bbox;
 
   for (UINT i = 0; i < strokeCount; ++i) {
-    TRectD r           = m_imp->m_strokes[i]->m_s->getBBox();
+    TStroke *stroke    = m_imp->m_strokes[i]->m_s;
     TColorStyle *style = 0;
     if (plt) style = plt->getStyle(m_imp->m_strokes[i]->m_s->getStyle());
-    if (dynamic_cast<TRasterImagePatternStrokeStyle *>(style) ||
-        dynamic_cast<TVectorImagePatternStrokeStyle *>(
-            style))  // con i pattern style, il render a volte taglia sulla bbox
-                     // dello stroke....
-      // aumento la bbox della meta' delle sue dimensioni:pezzaccia.
-      r = r.enlarge(std::max(r.getLx() * 0.25, r.getLy() * 0.25));
-    bbox = ((i == 0) ? r : bbox + r);
+    if (!style) continue;
+    // reimplemented in TRasterImagePatternStrokeStyle,
+    // TVectorImagePatternStrokeStyle and FlowLineStrokeStyle
+    TRectD r = style->getStrokeBBox(stroke);
+    bbox     = ((i == 0) ? r : bbox + r);
   }
 
   return bbox;
@@ -617,14 +675,14 @@ bool TVectorImage::getNearestStroke(const TPointD &p, double &outW,
 
 //-----------------------------------------------------------------------------
 
-#if defined(LINUX) || defined(MACOSX)
+#if defined(LINUX) || defined(FREEBSD) || defined(MACOSX)
 void TVectorImage::render(const TVectorRenderData &rd, TRaster32P &ras) {
   // hardRenderVectorImage(rd,ras,this);
 }
 #endif
 
 //-----------------------------------------------------------------------------
-//#include "timage_io.h"
+// #include "timage_io.h"
 
 TRaster32P TVectorImage::render(bool onlyStrokes) {
   TRect bBox = convert(getBBox());
@@ -826,8 +884,7 @@ bool TVectorImage::Imp::selectFill(const TRectD &selArea, TStroke *s,
     for (UINT i = 0; i < m_regions.size(); i++) {
       int index, j = 0;
 
-      do
-        index = m_regions[i]->getEdge(j++)->m_index;
+      do index = m_regions[i]->getEdge(j++)->m_index;
       while (index < 0 && j < (int)m_regions[i]->getEdgeCount());
       // if index<0, means that the region is purely of autoclose strokes!
       if (m_insideGroup != TGroupId() && index >= 0 &&
@@ -1031,11 +1088,11 @@ bool TVectorImage::Imp::areWholeGroups(const std::vector<int> &indexes) const {
   UINT i, j;
   for (i = 0; i < indexes.size(); i++) {
     if (m_strokes[indexes[i]]->m_isNewForFill) return false;
-    if (!m_strokes[indexes[i]]->m_groupId.isGrouped() != 0) return false;
+    if (!m_strokes[indexes[i]]->m_groupId.isGrouped()) return false;
     for (j = 0; j < m_strokes.size(); j++) {
       int ret = areDifferentGroup(indexes[i], false, j, false);
-      if (ret == -1 ||
-          ret >= 1 && find(indexes.begin(), indexes.end(), j) == indexes.end())
+      if (ret == -1 || (ret >= 1 && find(indexes.begin(), indexes.end(), j) ==
+                                        indexes.end()))
         return false;
     }
   }
@@ -1114,7 +1171,7 @@ void TVectorImage::Imp::notifyChangedStrokes(
 
 //-----------------------------------------------------------------------------
 
-void TVectorImage::findRegions(bool fromSwf) {
+void TVectorImage::findRegions() {
   // for (int i=0; i<(int)m_imp->m_strokes.size(); i++)
   //  {
   //  m_imp->eraseIntersection(i);
@@ -1219,8 +1276,8 @@ VIStroke::VIStroke(const VIStroke &s, bool sameId)
 
 //-----------------------------------------------------------------------------
 
-void TVectorImage::mergeImage(const TVectorImageP &img, const TAffine &affine,
-                              bool sameStrokeId) {
+int TVectorImage::mergeImage(const TVectorImageP &img, const TAffine &affine,
+                             bool sameStrokeId) {
   QMutexLocker sl(m_imp->m_mutex);
 
 #ifdef _DEBUG
@@ -1243,16 +1300,16 @@ void TVectorImage::mergeImage(const TVectorImageP &img, const TAffine &affine,
   // mettere comunque un test qui
   if (srcPlt) mergePalette(tarPlt, styleTable, srcPlt, usedStyles);
 
-  mergeImage(img, affine, styleTable, sameStrokeId);
+  return mergeImage(img, affine, styleTable, sameStrokeId);
 }
 
 //-----------------------------------------------------------------------------
 
-void TVectorImage::mergeImage(const TVectorImageP &img, const TAffine &affine,
-                              const std::map<int, int> &styleTable,
-                              bool sameStrokeId) {
+int TVectorImage::mergeImage(const TVectorImageP &img, const TAffine &affine,
+                             const std::map<int, int> &styleTable,
+                             bool sameStrokeId) {
   int imageSize = img->getStrokeCount();
-  if (imageSize == 0) return;
+  if (imageSize == 0) return 0;
   QMutexLocker sl(m_imp->m_mutex);
 
   m_imp->m_computedAlmostOnce |= img->m_imp->m_computedAlmostOnce;
@@ -1268,20 +1325,23 @@ void TVectorImage::mergeImage(const TVectorImageP &img, const TAffine &affine,
       TGroupId())  // if is inside a group, new image is put in that group.
   {
     TGroupId groupId;
-    for (i = m_imp->m_strokes.size() - 1; i >= 0; i--)
+    for (i = m_imp->m_strokes.size() - 1; i >= 0; i--) {
       if (m_imp->m_insideGroup.isParentOf(m_imp->m_strokes[i]->m_groupId)) {
         insertAt = i + 1;
         groupId  = m_imp->m_strokes[i]->m_groupId;
         break;
       }
-    if (insertAt != 0)
-      for (i = 0; i < (int)img->m_imp->m_strokes.size(); i++)
-        if (!img->m_imp->m_strokes[i]->m_groupId.isGrouped())
+    }
+    if (insertAt != 0) {
+      for (i = 0; i < (int)img->m_imp->m_strokes.size(); i++) {
+        if (!img->m_imp->m_strokes[i]->m_groupId.isGrouped()) {
           img->m_imp->m_strokes[i]->m_groupId = groupId;
-        else
+        } else {
           img->m_imp->m_strokes[i]->m_groupId =
               TGroupId(groupId, img->m_imp->m_strokes[i]->m_groupId);
-
+        }
+      }
+    }
   }
 
   // si fondono l'ultimo gruppo ghost della vecchia a e il primo della nuova
@@ -1348,6 +1408,8 @@ void TVectorImage::mergeImage(const TVectorImageP &img, const TAffine &affine,
 #ifdef _DEBUG
   checkIntersections();
 #endif
+
+  return insertAt;
 }
 
 //-----------------------------------------------------------------------------
@@ -1987,7 +2049,7 @@ static void computeEdgeList(TStroke *newS, const std::list<TEdge *> &edgeList1,
 //-----------------------------------------------------------------------------
 #ifdef _DEBUG
 
-//#include "tpalette.h"
+// #include "tpalette.h"
 #include "tcolorstyles.h"
 
 void printEdges(std::ofstream &os, char *str, TPalette *plt,
@@ -2023,12 +2085,12 @@ void TVectorImage::Imp::printStrokes(std::ofstream &os) {
 
 //-----------------------------------------------------------------------------
 
-TStroke *TVectorImage::removeEndpoints(int strokeIndex) {
-  return m_imp->removeEndpoints(strokeIndex);
+TStroke *TVectorImage::removeEndpoints(int strokeIndex, double *offset) {
+  return m_imp->removeEndpoints(strokeIndex, offset);
 }
 
-void TVectorImage::restoreEndpoints(int index, TStroke *oldStroke) {
-  m_imp->restoreEndpoints(index, oldStroke);
+void TVectorImage::restoreEndpoints(int index, TStroke *oldStroke, double offset) {
+  m_imp->restoreEndpoints(index, oldStroke, offset);
 }
 
 //-----------------------------------------------------------------------------
@@ -2149,10 +2211,10 @@ VIStroke *TVectorImage::Imp::joinStroke(int index1, int index2, int cpIndex1,
   int cpCount2 = stroke2->getControlPointCount();
   int styleId  = stroke1->getStyle();
 
-  // check if the both ends are at the same postion
+  // check if the both ends are at the same position
   bool isSamePos = isAlmostZero(tdistance2(stroke1->getControlPoint(cpIndex1),
                                            stroke2->getControlPoint(cpIndex2)));
-  // connecting the ends in the same shape at the same postion
+  // connecting the ends in the same shape at the same position
   // means just making the shape self-looped
   if (isSamePos && index1 == index2) {
     stroke1->setSelfLoop();
@@ -2581,7 +2643,7 @@ int TVectorImage::areDifferentGroup(UINT index1, bool isRegion1, UINT index2,
 
 //-------------------------------------------------------------------
 /*this method is tricky.
-it is not allow to have not-adiacent strokes  of same group.
+it is not allow to have not-adjacent strokes  of same group.
 but it can happen when you group  some already-grouped strokes creating
 sub-groups.
 
@@ -2599,7 +2661,7 @@ after grouping became:
 2
 not allowed!
 
-this method moves strokes, so that  adiacent strokes have same group.
+this method moves strokes, so that adjacent strokes have same group.
 so after calling rearrangeMultiGroup the vi became:
 2
 2
@@ -2904,8 +2966,8 @@ void TVectorImage::Imp::regroupGhosts(std::vector<int> &changedStrokes) {
       while (i < m_strokes.size() &&
              ((currGroupId.isGrouped(false) != 0 &&
                m_strokes[i]->m_groupId == currGroupId) ||
-              currGroupId.isGrouped(true) != 0 &&
-                  m_strokes[i]->m_groupId.isGrouped(true) != 0)) {
+              (currGroupId.isGrouped(true) != 0 &&
+               m_strokes[i]->m_groupId.isGrouped(true) != 0))) {
         if (m_strokes[i]->m_groupId != currGroupId) {
           m_strokes[i]->m_groupId = currGroupId;
           changedStrokes.push_back(i);

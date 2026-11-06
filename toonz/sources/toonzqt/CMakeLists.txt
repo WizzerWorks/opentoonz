@@ -27,11 +27,13 @@ set(MOC_HEADERS
     ../include/toonzqt/functiontreeviewer.h
     ../include/toonzqt/functionviewer.h
     ../include/toonzqt/fxhistogramrender.h
+    ../include/toonzqt/fxiconmanager.h
     ../include/toonzqt/fxschematicnode.h
     ../include/toonzqt/fxschematicscene.h
     ../include/toonzqt/fxselection.h
     ../include/toonzqt/fxsettings.h
     ../include/toonzqt/gutil.h
+    ../include/toonzqt/hexcolornames.h
     ../include/toonzqt/histogram.h
     ../include/toonzqt/icongenerator.h
     ../include/toonzqt/imageutils.h
@@ -52,6 +54,7 @@ set(MOC_HEADERS
     ../include/toonzqt/schematicviewer.h
     ../include/toonzqt/screenboard.h
     ../include/toonzqt/scriptconsole.h
+    ../include/toonzqt/seethroughwindow.h
     ../include/toonzqt/spectrumfield.h
     ../include/toonzqt/spreadsheetviewer.h
     ../include/toonzqt/stageschematicnode.h
@@ -87,7 +90,6 @@ set(HEADERS
     ../include/toonzqt/dvmimedata.h
     ../include/toonzqt/flipconsoleowner.h
     ../include/toonzqt/freelayout.h
-    ../include/toonzqt/fxiconmanager.h
     ../include/toonzqt/fxtypes.h
     ../include/toonzqt/glwidget_for_highdpi.h
     ../include/toonzqt/lutcalibrator.h
@@ -122,6 +124,7 @@ set(SOURCES
     fxhistogramrender.cpp
     fxsettings.cpp
     gutil.cpp
+    hexcolornames.cpp
     histogram.cpp
     icongenerator.cpp
     imageutils.cpp
@@ -139,6 +142,7 @@ set(SOURCES
     popupbutton.cpp
     rasterimagedata.cpp
     scriptconsole.cpp
+    seethroughwindow.cpp
     selection.cpp
     stageobjectsdata.cpp
     spectrumfield.cpp
@@ -202,8 +206,6 @@ set(SOURCES
 
 set(RESOURCES toonzqt.qrc)
 
-add_translation(toonzqt ${HEADERS} ${SOURCES})
-
 get_target_property(QW_LOC Qt5::Widgets INTERFACE_INCLUDE_DIRECTORIES)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -218,8 +220,14 @@ qt5_add_resources(SOURCES ${RESOURCES})
 qt5_wrap_cpp(SOURCES ${MOC_HEADERS} OPTIONS ${incs})
 
 add_library(toonzqt SHARED ${HEADERS} ${SOURCES} ${RESOURCES})
+
+if(WITH_TRANSLATION)
+    add_translation(toonzqt ${HEADERS} ${SOURCES})
+    add_compile_translations_command(toonzqt toonzqt)
+endif()
+
 if(BUILD_ENV_APPLE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-install_name,@rpath/libtoonzqt.dylib")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-install_name,@executable_path/libtoonzqt.dylib")
     add_dependencies(toonzqt tnzcore tnzbase tnzext toonzlib sound)
 endif()
 

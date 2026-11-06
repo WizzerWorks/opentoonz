@@ -20,10 +20,6 @@
 #include <map>
 
 // Boost includes
-#include <boost/bimap.hpp>
-#include <boost/multi_index_container.hpp>
-#include <boost/multi_index/ordered_index.hpp>
-#include <boost/multi_index/member.hpp>
 #include <boost/iterator/transform_iterator.hpp>
 
 #include "ext/plasticskeletondeformation.h"
@@ -33,45 +29,6 @@ PERSIST_IDENTIFIER(PlasticSkeletonVertexDeformation,
 PERSIST_IDENTIFIER(PlasticSkeletonDeformation, "PlasticSkeletonDeformation")
 
 DEFINE_CLASS_CODE(PlasticSkeletonDeformation, 121)
-
-//**************************************************************************************
-//    Boost-related  stuff
-//**************************************************************************************
-
-using namespace boost::multi_index;
-
-namespace {
-
-typedef boost::bimap<int, PlasticSkeletonP> SkeletonSet;
-
-//======================================================================
-
-struct VDKey {
-  QString m_name;
-  int m_hookNumber;
-
-  mutable std::map<int, int>
-      m_vIndices;  //!< Skeleton index to Vertex index map
-  mutable SkVD m_vd;
-};
-
-//----------------------------------------------------------------------
-
-typedef boost::multi_index_container<
-    VDKey,
-    indexed_by<
-
-        ordered_unique<tag<QString>, member<VDKey, QString, &VDKey::m_name>>,
-        ordered_unique<tag<int>, member<VDKey, int, &VDKey::m_hookNumber>>
-
-        >>
-    SkVDSet;
-
-//----------------------------------------------------------------------
-
-typedef SkVDSet::index<int>::type SkVDByHookNumber;
-
-}  // namespace
 
 //**************************************************************************************
 //    Local  namespace
@@ -231,7 +188,7 @@ public:
 
   // NOTE: There \a is a deformation even for a skeleton's root node. This is
   // now required due to the
-  // onwership of \a multiple skeletons at once. However, its angle and distance
+  // ownership of \a multiple skeletons at once. However, its angle and distance
   // params will be unused.
 
 public:

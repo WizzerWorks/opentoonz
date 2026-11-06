@@ -61,7 +61,7 @@ public:
   void registerFrameScroller();
   void unregisterFrameScroller();
 
-  void prepareToScrollOthers(const QPoint &offset);
+  void prepareToScrollOthers(const QPointF &offset);
 
   void setSyncing(bool s) { m_syncing = s; }
   bool isSyncing() { return m_syncing; }
@@ -70,8 +70,9 @@ private:
   void connectScrollbars();
   void disconnectScrollbars();
 
-  void handleScroll(QPoint &offset);
+  void handleScroll(QPoint &offset, int senderMaximum, int senderValue);
   void onScroll(const CellPositionRatio &offset);
+  bool exactScroll(const int senderMaximum, const int senderValue);
 
   void prepareToScrollRatio(const CellPositionRatio &offset);
 
@@ -79,8 +80,8 @@ private slots:
   void onVScroll(int value);
   void onHScroll(int value);
 signals:
-  void prepareToScrollOffset(const QPoint &offset);
-  void zoomScrollAdjust(QPoint &offset, bool toZoom);
+  void prepareToScrollOffset(const QPointF &offset);
+  void zoomScrollAdjust(QPointF &offset, bool toZoom);
 };
 
 //-------------------------------------------------------------------
@@ -143,11 +144,7 @@ class DVAPI ScrollArea final : public QScrollArea {
   Q_OBJECT
 
 public:
-#if QT_VERSION >= 0x050500
-  ScrollArea(QWidget *parent = 0, Qt::WindowFlags flags = 0);
-#else
-  ScrollArea(QWidget *parent = 0, Qt::WFlags flags = 0);
-#endif
+  ScrollArea(QWidget *parent = 0, Qt::WindowFlags flags = Qt::WindowFlags());
   virtual ~ScrollArea();
 
 protected:
@@ -220,7 +217,7 @@ protected:
   void paintEvent(QPaintEvent *) override;
   virtual void drawCells(QPainter &p, int r0, int c0, int r1, int c1) {}
 };
-}
+}  // namespace Spreadsheet
 
 //-------------------------------------------------------------------
 
@@ -237,15 +234,33 @@ class DVAPI SpreadsheetViewer : public QDialog {
   Q_PROPERTY(
       QColor LightLineColor READ getLightLineColor WRITE setLightLineColor)
 
-  QColor m_currentRowBgColor;  // current frame, column
-  QColor m_markerLineColor;    // marker interval (0, 255, 246)
-  QColor m_textColor;          // text (black)
-  QColor m_verticalLineColor;  // vertical line (black)
+  QColor m_currentRowBgColor;    // current frame, column
+  QColor m_markerLineColor;      // marker interval (0, 255, 246)
+  QColor m_secMarkerLineColor;   // second marker lines
+  QColor m_textColor;            // text (black)
+  QColor m_currentRowTextColor;  // text color for the current row
+  QColor m_frameTextColor;       // text color for frame numbers
+  QColor m_groupNameTextColor;   // text color for group name
+  QColor m_channelNameTextColor; // text color for channel name
+  QColor m_keyframeLineColor;    // color of keyframe lines
+  QColor m_verticalLineColor;    // vertical line (black)
+
   Q_PROPERTY(QColor CurrentRowBgColor READ getCurrentRowBgColor WRITE
                  setCurrentRowBgColor)
   Q_PROPERTY(
       QColor MarkerLineColor READ getMarkerLineColor WRITE setMarkerLineColor)
+  Q_PROPERTY(QColor SecMarkerLineColor READ getSecMarkerLineColor WRITE
+                 setSecMarkerLineColor)
   Q_PROPERTY(QColor TextColor READ getTextColor WRITE setTextColor)
+  Q_PROPERTY(QColor CurrentRowTextColor READ getCurrentRowTextColor WRITE
+                 setCurrentRowTextColor)
+  Q_PROPERTY(QColor FrameTextColor READ getFrameTextColor WRITE setFrameTextColor)
+  Q_PROPERTY(QColor GroupNameTextColor READ getGroupNameTextColor WRITE
+                 setGroupNameTextColor)
+  Q_PROPERTY(QColor ChannelNameTextColor READ getChannelNameTextColor WRITE
+                 setChannelNameTextColor)
+  Q_PROPERTY(QColor KeyframeLineColor READ getKeyframeLineColor WRITE
+                 setKeyframeLineColor)
   Q_PROPERTY(QColor VerticalLineColor READ getVerticalLineColor WRITE
                  setVerticalLineColor)
 
@@ -253,10 +268,14 @@ class DVAPI SpreadsheetViewer : public QDialog {
   QColor m_keyFrameColor;          // (219,139,54)
   QColor m_keyFrameBorderColor;    // (82,51,20)
   QColor m_selectedKeyFrameColor;  // (237,197,155)
+  QColor m_ignoredKeyFrameColor;
+  QColor m_selectedIgnoredKeyFrameColor;
   // key frame inbetween
   QColor m_inBetweenColor;          // (194,194,176)
   QColor m_inBetweenBorderColor;    // (72,72,65)
   QColor m_selectedInBetweenColor;  // (225,225,216)
+  QColor m_ignoredInBetweenColor;
+  QColor m_selectedIgnoredInBetweenColor;
   // empty cell
   QColor m_selectedEmptyColor;  // (190,190,190)
   // empty cell in the scene range
@@ -266,12 +285,22 @@ class DVAPI SpreadsheetViewer : public QDialog {
                  setKeyFrameBorderColor)
   Q_PROPERTY(QColor SelectedKeyFrameColor READ getSelectedKeyFrameColor WRITE
                  setSelectedKeyFrameColor)
+  Q_PROPERTY(QColor IgnoredKeyFrameColor READ getIgnoredKeyFrameColor WRITE
+                 setIgnoredKeyFrameColor)
+  Q_PROPERTY(
+      QColor SelectedIgnoredKeyFrameColor READ getSelectedIgnoredKeyFrameColor
+          WRITE setSelectedIgnoredKeyFrameColor)
   Q_PROPERTY(
       QColor InBetweenColor READ getInBetweenColor WRITE setInBetweenColor)
   Q_PROPERTY(QColor InBetweenBorderColor READ getInBetweenBorderColor WRITE
                  setInBetweenBorderColor)
   Q_PROPERTY(QColor SelectedInBetweenColor READ getSelectedInBetweenColor WRITE
                  setSelectedInBetweenColor)
+  Q_PROPERTY(QColor IgnoredInBetweenColor READ getIgnoredInBetweenColor WRITE
+                 setIgnoredInBetweenColor)
+  Q_PROPERTY(
+      QColor SelectedIgnoredInBetweenColor READ getSelectedIgnoredInBetweenColor
+          WRITE setSelectedIgnoredInBetweenColor)
   Q_PROPERTY(QColor SelectedEmptyColor READ getSelectedEmptyColor WRITE
                  setSelectedEmptyColor)
   Q_PROPERTY(
@@ -279,11 +308,8 @@ class DVAPI SpreadsheetViewer : public QDialog {
           WRITE setSelectedSceneRangeEmptyColor)
 
   QColor m_columnHeaderBorderColor;  // column header border lines (46,47,46)
-  QColor m_selectedColumnTextColor;  // selected column text (red)
   Q_PROPERTY(QColor ColumnHeaderBorderColor READ getColumnHeaderBorderColor
                  WRITE setColumnHeaderBorderColor)
-  Q_PROPERTY(QColor SelectedColumnTextColor READ getSelectedColumnTextColor
-                 WRITE setSelectedColumnTextColor)
 
   Spreadsheet::ScrollArea *m_columnScrollArea;
   Spreadsheet::ScrollArea *m_rowScrollArea;
@@ -292,6 +318,7 @@ class DVAPI SpreadsheetViewer : public QDialog {
 
   int m_columnWidth;
   int m_rowHeight;
+  int m_scaleFactor;
 
   // QPoint m_delta;
   int m_timerId;
@@ -299,7 +326,7 @@ class DVAPI SpreadsheetViewer : public QDialog {
   QPoint m_lastAutoPanPos;
   int m_rowCount, m_columnCount;
   int m_currentRow;
-  int m_markRowDistance, m_markRowOffset;
+  int m_markRowDistance, m_markRowOffset, m_markSecRowDistance;
   // QRect m_selectedCells; // x=col, y=row
   bool m_isComputingSize;
   // const Orientation *m_orientation;
@@ -317,9 +344,12 @@ public:
   int getRowHeight() const { return m_rowHeight; }
   void setRowHeight(int height) { m_rowHeight = height; }
 
+  void setScaleFactor(int factor) { m_scaleFactor = factor; }
+
   void setRowsPanel(Spreadsheet::RowPanel *rows);
   void setColumnsPanel(Spreadsheet::ColumnPanel *columns);
   void setCellsPanel(Spreadsheet::CellPanel *cells);
+  void setButtonAreaWidget(QWidget *widget);
 
   int getRowCount() const { return m_rowCount; }
 
@@ -338,8 +368,28 @@ public:
   QColor getCurrentRowBgColor() const { return m_currentRowBgColor; }
   void setMarkerLineColor(const QColor &color) { m_markerLineColor = color; }
   QColor getMarkerLineColor() const { return m_markerLineColor; }
+  void setSecMarkerLineColor(const QColor &color) {
+    m_secMarkerLineColor = color;
+  }
+  QColor getSecMarkerLineColor() const { return m_secMarkerLineColor; }
   void setTextColor(const QColor &color) { m_textColor = color; }
   QColor getTextColor() const { return m_textColor; }
+  void setCurrentRowTextColor(const QColor &color) {
+    m_currentRowTextColor = color;
+  }
+  QColor getCurrentRowTextColor() const { return m_currentRowTextColor; }
+  void setFrameTextColor(const QColor &color) { m_frameTextColor = color; }
+  QColor getFrameTextColor() const { return m_frameTextColor; }
+  void setGroupNameTextColor(const QColor &color) {
+    m_groupNameTextColor = color;
+  }
+  QColor getGroupNameTextColor() const { return m_groupNameTextColor; }
+  void setChannelNameTextColor(const QColor &color) {
+    m_channelNameTextColor = color;
+  }
+  QColor getChannelNameTextColor() const { return m_channelNameTextColor; }
+  void setKeyframeLineColor(const QColor &color) { m_keyframeLineColor = color; }
+  QColor getKeyframeLineColor() const { return m_keyframeLineColor; }
   void setVerticalLineColor(const QColor &color) {
     m_verticalLineColor = color;
   }
@@ -354,6 +404,18 @@ public:
     m_selectedKeyFrameColor = color;
   }
   QColor getSelectedKeyFrameColor() const { return m_selectedKeyFrameColor; }
+
+  void setIgnoredKeyFrameColor(const QColor &color) {
+    m_ignoredKeyFrameColor = color;
+  }
+  QColor getIgnoredKeyFrameColor() const { return m_ignoredKeyFrameColor; }
+  void setSelectedIgnoredKeyFrameColor(const QColor &color) {
+    m_selectedIgnoredKeyFrameColor = color;
+  }
+  QColor getSelectedIgnoredKeyFrameColor() const {
+    return m_selectedIgnoredKeyFrameColor;
+  }
+
   void setInBetweenColor(const QColor &color) { m_inBetweenColor = color; }
   QColor getInBetweenColor() const { return m_inBetweenColor; }
   void setInBetweenBorderColor(const QColor &color) {
@@ -364,6 +426,18 @@ public:
     m_selectedInBetweenColor = color;
   }
   QColor getSelectedInBetweenColor() const { return m_selectedInBetweenColor; }
+
+  void setIgnoredInBetweenColor(const QColor &color) {
+    m_ignoredInBetweenColor = color;
+  }
+  QColor getIgnoredInBetweenColor() const { return m_ignoredInBetweenColor; }
+  void setSelectedIgnoredInBetweenColor(const QColor &color) {
+    m_selectedIgnoredInBetweenColor = color;
+  }
+  QColor getSelectedIgnoredInBetweenColor() const {
+    return m_selectedIgnoredInBetweenColor;
+  }
+
   void setSelectedEmptyColor(const QColor &color) {
     m_selectedEmptyColor = color;
   }
@@ -379,12 +453,6 @@ public:
   }
   QColor getColumnHeaderBorderColor() const {
     return m_columnHeaderBorderColor;
-  }
-  void setSelectedColumnTextColor(const QColor &color) {
-    m_selectedColumnTextColor = color;
-  }
-  QColor getSelectedColumnTextColor() const {
-    return m_selectedColumnTextColor;
   }
 
   void scroll(QPoint delta);
@@ -419,23 +487,34 @@ public:
   bool isSelectedCell(int row, int col) const {
     return getSelectedCells().contains(QPoint(col, row));
   }
-  void setMarkRow(int distance, int offset) {
-    m_markRowDistance = distance;  // distance > 0 ? distance : 6;
-    m_markRowOffset   = offset;
+  void setMarkRow(int distance, int offset, int secDistance) {
+    m_markRowDistance    = distance;  // distance > 0 ? distance : 6;
+    m_markRowOffset      = offset;
+    m_markSecRowDistance = secDistance;
   }
   void getMarkRow(int &distance, int &offset) const {
     distance = m_markRowDistance;
     offset   = m_markRowOffset;
   }
-  int isMarkRow(int row) const {
+  bool isMarkRow(int row) const {
     return m_markRowDistance > 0 &&
-           ((row - m_markRowOffset) % m_markRowDistance) == 0;
+           ((row - m_markRowOffset) % m_markRowDistance) == 0 && row > 0;
   }
+  bool isMarkSecRow(int row) const {
+    return m_markSecRowDistance > 0 &&
+           ((row - m_markRowOffset) % m_markSecRowDistance) == 0 && row > 0;
+  }
+  bool isSecMarkerActive() const { return m_markSecRowDistance > 0; }
 
   void setFrameHandle(TFrameHandle *frameHandle);
   TFrameHandle *getFrameHandle() const { return m_frameHandle; }
 
   void ensureVisibleCol(int col);
+
+  virtual int getFrameZoomFactor() const { return 100; }
+
+  bool isSmallHeader();
+  void updateHeaderHeight();
 
 protected:
   void showEvent(QShowEvent *) override;
@@ -455,7 +534,9 @@ public slots:
   void onVSliderChanged(int);
   void onHSliderChanged(int);
 
-  void onPrepareToScrollOffset(const QPoint &offset);
+  void onPrepareToScrollOffset(const QPointF &offset);
+  void onZoomScrollAdjust(QPointF &offset, bool toZoom);
+
   /*
 void updateAllAree();
 void updateCellColumnAree();

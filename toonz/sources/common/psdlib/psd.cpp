@@ -176,7 +176,7 @@ bool TPSDReader::doImageResources() {
       hresd = FIXDPI(hres = read4Bytes(m_file));
       read2Bytes(m_file);
       read2Bytes(m_file);
-      vresd = FIXDPI(vres = read4Bytes(m_file));
+      vresd             = FIXDPI(vres = read4Bytes(m_file));
       m_headerInfo.vres = vresd;
       m_headerInfo.hres = hresd;
       fseek(m_file, savepos, SEEK_SET);
@@ -220,8 +220,8 @@ bool TPSDReader::doLayersInfo() {
     m_headerInfo.layersCount = -m_headerInfo.layersCount;
   }
   if (!m_headerInfo.linfoBlockEmpty) {
-    m_headerInfo.linfo = (TPSDLayerInfo *)mymalloc(
-        m_headerInfo.layersCount * sizeof(struct TPSDLayerInfo));
+    m_headerInfo.linfo = (TPSDLayerInfo *)mycalloc(
+        m_headerInfo.layersCount, sizeof(struct TPSDLayerInfo));
     int i = 0;
     for (i = 0; i < m_headerInfo.layersCount; i++) {
       readLayerInfo(i);
@@ -248,7 +248,7 @@ bool TPSDReader::readLayerInfo(int i) {
     fseek(m_file, 6 * li->channels + 12, SEEK_CUR);
     skipBlock(m_file);  // skip  "layer info: extra data";
   } else {
-    li->chan = (TPSDChannelInfo *)mymalloc(li->channels *
+    li->chan    = (TPSDChannelInfo *)mymalloc(li->channels *
                                            sizeof(struct TPSDChannelInfo));
     li->chindex = (int *)mymalloc((li->channels + 2) * sizeof(int));
     li->chindex += 2;  //
@@ -296,7 +296,7 @@ bool TPSDReader::readLayerInfo(int i) {
 
     // layer name
     li->nameno = (char *)malloc(16);
-    sprintf(li->nameno, "layer%d", i + 1);
+    snprintf(li->nameno, 16, "layer%d", i + 1);
     namelen  = fgetc(m_file);
     li->name = (char *)mymalloc(NEXT4(namelen + 1));
     fread(li->name, 1, NEXT4(namelen + 1) - 1, m_file);
@@ -306,7 +306,9 @@ bool TPSDReader::readLayerInfo(int i) {
     }
 
     // process layer's 'additional info'
-
+    // Assumption: File will provide all layerIds or none at all.
+    // Set layer id, for now, knowing it may be overwritten if found in file
+    li->layerId = i + 1;
     li->additionalpos = ftell(m_file);
     li->additionallen = extrastart + extralen - li->additionalpos;
     doExtraData(li, li->additionallen);
@@ -558,7 +560,7 @@ void TPSDReader::readImageData(TRasterP &rasP, TPSDLayerInfo *li,
     x1 = x0 + m_region.getLx() - 1;
     // controllo che x1 rimanga all'interno dell'immagine
     if (x1 >= m_headerInfo.cols) x1 = m_headerInfo.cols - 1;
-    y0                              = m_region.getP00().y;
+    y0 = m_region.getP00().y;
     // se y0 è fuori dalle dimensioni dell'immagine ritorna un'immagine vuota
     if (y0 >= m_headerInfo.rows) {
       free(rledata);
@@ -640,7 +642,7 @@ void TPSDReader::readImageData(TRasterP &rasP, TPSDLayerInfo *li,
     m_layersSavebox[li->layerId] = layerSaveBox2;
   else
     m_layersSavebox[0] = layerSaveBox2;
-  TRasterP smallRas    = rasP->extract(layerSaveBox2);
+  TRasterP smallRas = rasP->extract(layerSaveBox2);
   assert(smallRas);
   if (!smallRas) return;
   // Trovo l'indice di colonna del primo pixel del livello che deve essere letto
@@ -651,7 +653,7 @@ void TPSDReader::readImageData(TRasterP &rasP, TPSDLayerInfo *li,
   // L'indice è riferito al livello.
   // Nota che nel file photoshop le righe sono memorizzate dall'ultima alla
   // prima.
-  int rowOffset = abs(sby1) % m_shrinkY;
+  int rowOffset = std::abs(sby1) % m_shrinkY;
   int rowCount  = rowOffset;
   // if(m_shrinkY==3) rowCount--;
   for (j = 0; j < smallRas->getLy(); j++) {
@@ -1005,11 +1007,11 @@ void readChannel(FILE *f, TPSDLayerInfo *li,
 
   for (ch = 0; ch < channels; ++ch) {
     if (!li) chan[ch].id = ch;
-    chan[ch].rowbytes    = rb;
-    chan[ch].comptype    = comp;
-    chan[ch].rows        = chan->rows;
-    chan[ch].cols        = chan->cols;
-    chan[ch].filepos     = pos;
+    chan[ch].rowbytes = rb;
+    chan[ch].comptype = comp;
+    chan[ch].rows     = chan->rows;
+    chan[ch].cols     = chan->cols;
+    chan[ch].filepos  = pos;
 
     if (!chan->rows) continue;
 
@@ -1030,7 +1032,7 @@ void readChannel(FILE *f, TPSDLayerInfo *li,
 
         if (count > 2 * chan[ch].rowbytes)  // this would be impossible
           count = last;                     // make a guess, to help recover
-        last    = count;
+        last = count;
 
         chan[ch].rowpos[j] = pos;
         pos += count;
@@ -1294,9 +1296,8 @@ int TPSDParser::getLevelIdByName(std::string levelName) {
       levelNameCount++;
     }
   }
-  if (lyid == 0 && lyid < 0) lyid = 0;
-  if (lyid < 0 && lyid != 0)
-    throw TImageException(m_path, "Layer ID not exists");
+
+  if (lyid < 0) throw TImageException(m_path, "Layer ID not exists");
   return lyid;
 }
 int TPSDParser::getFramesCount(int levelId) {

@@ -5,6 +5,7 @@
 // Tnz6 includes
 #include "menubarcommandids.h"
 #include "tapp.h"
+#include "mainwindow.h"
 
 // TnzQt includes
 #include "toonzqt/menubarcommand.h"
@@ -29,6 +30,8 @@
 #include <QMainWindow>
 #include <QGroupBox>
 #include <QMessageBox>
+#include <QMenu>
+#include <QContextMenuEvent>
 
 using namespace DVGui;
 
@@ -166,7 +169,7 @@ public:
       tmpmatte = 0;
     else if (tmpmatte > 255)
       tmpmatte = 255;
-    color.m    = tmpmatte;
+    color.m = tmpmatte;
     return color;
   }
 };
@@ -186,7 +189,7 @@ public:
       tmpmatte = 0;
     else if (tmpmatte > 255)
       tmpmatte = 255;
-    color.m    = tmpmatte;
+    color.m = tmpmatte;
     return color;
   }
 };
@@ -377,11 +380,11 @@ void modifyColor(const T &modifier) {
   TUndo *undo;
   TStyleSelection *selection = dynamic_cast<TStyleSelection *>(
       TApp::instance()->getCurrentSelection()->getSelection());
-  if (selection) {
+  if (selection && !selection->isEmpty()) {
     undo = new GizmoUndo(*selection);
     getStyleIds(styleIds, *selection);
   }
-  /*-- StyleSelectionが有効でない場合はカレントStyleを用いる --*/
+  // modify the current style if the style selection is not active or is empty
   else {
     TStyleSelection tmpSelection;
     tmpSelection.setPaletteHandle(paletteHandle);
@@ -448,11 +451,7 @@ void modifyColor(const T &modifier) {
 // ValueAdjuster
 //-----------------------------------------------------------------------------
 
-#if QT_VERSION >= 0x050500
 ValueAdjuster::ValueAdjuster(QWidget *parent, Qt::WindowFlags flags)
-#else
-ValueAdjuster::ValueAdjuster(QWidget *parent, Qt::WFlags flags)
-#endif
     : QWidget(parent) {
   QPushButton *plusBut  = new QPushButton(QString("+"), this);
   QPushButton *minusBut = new QPushButton(QString("-"), this);
@@ -466,7 +465,7 @@ ValueAdjuster::ValueAdjuster(QWidget *parent, Qt::WFlags flags)
   m_valueLineEdit->setRange(0, 1000);
   //----layout
   QHBoxLayout *layout = new QHBoxLayout(this);
-  layout->setMargin(0);
+  layout->setContentsMargins(0, 0, 0, 0);
   layout->setSpacing(1);
   {
     layout->addWidget(plusBut, 0);
@@ -501,11 +500,7 @@ void ValueAdjuster::onClickedMinus() {
 // ValueShifter
 //-----------------------------------------------------------------------------
 
-#if QT_VERSION >= 0x050500
 ValueShifter::ValueShifter(bool isHue, QWidget *parent, Qt::WindowFlags flags)
-#else
-ValueShifter::ValueShifter(bool isHue, QWidget *parent, Qt::WFlags flags)
-#endif
     : QWidget(parent) {
   QPushButton *plusBut  = new QPushButton(QString("+"), this);
   QPushButton *minusBut = new QPushButton(QString("-"), this);
@@ -519,7 +514,7 @@ ValueShifter::ValueShifter(bool isHue, QWidget *parent, Qt::WFlags flags)
 
   //----layout
   QHBoxLayout *layout = new QHBoxLayout(this);
-  layout->setMargin(0);
+  layout->setContentsMargins(0, 0, 0, 0);
   layout->setSpacing(1);
   {
     layout->addWidget(plusBut, 0);
@@ -553,14 +548,10 @@ void ValueShifter::onClickedMinus() {
 // ColorFader
 //-----------------------------------------------------------------------------
 
-#if QT_VERSION >= 0x050500
 ColorFader::ColorFader(QString name, QWidget *parent, Qt::WindowFlags flags)
-#else
-ColorFader::ColorFader(QString name, QWidget *parent, Qt::WFlags flags)
-#endif
     : QWidget(parent) {
   QHBoxLayout *layout = new QHBoxLayout(this);
-  layout->setMargin(0);
+  layout->setContentsMargins(0, 0, 0, 0);
   layout->setSpacing(6);
   layout->setSizeConstraint(QLayout::SetFixedSize);
 
@@ -599,7 +590,9 @@ void ColorFader::onClicked() {
 //-----------------------------------------------------------------------------
 
 PltGizmoPopup::PltGizmoPopup()
-    : Dialog(TApp::instance()->getMainWindow(), false, true, "PltGizmo") {
+    : Dialog(TApp::instance()->getMainWindow(), false, true, "PltGizmo")
+    , m_isRoomBound(false)
+    , m_boundRoomName("") {
   setWindowTitle(tr("Palette Gizmo"));
 
   ValueAdjuster *luminanceValue   = new ValueAdjuster(this);
@@ -618,11 +611,11 @@ PltGizmoPopup::PltGizmoPopup()
   QPushButton *zeroMatteButton = new QPushButton(tr("Zero Alpha"), this);
 
   //----layout
-  m_topLayout->setMargin(5);
+  m_topLayout->setContentsMargins(5, 5, 5, 5);
   m_topLayout->setSpacing(3);
   {
     QGridLayout *upperLay = new QGridLayout();
-    upperLay->setMargin(0);
+    upperLay->setContentsMargins(0, 0, 0, 0);
     upperLay->setSpacing(3);
     {
       upperLay->addWidget(new QLabel(tr("Scale (%)"), this), 0, 1);
@@ -656,11 +649,11 @@ PltGizmoPopup::PltGizmoPopup()
 
     QGroupBox *fadeBox   = new QGroupBox(tr("Fade to Color"), this);
     QVBoxLayout *fadeLay = new QVBoxLayout();
-    fadeLay->setMargin(3);
+    fadeLay->setContentsMargins(3, 3, 3, 3);
     fadeLay->setSpacing(3);
     {
       QHBoxLayout *colorLay = new QHBoxLayout();
-      colorLay->setMargin(0);
+      colorLay->setContentsMargins(0, 0, 0, 0);
       colorLay->setSpacing(4);
       {
         colorLay->addWidget(new QLabel(tr("Color"), this), 0);
@@ -700,6 +693,43 @@ PltGizmoPopup::PltGizmoPopup()
 //-----------------------------------------------------------------------------
 
 PltGizmoPopup::~PltGizmoPopup() {}
+
+//-----------------------------------------------------------------------------
+
+void PltGizmoPopup::contextMenuEvent(QContextMenuEvent *event) {
+  QMenu *menu = new QMenu(this);
+  
+  // Add "Bind to Current Room" option
+  QAction *bindAction = menu->addAction(tr("Bind to Current Room"));
+  bindAction->setCheckable(true);
+  bindAction->setChecked(m_isRoomBound);
+  
+  connect(bindAction, &QAction::triggered, [this](bool checked) {
+    MainWindow *mw = dynamic_cast<MainWindow *>(
+        TApp::instance()->getMainWindow());
+    if (!mw) return;
+    
+    Room *currentRoom = mw->getCurrentRoom();
+    if (!currentRoom) return;
+    
+    // Update binding state
+    setRoomBound(checked);
+    if (checked) {
+      // Bind to current room
+      setBoundRoomName(currentRoom->getName());
+    } else {
+      // Unbind
+      setBoundRoomName("");
+      // Show if hidden
+      if (isHidden()) {
+        show();
+      }
+    }
+  });
+  
+  menu->exec(event->globalPos());
+  delete menu;
+}
 
 //-----------------------------------------------------------------------------
 

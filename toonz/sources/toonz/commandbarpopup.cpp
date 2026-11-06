@@ -1,3 +1,5 @@
+
+
 #include "commandbarpopup.h"
 
 // Tnz includes
@@ -28,42 +30,350 @@
 #include <QMimeData>
 #include <QDrag>
 #include <QMouseEvent>
+#include <QMap>
 #include <QPainter>
 #include <QApplication>
 #include <QLabel>
+#include <QLineEdit>
+#include <QMenu>
+#include <QRegularExpression>
 
 //=============================================================================
-// CommandBarCommandItem
+// CommandItem
 //-----------------------------------------------------------------------------
 
-class CommandBarCommandItem final : public QTreeWidgetItem {
-  QAction* m_action;
+CommandItem::CommandItem(QTreeWidgetItem* parent, QAction* action)
+    : QTreeWidgetItem(parent, UserType), m_action(action) {
+  setFlags(Qt::ItemIsSelectable | Qt::ItemIsDragEnabled | Qt::ItemIsEnabled |
+           Qt::ItemNeverHasChildren);
 
-public:
-  CommandBarCommandItem(QTreeWidgetItem* parent, QAction* action)
-      : QTreeWidgetItem(parent, UserType), m_action(action) {
-    setFlags(Qt::ItemIsSelectable | Qt::ItemIsDragEnabled | Qt::ItemIsEnabled |
-             Qt::ItemNeverHasChildren);
-    setText(0, m_action->text().remove("&"));
-    setToolTip(0, QObject::tr("[Drag] to move position"));
-  }
-  QAction* getAction() const { return m_action; }
-};
+  QString tempText = m_action->text();
+  // Removing accelerator key indicator
+  QRegularExpression accelRegex("&([^& ])");
+  tempText = tempText.replace(accelRegex, "\\1");
+  // Removing doubled &s
+  tempText = tempText.replace("&&", "&");
+
+  setText(0, tempText);
+  setToolTip(0, QObject::tr("[Drag] to move position"));
+}
 
 //=============================================================================
-// CommandBarSeparatorItem
+// SeparatorItem
 //-----------------------------------------------------------------------------
 
-class CommandBarSeparatorItem final : public QTreeWidgetItem {
-public:
-  CommandBarSeparatorItem(QTreeWidgetItem* parent)
-      : QTreeWidgetItem(parent, UserType) {
-    setFlags(Qt::ItemIsSelectable | Qt::ItemIsDragEnabled | Qt::ItemIsEnabled |
-             Qt::ItemNeverHasChildren);
-    setText(0, QObject::tr("----Separator----"));
-    setToolTip(0, QObject::tr("[Drag] to move position"));
+SeparatorItem::SeparatorItem(QTreeWidgetItem* parent)
+    : QTreeWidgetItem(parent, UserType) {
+  setFlags(Qt::ItemIsSelectable | Qt::ItemIsDragEnabled | Qt::ItemIsEnabled |
+           Qt::ItemNeverHasChildren);
+  setText(0, QObject::tr("----Separator----"));
+  setToolTip(0, QObject::tr("[Drag] to move position"));
+}
+
+//=============================================================================
+// CommandListTree
+//-----------------------------------------------------------------------------
+
+CommandListTree::CommandListTree(const QString& dropTargetString,
+                                 QWidget* parent, bool withSeparator)
+    : QTreeWidget(parent), m_dropTargetString(dropTargetString) {
+  setObjectName("SolidLineFrame");
+  setAlternatingRowColors(true);
+  setDragEnabled(true);
+  setDragDropMode(QAbstractItemView::DragOnly);
+  setColumnCount(1);
+  setIconSize(QSize(21, 18));
+  header()->close();
+
+  QIcon menuFolderIcon(createQIcon("folder_project"));
+  invisibleRootItem()->setIcon(0, menuFolderIcon);
+
+  QTreeWidgetItem* menuCommandFolder = new QTreeWidgetItem(this);
+  menuCommandFolder->setFlags(Qt::ItemIsEnabled);
+  menuCommandFolder->setText(
+      0, "1");  // Set tentative name for "Menu Commands" folder
+  menuCommandFolder->setExpanded(true);
+  menuCommandFolder->setIcon(0, invisibleRootItem()->icon(0));
+
+  addFolder(ShortcutTree::tr("File"), MenuFileCommandType, menuCommandFolder);
+  addFolder(ShortcutTree::tr("Edit"), MenuEditCommandType, menuCommandFolder);
+  addFolder(ShortcutTree::tr("Scan & Cleanup"), MenuScanCleanupCommandType,
+            menuCommandFolder);
+  addFolder(ShortcutTree::tr("Level"), MenuLevelCommandType, menuCommandFolder);
+  addFolder(ShortcutTree::tr("Xsheet"), MenuXsheetCommandType,
+            menuCommandFolder);
+  addFolder(ShortcutTree::tr("Cells"), MenuCellsCommandType, menuCommandFolder);
+  addFolder(ShortcutTree::tr("Play"), MenuPlayCommandType, menuCommandFolder);
+  addFolder(ShortcutTree::tr("Render"), MenuRenderCommandType,
+            menuCommandFolder);
+  addFolder(ShortcutTree::tr("View"), MenuViewCommandType, menuCommandFolder);
+  QTreeWidgetItem* windowsFolder = addFolder(ShortcutTree::tr("Windows"), MenuWindowsCommandType,
+            menuCommandFolder);
+  addFolder(ShortcutTree::tr("Custom Panels"), CustomPanelCommandType,
+            windowsFolder);
+  addFolder(ShortcutTree::tr("Help"), MenuHelpCommandType, menuCommandFolder);
+  addFolder(ShortcutTree::tr("SubMenu Commands"), MenuCommandType,
+            menuCommandFolder);
+
+  // Set tentative name for "Tools" folder
+  QTreeWidgetItem* toolsFolder = addFolder("2", ToolCommandType);
+
+  QTreeWidgetItem* advancedFolder = new QTreeWidgetItem(this);
+  advancedFolder->setFlags(Qt::ItemIsEnabled);
+  advancedFolder->setText(0, "3");  // Set tentative name for "Advanced" folder
+  advancedFolder->setIcon(0, invisibleRootItem()->icon(0));
+
+  addFolder(ShortcutTree::tr("Fill"), FillCommandType, advancedFolder);
+  QTreeWidgetItem* rcmSubFolder =
+      addFolder(ShortcutTree::tr("Right-click Menu Commands"),
+                RightClickMenuCommandType, advancedFolder);
+  addFolder(ShortcutTree::tr("Cell Mark"), CellMarkCommandType, rcmSubFolder);
+  QTreeWidgetItem* toolModifiersFolder =
+      addFolder(ShortcutTree::tr("Tool Modifiers"), ToolModifierCommandType,
+                advancedFolder);
+  addFolder(ShortcutTree::tr("Brush Presets"), BrushPresetCommandType,
+            toolModifiersFolder);
+  addFolder(ShortcutTree::tr("Brush Sizes"), BrushSizeCommandType,
+            toolModifiersFolder);
+  addFolder(ShortcutTree::tr("Visualization"), VisualizationButtonCommandType,
+            advancedFolder);
+  addFolder(ShortcutTree::tr("Misc"), MiscCommandType, advancedFolder);
+  addFolder(ShortcutTree::tr("RGBA Channels"), RGBACommandType, advancedFolder);
+
+  sortItems(0, Qt::AscendingOrder);
+  // Set the actual names after sorting items
+  menuCommandFolder->setText(0, ShortcutTree::tr("Menu Commands"));
+  toolsFolder->setText(0, ShortcutTree::tr("Tools"));
+  advancedFolder->setText(0, ShortcutTree::tr("Advanced"));
+
+  if (withSeparator) {
+    SeparatorItem* sep = new SeparatorItem(nullptr);
+    sep->setToolTip(0, QObject::tr("[Drag&Drop] to copy separator to %1")
+                           .arg(m_dropTargetString));
+    addTopLevelItem(sep);
   }
-};
+}
+
+//-----------------------------------------------------------------------------
+
+void CommandListTree::refreshTree() {
+  // Save expansion state
+  QMap<QString, bool> expandedState;
+  for (int i = 0; i < topLevelItemCount(); ++i) {
+    QTreeWidgetItem* item = topLevelItem(i);
+    if (item) {
+      expandedState[item->text(0)] = item->isExpanded();
+    }
+  }
+  
+  // Clear and rebuild
+  clear();
+  
+  QIcon menuFolderIcon(createQIcon("folder_project"));
+  invisibleRootItem()->setIcon(0, menuFolderIcon);
+
+  QTreeWidgetItem* menuCommandFolder = new QTreeWidgetItem(this);
+  menuCommandFolder->setFlags(Qt::ItemIsEnabled);
+  menuCommandFolder->setText(0, "1");
+  menuCommandFolder->setExpanded(true);
+  menuCommandFolder->setIcon(0, invisibleRootItem()->icon(0));
+
+  addFolder(ShortcutTree::tr("File"), MenuFileCommandType, menuCommandFolder);
+  addFolder(ShortcutTree::tr("Edit"), MenuEditCommandType, menuCommandFolder);
+  addFolder(ShortcutTree::tr("Scan & Cleanup"), MenuScanCleanupCommandType,
+            menuCommandFolder);
+  addFolder(ShortcutTree::tr("Level"), MenuLevelCommandType, menuCommandFolder);
+  addFolder(ShortcutTree::tr("Xsheet"), MenuXsheetCommandType,
+            menuCommandFolder);
+  addFolder(ShortcutTree::tr("Cells"), MenuCellsCommandType, menuCommandFolder);
+  addFolder(ShortcutTree::tr("Play"), MenuPlayCommandType, menuCommandFolder);
+  addFolder(ShortcutTree::tr("Render"), MenuRenderCommandType,
+            menuCommandFolder);
+  addFolder(ShortcutTree::tr("View"), MenuViewCommandType, menuCommandFolder);
+  QTreeWidgetItem* windowsFolder = addFolder(ShortcutTree::tr("Windows"), MenuWindowsCommandType,
+            menuCommandFolder);
+  addFolder(ShortcutTree::tr("Custom Panels"), CustomPanelCommandType,
+            windowsFolder);
+  addFolder(ShortcutTree::tr("Help"), MenuHelpCommandType, menuCommandFolder);
+  addFolder(ShortcutTree::tr("SubMenu Commands"), MenuCommandType,
+            menuCommandFolder);
+
+  QTreeWidgetItem* toolsFolder = addFolder("2", ToolCommandType);
+
+  QTreeWidgetItem* advancedFolder = new QTreeWidgetItem(this);
+  advancedFolder->setFlags(Qt::ItemIsEnabled);
+  advancedFolder->setText(0, "3");
+  advancedFolder->setIcon(0, invisibleRootItem()->icon(0));
+
+  addFolder(ShortcutTree::tr("Fill"), FillCommandType, advancedFolder);
+  QTreeWidgetItem* rcmSubFolder =
+      addFolder(ShortcutTree::tr("Right-click Menu Commands"),
+                RightClickMenuCommandType, advancedFolder);
+  addFolder(ShortcutTree::tr("Cell Mark"), CellMarkCommandType, rcmSubFolder);
+  QTreeWidgetItem* toolModifiersFolder =
+      addFolder(ShortcutTree::tr("Tool Modifiers"), ToolModifierCommandType,
+                advancedFolder);
+  addFolder(ShortcutTree::tr("Brush Presets"), BrushPresetCommandType,
+            toolModifiersFolder);
+  addFolder(ShortcutTree::tr("Brush Sizes"), BrushSizeCommandType,
+            toolModifiersFolder);
+  addFolder(ShortcutTree::tr("Visualization"), VisualizationButtonCommandType,
+            advancedFolder);
+  addFolder(ShortcutTree::tr("Misc"), MiscCommandType, advancedFolder);
+  addFolder(ShortcutTree::tr("RGBA Channels"), RGBACommandType, advancedFolder);
+
+  sortItems(0, Qt::AscendingOrder);
+  menuCommandFolder->setText(0, ShortcutTree::tr("Menu Commands"));
+  toolsFolder->setText(0, ShortcutTree::tr("Tools"));
+  advancedFolder->setText(0, ShortcutTree::tr("Advanced"));
+  
+  // Restore expansion state
+  for (int i = 0; i < topLevelItemCount(); ++i) {
+    QTreeWidgetItem* item = topLevelItem(i);
+    if (item && expandedState.contains(item->text(0))) {
+      item->setExpanded(expandedState[item->text(0)]);
+    }
+  }
+}
+
+//-----------------------------------------------------------------------------
+
+QTreeWidgetItem* CommandListTree::addFolder(const QString& title,
+                                            int commandType,
+                                            QTreeWidgetItem* parentFolder) {
+  QTreeWidgetItem* folder = (parentFolder) ? new QTreeWidgetItem(parentFolder)
+                                           : new QTreeWidgetItem(this);
+  assert(folder);
+
+  folder->setText(0, title);
+  folder->setIcon(0, invisibleRootItem()->icon(0));
+
+  std::vector<QAction*> actions;
+  CommandManager::instance()->getActions(static_cast<CommandType>(commandType),
+                                         actions);
+
+  for (QAction* action : actions) {
+    CommandItem* item = new CommandItem(folder, action);
+    item->setToolTip(0, QObject::tr("[Drag&Drop] to copy command to %1")
+                            .arg(m_dropTargetString));
+  }
+  return folder;
+}
+
+//-----------------------------------------------------------------------------
+
+void CommandListTree::mousePressEvent(QMouseEvent* event) {
+  setCurrentItem(itemAt(event->pos()));
+  QTreeWidgetItem* clickedItem = itemAt(event->pos());
+
+  CommandItem* commandItem     = dynamic_cast<CommandItem*>(clickedItem);
+  SeparatorItem* separatorItem = dynamic_cast<SeparatorItem*>(clickedItem);
+
+  if (commandItem || separatorItem) {
+    std::string dragStr;
+    QString dragPixmapTxt;
+
+    if (commandItem) {
+      dragStr =
+          CommandManager::instance()->getIdFromAction(commandItem->getAction());
+      dragPixmapTxt = commandItem->getAction()->text();
+      dragPixmapTxt.remove('&');
+    } else {
+      dragStr       = "separator";
+      dragPixmapTxt = tr("----Separator----");
+    }
+
+    QMimeData* mimeData = new QMimeData;
+    mimeData->setText(QString::fromStdString(dragStr));
+
+    QFontMetrics fm(QApplication::font());
+    QPixmap pix(fm.boundingRect(dragPixmapTxt).adjusted(-2, -2, 2, 2).size());
+
+    {
+      QPainter painter(&pix);
+      painter.fillRect(pix.rect(), Qt::white);
+      painter.setPen(Qt::black);
+      painter.drawText(pix.rect(), Qt::AlignCenter, dragPixmapTxt);
+    }
+
+    QDrag* drag = new QDrag(this);
+    drag->setMimeData(mimeData);
+    drag->setPixmap(pix);
+
+    drag->exec(Qt::CopyAction);
+  }
+
+  QTreeWidget::mousePressEvent(event);
+}
+
+//-----------------------------------------------------------------------------
+
+void CommandListTree::displayAll(QTreeWidgetItem* item) {
+  const int childCount = item->childCount();
+  for (int i = 0; i < childCount; ++i) {
+    displayAll(item->child(i));
+  }
+  item->setHidden(false);
+  item->setExpanded(false);
+}
+
+//-------------------------------------------------------------------
+
+void CommandListTree::hideAll(QTreeWidgetItem* item) {
+  const int childCount = item->childCount();
+  for (int i = 0; i < childCount; ++i) {
+    hideAll(item->child(i));
+  }
+  item->setHidden(true);
+  item->setExpanded(false);
+}
+
+//-----------------------------------------------------------------------------
+
+void CommandListTree::searchItems(const QString& searchWord) {
+  // If search word is empty, show all items
+  if (searchWord.isEmpty()) {
+    const int itemCount = topLevelItemCount();
+    for (int i = 0; i < itemCount; ++i) {
+      displayAll(topLevelItem(i));
+    }
+
+    // Revert to the initial state - expanding "Menu Commands" tree
+    auto menuCommandItems =
+        findItems(ShortcutTree::tr("Menu Commands"), Qt::MatchExactly);
+    if (!menuCommandItems.isEmpty()) {
+      menuCommandItems.first()->setExpanded(true);
+    }
+
+    update();
+    return;
+  }
+
+  // Hide all items first
+  const int itemCount = topLevelItemCount();
+  for (int i = 0; i < itemCount; ++i) {
+    hideAll(topLevelItem(i));
+  }
+
+  QList<QTreeWidgetItem*> foundItems =
+      findItems(searchWord, Qt::MatchContains | Qt::MatchRecursive, 0);
+
+  if (foundItems.isEmpty()) {  // If nothing is found, do nothing but update
+    update();
+    return;
+  }
+
+  // For each item found, show it and show its parent
+  for (auto item : foundItems) {
+    while (item) {
+      item->setHidden(false);
+      item->setExpanded(true);
+      item = item->parent();
+    }
+  }
+
+  update();
+}
 
 //=============================================================================
 // CommandBarTree
@@ -84,9 +394,9 @@ CommandBarTree::CommandBarTree(TFilePath& path, QWidget* parent)
 
   /*- Load path if it does exist. If not, then load from the template. -*/
   TFilePath fp;
-  if (TFileStatus(path).isWritable())
+  if (TFileStatus(path).isWritable()) {
     fp = path;
-  else {
+  } else {
     if (path.getName() == "xsheettoolbar") {
       fp = ToonzFolder::getTemplateModuleDir() + TFilePath("xsheettoolbar.xml");
     } else {
@@ -109,30 +419,32 @@ void CommandBarTree::loadMenuTree(const TFilePath& fp) {
   QXmlStreamReader reader(&file);
 
   if (reader.readNextStartElement()) {
-    if (reader.name() == "commandbar") {
+    if (reader.name() == QStringLiteral("commandbar")) {
       while (reader.readNextStartElement()) {
-        if (reader.name() == "command") {
+        if (reader.name() == QStringLiteral("command")) {
           QString cmdName = reader.readElementText();
 
           QAction* action = CommandManager::instance()->getAction(
               cmdName.toStdString().c_str());
           if (action) {
-            CommandBarCommandItem* item = new CommandBarCommandItem(0, action);
+            CommandItem* item = new CommandItem(nullptr, action);
             addTopLevelItem(item);
           }
-        } else if (reader.name() == "separator") {
-          CommandBarSeparatorItem* sep = new CommandBarSeparatorItem(0);
+        } else if (reader.name() == QStringLiteral("separator")) {
+          SeparatorItem* sep = new SeparatorItem(nullptr);
           addTopLevelItem(sep);
           reader.skipCurrentElement();
-        } else
+        } else {
           reader.skipCurrentElement();
+        }
       }
-    } else
+    } else {
       reader.raiseError(QObject::tr("Incorrect file"));
+    }
   }
 
   if (reader.hasError()) {
-    qDebug() << "Cannot read menubar xml";
+    qDebug() << "Cannot read menubar xml:" << reader.errorString();
   }
 }
 
@@ -141,29 +453,33 @@ void CommandBarTree::loadMenuTree(const TFilePath& fp) {
 void CommandBarTree::loadMenuRecursive(QXmlStreamReader& reader,
                                        QTreeWidgetItem* parentItem) {
   while (reader.readNextStartElement()) {
-    if (reader.name() == "command") {
+    if (reader.name() == QStringLiteral("command")) {
       QString cmdName = reader.readElementText();
       QAction* action =
           CommandManager::instance()->getAction(cmdName.toStdString().c_str());
-      if (action)
-        CommandBarCommandItem* item =
-            new CommandBarCommandItem(parentItem, action);
-    } else if (reader.name() == "command_debug") {
+      if (action) {
+        CommandItem* item = new CommandItem(parentItem, action);
+        Q_UNUSED(item);
+      }
+    } else if (reader.name() == QStringLiteral("command_debug")) {
 #ifndef NDEBUG
       QString cmdName = reader.readElementText();
       QAction* action =
           CommandManager::instance()->getAction(cmdName.toStdString().c_str());
-      if (action)
-        CommandBarCommandItem* item =
-            new CommandBarCommandItem(parentItem, action);
+      if (action) {
+        CommandItem* item = new CommandItem(parentItem, action);
+        Q_UNUSED(item);
+      }
 #else
       reader.skipCurrentElement();
 #endif
-    } else if (reader.name() == "separator") {
-      CommandBarSeparatorItem* sep = new CommandBarSeparatorItem(parentItem);
+    } else if (reader.name() == QStringLiteral("separator")) {
+      SeparatorItem* sep = new SeparatorItem(parentItem);
+      Q_UNUSED(sep);
       reader.skipCurrentElement();
-    } else
+    } else {
       reader.skipCurrentElement();
+    }
   }
 }
 
@@ -172,7 +488,7 @@ void CommandBarTree::loadMenuRecursive(QXmlStreamReader& reader,
 void CommandBarTree::saveMenuTree(TFilePath& path) {
   QFile file(toQString(path));
   if (!file.open(QFile::WriteOnly | QFile::Text)) {
-    qDebug() << "Cannot read file" << file.errorString();
+    qDebug() << "Cannot write file" << file.errorString();
     return;
   }
 
@@ -181,7 +497,7 @@ void CommandBarTree::saveMenuTree(TFilePath& path) {
   writer.writeStartDocument();
 
   writer.writeStartElement("commandbar");
-  { saveMenuRecursive(writer, invisibleRootItem()); }
+  saveMenuRecursive(writer, invisibleRootItem());
   writer.writeEndElement();
 
   writer.writeEndDocument();
@@ -191,19 +507,18 @@ void CommandBarTree::saveMenuTree(TFilePath& path) {
 
 void CommandBarTree::saveMenuRecursive(QXmlStreamWriter& writer,
                                        QTreeWidgetItem* parentItem) {
-  for (int c = 0; c < parentItem->childCount(); c++) {
-    CommandBarCommandItem* command =
-        dynamic_cast<CommandBarCommandItem*>(parentItem->child(c));
-    CommandBarSeparatorItem* sep =
-        dynamic_cast<CommandBarSeparatorItem*>(parentItem->child(c));
+  for (int c = 0; c < parentItem->childCount(); ++c) {
+    CommandItem* command = dynamic_cast<CommandItem*>(parentItem->child(c));
+    SeparatorItem* sep   = dynamic_cast<SeparatorItem*>(parentItem->child(c));
 
-    if (command)
+    if (command) {
       writer.writeTextElement(
           "command",
           QString::fromStdString(CommandManager::instance()->getIdFromAction(
               command->getAction())));
-    else if (sep)
+    } else if (sep) {
       writer.writeEmptyElement("separator");
+    }
   }
 }
 
@@ -212,22 +527,28 @@ void CommandBarTree::saveMenuRecursive(QXmlStreamWriter& writer,
 bool CommandBarTree::dropMimeData(QTreeWidgetItem* parent, int index,
                                   const QMimeData* data,
                                   Qt::DropAction action) {
+  Q_UNUSED(action);
+
   if (data->hasText()) {
-    QString txt = data->text();
-    QTreeWidgetItem* item;
-    if (txt == "separator")
-      item = new CommandBarSeparatorItem(0);
-    else {
+    QString txt           = data->text();
+    QTreeWidgetItem* item = nullptr;
+
+    if (txt == "separator") {
+      item = new SeparatorItem(nullptr);
+    } else {
       QAction* act =
           CommandManager::instance()->getAction(txt.toStdString().c_str());
-      if (!act) return false;
-      item = new CommandBarCommandItem(0, act);
+      if (!act) {
+        return false;
+      }
+      item = new CommandItem(nullptr, act);
     }
 
-    if (parent)
+    if (parent) {
       parent->insertChild(index, item);
-    else
+    } else {
       insertTopLevelItem(index, item);
+    }
 
     return true;
   }
@@ -239,7 +560,7 @@ bool CommandBarTree::dropMimeData(QTreeWidgetItem* parent, int index,
 
 QStringList CommandBarTree::mimeTypes() const {
   QStringList qstrList;
-  qstrList.append("text/plain");
+  qstrList.append(QStringLiteral("text/plain"));
   return qstrList;
 }
 
@@ -247,150 +568,37 @@ QStringList CommandBarTree::mimeTypes() const {
 
 void CommandBarTree::contextMenuEvent(QContextMenuEvent* event) {
   QTreeWidgetItem* item = itemAt(event->pos());
-  if (item != currentItem()) setCurrentItem(item);
-  QMenu* menu = new QMenu(this);
-  QAction* action;
-
-  if (item) {
-    action = menu->addAction(tr("Remove \"%1\"").arg(item->text(0)));
-    connect(action, SIGNAL(triggered()), this, SLOT(removeItem()));
+  if (item != currentItem()) {
+    setCurrentItem(item);
   }
 
-  menu->exec(event->globalPos());
-  delete menu;
+  QMenu menu(this);
+
+  if (item) {
+    QAction* removeAction =
+        menu.addAction(tr("Remove \"%1\"").arg(item->text(0)));
+    connect(removeAction, &QAction::triggered, this,
+            &CommandBarTree::removeItem);
+  }
+
+  menu.exec(event->globalPos());
 }
 
 //-----------------------------------------------------------------------------
 
 void CommandBarTree::removeItem() {
   QTreeWidgetItem* item = currentItem();
-  if (!item) return;
+  if (!item) {
+    return;
+  }
 
-  if (indexOfTopLevelItem(item) >= 0)
-    takeTopLevelItem(indexOfTopLevelItem(item));
-  else
+  int topLevelIndex = indexOfTopLevelItem(item);
+  if (topLevelIndex >= 0) {
+    delete takeTopLevelItem(topLevelIndex);
+  } else if (item->parent()) {
     item->parent()->removeChild(item);
-
-  delete item;
-}
-
-//=============================================================================
-// CommandListTree
-//-----------------------------------------------------------------------------
-
-CommandBarListTree::CommandBarListTree(QWidget* parent) : QTreeWidget(parent) {
-  setObjectName("SolidLineFrame");
-  setAlternatingRowColors(true);
-  setDragEnabled(true);
-  setDragDropMode(QAbstractItemView::DragOnly);
-  setColumnCount(1);
-  setIconSize(QSize(21, 17));
-  header()->close();
-
-  QIcon menuFolderIcon(":Resources/browser_project_close.svg");
-  menuFolderIcon.addFile(":Resources/browser_project_open.svg", QSize(),
-                         QIcon::Normal, QIcon::On);
-  invisibleRootItem()->setIcon(0, menuFolderIcon);
-
-  QTreeWidgetItem* menuCommandFolder = new QTreeWidgetItem(this);
-  menuCommandFolder->setFlags(Qt::ItemIsEnabled);
-  menuCommandFolder->setText(0, ShortcutTree::tr("Menu Commands"));
-  menuCommandFolder->setExpanded(true);
-  menuCommandFolder->setIcon(0, invisibleRootItem()->icon(0));
-
-  addFolder(ShortcutTree::tr("File"), MenuFileCommandType, menuCommandFolder);
-  addFolder(ShortcutTree::tr("Edit"), MenuEditCommandType, menuCommandFolder);
-  addFolder(ShortcutTree::tr("Scan & Cleanup"), MenuScanCleanupCommandType,
-            menuCommandFolder);
-  addFolder(ShortcutTree::tr("Level"), MenuLevelCommandType, menuCommandFolder);
-  addFolder(ShortcutTree::tr("Xsheet"), MenuXsheetCommandType,
-            menuCommandFolder);
-  addFolder(ShortcutTree::tr("Cells"), MenuCellsCommandType, menuCommandFolder);
-  addFolder(ShortcutTree::tr("Play"), MenuPlayCommandType, menuCommandFolder);
-  addFolder(ShortcutTree::tr("Render"), MenuRenderCommandType,
-            menuCommandFolder);
-  addFolder(ShortcutTree::tr("View"), MenuViewCommandType, menuCommandFolder);
-  addFolder(ShortcutTree::tr("Windows"), MenuWindowsCommandType,
-            menuCommandFolder);
-  addFolder(ShortcutTree::tr("Help"), MenuHelpCommandType, menuCommandFolder);
-
-  addFolder(ShortcutTree::tr("Tools"), ToolCommandType);
-  addFolder(ShortcutTree::tr("Fill"), FillCommandType);
-  addFolder(ShortcutTree::tr("Right-click Menu Commands"),
-            RightClickMenuCommandType);
-  addFolder(ShortcutTree::tr("Tool Modifiers"), ToolModifierCommandType);
-  addFolder(ShortcutTree::tr("Visualization"), VisualizationButtonCommandType);
-  addFolder(ShortcutTree::tr("Misc"), MiscCommandType);
-  addFolder(ShortcutTree::tr("RGBA Channels"), RGBACommandType);
-
-  sortItems(0, Qt::AscendingOrder);
-
-  CommandBarSeparatorItem* sep = new CommandBarSeparatorItem(0);
-  sep->setToolTip(0, QObject::tr("[Drag&Drop] to copy separator to menu bar"));
-  addTopLevelItem(sep);
-}
-
-//-----------------------------------------------------------------------------
-
-void CommandBarListTree::addFolder(const QString& title, int commandType,
-                                   QTreeWidgetItem* parentFolder) {
-  QTreeWidgetItem* folder;
-  if (!parentFolder)
-    folder = new QTreeWidgetItem(this);
-  else
-    folder = new QTreeWidgetItem(parentFolder);
-  assert(folder);
-  folder->setText(0, title);
-  folder->setIcon(0, invisibleRootItem()->icon(0));
-
-  std::vector<QAction*> actions;
-  CommandManager::instance()->getActions((CommandType)commandType, actions);
-  for (int i = 0; i < (int)actions.size(); i++) {
-    CommandBarCommandItem* item = new CommandBarCommandItem(folder, actions[i]);
-    item->setToolTip(0, QObject::tr("[Drag&Drop] to copy command to menu bar"));
+    delete item;
   }
-}
-
-//-----------------------------------------------------------------------------
-
-void CommandBarListTree::mousePressEvent(QMouseEvent* event) {
-  setCurrentItem(itemAt(event->pos()));
-  CommandBarCommandItem* commandItem =
-      dynamic_cast<CommandBarCommandItem*>(itemAt(event->pos()));
-  CommandBarSeparatorItem* separatorItem =
-      dynamic_cast<CommandBarSeparatorItem*>(itemAt(event->pos()));
-
-  if (commandItem || separatorItem) {
-    std::string dragStr;
-    QString dragPixmapTxt;
-    if (commandItem) {
-      dragStr =
-          CommandManager::instance()->getIdFromAction(commandItem->getAction());
-      dragPixmapTxt = commandItem->getAction()->text();
-      dragPixmapTxt.remove("&");
-    } else {
-      dragStr       = "separator";
-      dragPixmapTxt = tr("----Separator----");
-    }
-
-    QMimeData* mimeData = new QMimeData;
-    mimeData->setText(QString::fromStdString(dragStr));
-
-    QFontMetrics fm(QApplication::font());
-    QPixmap pix(fm.boundingRect(dragPixmapTxt).adjusted(-2, -2, 2, 2).size());
-    QPainter painter(&pix);
-    painter.fillRect(pix.rect(), Qt::white);
-    painter.setPen(Qt::black);
-    painter.drawText(pix.rect(), Qt::AlignCenter, dragPixmapTxt);
-
-    QDrag* drag = new QDrag(this);
-    drag->setMimeData(mimeData);
-    drag->setPixmap(pix);
-
-    drag->exec(Qt::CopyAction);
-  }
-
-  QTreeWidget::mousePressEvent(event);
 }
 
 //=============================================================================
@@ -411,7 +619,7 @@ CommandBarPopup::CommandBarPopup(bool isXsheetToolbar)
     setWindowTitle(tr("Customize Command Bar"));
   }
 
-  m_commandListTree = new CommandBarListTree(this);
+  m_commandListTree = new CommandListTree(commandBarLabel->text(), this);
   m_menuBarTree     = new CommandBarTree(m_path, this);
 
   QPushButton* okBtn     = new QPushButton(tr("OK"), this);
@@ -434,22 +642,33 @@ CommandBarPopup::CommandBarPopup(bool isXsheetToolbar)
   nf.setItalic(true);
   noticeLabel->setFont(nf);
 
+  QLineEdit* searchEdit = new QLineEdit(this);
+
   //--- layout
-  QVBoxLayout* mainLay = new QVBoxLayout();
-  m_topLayout->setMargin(0);
+  m_topLayout->setContentsMargins(0, 0, 0, 0);
   m_topLayout->setSpacing(0);
   {
     QGridLayout* mainUILay = new QGridLayout();
-    mainUILay->setMargin(5);
+    mainUILay->setContentsMargins(5, 5, 5, 5);
     mainUILay->setHorizontalSpacing(8);
     mainUILay->setVerticalSpacing(5);
     {
       mainUILay->addWidget(commandBarLabel, 0, 0);
       mainUILay->addWidget(commandItemListLabel, 0, 1);
-      mainUILay->addWidget(m_menuBarTree, 1, 0);
-      mainUILay->addWidget(m_commandListTree, 1, 1);
 
-      mainUILay->addWidget(noticeLabel, 2, 0, 1, 2);
+      mainUILay->addWidget(m_menuBarTree, 1, 0, 2, 1);
+
+      QHBoxLayout* searchLay = new QHBoxLayout();
+      searchLay->setContentsMargins(0, 0, 0, 0);
+      searchLay->setSpacing(5);
+      {
+        searchLay->addWidget(new QLabel(tr("Search:"), this), 0);
+        searchLay->addWidget(searchEdit);
+      }
+      mainUILay->addLayout(searchLay, 1, 1);
+      mainUILay->addWidget(m_commandListTree, 2, 1);
+
+      mainUILay->addWidget(noticeLabel, 3, 0, 1, 2);
     }
     mainUILay->setRowStretch(0, 0);
     mainUILay->setRowStretch(1, 1);
@@ -460,7 +679,7 @@ CommandBarPopup::CommandBarPopup(bool isXsheetToolbar)
     m_topLayout->addLayout(mainUILay, 1);
   }
 
-  m_buttonLayout->setMargin(0);
+  m_buttonLayout->setContentsMargins(0, 0, 0, 0);
   m_buttonLayout->setSpacing(30);
   {
     m_buttonLayout->addStretch(1);
@@ -470,16 +689,24 @@ CommandBarPopup::CommandBarPopup(bool isXsheetToolbar)
   }
 
   //--- signal/slot connections
-
-  bool ret = connect(okBtn, SIGNAL(clicked()), this, SLOT(onOkPressed()));
-  ret      = ret && connect(cancelBtn, SIGNAL(clicked()), this, SLOT(reject()));
-  assert(ret);
+  connect(okBtn, &QPushButton::clicked, this, &CommandBarPopup::onOkPressed);
+  connect(cancelBtn, &QPushButton::clicked, this, &QDialog::reject);
+  connect(searchEdit, &QLineEdit::textChanged, this,
+          &CommandBarPopup::onSearchTextChanged);
 }
 
 //-----------------------------------------------------------------------------
 
 void CommandBarPopup::onOkPressed() {
   m_menuBarTree->saveMenuTree(m_path);
-
   accept();
+}
+
+void CommandBarPopup::onSearchTextChanged(const QString& text) {
+  static bool busy = false;
+  if (busy) return;
+
+  busy = true;
+  m_commandListTree->searchItems(text);
+  busy = false;
 }

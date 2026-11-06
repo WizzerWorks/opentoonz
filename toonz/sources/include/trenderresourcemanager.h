@@ -144,7 +144,7 @@ private:
 /*!  \def MANAGER_FILESCOPE_DECLARATION(managerClass, generatorClass)
 This macro must be used at file scope to bind the manager to its generator
 instance - just place it after the generator definition.
-\note In case the manager is dependant on some other manager, use the
+\note In case the manager is dependent on some other manager, use the
 \c MANAGER_FILESCOPE_DECLARATION_DEP macro instead.
 */
 
@@ -171,7 +171,7 @@ A variation of the MANAGER_FILESCOPE_DECLARATION macro used to declare
 dependencies between
 resource managers. A manager always receives start notifications \a after those
 from which
-it depends, and viceversa for end notifications. The same applies for
+it depends, and vice versa for end notifications. The same applies for
 constructors and destructors.
 \n \n
 The dependencies declarations list is a sequence of static \c

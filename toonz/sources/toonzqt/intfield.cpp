@@ -10,6 +10,7 @@
 #include <QAction>
 #include <QFocusEvent>
 #include <QPainter>
+#include <QPushButton>
 
 namespace {
 const int NonLinearSliderPrecision = 2;
@@ -128,7 +129,7 @@ void RollerField::removeValue(bool isDragging) {
 IntLineEdit::IntLineEdit(QWidget *parent, int value, int minValue, int maxValue,
                          int showedDigits)
     : LineEdit(parent), m_showedDigits(showedDigits) {
-  setFixedWidth(54);
+  setFixedWidth(40);
 
   m_validator = new QIntValidator(this);
   setValue(value);
@@ -202,11 +203,25 @@ void IntLineEdit::focusOutEvent(QFocusEvent *e) {
 
 // for fps edit in flip console
 void IntLineEdit::setLineEditBackgroundColor(QColor color) {
-  QString sheet = QString("background-color: rgb(") +
-                  QString::number(color.red()) + QString(",") +
-                  QString::number(color.green()) + QString(",") +
-                  QString::number(color.blue()) + QString(",") +
-                  QString::number(color.alpha()) + QString(");");
+  // Set text color based on luminescence of bg color
+  int value           = 0;
+  double luminescence = ((0.299 * color.red()) + (0.587 * color.green()) +
+                         (0.114 * color.blue())) /
+                        255;
+  if (luminescence > 0.5)
+    value = 0;  // black
+  else
+    value = 255;  // white
+
+  QString sheet =
+      QString("background-color: rgba(") + QString::number(color.red()) +
+      QString(",") + QString::number(color.green()) + QString(",") +
+      QString::number(color.blue()) + QString(",") +
+      QString::number(color.alpha()) +
+      QString(");" +
+              QString("color: rgb(" + QString::number(value) + QString(",") +
+                      QString::number(value) + QString(",") +
+                      QString::number(value) + QString(");")));
   setStyleSheet(sheet);
 }
 
@@ -249,22 +264,25 @@ void IntLineEdit::mouseReleaseEvent(QMouseEvent *e) {
 // IntField
 //-----------------------------------------------------------------------------
 
-IntField::IntField(QWidget *parent, bool isMaxRangeLimited, bool isRollerHide)
+IntField::IntField(QWidget *parent, bool isMaxRangeLimited, bool isRollerHide,
+                   bool isSpinnerHide)
     : QWidget(parent)
+    , m_roller(0)
     , m_lineEdit(0)
     , m_slider(0)
-    , m_roller(0)
+    , m_inc(0)
+    , m_dec(0)
     , m_isMaxRangeLimited(isMaxRangeLimited)
     , m_isLinearSlider(true) {
   setObjectName("IntField");
   QHBoxLayout *layout = new QHBoxLayout(this);
-  layout->setMargin(0);
+  layout->setContentsMargins(0, 0, 0, 0);
   layout->setSpacing(5);
 
   QWidget *field = new QWidget(this);
   field->setMaximumWidth(43);
   QVBoxLayout *vLayout = new QVBoxLayout(field);
-  vLayout->setMargin(0);
+  vLayout->setContentsMargins(0, 0, 0, 0);
   vLayout->setSpacing(0);
 
   m_lineEdit = new DVGui::IntLineEdit(field);
@@ -281,6 +299,24 @@ IntField::IntField(QWidget *parent, bool isMaxRangeLimited, bool isRollerHide)
 
   layout->addWidget(field);
 
+  m_inc = new QPushButton(QString("+"));
+  m_dec = new QPushButton(QString("-"));
+  m_inc->setFixedSize(QSize(20, 20));
+  m_dec->setFixedSize(QSize(20, 20));
+  ret = ret
+     && connect(m_inc, SIGNAL(clicked()), this, SLOT(onIncClicked()))
+     && connect(m_dec, SIGNAL(clicked()), this, SLOT(onDecClicked()));
+   
+  if (isSpinnerHide) enableSpinner(false);
+  
+  // TODO:
+  // Commonly in OpenToonz spin-buttons has been placed in that order: [+][-]
+  // This seems unusual behavior.
+  // And in this particular case buttons has been placed in another order: [-][+]
+  // We need to know what is better
+  layout->addWidget(m_dec);
+  layout->addWidget(m_inc);
+  
   m_slider = new QSlider(Qt::Horizontal, this);
   ret      = ret && connect(m_slider, SIGNAL(valueChanged(int)), this,
                        SLOT(onSliderChanged(int)));
@@ -372,6 +408,24 @@ bool IntField::rollerIsEnabled() { return m_roller->isEnabled(); }
 
 //-----------------------------------------------------------------------------
 
+void IntField::enableSpinner(bool enable) {
+  m_inc->setEnabled(enable);
+  m_dec->setEnabled(enable);
+  if (enable) {
+    m_inc->show();
+    m_dec->show();
+  } else {
+    m_inc->hide();
+    m_dec->hide();
+  }
+}
+
+//-----------------------------------------------------------------------------
+
+bool IntField::spinnerIsEnabled() { return m_inc->isEnabled(); }
+
+//-----------------------------------------------------------------------------
+
 void IntField::setLineEditBackgroundColor(QColor color) {
   m_lineEdit->setLineEditBackgroundColor(color);
 }
@@ -438,12 +492,34 @@ void IntField::onSliderChanged(int sliderPos) {
 
 //-----------------------------------------------------------------------------
 
+void IntField::onIncClicked() {
+  int value = m_lineEdit->getValue() + 1;
+  m_lineEdit->setValue(value);
+  m_slider->setValue(value2pos(value));
+  m_roller->setValue((double)value);
+  m_lineEdit->setCursorPosition(0);
+  emit valueChanged(false);
+}
+
+//-----------------------------------------------------------------------------
+
+void IntField::onDecClicked() {
+  int value = m_lineEdit->getValue() - 1;
+  m_lineEdit->setValue(value);
+  m_slider->setValue(value2pos(value));
+  m_roller->setValue((double)value);
+  m_lineEdit->setCursorPosition(0);
+  emit valueChanged(false);
+}
+
+//-----------------------------------------------------------------------------
+
 void IntField::onEditingFinished() {
   double value = m_lineEdit->getValue();
   // Controllo necessario per evitare che il segnale di cambiamento venga emesso
   // piu' volte.
   if ((pos2value(m_slider->value()) == value && m_slider->isVisible()) ||
-      (int)m_roller->getValue() == value && m_roller->isVisible())
+      ((int)m_roller->getValue() == value && m_roller->isVisible()))
     return;
   m_slider->setValue(value2pos(value));
   m_roller->setValue((double)value);

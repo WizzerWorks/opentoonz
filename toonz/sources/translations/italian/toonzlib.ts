@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1">
+<TS version="2.1" language="it" sourcelanguage="en">
 <context>
     <name>CenterlineVectorizer</name>
     <message>
@@ -227,7 +227,7 @@
     </message>
     <message>
         <source>%1 is not a valid color (valid color names are &apos;red&apos;, &apos;transparent&apos;, &apos;#FF8800&apos;, ecc.)</source>
-        <translation>%1 non è un colore valido (i nomi di colore validi sono &apos;red&apos;,  &apos;transparent&apos;, &apos;#FF8800&apos;, ecc.)</translation>
+        <translation type="vanished">%1 non è un colore valido (i nomi di colore validi sono &apos;red&apos;,  &apos;transparent&apos;, &apos;#FF8800&apos;, ecc.)</translation>
     </message>
     <message>
         <source>Vectorization failed</source>
@@ -450,11 +450,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Move E/W</source>
+        <source>Move X</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Move N/S</source>
+        <source>Move Y</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -608,6 +608,63 @@
     <message>
         <source>Failed to save the following resources:
 </source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to save palette.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>and %1 more item(s).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Orange</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Yellow</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Light Green</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Light Blue</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Dark Blue</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Purple</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Pink</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Dark Pink</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>White</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Custom Texture</source>
+        <comment>TextureStyleChooserPage</comment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Set Current Style from #%1 to %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is not a valid color (valid color names are &apos;red&apos;, &apos;transparent&apos;, &apos;#FF8800&apos;, etc.)</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -788,12 +845,8 @@
         <translation type="unfinished">Non è possibile salvare un livello vuoto</translation>
     </message>
     <message>
-        <source>Unrecognized file type :</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Can&apos;t save a %1 level to this file type : %2</source>
-        <translation type="unfinished">Non è possibile salvare un livello %1 in questo tipo di file: %2</translation>
+        <translation type="obsolete">Non è possibile salvare un livello %1 in questo tipo di file: %2</translation>
     </message>
     <message>
         <source>Exception writing %1</source>
@@ -813,11 +866,31 @@
     </message>
     <message>
         <source>can not insert a %1 image into a level</source>
-        <translation type="unfinished">Non posso inserire un&apos;immagine %1 nel livello</translation>
+        <translation type="obsolete">Non posso inserire un&apos;immagine %1 nel livello</translation>
     </message>
     <message>
         <source>can not insert a %1 image to a %2 level</source>
-        <translation type="unfinished">Non posso inserire un&apos;immagine %1 in un livello %2</translation>
+        <translation type="obsolete">Non posso inserire un&apos;immagine %1 in un livello %2</translation>
+    </message>
+    <message>
+        <source>Cannot set path on empty level</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unrecognized file type: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Can&apos;t save a %1 level to this file type: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>cannot insert a %1 image into a level</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>cannot insert a %1 image to a %2 level</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -840,7 +913,11 @@
     </message>
     <message>
         <source>Invalid color : </source>
-        <translation type="unfinished">Colore non valido:</translation>
+        <translation type="obsolete">Colore non valido:</translation>
+    </message>
+    <message>
+        <source>Invalid color: %1</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>

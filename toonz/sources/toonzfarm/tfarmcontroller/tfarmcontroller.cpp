@@ -29,7 +29,6 @@ using namespace std;
 #ifndef _WIN32
 #include <sys/param.h>
 #include <unistd.h>
-#include <sys/timeb.h>
 #endif
 
 int inline STRICMP(const QString &a, const QString &b) {
@@ -70,8 +69,8 @@ TFilePath getGlobalRoot() {
 // Leggo la globalRoot da File txt
 #ifdef MACOSX
   // If MACOSX, change to MACOSX path
-  std::string unixpath = "./" + tver.getAppName() +
-                         ".app/Contents/Resources/configfarmroot.txt";
+  std::string unixpath =
+      "./" + tver.getAppName() + ".app/Contents/Resources/configfarmroot.txt";
 #else
   // set path to something suitable for most linux (Unix?) systems
   std::string unixpath = "/etc/" + tver.getAppName() + "/opentoonz.conf";
@@ -105,8 +104,9 @@ TFilePath getLocalRoot() {
   TFilePath lroot;
 
 #ifdef _WIN32
-  std::string regpath = "SOFTWARE\\" + tver.getAppName() + "\\" + tver.getAppName() +
-                   "\\" + tver.getAppVersionString() + "\\FARMROOT";
+  std::string regpath = "SOFTWARE\\" + tver.getAppName() + "\\" +
+                        tver.getAppName() + "\\" + tver.getAppVersionString() +
+                        "\\FARMROOT";
   TFilePath name(regpath);
   lroot = TFilePath(TSystem::getSystemValue(name).toStdString()) +
           TFilePath("toonzfarm");
@@ -114,11 +114,16 @@ TFilePath getLocalRoot() {
 // Leggo la localRoot da File txt
 #ifdef MACOSX
   // If MACOSX, change to MACOSX path
-  std::string unixpath = "./" + tver.getAppName() +
-                         ".app/Contents/Resources/configfarmroot.txt";
+  std::string unixpath =
+      "./" + tver.getAppName() + ".app/Contents/Resources/configfarmroot.txt";
 #else
   // set path to something suitable for most linux (Unix?) systems
+#ifdef FREEBSD
+  std::string unixpath =
+      "/usr/local/etc/" + tver.getAppName() + "/opentoonz.conf";
+#else
   std::string unixpath = "/etc/" + tver.getAppName() + "/opentoonz.conf";
+#endif
 #endif
   TFilePath name(unixpath);
   Tifstream is(name);
@@ -764,7 +769,7 @@ inline QString toString(const TFarmTask &task, int ver) {
     ss += QString::number(task.m_platform) + ",";
 
     int depCount = 0;
-    if (task.m_dependencies) depCount= task.m_dependencies->getTaskCount();
+    if (task.m_dependencies) depCount = task.m_dependencies->getTaskCount();
 
     ss += QString::number(depCount);
 
@@ -1155,9 +1160,9 @@ CtrlFarmTask *FarmController::getTaskToStart(FarmServerProxy *server) {
     CtrlFarmTask *task = itTask->second;
     if ((!server || (task->m_platform == NoPlatform ||
                      task->m_platform == server->m_platform)) &&
-        ((task->m_status == Waiting && task->m_priority > maxPriority) ||
-         (task->m_status == Aborted && task->m_failureCount < 3) &&
-             task->m_parentId != "")) {
+        (((task->m_status == Waiting && task->m_priority > maxPriority) ||
+          (task->m_status == Aborted && task->m_failureCount < 3)) &&
+         task->m_parentId != "")) {
       bool dependenciesCompleted = true;
 
       if (task->m_dependencies) {
@@ -1317,7 +1322,7 @@ bool FarmController::tryToStartTask(CtrlFarmTask *task) {
           m_tasks.find(TaskId(*itSubTaskId));
       if (itSubTask != m_tasks.end()) {
         CtrlFarmTask *subTask = itSubTask->second;
-        if (tryToStartTask(subTask)) started= true;
+        if (tryToStartTask(subTask)) started = true;
       }
     }
 
@@ -1772,8 +1777,7 @@ void FarmController::taskSubmissionError(const QString &taskId, int errCode) {
         }
 
         parentTask->m_status = parentTaskState;
-        if (parentTask->m_status == Aborted ||
-            parentTask->m_status == Aborted) {
+        if (parentTask->m_status == Aborted) {
           parentTask->m_completionDate = task->m_completionDate;
           if (parentTask->m_toBeDeleted) m_tasks.erase(itParent);
         }
@@ -1858,7 +1862,7 @@ void FarmController::taskCompleted(const QString &taskId, int exitCode) {
       switch (exitCode) {
       case 0:
         task->m_status = Completed;
-        if (isAScript(task)) task->m_successfullSteps= task->m_stepCount;
+        if (isAScript(task)) task->m_successfullSteps = task->m_stepCount;
         break;
       case RENDER_LICENSE_NOT_FOUND:
         task->m_status = Waiting;
@@ -2171,7 +2175,7 @@ void FarmController::activateReadyServers() {
     ServerState state = queryServerState2(server->getId());
     int tasksCount    = server->m_tasks.size();
     if (state == Ready ||
-        state == Busy && tasksCount < server->m_maxTaskCount) {
+        (state == Busy && tasksCount < server->m_maxTaskCount)) {
       for (int i = 0; i < (server->m_maxTaskCount - tasksCount); ++i) {
         // cerca un task da sottomettere al server
         CtrlFarmTask *task = getTaskToStart(server);
@@ -2339,7 +2343,7 @@ void ControllerService::onStart(int argc, char *argv[]) {
   msg += "\n";
   m_userLog->info(msg);
 
-// std::cout << msg;
+  // std::cout << msg;
 
 #ifdef __sgi
   { remove("/tmp/.tfarmcontroller.dat"); }

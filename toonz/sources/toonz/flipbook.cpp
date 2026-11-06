@@ -163,34 +163,33 @@ inline TRectD getImageBoundsD(const TImageP &img) {
 FlipBook::FlipBook(QWidget *parent, QString viewerTitle,
                    std::vector<int> flipConsoleButtonMask, UCHAR flags,
                    bool isColorModel)  //, bool showOnlyPlayBackgroundButton)
-    : QWidget(parent),
-      m_viewerTitle(viewerTitle),
-      m_levelNames(),
-      m_levels(),
-      m_playSound(false),
-      m_snd(0),
-      m_player(0)
-      //, m_doCompare(false)
-      ,
-      m_currentFrameToSave(0),
-      m_lw(),
-      m_lr(),
-      m_loadPopup(0),
-      m_savePopup(0),
-      m_shrink(1),
-      m_isPreviewFx(false),
-      m_previewedFx(0),
-      m_previewXsh(0),
-      m_previewUpdateTimer(this),
-      m_xl(0),
-      m_title1(),
-      m_poolIndex(-1),
-      m_freezed(false),
-      m_loadbox(),
-      m_dim(),
-      m_loadboxes(),
-      m_freezeButton(0),
-      m_flags(flags) {
+    : QWidget(parent)
+    , m_viewerTitle(viewerTitle)
+    , m_levelNames()
+    , m_levels()
+    , m_playSound(false)
+    , m_snd(0)
+    , m_player(0)
+    //, m_doCompare(false)
+    , m_currentFrameToSave(0)
+    , m_lw()
+    , m_lr()
+    , m_loadPopup(0)
+    , m_savePopup(0)
+    , m_shrink(1)
+    , m_isPreviewFx(false)
+    , m_previewedFx(0)
+    , m_previewXsh(0)
+    , m_previewUpdateTimer(this)
+    , m_xl(0)
+    , m_title1()
+    , m_poolIndex(-1)
+    , m_freezed(false)
+    , m_loadbox()
+    , m_dim()
+    , m_loadboxes()
+    , m_freezeButton(0)
+    , m_flags(flags) {
   setAcceptDrops(true);
   setFocusPolicy(Qt::StrongFocus);
 
@@ -211,7 +210,7 @@ FlipBook::FlipBook(QWidget *parent, QString viewerTitle,
 
   // layout
   QVBoxLayout *mainLayout = new QVBoxLayout(this);
-  mainLayout->setMargin(0);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
   mainLayout->setSpacing(0);
   {
     mainLayout->addWidget(fsWidget, 1);
@@ -232,8 +231,6 @@ FlipBook::FlipBook(QWidget *parent, QString viewerTitle,
                                   ->getProperties()
                                   ->getOutputProperties()
                                   ->getFrameRate());
-
-  mainLayout->addWidget(m_flipConsole);
 
   m_previewUpdateTimer.setSingleShot(true);
 
@@ -266,9 +263,8 @@ void FlipBook::addFreezeButtonToTitleBar() {
   TPanel *panel = qobject_cast<TPanel *>(parentWidget());
   if (panel) {
     TPanelTitleBar *titleBar = panel->getTitleBar();
-    m_freezeButton           = new TPanelTitleBarButton(
-        titleBar, ":Resources/pane_freeze_off.svg",
-        ":Resources/pane_freeze_over.svg", ":Resources/pane_freeze_on.svg");
+    m_freezeButton =
+        new TPanelTitleBarButton(titleBar, "freeze");
     m_freezeButton->setToolTip("Freeze");
     titleBar->add(QPoint(-64, 0), m_freezeButton);
     connect(m_freezeButton, SIGNAL(toggled(bool)), this, SLOT(freeze(bool)));
@@ -390,7 +386,7 @@ LoadImagesPopup::LoadImagesPopup(FlipBook *flip)
 
   // layout
   QHBoxLayout *frameRangeLayout = new QHBoxLayout();
-  frameRangeLayout->setMargin(5);
+  frameRangeLayout->setContentsMargins(5, 5, 5, 5);
   frameRangeLayout->setSpacing(5);
   {
     frameRangeLayout->addStretch(1);
@@ -465,7 +461,7 @@ bool LoadImagesPopup::execute() { return doLoad(false); }
 
 //-----------------------------------------------------------------------------
 /*! Append images with apply button
-*/
+ */
 bool LoadImagesPopup::executeApply() { return doLoad(true); }
 
 //-----------------------------------------------------------------------------
@@ -504,8 +500,8 @@ void LoadImagesPopup::onFilePathClicked(const TFilePath &fp) {
 
   if (!level || level->getFrameCount() == 0) goto clear;
 
-  it = level->begin();
-  m_to, m_from = it->first.getNumber();
+  it   = level->begin();
+  m_to = m_from = it->first.getNumber();
 
   for (; it != level->end(); ++it) m_to = it->first.getNumber();
 
@@ -575,7 +571,11 @@ void FlipBook::saveImages() {
                               ->getScene()
                               ->getProperties()
                               ->getOutputProperties();
-  m_savePopup->setFolder(op->getPath().getParentDir());
+  m_savePopup->setFolder(TApp::instance()
+                             ->getCurrentScene()
+                             ->getScene()
+                             ->decodeFilePath(op->getPath())
+                             .getParentDir());
   m_savePopup->setFilename(op->getPath().withFrame().withoutParentDir());
 
   m_savePopup->show();
@@ -789,24 +789,32 @@ void FlipBook::onButtonPressed(FlipConsole::EGadget button) {
     TImageP clonedImg;
     if (ri)
       clonedImg = TRasterImageP(ri->getRaster()->clone());
-    else
+    else {
       clonedImg = TToonzImageP(ti->getRaster()->clone(), ti->getSavebox());
+      clonedImg->setPalette(ti->getPalette());
+    }
     TImageCache::instance()->add(QString("TnzCompareImg"), clonedImg);
+    // to update the histogram of compare snapshot image
+    m_imageViewer->invalidateCompHisto();
     break;
   }
 
   case FlipConsole::eCompare:
-    if ((TVectorImageP)getCurrentImage(m_flipConsole->getCurrentFrame())) {
+    if (m_flipConsole->isChecked(FlipConsole::eCompare) &&
+        (TVectorImageP)getCurrentImage(m_flipConsole->getCurrentFrame())) {
       DVGui::warning(
           tr("It is not possible to take or compare snapshots for Toonz vector "
              "levels."));
-      m_flipConsole->setChecked(FlipConsole::eCompare, false);
+      // cancel the button pressing
+      m_flipConsole->pressButton(FlipConsole::eCompare);
       return;
     }
     break;
 
   case FlipConsole::eSave:
     saveImages();
+    break;
+  default:
     break;
   }
 }
@@ -908,11 +916,11 @@ FlipBook *FlipBookPool::pop() {
 //! Saves the content of this flipbook pool.
 void FlipBookPool::save() const {
   QSettings history(toQString(m_historyPath), QSettings::IniFormat);
-  history.clear();
-
   history.setValue("count", m_overallFlipCount);
 
   history.beginGroup("flipbooks");
+  // clear all contents in the group
+  history.remove("");
 
   std::map<int, FlipBook *>::const_iterator it;
   for (it = m_pool.begin(); it != m_pool.end(); ++it) {
@@ -1098,7 +1106,7 @@ void FlipBook::setLevel(const TFilePath &fp, TPalette *palette, int from,
         fromIndex = level->begin()->first.getNumber();
         toIndex   = (--level->end())->first.getNumber();
         if (m_imageViewer->isColorModel())
-          current           = m_flipConsole->getCurrentFrame();
+          current = m_flipConsole->getCurrentFrame();
         incrementalIndexing = true;
       } else {
         TLevel::Iterator it = level->begin();
@@ -1136,13 +1144,13 @@ void FlipBook::setLevel(const TFilePath &fp, TPalette *palette, int from,
       levelToPush.m_incrementalIndexing = incrementalIndexing;
 
       int formatIdx = Preferences::instance()->matchLevelFormat(fp);
-      if (formatIdx >= 0 &&
-          Preferences::instance()
-              ->levelFormat(formatIdx)
-              .m_options.m_premultiply) {
-        levelToPush.m_premultiply = true;
-      }
+      if (formatIdx >= 0) {
+        LevelOptions options =
+            Preferences::instance()->levelFormat(formatIdx).m_options;
 
+        levelToPush.m_premultiply     = options.m_premultiply;
+        levelToPush.m_colorSpaceGamma = options.m_colorSpaceGamma;
+      }
       m_levels.push_back(levelToPush);
 
       // Get the frames count to be shown in this flipbook level
@@ -1201,7 +1209,7 @@ void FlipBook::setLevel(const TFilePath &fp, TPalette *palette, int from,
                                  m_framesCount);                         // to
       }
 
-      // An old archived bug says that simulatenous open for read of the same
+      // An old archived bug says that simultaneous open for read of the same
       // tlv are not allowed...
       // if(m_lr && m_lr->getFilePath().getType()=="tlv")
       //  m_lr = TLevelReaderP();
@@ -1408,7 +1416,7 @@ void FlipBook::freezePreview() {
 
   m_freezed = true;
 
-  // sync the button state when triggered by shotcut
+  // sync the button state when triggered by shortcut
   if (m_freezeButton) m_freezeButton->setPressed(true);
 }
 
@@ -1421,7 +1429,7 @@ void FlipBook::unfreezePreview() {
 
   m_freezed = false;
 
-  // sync the button state when triggered by shotcut
+  // sync the button state when triggered by shortcut
   if (m_freezeButton) m_freezeButton->setPressed(false);
 }
 
@@ -1506,6 +1514,9 @@ TImageP FlipBook::getCurrentImage(int frame) {
   bool randomAccessRead    = false;
   bool incrementalIndexing = false;
   bool premultiply         = false;
+  TSceneProperties *sp =
+      TApp::instance()->getCurrentScene()->getScene()->getProperties();
+  double colorSpaceGamma = LevelOptions::DefaultColorSpaceGamma;
   if (m_xl)  // is an xsheet level
   {
     if (m_xl->getFrameCount() <= 0) return 0;
@@ -1541,13 +1552,17 @@ TImageP FlipBook::getCurrentImage(int frame) {
     levelName           = m_levelNames[i];
     fid                 = m_levels[i].flipbookIndexToLevelFrame(frameIndex);
     premultiply         = m_levels[i].m_premultiply;
+    colorSpaceGamma     = m_levels[i].m_colorSpaceGamma;
+
     if (fid == TFrameId()) return 0;
     id = levelName.toStdString() + fid.expand(TFrameId::NO_PAD) +
          ((m_isPreviewFx) ? "" : ::to_string(this));
 
-    if (!m_isPreviewFx)
+    if (!m_isPreviewFx) {
       m_title1 = m_viewerTitle + " :: " + fp.withoutParentDir().withFrame(fid);
-    else
+      if (fp.getType() == "exr")
+        m_title1 += " :: " + tr("Gamma : %1").arg(colorSpaceGamma);
+    } else
       m_title1 = "";
   } else if (m_levelNames.empty())
     return 0;
@@ -1585,10 +1600,17 @@ TImageP FlipBook::getCurrentImage(int frame) {
     }
     TImageReaderP ir = m_lr->getFrameReader(fid);
     ir->setShrink(m_shrink);
+    ir->setColorSpaceGamma(colorSpaceGamma);
     if (m_loadbox != TRect() && showSub) {
       ir->setRegion(m_loadbox);
       lx = m_loadbox.getLx();
     }
+
+    if (Preferences::instance()->is30bitDisplayEnabled())
+      ir->enable16BitRead(true);
+
+    // always enable to load float-format images
+    ir->enableFloatRead(true);
 
     TImageP img = ir->load();
 
@@ -1632,7 +1654,7 @@ TImageP FlipBook::getCurrentImage(int frame) {
       m_loadboxes[id] = showSub ? m_loadbox : TRect();
     }
 
-    // An old archived bug says that simulatenous open for read of the same tlv
+    // An old archived bug says that simultaneous open for read of the same tlv
     // are not allowed...
     // if(fp.getType()=="tlv")
     //  m_lr = TLevelReaderP();
@@ -1655,16 +1677,29 @@ else*/
 //-----------------------------------------------------------------------------
 
 /*! Set current level frame to image viewer. Add the view image in cache.
-*/
-void FlipBook::onDrawFrame(int frame, const ImagePainter::VisualSettings &vs) {
+ */
+void FlipBook::onDrawFrame(int frame, const ImagePainter::VisualSettings &vs,
+                           QElapsedTimer *timer, qint64 targetInstant) {
   try {
     m_imageViewer->setVisual(vs);
+    m_imageViewer->setTimerAndTargetInstant(timer, targetInstant);
 
     TImageP img = getCurrentImage(frame);
 
     if (!img) return;
 
-    m_imageViewer->setImage(img);
+    // gain control ( for now the result is not cached )
+    if (vs.m_gainStep != 0) {
+      TImageP gainedImg = img->cloneImage();
+      TSceneProperties *sp =
+          TApp::instance()->getCurrentScene()->getScene()->getProperties();
+      double colorSpaceGamma =
+          sp->getPreviewProperties()->getRenderSettings().m_colorSpaceGamma;
+      TRop::adjustGain(gainedImg->raster(), vs.m_gainStep, colorSpaceGamma);
+
+      m_imageViewer->setImage(gainedImg, img);
+    } else
+      m_imageViewer->setImage(img);
   } catch (...) {
     m_imageViewer->setImage(TImageP());
   }
@@ -1702,8 +1737,7 @@ void FlipBook::clearCache() {
       for (it = m_levels[i].m_level->begin(); it != m_levels[i].m_level->end();
            ++it)
         TImageCache::instance()->remove(
-            m_levelNames[i].toStdString() +
-            std::to_string(it->first.getNumber()) +
+            m_levelNames[i].toStdString() + it->first.expand(TFrameId::NO_PAD) +
             ((m_isPreviewFx) ? "" : ::to_string(this)));
   else {
     int from, to, step;
@@ -1749,9 +1783,12 @@ void FlipBook::onCloseButtonPressed() {
 
 void ImageViewer::showHistogram() {
   if (!m_isHistogramEnable) return;
+
+  // close the popup when using the command while open
   if (m_histogramPopup->isVisible())
-    m_histogramPopup->raise();
+    m_histogramPopup->hide();
   else {
+    m_histogramPopup->moveNextToWidget(this);
     m_histogramPopup->setImage(getImage());
     m_histogramPopup->show();
   }
@@ -1876,6 +1913,7 @@ void FlipBook::reset() {
 
   m_flipConsole->enableButton(FlipConsole::eDefineLoadBox, true);
   m_flipConsole->enableButton(FlipConsole::eUseLoadBox, true);
+  m_flipConsole->resetGain(true);
 
   m_lr = TLevelReaderP();
 
@@ -2103,13 +2141,13 @@ QPointF newViewerGeomCenter(
 
 //-----------------------------------------------------------------------------
 
-void FlipBook::onDoubleClick(QMouseEvent *me) {
+void FlipBook::adaptGeometryToCurrentSize() {
   TImageP img(m_imageViewer->getImage());
   if (!img) return;
 
   TAffine toWidgetRef(m_imageViewer->getImgToWidgetAffine());
-  TRectD pixGeomD(TScale(1.0 / (double)getDevPixRatio()) * toWidgetRef *
-                  getImageBoundsD(img));
+  TRectD pixGeomD(TScale(1.0 / (double)getDevicePixelRatio(this)) *
+                  toWidgetRef * getImageBoundsD(img));
   // TRectD pixGeomD(toWidgetRef  * getImageBoundsD(img));
   TRect pixGeom(tceil(pixGeomD.x0), tceil(pixGeomD.y0), tfloor(pixGeomD.x1) - 1,
                 tfloor(pixGeomD.y1) - 1);
@@ -2130,6 +2168,17 @@ void FlipBook::onDoubleClick(QMouseEvent *me) {
 
 //-----------------------------------------------------------------------------
 
+void FlipBook::onDoubleClick(QMouseEvent *me) { adaptGeometryToCurrentSize(); }
+
+//-----------------------------------------------------------------------------
+
+void FlipBook::zoomAndAdaptGeometry(bool forward) {
+  m_imageViewer->zoomQt(forward, false);
+  adaptGeometryToCurrentSize();
+}
+
+//-----------------------------------------------------------------------------
+
 void FlipBook::minimize(bool doMinimize) {
   m_imageViewer->setVisible(!doMinimize);
   m_flipConsole->showHideAllParts(!doMinimize);
@@ -2141,7 +2190,7 @@ void FlipBook::minimize(bool doMinimize) {
 */
 void FlipBook::loadAndCacheAllTlvImages(Level level, int fromFrame,
                                         int toFrame) {
-  TFilePath fp                                   = level.m_fp;
+  TFilePath fp = level.m_fp;
   if (!m_lr || (fp != m_lr->getFilePath())) m_lr = TLevelReaderP(fp);
   if (!m_lr) return;
 
@@ -2213,12 +2262,12 @@ void FlipBook::loadAndCacheAllTlvImages(Level level, int fromFrame,
 FlipBook *viewFile(const TFilePath &path, int from, int to, int step,
                    int shrink, TSoundTrack *snd, FlipBook *flipbook,
                    bool append, bool isToonzOutput) {
-  // In case the step and shrink informations are invalid, load them from
+  // In case the step and shrink information is invalid, load them from
   // preferences
   if (step == -1 || shrink == -1) {
     int _step = 1, _shrink = 1;
     Preferences::instance()->getViewValues(_shrink, _step);
-    if (step == -1) step     = _step;
+    if (step == -1) step = _step;
     if (shrink == -1) shrink = _shrink;
   }
 
@@ -2235,7 +2284,7 @@ FlipBook *viewFile(const TFilePath &path, int from, int to, int step,
   if (path.getType() == "scr") return NULL;
 
   // Avi and movs may be viewed by an external viewer, depending on preferences
-  if (path.getType() == "mov" || path.getType() == "avi" && !flipbook) {
+  if ((path.getType() == "mov" || path.getType() == "avi") && !flipbook) {
     QString str;
     QSettings().value("generatedMovieViewEnabled", str);
     if (str.toInt() != 0) {

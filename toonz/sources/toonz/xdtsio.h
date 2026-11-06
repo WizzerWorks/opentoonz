@@ -1,247 +1,247 @@
 #pragma once
+
 #ifndef XDTSIO_H
 #define XDTSIO_H
+
+#include "tfilepath.h"
 
 #include <QString>
 #include <QList>
 #include <QPair>
 #include <QStringList>
 
-#include <iostream>
-
 class ToonzScene;
-class TFilePath;
 class TXsheet;
 class TXshCellColumn;
 class QJsonObject;
 
 namespace XdtsIo {
 
-enum FieldId { CELL = 0, DIALOG = 3, CAMERAWORK = 5 };
-// (*1) Field: Input location of each timesheet instruction.
-// Fields are divided into cells, dialog, and camerawork.
-// [FieldId]  [field name]  [details]
-// 0          Cell          Field for cell numbers
-// 3          Dialog        Field for speaker names and line timing
-// 5          Camerawork    Field for camerawork instructions
+//=============================================================================
+// Field IDs - Correspond to different types of timesheet instructions
+//=============================================================================
 
-// "description": "Cut / scene information",
+enum FieldId {
+  CELL       = 0,  // Field for cell numbers
+  DIALOG     = 3,  // Field for speaker names and line timing
+  CAMERAWORK = 5   // Field for camerawork instructions
+};
+
+//=============================================================================
+// XdtsHeader - Cut/Scene information
+//=============================================================================
+
 class XdtsHeader {
-  //"description": "Cut No."
-  //"pattern" : "\\d{1,4}"
-  QString m_cut;
-  //"description": "Scene No.",
-  //"pattern" : "\\d{1,4}"
-  QString m_scene;
+  QString m_cut;    // Cut number (pattern: \d{1,4})
+  QString m_scene;  // Scene number (pattern: \d{1,4})
 
-  // "required": ["cut", "scene"]
 public:
-  void read(const QJsonObject &json);
-  void write(QJsonObject &json) const;
+  void read(const QJsonObject& json);
+  void write(QJsonObject& json) const;
+
   bool isEmpty() const { return m_cut.isEmpty() && m_scene.isEmpty(); }
 };
 
-//"description": "Frame instruction information",
+//=============================================================================
+// XdtsFrameDataItem - Frame instruction information
+//=============================================================================
+
 class XdtsFrameDataItem {
-  //"description": "Instruction type(*2)",
-  //*2 Currently only supports instructions with id=0.
   enum DataId { Default = 0 } m_id;
-
-  //"description": "Instruction value(*3)",
   QList<QString> m_values;
-  // "minItems" : 1,
-  //"required": ["id", "values"]
+  QList<QString> m_options;  // Extended options for Ponoc customized version
 
-  //(*3) Values are different depending on the field type.
-  // Values for each field are as follows.
-  // [Field name: Cell]
-  //  Enter the cell number string and special instruction string(*4)
-  //  (value element numbers: 1)
-  // [Field name: Dialog]
-  //  In the dialog's first frame, enter the speaker name in the first
-  //  element, and the dialog's string in the second element.
-  //  When the line lasts for multiple frames, specify the character
-  //  string "SYMBOL_HYPHEN" up to the end frame.
-  //  (value element numbers: 1Å`2)
-  // [Field name: Camerawork]
-  //  In the camerawork's first frame, enter the camerawork instruction
-  //  string When the camerawork lasts for multiple frames, specify the
-  //  character string "SYMBOL_HYPHEN" up to the end frame.
-  //  (value element numbers: 1)
-
-  //(*4) Special instruction character strings
-  // [Character string]  [Instruction]           [Valid field]
-  // SYMBOL_TICK_1       Inbetween symbol(Åõ)     Cell
-  // SYMBOL_TICK_2       Reverse sheet symbol(Åú) Cell
-  // SYMBOL_NULL_CELL    Empty cell symbol(Å~)    Cell
-  // SYMBOL_HYPHEN       Continue previous       All fields
-  //                     field instruction
+  TFrameId str2Fid(const QString& str) const;
+  QString fid2Str(const TFrameId& fid) const;
 
 public:
+  enum { SYMBOL_TICK_1 = -100, SYMBOL_TICK_2 = -200 };
+
   XdtsFrameDataItem() : m_id(Default) {}
-  XdtsFrameDataItem(int cellNumber) : m_id(Default) {
-    m_values.append((cellNumber == 0) ? QString("SYMBOL_NULL_CELL")
-                                      : QString::number(cellNumber));
+  explicit XdtsFrameDataItem(TFrameId fid, const QList<QString>& options = {})
+      : m_id(Default), m_options(options) {
+    m_values.append(fid2Str(fid));
   }
-  void read(const QJsonObject &json);
-  void write(QJsonObject &json) const;
-  int getCellNumber() const {
-    if (m_values.isEmpty()) return 0;
-    QString val = m_values.at(0);
-    if (val == "SYMBOL_NULL_CELL") return 0;
-    // ignore sheet symbols for now
-    else if (val == "SYMBOL_HYPHEN" || val == "SYMBOL_TICK_1" ||
-             val == "SYMBOL_TICK_2")
-      return -1;
-    // return cell number
-    return m_values.at(0).toInt();
-  }
+
+  void read(const QJsonObject& json);
+  void write(QJsonObject& json) const;
+
+  struct FrameInfo {
+    TFrameId frameId;
+    QStringList options;
+  };
+
+  FrameInfo getFrameInfo() const;
 };
 
-//"description": "Individual layer frame information",
+//=============================================================================
+// XdtsTrackFrameItem - Individual layer frame information
+//=============================================================================
+
 class XdtsTrackFrameItem {
-  //"description": "Frame instruction information",
   QList<XdtsFrameDataItem> m_data;
+  int m_frame = 0;  // Frame number (0 for first frame)
 
-  //"description": "Frame No.(*5)",
-  // (*5) Set as 0 when specifying the first frame.
-  //"minimum" : 0
-  int m_frame;
-
-  //"required": ["data", "frame"]
 public:
   XdtsTrackFrameItem() = default;
-  XdtsTrackFrameItem(int frame, int cellNumber) : m_frame(frame) {
-    m_data.append(XdtsFrameDataItem(cellNumber));
+  XdtsTrackFrameItem(int frame, TFrameId fid,
+                     const QList<QString>& options = {})
+      : m_frame(frame) {
+    m_data.append(XdtsFrameDataItem(fid, options));
   }
-  void read(const QJsonObject &json);
-  void write(QJsonObject &json) const;
-  QPair<int, int> frameCellNumber() const;
+
+  void read(const QJsonObject& json);
+  void write(QJsonObject& json) const;
+
+  QPair<int, XdtsFrameDataItem::FrameInfo> frameFinfo() const;
 };
 
-//"description": "Individual field layer info",
+//=============================================================================
+// XdtsFieldTrackItem - Individual field layer info
+//=============================================================================
+
 class XdtsFieldTrackItem {
-  //"description": "Individual layer frame information",
   QList<XdtsTrackFrameItem> m_frames;
+  int m_trackNo = 0;  // Layer number (0 for bottom layer)
 
-  //"description":  "Layer No.(*6)",
-  // (*6) Set as 0 for the bottom layer.
-  // corresponds to column numbers in OT
-  int m_trackNo;
-  // "minimum" : 0
-
-  //"required": ["frames", "trackNo"]
 public:
-  XdtsFieldTrackItem(int trackNo = 0) : m_trackNo(trackNo) {}
-  void read(const QJsonObject &json);
-  void write(QJsonObject &json) const;
+  explicit XdtsFieldTrackItem(int trackNo = 0) : m_trackNo(trackNo) {}
+
+  void read(const QJsonObject& json);
+  void write(QJsonObject& json) const;
+
   bool isEmpty() const { return m_frames.isEmpty(); }
   int getTrackNo() const { return m_trackNo; }
-  QVector<int> getCellNumberTrack() const;
 
-  QString build(TXshCellColumn *, int);
-  void addFrame(int frame, int cellNumber) {
-    m_frames.append(XdtsTrackFrameItem(frame, cellNumber));
+  QVector<TFrameId> getCellFrameIdTrack(QList<int>& tick1, QList<int>& tick2,
+                                        QList<int>& keyFrames,
+                                        QList<int>& refFrames) const;
+
+  QString build(TXshCellColumn* column);
+
+  void addFrame(int frame, TFrameId fid, const QList<QString>& options = {}) {
+    m_frames.append(XdtsTrackFrameItem(frame, fid, options));
   }
 };
+
+//=============================================================================
+// XdtsTimeTableFieldItem - Field type with multiple tracks
+//=============================================================================
 
 class XdtsTimeTableFieldItem {
-  // "description": "Field type(*1)",
-  FieldId m_fieldId;
-
-  //"description": "Individual field layer info",
+  FieldId m_fieldId = CELL;
   QList<XdtsFieldTrackItem> m_tracks;
 
-  //"required": ["fieldId", "tracks"]
 public:
-  XdtsTimeTableFieldItem(FieldId fieldId = CELL) : m_fieldId(fieldId) {}
-  void read(const QJsonObject &json);
-  void write(QJsonObject &json) const;
-  bool isCellField() { return m_fieldId == CELL; }
-  QList<int> getOccupiedColumns() const;
-  QVector<int> getColumnTrack(int col) const;
+  explicit XdtsTimeTableFieldItem(FieldId fieldId = CELL)
+      : m_fieldId(fieldId) {}
 
-  void build(TXsheet *, int, QStringList &);
+  void read(const QJsonObject& json);
+  void write(QJsonObject& json) const;
+
+  bool isCellField() const { return m_fieldId == CELL; }
+  QList<int> getOccupiedColumns() const;
+
+  QVector<TFrameId> getColumnTrack(int column, QList<int>& tick1,
+                                   QList<int>& tick2, QList<int>& keyFrames,
+                                   QList<int>& refFrames) const;
+
+  void build(TXsheet* xsheet, QStringList& columnLabels);
 };
+
+//=============================================================================
+// XdtsTimeTableHeaderItem - Layer name information
+//=============================================================================
 
 class XdtsTimeTableHeaderItem {
-  //"description": "Field type(*1)",
-  FieldId m_fieldId;
+  FieldId m_fieldId = CELL;
+  QStringList m_names;  // Layer names matching track numbers
 
-  //"description": "Layer name array(*7)",
-  //(*7) Specify layer names with trackNo's that match numbers counted as 0,1,2,
-  // etc.
-  QStringList m_names;
-
-  //"required": ["fieldId", "names"]
 public:
-  XdtsTimeTableHeaderItem(FieldId fieldId = CELL) : m_fieldId(fieldId) {}
-  void read(const QJsonObject &json);
-  void write(QJsonObject &json) const;
-  bool isCellField() { return m_fieldId == CELL; }
+  explicit XdtsTimeTableHeaderItem(FieldId fieldId = CELL)
+      : m_fieldId(fieldId) {}
+
+  void read(const QJsonObject& json);
+  void write(QJsonObject& json) const;
+
+  bool isCellField() const { return m_fieldId == CELL; }
   QStringList getLayerNames() const { return m_names; }
 
-  void build(QStringList &);
-  void addName(QString name) { m_names.append(name); }
+  void build(const QStringList& columnLabels) { m_names = columnLabels; }
+  void addName(const QString& name) { m_names.append(name); }
 };
 
-class XdtsTimeTableItem {
-  //"description": "Individual field info",
-  QList<XdtsTimeTableFieldItem> m_fields;
-  int m_cellFieldIndex = -1;
-  //"description":  "Timesheet total frames",
-  //"minimum" : 1
-  int m_duration;
+//=============================================================================
+// XdtsTimeTableItem - Timesheet with fields and headers
+//=============================================================================
 
-  //"description": "Timesheet name",
+class XdtsTimeTableItem {
+  QList<XdtsTimeTableFieldItem> m_fields;
+  QList<XdtsTimeTableHeaderItem> m_timeTableHeaders;
+
+  int m_cellFieldIndex  = -1;
+  int m_cellHeaderIndex = -1;
+  int m_duration        = 0;
   QString m_name;
 
-  // "description": "Individual field layer name",
-  QList<XdtsTimeTableHeaderItem> m_timeTableHeaders;
-  int m_cellHeaderIndex = -1;
-  //"required": ["duration", "name", "timeTableHeaders"]
-
 public:
-  void read(const QJsonObject &json);
-  void write(QJsonObject &json) const;
-  QStringList getLevelNames() const;
-  XdtsTimeTableFieldItem getCellField() { return m_fields[m_cellFieldIndex]; }
-  XdtsTimeTableHeaderItem getCellHeader() {
-    return m_timeTableHeaders[m_cellHeaderIndex];
-  }
-  int getDuration() { return m_duration; }
+  void read(const QJsonObject& json);
+  void write(QJsonObject& json) const;
 
-  void build(TXsheet *, QString);
-  bool isEmpty() {
+  QStringList getLevelNames() const;
+
+  XdtsTimeTableFieldItem getCellField() const {
+    return m_fields.value(m_cellFieldIndex);
+  }
+
+  XdtsTimeTableHeaderItem getCellHeader() const {
+    return m_timeTableHeaders.value(m_cellHeaderIndex);
+  }
+
+  int getDuration() const { return m_duration; }
+
+  void build(TXsheet* xsheet, const QString& name, int duration);
+
+  bool isEmpty() const {
     return m_duration == 0 || m_fields.isEmpty() ||
            m_timeTableHeaders.isEmpty();
   }
 };
 
-// "$schema": "http://json-schema.org/draft-07/schema",
+//=============================================================================
+// XdtsData - Complete XDTS document structure
+//=============================================================================
+
 class XdtsData {
   XdtsHeader m_header;
-
-  //"description": "Timesheet info",
-  //"minItems" : 1,
   QList<XdtsTimeTableItem> m_timeTables;
 
-  // "description": "XTDS file format version",
-  enum Version { Ver_2018_11_29 = 5 } m_version;
+  enum Version { Ver_2018_11_29 = 5 } m_version = Ver_2018_11_29;
+  QString m_subversion;  // "p1" for Ponoc extended version
 
-  //"required": ["timeTables", "version"]
 public:
-  XdtsData(Version version = Ver_2018_11_29) : m_version(version) {}
-  void read(const QJsonObject &json);
-  void write(QJsonObject &json) const;
+  explicit XdtsData(Version version = Ver_2018_11_29) : m_version(version) {}
+
+  void read(const QJsonObject& json);
+  void write(QJsonObject& json) const;
+
   QStringList getLevelNames() const;
-  XdtsTimeTableItem &timeTable() { return m_timeTables[0]; }
-  void build(TXsheet *, QString);
-  bool isEmpty() { return m_timeTables.isEmpty(); }
+
+  XdtsTimeTableItem& timeTable() { return m_timeTables[0]; }
+  const XdtsTimeTableItem& timeTable() const { return m_timeTables[0]; }
+
+  void build(TXsheet* xsheet, const QString& name, int duration);
+
+  bool isEmpty() const { return m_timeTables.isEmpty(); }
+  bool isUextVersion() const { return !m_subversion.isEmpty(); }
 };
 
-bool loadXdtsScene(ToonzScene *scene, const TFilePath &scenePath);
+//=============================================================================
+// Public interface functions
+//=============================================================================
+
+bool loadXdtsScene(ToonzScene* scene, const TFilePath& scenePath);
 
 }  // namespace XdtsIo
 
-#endif
+#endif  // XDTSIO_H

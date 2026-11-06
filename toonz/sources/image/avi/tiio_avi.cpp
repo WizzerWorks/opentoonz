@@ -272,6 +272,14 @@ void TLevelWriterAvi::searchForCodec() {
     for (int bpp = 32; (bpp >= 24) && !found; bpp -= 8) {
       inFmt.bmiHeader.biBitCount = bpp;
       for (int i = 0; ICInfo(fccType, i, &icinfo); i++) {
+        // Skip blacklisted DLLs
+        char driver[2048];
+        WideChar2Char(icinfo.szDriver, driver, sizeof(driver));
+        if (TSystem::isDLLBlackListed(
+                QString::fromStdString(std::string(driver)))) {
+          continue;
+        }
+
         hic = ICOpen(icinfo.fccType, icinfo.fccHandler, ICMODE_COMPRESS);
 
         ICGetInfo(hic, &icinfo,
@@ -332,7 +340,7 @@ void TLevelWriterAvi::createBitmap(int lx, int ly) {
 TImageWriterP TLevelWriterAvi::getFrameWriter(TFrameId fid) {
   if (IOError != 0)
     throw TImageException(m_path, buildAVIExceptionString(IOError));
-  if (fid.getLetter() != 0) return TImageWriterP(0);
+  if (!fid.getLetter().isEmpty()) return TImageWriterP(0);
   int index            = fid.getNumber() - 1;
   TImageWriterAvi *iwa = new TImageWriterAvi(m_path, index, this);
   return TImageWriterP(iwa);
@@ -720,7 +728,11 @@ TLevelReaderAvi::TLevelReaderAvi(const TFilePath &path)
     ICINFO icinfo;
     memset(&icinfo, 0, sizeof(ICINFO));
     ICInfo(ICTYPE_VIDEO, si.fccHandler, &icinfo);
-    m_hic = ICOpen(icinfo.fccType, icinfo.fccHandler, ICMODE_DECOMPRESS);
+
+    char driver[2048];
+    WideChar2Char(icinfo.szDriver, driver, sizeof(driver));
+    if (!TSystem::isDLLBlackListed(driver))
+      m_hic = ICOpen(icinfo.fccType, icinfo.fccHandler, ICMODE_DECOMPRESS);
     if (!m_hic) {
       m_hic = findCandidateDecompressor();
       if (!m_hic)
@@ -736,7 +748,7 @@ TLevelReaderAvi::TLevelReaderAvi(const TFilePath &path)
     result = ICDecompressBegin(m_hic, m_srcBitmapInfo, m_dstBitmapInfo);
     if (result != ICERR_OK)
       throw TImageException(getFilePath(),
-                            "unable to initializate the decompressor");
+                            "unable to initialize the decompressor");
 
     char descr[2048], name[2048];
     ICGetInfo(m_hic, &icinfo, sizeof(ICINFO));  // Find out the compressor name
@@ -785,6 +797,14 @@ HIC TLevelReaderAvi::findCandidateDecompressor() {
   for (DWORD id = 0; ICInfo(ICTYPE_VIDEO, id, &info); ++id) {
     info.dwSize = sizeof(
         ICINFO);  // I don't think this is necessary, but just in case....
+
+    // Skip blacklisted DLLs
+    char driver[2048];
+    WideChar2Char(info.szDriver, driver, sizeof(driver));
+    if (TSystem::isDLLBlackListed(
+            QString::fromStdString(std::string(driver)))) {
+      continue;
+    }
 
     HIC hic = ICOpen(info.fccType, info.fccHandler, ICMODE_DECOMPRESS);
 
@@ -879,7 +899,7 @@ TLevelP TLevelReaderAvi::loadInfo() {
 TImageReaderP TLevelReaderAvi::getFrameReader(TFrameId fid) {
   if (IOError != 0)
     throw TImageException(m_path, buildAVIExceptionString(IOError));
-  if (fid.getLetter() != 0) return TImageReaderP(0);
+  if (!fid.getLetter().isEmpty()) return TImageReaderP(0);
   int index = fid.getNumber() - 1;
 
   TImageReaderAvi *ira = new TImageReaderAvi(m_path, index, this);
@@ -970,16 +990,16 @@ TImageP TLevelReaderAvi::load(int frameIndex) {
 int TLevelReaderAvi::readFrameFromStream(void *bufferOut, DWORD &bufferSize,
                                          int frameIndex) const {
   assert(bufferOut && bufferSize > 0);
-  LONG bytesReaded   = 0;
-  LONG samplesReaded = 0;
+  LONG bytesReaded = 0;
+  LONG samplesRead = 0;
 
   int rc = AVIStreamRead(m_videoStream, frameIndex, 1, bufferOut, bufferSize,
-                         &bytesReaded, &samplesReaded);
+                         &bytesReaded, &samplesRead);
   if (!rc) {
-    assert(samplesReaded == 1);  // deve aver letto un frame!!!
+    assert(samplesRead == 1);  // must have read a frame!!!
     assert(bytesReaded <=
-           (LONG)bufferSize);  // deve aver letto un numero di byte
-    // minore o uguale di quello che ci aspettiamo
+           (LONG)bufferSize);  // must have read a number of bytes
+    // less than or equal to what we expect
     bufferSize = bytesReaded;
   }
   return rc;
@@ -1131,6 +1151,14 @@ Tiio::AviWriterProperties::AviWriterProperties() : m_codec("Codec") {
         memset(&icinfo, 0, sizeof icinfo);
         if (!safe_ICInfo(fccType, i, &icinfo)) {
           break;
+        }
+
+        // Skip blacklisted DLLs
+        char driver[2048];
+        WideChar2Char(icinfo.szDriver, driver, sizeof(driver));
+        if (TSystem::isDLLBlackListed(
+                QString::fromStdString(std::string(driver)))) {
+          continue;
         }
 
         auto const hic =

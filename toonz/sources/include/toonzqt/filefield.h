@@ -92,13 +92,14 @@ public:
   void setValidator(const QValidator *v) { m_field->setValidator(v); }
   QString getPath();
   void setPath(const QString &path);
+  LineEdit *getField() { return m_field; }
 
   static void setBrowserPopupController(BrowserPopupController *controller);
   static BrowserPopupController *getBrowserPopupController();
 
 protected slots:
   /*! Open a static file dialog popup to browse and choose directories. If a
-                  directory is seleceted and choose, set field to this
+                  directory is selected and chosen, set field to this
      directory. */
   // reimplemented in the "save in" filefield in CleanupSettings
   virtual void browseDirectory();

@@ -7,7 +7,6 @@
 #include "ttessellator.h"
 #include "trop.h"
 #include "drawutil.h"
-#include "tflash.h"
 #include "tpixelutils.h"
 #include "tlevel_io.h"
 #include "timage_io.h"
@@ -113,9 +112,33 @@ TColorStyle *TTextureStyle::clone() const { return new TTextureStyle(*this); }
 
 //-----------------------------------------------------------------------------
 
+TColorStyle *TTextureStyle::clone(std::string brushIdName) const {
+  TTextureStyle *style = new TTextureStyle(*this);
+
+  std::string name = getBrushIdNameParam(brushIdName);
+  style->m_texturePath = TFilePath(name);
+  style->setAverageColor();
+  return style;
+}
+
+//-----------------------------------------------------------------------------
+
 QString TTextureStyle::getDescription() const { return "TextureStyle"; }
 
 //-----------------------------------------------------------------------------
+
+std::string TTextureStyle::getBrushIdName() const {
+  std::wstring ws = m_texturePath.getWideString();
+  const std::string s(ws.begin(), ws.end());
+  return "TextureStyle:" + s;
+}
+
+//-----------------------------------------------------------------------------
+
+std::string TTextureStyle::staticBrushIdName(std::wstring texturePath) {
+  const std::string s(texturePath.begin(), texturePath.end());
+  return "TextureStyle:" + s;
+}
 
 //-----------------------------------------------------------------------------
 int TTextureStyle::getTagId() const { return 4; }
@@ -330,18 +353,6 @@ void TTextureStyle::drawRegion(const TColorFunction *cf,
                                TRegionOutline &boundary) const {
   if (m_tessellator)
     m_tessellator->tessellate(cf, antiAliasing, boundary, m_texture);
-}
-//-----------------------------------------------------------------------------
-void TTextureStyle::drawRegion(TFlash &flash, const TRegion *r) const {
-  flash.setTexture(m_texture);
-  flash.setFillStyleMatrix(TAffine());
-  flash.drawRegion(*r);
-  // rd.setTexture(m_colorStyle->getMainColor());
-}
-//-----------------------------------------------------------------------------
-
-void TTextureStyle::setFill(TFlash &flash) const {
-  flash.setTexture(getTexture());
 }
 
 //-----------------------------------------------------------------------------
@@ -956,7 +967,9 @@ bool TTextureStyle::doCompute(const Params &params) const {
     if (m_params.m_type == TTextureParams::AUTOMATIC) {
       TRect bBox;
       TRop::computeBBox(r, bBox);
-
+      
+      // Just in case of empty raster
+      if (bBox.isEmpty()) bBox = TRect(0,0,1,1);
       r = r->extract(bBox);
       p += r->getCenter() - computeCentroid(r);
     }

@@ -29,7 +29,7 @@ class StageSchematicGroupEditor;
 //
 //==================================================================
 //! Provide a structure representing a node af a tree.
-//! This class mantains information about a node of the stage schematic and its
+//! This class maintains information about a node of the stage schematic and its
 //! children.
 //! The tree is generated using the TStageObjectTree.
 //! The generated tree is used to oreder stage schematic nodes in the window.
@@ -59,7 +59,7 @@ public:
   //! Sort the children container.
   //! The sorting follows this rules:\n
   //! \li TableNode < CameraNode < PegbarNode < ColumnNode
-  //! \li if two nodes are of the same type, they are odered using indexes
+  //! \li if two nodes are of the same type, they are ordered using indexes
   void sortChildren(int startIndex, int lastIndex);
   void reverseChildren() { std::reverse(m_cildren.begin(), m_cildren.end()); }
 };
@@ -74,7 +74,7 @@ public:
 //! QGraphicsScene for the Stage Schematic.
 //! All StageSchematicNode,  StageSchematicSplineNode and link are pleced and
 //! handled in this scene.
-//! The scene mantains two mapping:
+//! The scene maintains two mapping:
 //! one for StageSchematicNode and one for StageSchematicSplineNode. These
 //! mapping can be used to retrieve
 //! nodes and spline.\n
@@ -110,7 +110,7 @@ public:
   //! Clear all item an regenerate the Stage Schematic graph.
   void updateScene() override;
 
-  //! Reurns the current node.
+  //! Returns the current node.
   QGraphicsItem *getCurrentNode() override;
 
   //! Replace all nodes in the scene.
@@ -138,6 +138,8 @@ public:
   bool isShowLetterOnPortFlagEnabled() { return m_showLetterOnPortFlag; }
 
   SchematicViewer *getSchematicViewer() { return m_viewer; }
+
+  StageObjectSelection *getStageSelection() const { return m_selection; }
 
 private:
   StageSchematicNode *addStageSchematicNode(TStageObject *pegbar);
@@ -184,6 +186,9 @@ private:
   void updateSplinePositionOnResize(TStageObjectSpline *spl,
                                     bool maximizedNode);
 
+  // snap to neighbor nodes on dragging
+  void updateSnapTarget(QGraphicsItem *item) override;
+
 protected:
   void contextMenuEvent(QGraphicsSceneContextMenuEvent *cme) override;
   void mousePressEvent(QGraphicsSceneMouseEvent *me) override;
@@ -192,6 +197,17 @@ signals:
   void editObject();
   void doCollapse(QList<TStageObjectId>);
   void doExplodeChild(QList<TStageObjectId>);
+
+public slots:
+  // Public wrapper slots for modern Qt5 connection syntax
+  void onResetCenterPublic() { onResetCenter(); }
+  void onEditGroupPublic() { onEditGroup(); }
+  void onCameraActivatePublic() { onCameraActivate(); }
+  void onRemoveSplinePublic() { onRemoveSpline(); }
+  void onSaveSplinePublic() { onSaveSpline(); }
+  void onLoadSplinePublic() { onLoadSpline(); }
+  void onPathToggledPublic(int state) { onPathToggled(state); }
+  void onCpToggledPublic(bool toggled) { onCpToggled(toggled); }
 
 protected slots:
   void onSelectionSwitched(TSelection *oldSel, TSelection *newSel) override;

@@ -31,7 +31,7 @@ namespace DVGui {
 class ProgressDialog;
 class FileField;
 class LineEdit;
-}
+}  // namespace DVGui
 
 //-----------------------------------------------------------------------------
 
@@ -65,6 +65,7 @@ public:
   void startDragDrop() override;
 
   void draw(QPainter &) override;
+  void addCurrentScene();
 
 protected:
   void dragEnterEvent(QDragEnterEvent *event) override;
@@ -89,11 +90,7 @@ class ExportPanel final : public TPanel {
   QCheckBox *m_useMarker;
 
 public:
-#if QT_VERSION >= 0x050500
-  ExportPanel(QWidget *parent = 0, Qt::WindowFlags flags = 0);
-#else
-  ExportPanel(QWidget *parent = 0, Qt::WFlags flags = 0);
-#endif
+  ExportPanel(QWidget *parent = 0, Qt::WindowFlags flags = Qt::WindowFlags());
   ~ExportPanel();
   void loadExportSettings();
   void saveExportSettings();
@@ -104,6 +101,9 @@ public slots:
   void onSceneSwitched();
   void onFormatChanged(const QString &);
   void openSettingsPopup();
+
+protected:
+  void showEvent(QShowEvent *) override;
 };
 
 class RenderController final : public QObject,

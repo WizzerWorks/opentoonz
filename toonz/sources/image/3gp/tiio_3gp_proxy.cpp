@@ -1,6 +1,7 @@
 
 
-#if (defined(x64) || defined(__LP64__) || defined(LINUX))
+#if defined(x64) || defined(__LP64__) || defined(LINUX) || defined(FREEBSD) || \
+    defined(HAIKU) || (defined(_WIN32) && defined(__GNUC__))
 
 // Toonz includes
 #include "tfilepath.h"
@@ -87,7 +88,8 @@ TLevelWriter3gp::TLevelWriter3gp(const TFilePath &path, TPropertyGroup *winfo)
 
   QLocalSocket socket;
   tipc::startSlaveConnection(&socket, t32bitsrv::srvName(), -1,
-                             t32bitsrv::srvCmdline());
+                             t32bitsrv::srvCmdlinePrg(),
+                             t32bitsrv::srvCmdlineArgs());
 
   tipc::Stream stream(&socket);
   tipc::Message msg;
@@ -132,7 +134,8 @@ err:
 TLevelWriter3gp::~TLevelWriter3gp() {
   QLocalSocket socket;
   tipc::startSlaveConnection(&socket, t32bitsrv::srvName(), -1,
-                             t32bitsrv::srvCmdline());
+                             t32bitsrv::srvCmdlinePrg(),
+                             t32bitsrv::srvCmdlineArgs());
 
   tipc::Stream stream(&socket);
   tipc::Message msg;
@@ -150,7 +153,8 @@ void TLevelWriter3gp::setFrameRate(double fps) {
 
   QLocalSocket socket;
   tipc::startSlaveConnection(&socket, t32bitsrv::srvName(), -1,
-                             t32bitsrv::srvCmdline());
+                             t32bitsrv::srvCmdlinePrg(),
+                             t32bitsrv::srvCmdlineArgs());
 
   tipc::Stream stream(&socket);
   tipc::Message msg;
@@ -164,7 +168,7 @@ void TLevelWriter3gp::setFrameRate(double fps) {
 //------------------------------------------------------------------
 
 TImageWriterP TLevelWriter3gp::getFrameWriter(TFrameId fid) {
-  if (fid.getLetter() != 0) return TImageWriterP(0);
+  if (!fid.getLetter().isEmpty()) return TImageWriterP(0);
 
   int index = fid.getNumber() - 1;
   return new TImageWriter3gpProxy(m_path, index, this);
@@ -187,7 +191,8 @@ void TLevelWriter3gp::save(const TImageP &img, int frameIndex) {
   // Send messages
   QLocalSocket socket;
   tipc::startSlaveConnection(&socket, t32bitsrv::srvName(), -1,
-                             t32bitsrv::srvCmdline());
+                             t32bitsrv::srvCmdlinePrg(),
+                             t32bitsrv::srvCmdlineArgs());
 
   tipc::Stream stream(&socket);
   tipc::Message msg;
@@ -203,7 +208,7 @@ void TLevelWriter3gp::save(const TImageP &img, int frameIndex) {
   }
 
   if (tipc::readMessage(stream, msg) != "ok")
-    throw TImageException(getFilePath(), "Couln't save image");
+    throw TImageException(getFilePath(), "Couldn't save image");
 }
 
 //------------------------------------------------------------------
@@ -214,7 +219,8 @@ void TLevelWriter3gp::saveSoundTrack(TSoundTrack *st) {
   // Prepare connection
   QLocalSocket socket;
   tipc::startSlaveConnection(&socket, t32bitsrv::srvName(), -1,
-                             t32bitsrv::srvCmdline());
+                             t32bitsrv::srvCmdlinePrg(),
+                             t32bitsrv::srvCmdlineArgs());
 
   unsigned int size = st->getSampleSize() * st->getSampleCount();
 
@@ -225,7 +231,7 @@ void TLevelWriter3gp::saveSoundTrack(TSoundTrack *st) {
   stream << (msg << QString("$LW3gpSaveSoundTrack") << m_id
                  << st->getSampleRate() << st->getBitPerSample()
                  << st->getChannelCount() << st->getSampleCount()
-                 << st->getFormat().m_signedSample);
+                 << (st->getFormat().m_sampleType != TSound::UINT));
 
   t32bitsrv::BufferExchanger exch((UCHAR *)st->getRawData());
   tipc::writeShMemBuffer(stream, msg << tipc::clr, size, &exch);
@@ -303,7 +309,8 @@ TLevelReader3gp::TLevelReader3gp(const TFilePath &path) : TLevelReader(path) {
 
   QLocalSocket socket;
   tipc::startSlaveConnection(&socket, t32bitsrv::srvName(), -1,
-                             t32bitsrv::srvCmdline());
+                             t32bitsrv::srvCmdlinePrg(),
+                             t32bitsrv::srvCmdlineArgs());
 
   tipc::Stream stream(&socket);
   tipc::Message msg;
@@ -327,7 +334,8 @@ TLevelReader3gp::TLevelReader3gp(const TFilePath &path) : TLevelReader(path) {
 TLevelReader3gp::~TLevelReader3gp() {
   QLocalSocket socket;
   tipc::startSlaveConnection(&socket, t32bitsrv::srvName(), -1,
-                             t32bitsrv::srvCmdline());
+                             t32bitsrv::srvCmdlinePrg(),
+                             t32bitsrv::srvCmdlineArgs());
 
   tipc::Stream stream(&socket);
   tipc::Message msg;
@@ -340,7 +348,7 @@ TLevelReader3gp::~TLevelReader3gp() {
 //------------------------------------------------------------------
 
 TImageReaderP TLevelReader3gp::getFrameReader(TFrameId fid) {
-  if (fid.getLetter() != 0) return TImageReaderP(0);
+  if (!fid.getLetter().isEmpty()) return TImageReaderP(0);
 
   int index = fid.getNumber() - 1;
   return new TImageReader3gpProxy(m_path, index, this, m_info);
@@ -351,7 +359,8 @@ TImageReaderP TLevelReader3gp::getFrameReader(TFrameId fid) {
 TLevelP TLevelReader3gp::loadInfo() {
   QLocalSocket socket;
   tipc::startSlaveConnection(&socket, t32bitsrv::srvName(), -1,
-                             t32bitsrv::srvCmdline());
+                             t32bitsrv::srvCmdlinePrg(),
+                             t32bitsrv::srvCmdlineArgs());
 
   tipc::Stream stream(&socket);
   tipc::Message msg;
@@ -399,7 +408,8 @@ err:
 void TLevelReader3gp::enableRandomAccessRead(bool enable) {
   QLocalSocket socket;
   tipc::startSlaveConnection(&socket, t32bitsrv::srvName(), -1,
-                             t32bitsrv::srvCmdline());
+                             t32bitsrv::srvCmdlinePrg(),
+                             t32bitsrv::srvCmdlineArgs());
 
   tipc::Stream stream(&socket);
   tipc::Message msg;
@@ -416,7 +426,8 @@ void TLevelReader3gp::load(const TRasterP &ras, int frameIndex,
                            const TPoint &pos, int shrinkX, int shrinkY) {
   QLocalSocket socket;
   tipc::startSlaveConnection(&socket, t32bitsrv::srvName(), -1,
-                             t32bitsrv::srvCmdline());
+                             t32bitsrv::srvCmdlinePrg(),
+                             t32bitsrv::srvCmdlineArgs());
 
   tipc::Stream stream(&socket);
   tipc::Message msg;

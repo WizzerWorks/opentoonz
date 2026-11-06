@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="zh_CN">
+<TS version="2.1" language="zh_CN" sourcelanguage="en">
 <context>
     <name>BmpWriterProperties</name>
     <message>
@@ -39,7 +39,7 @@
     </message>
     <message>
         <source>Skipping frame.</source>
-        <translation>跳帧。</translation>
+        <translation type="vanished">跳帧。</translation>
     </message>
     <message>
         <source>Malformed frame name</source>

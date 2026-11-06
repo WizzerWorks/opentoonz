@@ -401,19 +401,23 @@ PlasticToolOptionsBox::PlasticToolOptionsBox(QWidget *parent, TTool *tool,
       return space;
     }
   };
-
+  setObjectName("toolOptionsPanel");
   // Create Mesh button
   QPushButton *meshifyButton = new QPushButton(tr("Create Mesh"));
+
   // Add skeleton id-related widgets
   QLabel *skelIdLabel = new QLabel(tr("Skeleton:"));
   m_skelIdComboBox    = new SkelIdsComboBox;
   m_addSkelButton     = new QPushButton("+");  // Connected in the show event
   m_removeSkelButton  = new QPushButton("-");  // Connected in the show event
   // Add sub-options for each mode group
-  for (int m         = 0; m != PlasticTool::MODES_COUNT; ++m)
-    m_subToolbars[m] = new GenericToolOptionsBox(0, tool, pltHandle, m);
+  for (int m = 0; m != PlasticTool::MODES_COUNT; ++m)
+    m_subToolbars[m] =
+        new GenericToolOptionsBox(0, tool, pltHandle, m, 0, false);
 
   meshifyButton->setFixedHeight(20);
+  int buttonWidth = fontMetrics().horizontalAdvance(meshifyButton->text()) + 20;
+  meshifyButton->setFixedWidth(buttonWidth);
   QAction *meshifyAction =
       CommandManager::instance()->getAction("A_ToolOption_Meshify");
   meshifyButton->addAction(meshifyAction);
@@ -638,7 +642,7 @@ PlasticTool::PlasticTool()
     , m_showSkeletonOS(true)
     , m_recompileOnMouseRelease(false) {
   // And now, a little trick about tool binding
-  bind(TTool::AllImages);   // Attach the tool to all types :)
+  bind(TTool::AllImages | TTool::EmptyTarget);   // Attach the tool to all types :)
   bind(TTool::MeshLevels);  // But disable it for all but meshes :0
 
   // This little trick is needed to associate the tool to common levels (the
@@ -883,7 +887,7 @@ void PlasticTool::onColumnSwitched() {
 void PlasticTool::onXsheetChanged() {
   onColumnSwitched();
   TTool::updateEnabled();  // Current cell may no longer be a mesh one (or
-                           // viceversa),
+                           // vice versa),
 }  // so tool enabled status must be updated.
 
 //------------------------------------------------------------------------
@@ -922,7 +926,7 @@ void PlasticTool::onChange() {
   }
 
   // Passing through Qt's event system to compress repaints in a single one
-  TTool::Viewer *viewer = getViewer();
+  TToolViewer *viewer = getViewer();
   if (viewer)                 // This goes through paintEvent(),
     viewer->invalidateAll();  // \a unlike TTool::invalidate()
 }
@@ -938,7 +942,7 @@ void PlasticTool::onChange(const TParamChange &pc) {
 //------------------------------------------------------------------------
 
 void PlasticTool::onSetViewer() {
-  Viewer *viewer = getViewer();
+  TToolViewer *viewer = getViewer();
   if (viewer) {
     PlasticVisualSettings &pvs =
         viewer->visualSettings().m_plasticVisualSettings;
@@ -993,7 +997,7 @@ void PlasticTool::onDeactivate() {
                    SIGNAL(xsheetSwitched()), this, SLOT(onXsheetChanged())),
   assert(ret);
 
-  Viewer *viewer = getViewer();
+  TToolViewer *viewer = getViewer();
   if (viewer) {
     viewer->visualSettings().m_plasticVisualSettings = PlasticVisualSettings();
     // Only the mesh visibility is not reset in order to enable to keep the mesh
@@ -1969,9 +1973,8 @@ void PlasticTool::drawOnionSkinSkeletons_animate(double pixelSize) {
     PlasticSkeleton skel;
     m_sd->storeDeformedSkeleton(m_sd->skeletonId(sdFrame), sdFrame, skel);
 
-    UCHAR alpha =
-        255 -
-        255.0 * OnionSkinMask::getOnionSkinFade(abs(osRows[r] - currentRow));
+    UCHAR alpha = 255 - 255.0 * OnionSkinMask::getOnionSkinFade(
+                                    abs(osRows[r] - currentRow));
     drawSkeleton(skel, pixelSize, alpha);
   }
 }
@@ -2110,6 +2113,7 @@ void PlasticTool::draw() {
   glPushAttrib(GL_LINE_BIT | GL_COLOR_BUFFER_BIT | GL_ENABLE_BIT);
 
   glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_LINE_SMOOTH);
 
   switch (m_mode.getIndex()) {

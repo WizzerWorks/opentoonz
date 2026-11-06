@@ -9,6 +9,7 @@
 #include "tcommon.h"
 #include "tgeometry.h"
 #include "tpixel.h"
+#include "tfilepath.h"
 
 // TnzLib includes
 #include "toonz/levelproperties.h"
@@ -18,9 +19,10 @@
 #include <QString>
 #include <QObject>
 #include <QMap>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QVariant>
 #include <QDataStream>
+#include <QMetaType>
 
 #undef DVAPI
 #undef DVVAR
@@ -33,13 +35,10 @@
 #endif
 
 //==============================================================
-
 //    Forward declarations
-
-class TFilePath;
-class QSettings;
-
 //==============================================================
+
+class QSettings;
 
 //**********************************************************************************
 //    Preferences  declaration
@@ -75,16 +74,14 @@ class DVAPI Preferences final : public QObject  // singleton
 public:
   struct LevelFormat {
     QString m_name;  //!< Name displayed for the format.
-    QRegExp
-        m_pathFormat;  //!< <TT>[default: ".*"]</TT>Used to recognize levels in
-                       //!  the format. It's case <I>in</I>sensitive.
+    QRegularExpression m_pathFormat;
     LevelOptions m_options;  //!< Options associated to levels in the format.
     int m_priority;  //!< <TT>[default: 1]</TT> Priority value for the format.
     //!  Higher priority means that the format is matched first.
   public:
     LevelFormat(const QString &name = QString())
         : m_name(name)
-        , m_pathFormat(".*", Qt::CaseInsensitive)
+        , m_pathFormat(".*", QRegularExpression::CaseInsensitiveOption)
         , m_priority(1) {}
 
     bool matches(const TFilePath &fp) const;
@@ -98,18 +95,25 @@ public:
                     header)     */
   };
 
-  enum SnappingTarge { SnapStrokes, SnapGuides, SnapAll };
+  enum SnappingTarget { SnapStrokes, SnapGuides, SnapAll };
 
   enum PathAliasPriority {
     ProjectFolderAliases = 0,
     SceneFolderAlias,
-    ProjectFolderOnly
+    ProjectFolderOnly,
+    AutoByScene
   };
 
   enum FunctionEditorToggle {
     ShowGraphEditorInPopup = 0,
     ShowFunctionSpreadsheetInPopup,
     ToggleBetweenGraphAndSpreadsheet
+  };
+
+  enum LevelNameDisplayType {
+    ShowLevelName_Default = 0,
+    ShowLevelNameOnEachMarker,
+    ShowLevelNameOnColumnHeader
   };
 
   //--- callbacks
@@ -183,15 +187,19 @@ public:
   PathAliasPriority getPathAliasPriority() const {
     return PathAliasPriority(getIntValue(pathAliasPriority));
   }
+  bool isLazyLoadRoomsEnabled() { return getBoolValue(lazyLoadRooms); }
 
   // Interface  tab
   QStringList getStyleSheetList() const { return m_styleSheetList; }
-  void storeOldUnits();  // OK
-  void resetOldUnits();  // OK
+  void storeOldUnits();
+  void resetOldUnits();
   QStringList getLanguageList() const { return m_languageList; }
   QMap<int, QString> getRoomMap() const { return m_roomMaps; }
 
-  QString getCurrentStyleSheetPath() const;  // OK
+  QString getCurrentStyleSheet() const;
+  QString getAdditionalStyleSheet() const {
+    return getStringValue(additionalStyleSheet);
+  }
   bool getPixelsOnly() const { return getBoolValue(pixelsOnly); }
   QString getOldUnits() const { return getStringValue(oldUnits); }
   QString getOldCameraUnits() const { return getStringValue(oldCameraUnits); }
@@ -209,14 +217,8 @@ public:
   bool isActualPixelViewOnSceneEditingModeEnabled() const {
     return getBoolValue(actualPixelViewOnSceneEditingMode);
   }
-  bool isLevelNameOnEachMarkerEnabled() const {
-    return getBoolValue(levelNameOnEachMarkerEnabled);
-  }
   bool isShowRasterImagesDarkenBlendedInViewerEnabled() const {
     return getBoolValue(showRasterImagesDarkenBlendedInViewer);
-  }
-  bool isShowFrameNumberWithLettersEnabled() const {
-    return getBoolValue(showFrameNumberWithLetters);
   }
   TDimension getIconSize() const { return getSizeValue(iconSize); }
   void getViewValues(int &shrink, int &step) const {
@@ -231,13 +233,23 @@ public:
   }
   void setColorCalibrationLutPath(QString monitorName, QString path);
   QString getColorCalibrationLutPath(QString &monitorName) const;
+  bool is30bitDisplayEnabled() const { return getBoolValue(displayIn30bit); }
+
+  bool isViewerIndicatorEnabled() const {
+    return getBoolValue(viewerIndicatorEnabled);
+  }
 
   // Visualization  tab
   bool getShow0ThickLines() const { return getBoolValue(show0ThickLines); }
   bool getRegionAntialias() const { return getBoolValue(regionAntialias); }
+  bool getRasterizeAntialias() const {
+    return getBoolValue(rasterizeAntialias);
+  }
 
   // Loading  tab
   int getDefaultImportPolicy() { return getIntValue(importPolicy); }
+  int getDefaultRenamePolicy() { return getIntValue(renamePolicy); }
+  int getDefaultConvertPolicy() { return getIntValue(convertPolicy); }
   bool isAutoExposeEnabled() const { return getBoolValue(autoExposeEnabled); }
   bool isSubsceneFolderEnabled() const {
     return getBoolValue(subsceneFolderEnabled);
@@ -246,8 +258,8 @@ public:
     return getBoolValue(removeSceneNumberFromLoadedLevelName);
   }
   bool isIgnoreImageDpiEnabled() const { return getBoolValue(IgnoreImageDpi); }
-  int getInitialLoadTlvCachingBehavior() const {
-    return getIntValue(initialLoadTlvCachingBehavior);
+  int getRasterLevelCachingBehavior() const {
+    return getIntValue(rasterLevelCachingBehavior);
   }
   ColumnIconLoadingPolicy getColumnIconLoadingPolicy() const {
     return ColumnIconLoadingPolicy(getIntValue(columnIconLoadingPolicy));
@@ -266,6 +278,9 @@ public:
   int matchLevelFormat(const TFilePath &fp)
       const;  //!< Returns the \a nonnegative index of the first level format
               //!  matching the specified file path, <I>or \p -1 if none</I>.
+  bool isAutoRemoveUnusedLevelsEnabled() const {
+    return isAutoExposeEnabled() && getBoolValue(autoRemoveUnusedLevels);
+  }
 
   // Saving tab
   TPixel getRasterBackgroundColor() const {
@@ -276,9 +291,14 @@ public:
   QString getFfmpegPath() const { return getStringValue(ffmpegPath); }
   int getFfmpegTimeout() { return getIntValue(ffmpegTimeout); }
   QString getFastRenderPath() const { return getStringValue(fastRenderPath); }
+  bool getFfmpegMultiThread() const { return getBoolValue(ffmpegMultiThread); }
+  bool isUseQuickTimeBackend() const { return getBoolValue(quickTimeBackend); }
+  QString getRhubarbPath() const { return getStringValue(rhubarbPath); }
+  int getRhubarbTimeout() { return getIntValue(rhubarbTimeout); }
 
   // Drawing  tab
-  QString getScanLevelType() const { return getStringValue(scanLevelType); }
+  QString getDefRasterFormat() const { return getStringValue(DefRasterFormat); }
+  // QString getScanLevelType() const { return getStringValue(scanLevelType); }
   int getDefLevelType() const { return getIntValue(DefLevelType); }
   bool isNewLevelSizeToCameraSizeEnabled() const {
     return getBoolValue(newLevelSizeToCameraSizeEnabled);
@@ -316,9 +336,9 @@ public:
   }
 
   // Tools Tab
-  bool getDropdownShortcutsCycleOptions() {
-    return getIntValue(dropdownShortcutsCycleOptions) == 1;
-  }
+  // bool getDropdownShortcutsCycleOptions() {
+  //  return getIntValue(dropdownShortcutsCycleOptions) == 1;
+  //}
   bool getFillOnlySavebox() const { return getBoolValue(FillOnlysavebox); }
   bool isMultiLayerStylePickerEnabled() const {
     return getBoolValue(multiLayerStylePickerEnabled);
@@ -330,8 +350,24 @@ public:
   bool isCursorOutlineEnabled() const {
     return getBoolValue(cursorOutlineEnabled);
   }
+  bool isUseStrokeEndCursor() const { return getBoolValue(useStrokeEndCursor); }
+  bool isClickTwiceToCreateArcs() {
+    return getBoolValue(clickTwiceToCreateArcs);
+  }
   int getLevelBasedToolsDisplay() const {
     return getIntValue(levelBasedToolsDisplay);
+  }
+  bool useCtrlAltToResizeBrushEnabled() const {
+    return getBoolValue(useCtrlAltToResizeBrush);
+  }
+  int getTempToolSwitchTimer() const {
+    return getIntValue(tempToolSwitchTimer);
+  }
+  double getAnimateToolHandleSize() const {
+    return getDoubleValue(animateToolHandleSize);
+  }
+  TPixel32 getAnimateToolColor() const {
+    return getColorValue(animateToolColor);
   }
 
   // Xsheet  tab
@@ -347,7 +383,14 @@ public:
   bool isXsheetAutopanEnabled() const {
     return getBoolValue(xsheetAutopanEnabled);
   }  //!< Returns whether xsheet pans during playback.
+  int isAlwaysDragFrameCell() const {
+    return getBoolValue(alwaysDragFrameCell);
+  }
   int getDragCellsBehaviour() const { return getIntValue(DragCellsBehaviour); }
+  int getDeleteCommandBehaviour() const {
+    return getIntValue(deleteCommandBehavior);
+  }
+  int getPasteCellsBehavior() const { return getIntValue(pasteCellsBehavior); }
   bool isIgnoreAlphaonColumn1Enabled() const {
     return getBoolValue(ignoreAlphaonColumn1Enabled);
   }
@@ -360,8 +403,11 @@ public:
   bool isUseArrowKeyToShiftCellSelectionEnabled() const {
     return getBoolValue(useArrowKeyToShiftCellSelection);
   }
+  bool isInputCellsUsingNumpad() const {
+    return getIntValue(cellInputMethod) == 1;
+  }
   bool isInputCellsWithoutDoubleClickingEnabled() const {
-    return getBoolValue(inputCellsWithoutDoubleClickingEnabled);
+    return getIntValue(cellInputMethod) == 2;
   }
   bool isShortcutCommandsWhileRenamingCellEnabled() const {
     return getBoolValue(shortcutCommandsWhileRenamingCellEnabled);
@@ -369,11 +415,20 @@ public:
   bool isShowXSheetToolbarEnabled() const {
     return getBoolValue(showXSheetToolbar);
   }
+  bool isShowXsheetBreadcrumbsEnabled() const {
+    return getBoolValue(showXsheetBreadcrumbs);
+  }
   bool isExpandFunctionHeaderEnabled() const {
     return getBoolValue(expandFunctionHeader);
   }
   bool isShowColumnNumbersEnabled() const {
     return getBoolValue(showColumnNumbers);
+  }
+  bool isUnifyColumnVisibilityTogglesEnabled() const {
+    return getBoolValue(unifyColumnVisibilityToggles);
+  }
+  bool isParentColorsInXsheetColumnEnabled() const {
+    return getBoolValue(parentColorsInXsheetColumn);
   }
   bool isSyncLevelRenumberWithXsheetEnabled() const {
     return getBoolValue(syncLevelRenumberWithXsheet);
@@ -385,9 +440,25 @@ public:
     color = getColorValue(currentColumnColor);
   }
 
+  LevelNameDisplayType getLevelNameDisplayType() const {
+    return LevelNameDisplayType(getIntValue(levelNameDisplayType));
+  }
+  bool isLevelNameOnEachMarkerEnabled() const {
+    return getLevelNameDisplayType() == ShowLevelNameOnEachMarker;
+  }
+  bool isShowFrameNumberWithLettersEnabled() const {
+    return getBoolValue(showFrameNumberWithLetters);
+  }
+  bool isLinkColumnNameWithLevelEnabled() const {
+    return getBoolValue(linkColumnNameWithLevel);
+  }
+
   // Animation  tab
   int getKeyframeType() const { return getIntValue(keyframeType); }
   int getAnimationStep() const { return getIntValue(animationStep); }
+  bool isModifyExpressionOnMovingReferencesEnabled() const {
+    return getBoolValue(modifyExpressionOnMovingReferences);
+  }
 
   // Preview  tab
   void getBlankValues(int &bCount, TPixel32 &bColor) const {
@@ -402,7 +473,9 @@ public:
   bool previewAlwaysOpenNewFlipEnabled() const {
     return getBoolValue(previewAlwaysOpenNewFlip);
   }
-  bool fitToFlipbookEnabled() const { return getBoolValue(fitToFlipbook); }
+  bool fitToFlipbookEnabled() const {
+    return getBoolValue(fitToFlipbookWhenPreview);
+  }
   bool isGeneratedMovieViewEnabled() const {
     return getBoolValue(generatedMovieViewEnabled);
   }
@@ -444,6 +517,10 @@ public:
     ink   = getColorValue(transpCheckInkOnWhite);
     paint = getColorValue(transpCheckPaint);
   }
+  // Returns the configured colors used for Ink and Paint check operations
+  TPixel getInkCheckColor() const { return getColorValue(inkCheckColor); }
+  TPixel getInk1CheckColor() const { return getColorValue(ink1CheckColor); }
+  TPixel getPaintCheckColor() const { return getColorValue(paintCheckColor); }
 
   // Version Control  tab
   bool isSVNEnabled() const { return getBoolValue(SVNEnabled); }
@@ -456,6 +533,9 @@ public:
 
   // Tablet tab
   bool isWinInkEnabled() const { return getBoolValue(winInkEnabled); }
+  bool isQtNativeWinInkEnabled() const {
+    return getBoolValue(useQtNativeWinInk);
+  }
 
   // Others (not appeared in the popup)
   // Shortcut popup settings

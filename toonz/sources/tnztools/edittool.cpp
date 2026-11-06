@@ -1,5 +1,6 @@
 
 
+#include "edittool.h"
 #include "tools/tool.h"
 #include "tools/cursors.h"
 #include "tproperty.h"
@@ -123,7 +124,11 @@ public:
         ->setCenter(m_objId, m_frame, m_center);
   }
   void leftButtonUp(const TPointD &pos, const TMouseEvent &) override {
-    if ((m_lockCenterX && m_lockCenterY) || m_firstPos == pos) return;
+    if (m_firstPos == pos) return;
+    leftButtonUp();
+  }
+  void leftButtonUp() override {
+    if (m_lockCenterX && m_lockCenterY) return;
     UndoStageObjectCenterMove *undo =
         new UndoStageObjectCenterMove(m_objId, m_frame, m_oldCenter, m_center);
     TTool::Application *app = TTool::getApplication();
@@ -229,7 +234,11 @@ public:
   }
 
   void leftButtonUp(const TPointD &pos, const TMouseEvent &) override {
-    if (!m_isStarted || m_firstPos == pos)
+    if (m_firstPos == pos) return;
+    leftButtonUp();
+  }
+  void leftButtonUp() override {
+    if (!m_isStarted)
       return;
     else
       m_isStarted = false;
@@ -489,9 +498,9 @@ public:
     if (norm2(a) < eps || norm2(b) < eps) return;
 
     double fx = b.x / a.x;
-    if (fabs(fx) > 1) fx = tsign(fx) * sqrt(abs(fx));
+    if (fabs(fx) > 1) fx = tsign(fx) * sqrt(std::abs(fx));
     double fy = b.y / a.y;
-    if (fabs(fy) > 1) fy = tsign(fy) * sqrt(abs(fy));
+    if (fabs(fy) > 1) fy = tsign(fy) * sqrt(std::abs(fy));
 
     int constraint = m_constraint;
     if (constraint == ScaleConstraints::None && e.isShiftPressed())
@@ -587,11 +596,11 @@ public:
 
 class DragZTool final : public DragChannelTool {
   TPointD m_lastPos;
-  TTool::Viewer *m_viewer;
+  TToolViewer *m_viewer;
   double m_dz;
 
 public:
-  DragZTool(TTool::Viewer *viewer, bool globalKeyframesEnabled)
+  DragZTool(TToolViewer *viewer, bool globalKeyframesEnabled)
       : DragChannelTool(TStageObject::T_Z, globalKeyframesEnabled)
       , m_viewer(viewer) {}
 
@@ -613,133 +622,19 @@ public:
   }
 };
 
+bool hasVisibleChildColumn(const TStageObject *obj, const TXsheet *xsh) {
+  if (!(obj->getId().isColumn())) return false;  // just in case
+  TXshColumn *column = xsh->getColumn(obj->getId().getIndex());
+  if (!column) return false;
+  if (column->isCamstandVisible()) return true;
+  for (const auto child : obj->getChildren()) {
+    if (hasVisibleChildColumn(child, xsh)) return true;
+  }
+  return false;
+}
+
 //=============================================================================
 }  // namespace
-//-----------------------------------------------------------------------------
-
-//=============================================================================
-// EditTool
-//-----------------------------------------------------------------------------
-
-class EditTool final : public TTool {
-  Q_DECLARE_TR_FUNCTIONS(EditTool)
-
-  DragTool *m_dragTool;
-
-  bool m_firstTime;
-
-  enum {
-    None        = -1,
-    Translation = 1,
-    Rotation,
-    Scale,
-    ScaleX,
-    ScaleY,
-    ScaleXY,
-    Center,
-    ZTranslation,
-    Shear,
-  };
-
-  // DragInfo m_dragInfo;
-
-  TPointD m_lastPos;
-  TPointD m_curPos;
-  TPointD m_firstPos;
-  TPointD m_curCenter;
-
-  bool m_active;
-  bool m_keyFrameAdded;
-  int m_what;
-  int m_highlightedDevice;
-
-  double m_oldValues[2];
-
-  double m_currentScaleFactor;
-  FxGadgetController *m_fxGadgetController;
-
-  bool m_isAltPressed;
-
-  TEnumProperty m_scaleConstraint;
-  TEnumProperty m_autoSelect;
-  TBoolProperty m_globalKeyframes;
-
-  TBoolProperty m_lockCenterX;
-  TBoolProperty m_lockCenterY;
-  TBoolProperty m_lockPositionX;
-  TBoolProperty m_lockPositionY;
-  TBoolProperty m_lockRotation;
-  TBoolProperty m_lockShearH;
-  TBoolProperty m_lockShearV;
-  TBoolProperty m_lockScaleH;
-  TBoolProperty m_lockScaleV;
-  TBoolProperty m_lockGlobalScale;
-
-  TBoolProperty m_showEWNSposition;
-  TBoolProperty m_showZposition;
-  TBoolProperty m_showSOposition;
-  TBoolProperty m_showRotation;
-  TBoolProperty m_showGlobalScale;
-  TBoolProperty m_showHVscale;
-  TBoolProperty m_showShear;
-  TBoolProperty m_showCenterPosition;
-
-  TEnumProperty m_activeAxis;
-
-  TPropertyGroup m_prop;
-
-  void drawMainHandle();
-  void onEditAllLeftButtonDown(TPointD &pos, const TMouseEvent &e);
-
-public:
-  EditTool();
-  ~EditTool();
-
-  ToolType getToolType() const override { return TTool::ColumnTool; }
-
-  bool doesApply() const;  // ritorna vero se posso deformare l'oggetto corrente
-  void saveOldValues();
-
-  const TStroke *getSpline() const;
-
-  void rotate();
-  void move();
-  void moveCenter();
-  void scale();
-  void isoScale();
-  void squeeze();
-  void shear(const TPointD &pos, bool single);
-
-  void updateTranslation() override;
-
-  void leftButtonDown(const TPointD &pos, const TMouseEvent &) override;
-  void leftButtonDrag(const TPointD &pos, const TMouseEvent &) override;
-  void leftButtonUp(const TPointD &pos, const TMouseEvent &) override;
-
-  void mouseMove(const TPointD &, const TMouseEvent &e) override;
-
-  void draw() override;
-
-  void transform(const TAffine &aff);
-
-  void onActivate() override;
-  void onDeactivate() override;
-  bool onPropertyChanged(std::string propertyName) override;
-
-  void computeBBox();
-
-  int getCursorId() const override;
-
-  TPropertyGroup *getProperties(int targetType) override { return &m_prop; }
-
-  void updateMatrix() override {
-    setMatrix(
-        getCurrentObjectParentMatrix2());  // getCurrentObjectParentMatrix());
-  }
-
-  void drawText(const TPointD &p, double unit, std::string text);
-};
-
 //-----------------------------------------------------------------------------
 
 EditTool::EditTool()
@@ -753,17 +648,17 @@ EditTool::EditTool()
     , m_scaleConstraint("Scale Constraint:")  // W_ToolOptions_ScaleConstraint
     , m_autoSelect("Auto Select Column")      // W_ToolOptions_AutoSelect
     , m_globalKeyframes("Global Key", false)  // W_ToolsOptions_GlobalKeyframes
-    , m_lockCenterX("Lock Center E/W", false)
-    , m_lockCenterY("Lock Center N/S", false)
-    , m_lockPositionX("Lock Position E/W", false)
-    , m_lockPositionY("Lock Position N/S", false)
+    , m_lockCenterX("Lock Center X", false)
+    , m_lockCenterY("Lock Center Y", false)
+    , m_lockPositionX("Lock Position X", false)
+    , m_lockPositionY("Lock Position Y", false)
     , m_lockRotation("Lock Rotation", false)
     , m_lockShearH("Lock Shear H", false)
     , m_lockShearV("Lock Shear V", false)
     , m_lockScaleH("Lock Scale H", false)
     , m_lockScaleV("Lock Scale V", false)
     , m_lockGlobalScale("Lock Global Scale", false)
-    , m_showEWNSposition("E/W and N/S Positions", true)
+    , m_showEWNSposition("X and Y Positions", true)
     , m_showZposition("Z Position", true)
     , m_showSOposition("SO", true)
     , m_showRotation("Rotation", true)
@@ -846,17 +741,17 @@ void EditTool::updateTranslation() {
   m_autoSelect.setItemUIName(L"Pegbar", tr("Pegbar"));
 
   m_globalKeyframes.setQStringName(tr("Global Key"));
-  m_lockCenterX.setQStringName(tr("Lock Center E/W"));
-  m_lockCenterY.setQStringName(tr("Lock Center N/S"));
-  m_lockPositionX.setQStringName(tr("Lock Position E/W"));
-  m_lockPositionY.setQStringName(tr("Lock Position N/S"));
+  m_lockCenterX.setQStringName(tr("Lock Center X"));
+  m_lockCenterY.setQStringName(tr("Lock Center Y"));
+  m_lockPositionX.setQStringName(tr("Lock Position X"));
+  m_lockPositionY.setQStringName(tr("Lock Position Y"));
   m_lockRotation.setQStringName(tr("Lock Rotation"));
   m_lockShearH.setQStringName(tr("Lock Shear H"));
   m_lockShearV.setQStringName(tr("Lock Shear V"));
   m_lockScaleH.setQStringName(tr("Lock Scale H"));
   m_lockScaleV.setQStringName(tr("Lock Scale V"));
   m_lockGlobalScale.setQStringName(tr("Lock Global Scale"));
-  m_showEWNSposition.setQStringName(tr("E/W and N/S Positions"));
+  m_showEWNSposition.setQStringName(tr("X and Y Positions"));
   m_showZposition.setQStringName(tr("Z Position"));
   m_showSOposition.setQStringName(tr("SO"));
   m_showRotation.setQStringName(tr("Rotation"));
@@ -890,6 +785,16 @@ bool EditTool::doesApply() const {
 
 //-----------------------------------------------------------------------------
 
+bool EditTool::transformEnabled() const {
+  // check if the column transformation is enabled
+  TXsheet *xsh = getXsheet();
+  TStageObjectId objId(getObjectId());
+  TStageObject *pegbar = xsh->getStageObject(objId);
+  return (!objId.isColumn() || hasVisibleChildColumn(pegbar, xsh));
+}
+
+//-----------------------------------------------------------------------------
+
 const TStroke *EditTool::getSpline() const {
   TTool::Application *app    = TTool::getApplication();
   TXsheet *xsh               = app->getCurrentXsheet()->getXsheet();
@@ -915,9 +820,8 @@ void EditTool::mouseMove(const TPointD &, const TMouseEvent &e) {
     selectedDevice = m_what;
     if (m_what == Translation && e.isCtrlPressed())
       selectedDevice = ZTranslation;
-    else if (
-        m_what == ZTranslation &&
-        !e.isCtrlPressed()) /*--ここには、一度Z移動をした後に入る可能性がある--*/
+    else if (m_what == ZTranslation &&
+             !e.isCtrlPressed()) /*-- Here, it may enter after a Z movement --*/
       selectedDevice = Translation;
     else if (m_what == Scale && e.isCtrlPressed())
       selectedDevice = ScaleXY;
@@ -943,7 +847,7 @@ TPoint lastScreenPos;
 
 void EditTool::leftButtonDown(const TPointD &ppos, const TMouseEvent &e) {
   TPointD pos = ppos;
-  /*-- Soundカラムの場合は何もしない --*/
+  /*-- Do nothing for Sound column --*/
   if (!doesApply()) return;
 
   if (m_activeAxis.getValue() == L"Position")
@@ -971,7 +875,7 @@ void EditTool::leftButtonDown(const TPointD &ppos, const TMouseEvent &e) {
     m_dragTool = m_fxGadgetController->createDragTool(m_highlightedDevice);
   }
 
-  if (!m_dragTool) {
+  if (!m_dragTool && transformEnabled()) {
     switch (m_what) {
     case Center:
       m_dragTool = new DragCenterTool(m_lockCenterX.getValue(),
@@ -1029,9 +933,8 @@ void EditTool::onEditAllLeftButtonDown(TPointD &pos, const TMouseEvent &e) {
   m_what             = selectedDevice >= 0 ? selectedDevice : Translation;
 
   if (selectedDevice < 0 && m_autoSelect.getValue() != L"None") {
-    pos = getMatrix() * pos;
-    int columnIndex =
-        getViewer()->posToColumnIndex(e.m_pos, 5 * getPixelSize(), false);
+    pos             = getMatrix() * pos;
+    int columnIndex = getViewer()->posToColumnIndex(e.m_pos, 5.0, false);
     if (columnIndex >= 0) {
       TStageObjectId id      = TStageObjectId::ColumnId(columnIndex);
       int currentColumnIndex = getColumnIndex();
@@ -1173,7 +1076,7 @@ void drawCameraIcon() {
 }
 
 void drawZArrow() {
-  /*--矢印--*/
+  /*-- Arrow --*/
   glBegin(GL_LINE_LOOP);
   glVertex2i(0, 3);
   glVertex2i(2, 2);
@@ -1186,7 +1089,7 @@ void drawZArrow() {
   glVertex2i(-1, 2);
   glVertex2i(-2, 2);
   glEnd();
-  /*--Zの文字--*/
+  /*-- Letter Z --*/
   glBegin(GL_LINE_STRIP);
   glVertex2i(3, 4);
   glVertex2i(5, 4);
@@ -1223,8 +1126,10 @@ glColor3d(0,0,0);
 //-----------------------------------------------------------------------------
 
 void EditTool::drawMainHandle() {
-  const TPixel32 normalColor(250, 127, 240);
-  const TPixel32 highlightedColor(150, 255, 140);
+  // Initialize local preference variables
+  const TPixel32 normalColor = Preferences::instance()->getAnimateToolColor();
+  const TPixel32 highlightedColor = TPixel32(150, 255, 140);
+  const double prefScale = Preferences::instance()->getAnimateToolHandleSize();
 
   // collect information
   TXsheet *xsh         = getXsheet();
@@ -1233,7 +1138,7 @@ void EditTool::drawMainHandle() {
   TAffine parentAff    = xsh->getParentPlacement(objId, frame);
   TAffine aff          = xsh->getPlacement(objId, frame);
   TPointD center       = Stage::inch * xsh->getCenter(objId, frame);
-  int devPixRatio      = getDevPixRatio();
+  int devPixRatio      = getDevicePixelRatio(m_viewer->viewerWidget());
   // the gadget appears on the center of the level. orientation and dimension
   // are independent of the movement of the level
   glPushMatrix();
@@ -1243,8 +1148,8 @@ void EditTool::drawMainHandle() {
   // so in the system of ref. of the gadget the center is always in the origin
   center = TPointD();
 
-  double unit = sqrt(tglGetPixelSize2());
-  unit *= devPixRatio;
+  // SINGLE DEFINITION OF UNIT (including prefScale)
+  double unit   = sqrt(tglGetPixelSize2()) * devPixRatio * prefScale;
   bool dragging = m_dragTool != 0;
 
   // draw center
@@ -1316,8 +1221,7 @@ void EditTool::drawMainHandle() {
 
   TPointD q;
   double dd = unit * 10;
-
-  q = p + TPointD(dd, dd);
+  q         = p + TPointD(dd, dd);
   tglColor(m_highlightedDevice == ScaleXY ? highlightedColor : normalColor);
   glPushName(ScaleXY);
   hitRect =
@@ -1358,26 +1262,20 @@ void EditTool::drawMainHandle() {
   tglColor(normalColor);
   tglDrawSegment(p, center);
 
-  //
   if (objId.isCamera()) {
     if (xsh->getStageObjectTree()->getCurrentCameraId() != objId) {
       glEnable(GL_LINE_STIPPLE);
-      glColor3d(1.0, 0.0, 1.0);
+      tglColor(normalColor);
       glLineStipple(1, 0x1111);
       TRectD cameraRect = TTool::getApplication()
                               ->getCurrentScene()
                               ->getScene()
                               ->getCurrentCamera()
                               ->getStageRect();
-
-      glPushMatrix();
-      // tglMultMatrix(mat);
       tglDrawRect(cameraRect);
-      glPopMatrix();
       glDisable(GL_LINE_STIPPLE);
     }
   }
-
   glPopMatrix();
 }
 //-----------------------------------------------------------------------------
@@ -1389,11 +1287,19 @@ void EditTool::draw() {
 
   /*-- Show nothing on Level Editing mode --*/
   if (TTool::getApplication()->getCurrentFrame()->isEditingLevel()) return;
-  const TPixel32 normalColor(250, 127, 240);
-  const TPixel32 highlightedColor(150, 255, 140);
 
-  // collect information
-  TXsheet *xsh = getXsheet();
+  // if the column and its children are all hidden, only draw fx gadgets
+  if (!transformEnabled()) {
+    m_fxGadgetController->draw(isPicking());
+    return;
+  }
+
+  // GLOBAL DEFINITION OF COLORS AND SCALE FOR THIS FUNCTION
+  const TPixel32 normalColor = Preferences::instance()->getAnimateToolColor();
+  const TPixel32 highlightedColor = TPixel32(150, 255, 140);
+  const double prefScale = Preferences::instance()->getAnimateToolHandleSize();
+
+  TXsheet *xsh         = getXsheet();
   /*-- Obtain ID of the current editing stage object --*/
   TStageObjectId objId = getObjectId();
   int frame            = getFrame();
@@ -1405,17 +1311,15 @@ void EditTool::draw() {
   if (getViewer()->is3DView()) {
     glPushMatrix();
     glPushName(ZTranslation);
-
     tglColor(m_highlightedDevice == ZTranslation ? highlightedColor
                                                  : normalColor);
-
     glPushMatrix();
     double z = xsh->getZ(objId, frame);
     glTranslated(0, -1, z);
-    drawArrow(50, isPicking());
+    // Apply prefScale to the 3D arrow as well
+    drawArrow(50 * prefScale, isPicking());
     glPopName();
     glPopMatrix();
-
     glPopMatrix();
     return;
   }
@@ -1427,7 +1331,8 @@ void EditTool::draw() {
     return;
   }
 
-  double unit = getPixelSize();
+  // SINGLE DEFINITION OF UNIT
+  double unit = getPixelSize() * prefScale;
 
   /*-- Obtain object's center position --*/
   glPushMatrix();
@@ -1450,45 +1355,34 @@ void EditTool::draw() {
     glScaled(unit * 8, unit * 8, 1);
     drawZArrow();
     glPopMatrix();
-  }
-  /*-- Rotation, Position : Draw vertical and horizontal lines --*/
-  else if (m_activeAxis.getValue() == L"Rotation" ||
-           m_activeAxis.getValue() == L"Position") {
+  } else if (m_activeAxis.getValue() == L"Rotation" ||
+             m_activeAxis.getValue() == L"Position") {
     glPushMatrix();
     tglMultMatrix(parentAff.inv() * aff * TTranslation(center));
     glScaled(unit, unit, 1);
     tglColor(normalColor);
-    glBegin(GL_LINE_STRIP);
+    glBegin(GL_LINES);  // GL_LINE_STRIP to GL_LINES for continuous axes
     glVertex2i(-800, 0);
     glVertex2i(800, 0);
-    glEnd();
-    glBegin(GL_LINE_STRIP);
     glVertex2i(0, -100);
     glVertex2i(0, 100);
     glEnd();
     glPopMatrix();
   }
-  glPushMatrix();
 
+  glPushMatrix();
   tglMultMatrix(parentAff.inv() * TTranslation(aff * center));
   center = TPointD();
 
-  bool dragging = m_dragTool != 0;
-
-  // draw center
-  tglColor(normalColor);
+  // Draw center with highlight
+  tglColor(m_highlightedDevice == Center ? highlightedColor : normalColor);
   glPushName(Center);
   {
     tglDrawCircle(center, unit * 10);
     tglDrawCircle(center, unit * 8);
-
-    /*-- Draw crossed lines in the circle. It's already translated to the center
-     * position. --*/
-    glBegin(GL_LINE_STRIP);
+    glBegin(GL_LINES);
     glVertex2d(-unit * 8, 0.0);
     glVertex2d(unit * 8, 0.0);
-    glEnd();
-    glBegin(GL_LINE_STRIP);
     glVertex2d(0.0, -unit * 8);
     glVertex2d(0.0, unit * 8);
     glEnd();
@@ -1522,23 +1416,18 @@ void EditTool::draw() {
       // TODO : glLineStipple has been deprecated in the OpenGL APIs. Need to be
       // replaced. 2016/1/20 shun_iwasawa
       glEnable(GL_LINE_STIPPLE);
-      glColor3d(1.0, 0.0, 1.0);
+      tglColor(normalColor);
       glLineStipple(1, 0x1111);
       TRectD cameraRect = TTool::getApplication()
                               ->getCurrentScene()
                               ->getScene()
                               ->getCurrentCamera()
                               ->getStageRect();
-
-      glPushMatrix();
       tglDrawRect(cameraRect);
-      glPopMatrix();
       glDisable(GL_LINE_STIPPLE);
     }
   }
-
   glPopMatrix();
-
   m_fxGadgetController->draw(isPicking());
 }
 
@@ -1590,7 +1479,14 @@ m_foo.setFxHandle(getApplication()->getCurrentFx());
 
 //=============================================================================
 
-void EditTool::onDeactivate() {}
+void EditTool::onDeactivate() {
+  if (m_dragTool) {
+    m_dragTool->leftButtonUp();
+    TUndoManager::manager()->endBlock();
+    delete m_dragTool;
+    m_dragTool = nullptr;
+  }
+}
 
 //-----------------------------------------------------------------------------
 
@@ -1649,7 +1545,7 @@ bool EditTool::onPropertyChanged(std::string propertyName) {
   else if (propertyName == m_showCenterPosition.getName())
     ShowCenterPosition = (int)m_showCenterPosition.getValue();
 
-  /*-- Active Axis の変更 --*/
+  /*-- Active Axis change --*/
   else if (propertyName == m_activeAxis.getName()) {
     std::wstring activeAxis = m_activeAxis.getValue();
     if (activeAxis == L"Position")
@@ -1673,10 +1569,10 @@ bool EditTool::onPropertyChanged(std::string propertyName) {
 
 int EditTool::getCursorId() const {
   int ret;
-  // cursor for controling the fx gadget
+  // cursor for controlling the fx gadget
   if (m_highlightedDevice >= 1000)
     ret = ToolCursor::FxGadgetCursor;
-  else {
+  else if (transformEnabled()) {
     // switch cursors depending on the active axis
     std::wstring activeAxis = m_activeAxis.getValue();
     if (activeAxis == L"Position") {
@@ -1724,10 +1620,64 @@ int EditTool::getCursorId() const {
         ret = ToolCursor::MoveCursor;
     } else
       ret = ToolCursor::StrokeSelectCursor;
-  }
+  } else
+    return ToolCursor::DisableCursor;
   // precise control with pressing Alt key
   if (m_isAltPressed) ret = ret | ToolCursor::Ex_Precise;
   return ret;
+}
+
+//-----------------------------------------------------------------------------
+// overriding TTool::updateEnabled()
+QString EditTool::updateEnabled(int rowIndex, int columnIndex) {
+  // toolType = TTool::ColumnTool
+  // targetType = TTool::AllTargets;
+
+  // Disable every tool during playback
+  if (m_application->getCurrentFrame()->isPlaying())
+    return (enable(false), QString());
+
+  // Disable in Level Strip
+  if (m_application->getCurrentFrame()->isEditingLevel())
+    return (
+        enable(false),
+        QObject::tr("The current tool cannot be used in Level Strip mode."));
+
+  // if an object other than column is selected, then enable the tool
+  // regardless of the current column state
+  TStageObjectId objId = m_application->getCurrentObject()->getObjectId();
+  if (!objId.isColumn()) return (enable(true), QString());
+
+  // Retrieve vars and view modes
+  TXsheet *xsh = m_application->getCurrentXsheet()->getXsheet();
+  // if a column object is selected, switch the inspected column to it
+  TXshColumn *column = xsh->getColumn(objId.getIndex());
+
+  // disable if the column is empty
+  if (!column || column->isEmpty()) return (enable(false), QString());
+
+  if (column->getSoundColumn())
+    return (enable(false),
+            QObject::tr("It is not possible to edit the audio column."));
+
+  else if (column->getSoundTextColumn())
+    return (enable(false),
+            QObject::tr(
+                "Note columns can only be edited in the xsheet or timeline."));
+
+  // Enable to control Fx gadgets even on the locked or hidden columns
+  if (m_fxGadgetController && m_fxGadgetController->hasGadget())
+    return (enable(true), QString());
+
+  // Check against unplaced columns
+  if (column->isLocked())
+    return (enable(false), QObject::tr("The current column is locked."));
+
+  // check if the current column and all of its child columns are hidden
+  if (!hasVisibleChildColumn(xsh->getStageObject(objId), xsh))
+    return (enable(false), QObject::tr("The current column is hidden."));
+
+  return (enable(true), QString());
 }
 
 //=============================================================================

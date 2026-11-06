@@ -21,6 +21,29 @@
     </message>
 </context>
 <context>
+    <name>FlowLineStrokeStyle</name>
+    <message>
+        <source>Density</source>
+        <translation>밀도</translation>
+    </message>
+    <message>
+        <source>Extension</source>
+        <translation>확장</translation>
+    </message>
+    <message>
+        <source>Width Scale</source>
+        <translation>폭 척도</translation>
+    </message>
+    <message>
+        <source>Straighten Ends</source>
+        <translation>끝을 똑바로</translation>
+    </message>
+    <message>
+        <source>Flow Line</source>
+        <translation>흐름라인</translation>
+    </message>
+</context>
+<context>
     <name>MovingSolidColor</name>
     <message>
         <source>Horiz Offset</source>

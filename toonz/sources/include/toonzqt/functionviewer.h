@@ -74,11 +74,8 @@ public:
   enum IoType { eSaveCurve, eLoadCurve, eExportCurve };
 
 public:
-#if QT_VERSION >= 0x050500
-  FunctionViewer(QWidget *parent = 0, Qt::WindowFlags flags = 0);
-#else
-  FunctionViewer(QWidget *parent = 0, Qt::WFlags flags = 0);
-#endif
+  FunctionViewer(QWidget *parent       = 0,
+                 Qt::WindowFlags flags = Qt::WindowFlags());
   ~FunctionViewer();
 
   void setXsheetHandle(TXsheetHandle *xshHandle);  //!< Associates an xsheet to
@@ -121,10 +118,14 @@ public:
   bool columnsOrGraphHasFocus();
   void setSceneHandle(TSceneHandle *sceneHandle);
   TSceneHandle *getSceneHandle() const { return m_sceneHandle; }
+  TXsheetHandle *getXsheetHandle() const { return m_xshHandle; }
 
   // SaveLoadQSettings
   virtual void save(QSettings &settings) const override;
   virtual void load(QSettings &settings) override;
+
+  // refer to the preferences' "Current Column Color"
+  QColor getCurrentTextColor() const;
 
 signals:
 
@@ -147,6 +148,7 @@ public slots:
   void onCurveChanged(bool isDragging);
   void onCurveSelected(TDoubleParam *);
   void onSelectionChanged();
+  void onPreferenceChanged(const QString &);
 
   void doSwitchCurrentObject(TStageObject *obj);
   void doSwitchCurrentFx(TFx *fx);

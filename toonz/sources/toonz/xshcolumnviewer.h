@@ -27,6 +27,7 @@ class TXsheetHandle;
 class TStageObjectId;
 class TXshColumn;
 class QComboBox;
+class QPushButton;
 class Orientation;
 class TApp;
 class TXsheet;
@@ -49,12 +50,7 @@ class MotionPathMenu final : public QWidget {
   QPoint m_pos;
 
 public:
-#if QT_VERSION >= 0x050500
-  MotionPathMenu(QWidget *parent = 0, Qt::WindowFlags flags = 0);
-#else
-  MotionPathMenu(QWidget *parent = 0, Qt::WFlags flags = 0);
-#endif
-
+  MotionPathMenu(QWidget *parent = 0, Qt::WindowFlags flags = Qt::WindowFlags());
   ~MotionPathMenu();
 
 protected:
@@ -89,12 +85,17 @@ public:
 
 protected:
   void mouseMoveEvent(QMouseEvent *event) override;
+  void wheelEvent(QWheelEvent *event) override;
   void focusOutEvent(QFocusEvent *e) override;
   void focusInEvent(QFocusEvent *e) override {}
-  void selectCurrent(const QString &text);
+
+  void addText(const QString &text, const QString &display);
+  void addText(const QString &text, const QColor &textColor);
+  void addText(const TStageObjectId &id, const QString &display,
+               const QColor &identColor);
 
 protected slots:
-  virtual void onTextChanged(const QString &) = 0;
+  virtual void onItemSelected(QListWidgetItem *) = 0;
 };
 
 //=============================================================================
@@ -110,8 +111,11 @@ public:
 
   void refresh() override;
 
+  static QString getNameTr(const TStageObjectId id);
+  void selectCurrent(const TStageObjectId &id);
+
 protected slots:
-  void onTextChanged(const QString &) override;
+  void onItemSelected(QListWidgetItem *) override;
 };
 
 //=============================================================================
@@ -126,9 +130,10 @@ public:
   ~ChangeObjectHandle();
 
   void refresh() override;
+  void selectCurrent(const QString &text);
 
 protected slots:
-  void onTextChanged(const QString &) override;
+  void onItemSelected(QListWidgetItem *) override;
 };
 
 //=============================================================================
@@ -214,8 +219,11 @@ class ColumnTransparencyPopup final : public QWidget {
 
   QComboBox *m_filterColorCombo;
 
+  XsheetViewer *m_viewer;
+  QPushButton *m_lockBtn;
+
 public:
-  ColumnTransparencyPopup(QWidget *parent);
+  ColumnTransparencyPopup(XsheetViewer *viewer, QWidget *parent);
   void setColumn(TXshColumn *column);
 
 protected:
@@ -228,7 +236,8 @@ protected slots:
   void onSliderValueChanged(int);
   void onValueChanged(const QString &);
 
-  void onFilterColorChanged(int id);
+  void onFilterColorChanged();
+  void onLockButtonClicked(bool on);
 };
 
 class SoundColumnPopup final : public QWidget {
@@ -257,20 +266,30 @@ protected slots:
 class ColumnArea final : public QWidget {
   Q_OBJECT
 
-  enum {
-    ToggleTransparency = 1,
-    ToggleAllTransparency,
-    TogglePreviewVisible,
+  enum ReleaseAction {
+    //ToggleTransparency = 1,
+    ToggleAllTransparency = 1,
+    //TogglePreviewVisible,
     ToggleAllPreviewVisible,
-    ToggleLock,
+    // ToggleLock,
     ToggleAllLock,
     OpenSettings
+  };
+
+  enum MoveAction {
+      ToggleOnTransparency = 1,
+      ToggleOffTransparency,
+      ToggleOnPreviewVisible,
+      ToggleOffPreviewVisible,
+      ToggleOnLock,
+      ToggleOffLock
   };
 
   ColumnTransparencyPopup *m_columnTransparencyPopup;
   SoundColumnPopup *m_soundColumnPopup;
   QTimer *m_transparencyPopupTimer;
   int m_doOnRelease;
+  int m_doOnMove;
   XsheetViewer *m_viewer;
   int m_col;
   QRect m_indexBox;
@@ -312,6 +331,7 @@ class ColumnArea final : public QWidget {
     bool isEmpty, isCurrent;
     TXshColumn *column;
     QPoint orig;
+    TXshLevel *reservedLevel;
 
   public:
     DrawHeader(ColumnArea *area, QPainter &p, int col);
@@ -325,6 +345,7 @@ class ColumnArea final : public QWidget {
     void drawBaseFill(const QColor &columnColor, const QColor &dragColor) const;
     void drawEye() const;
     void drawPreviewToggle(int opacity) const;
+    void drawUnifiedViewToggle(int opacity) const;
     void drawLock() const;
     void drawConfig() const;
     void drawColumnNumber() const;
@@ -339,11 +360,7 @@ class ColumnArea final : public QWidget {
   };
 
 public:
-#if QT_VERSION >= 0x050500
-  ColumnArea(XsheetViewer *parent, Qt::WindowFlags flags = 0);
-#else
-  ColumnArea(XsheetViewer *parent, Qt::WFlags flags = 0);
-#endif
+  ColumnArea(XsheetViewer *parent, Qt::WindowFlags flags = Qt::WindowFlags());
   ~ColumnArea();
 
   void onControlPressed(bool pressed);
@@ -381,11 +398,13 @@ protected slots:
   void openSoundColumnPopup();
   void openCameraColumnPopup(QPoint pos);
   void onCameraColumnChangedTriggered();
+  void onCameraColumnLockToggled(bool);
   void onXsheetCameraChange(int);
+  void onSetMask(int);
 };
 
 //-----------------------------------------------------------------------------
-}  // namespace XsheetGUI;
+}  // namespace XsheetGUI
 //-----------------------------------------------------------------------------
 
 #endif  // XSHCOLUMNVIEWER_H

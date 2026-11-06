@@ -6,6 +6,7 @@
 
 #include <QDir>
 #include <QSettings>
+#include <QStandardPaths>
 
 #ifdef LEVO_MACOSX
 
@@ -79,12 +80,18 @@ public:
     settingsPath = QString::fromStdString(getApplicationFileName()) +
                    QString(".app") +
                    QString("/Contents/Resources/SystemVar.ini");
+#else
+#ifdef HAIKU
+    settingsPath =
+        QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) +
+        "/SystemVar.ini";
 #else /* Generic Unix */
     // TODO: use QStandardPaths::ConfigLocation when we drop Qt4
     settingsPath = QDir::homePath();
     settingsPath.append("/.config/");
     settingsPath.append(getApplicationName().c_str());
     settingsPath.append("/SystemVar.ini");
+#endif
 #endif
 
     QSettings settings(settingsPath, QSettings::IniFormat);
@@ -172,15 +179,15 @@ public:
     m_applicationFullName = m_version.getAppName() + " " + m_applicationVersion;
     if (m_version.hasAppNote())
       m_applicationFullName += " " + m_version.getAppNote();
-      
-    m_moduleName          = m_version.getAppName();
-    m_rootVarName         = toUpper(m_version.getAppName()) + "ROOT";
+
+    m_moduleName  = m_version.getAppName();
+    m_rootVarName = m_version.getSystemVarPrefix() + "ROOT";
 #ifdef _WIN32
     // from v1.3, registry root is moved to SOFTWARE\\OpenToonz\\OpenToonz
     m_registryRoot =
         TFilePath("SOFTWARE\\OpenToonz\\") + m_version.getAppName();
 #endif
-    m_systemVarPrefix = m_version.getAppName();
+    m_systemVarPrefix = m_version.getSystemVarPrefix();
     updateEnvFile();
   }
 
@@ -209,12 +216,14 @@ public:
   std::string getModuleName() { return m_moduleName; }
 
   void setRootVarName(std::string varName) {
+    if (m_rootVarName == varName) return;
     m_rootVarName = varName;
     updateEnvFile();
   }
   std::string getRootVarName() { return m_rootVarName; }
 
   void setSystemVarPrefix(std::string prefix) {
+    if (m_systemVarPrefix == prefix) return;
     m_systemVarPrefix = prefix;
     updateEnvFile();
   }
@@ -265,7 +274,7 @@ public:
   }
 
   void setArgPathValue(std::string key, std::string value) {
-    m_argPathValues.emplace(key, value);
+    m_argPathValues.insert_or_assign(key, value);
     if (key == m_systemVarPrefix + "PROFILES") updateEnvFile();
   }
 
@@ -322,7 +331,7 @@ public:
 
 //=========================================================
 //
-// varaible manager (singleton)
+// variable manager (singleton)
 //
 //=========================================================
 
@@ -392,8 +401,8 @@ void VariableSet::load() {
     char *s = buffer;
     while (*s == ' ') s++;
     char *t = s;
-    while ('a' <= *s && *s <= 'z' || 'A' <= *s && *s <= 'Z' ||
-           '0' <= *s && *s <= '9' || *s == '_')
+    while (('a' <= *s && *s <= 'z') || ('A' <= *s && *s <= 'Z') ||
+           ('0' <= *s && *s <= '9') || *s == '_')
       s++;
     std::string name(t, s - t);
     if (name.size() == 0) continue;
@@ -507,7 +516,7 @@ void TEnv::setApplicationFileName(std::string appFileName) {
 #ifdef MACOSX
   if (fp.getWideName().find(L".app"))
     for (int i = 0; i < 3; i++) fp = fp.getParentDir();
-#elif LINUX
+#elif defined(LINUX) || defined(FREEBSD)
   if (fp.getWideName().find(L".appimage"))
     for (int i = 0; i < 2; i++) fp = fp.getParentDir();
 #endif
@@ -591,11 +600,11 @@ std::string TEnv::getSystemVarPrefix() {
 }
 
 TFilePath TEnv::getStuffDir() {
-  //#ifdef MACOSX
-  // return TFilePath("/Applications/Toonz 5.0/Toonz 5.0 stuff");
-  //#else
+  // #ifdef MACOSX
+  //  return TFilePath("/Applications/Toonz 5.0/Toonz 5.0 stuff");
+  // #else
   return EnvGlobals::instance()->getStuffDir();
-  //#endif
+  // #endif
 }
 
 bool TEnv::getIsPortable() { return EnvGlobals::instance()->getIsPortable(); }
@@ -694,8 +703,7 @@ std::string toString2(T value) {
 template <>
 std::string toString2(TRect value) {
   std::ostringstream ss;
-  ss << value.x0 << " " << value.y0 << " " << value.x1 << " " << value.y1
-     << '\0';
+  ss << value.x0 << " " << value.y0 << " " << value.x1 << " " << value.y1;
   return ss.str();
 }
 

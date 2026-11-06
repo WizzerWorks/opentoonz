@@ -2,6 +2,7 @@
 
 #include "toonzqt/schematicnode.h"
 #include "toonzqt/stageschematicscene.h"
+#include "toonzqt/fxschematicscene.h"
 
 #include <QGraphicsSceneMouseEvent>
 #include <QStyleOptionGraphicsItem>
@@ -13,10 +14,18 @@
 #include <QTextBlock>
 #include <QMenuBar>
 #include <QPolygonF>
-#include <QDesktopWidget>
+
+#include <QClipboard>
+#include <QRegularExpression>
 #include "tundo.h"
 #include "toonzqt/menubarcommand.h"
 #include "toonzqt/gutil.h"
+
+#define ACCEL_KEY(k)                                                           \
+  (!QCoreApplication::testAttribute(Qt::AA_DontShowShortcutsInContextMenus)    \
+       ? QLatin1Char('\t') +                                                   \
+             QKeySequence(k).toString(QKeySequence::NativeText)                \
+       : QString())
 
 //========================================================
 //
@@ -25,22 +34,67 @@
 //========================================================
 
 SchematicName::SchematicName(QGraphicsItem *parent, double width, double height)
-    : QGraphicsTextItem("", parent), m_width(width), m_height(height) {
+    : QGraphicsTextItem("", parent)
+    , m_width(width)
+    , m_height(height)
+    , m_defName("")
+    , m_curName("")
+    , m_refocus(false) {
   setFlag(QGraphicsItem::ItemIsSelectable, true);
   setFlag(QGraphicsItem::ItemIsFocusable, true);
   setTextInteractionFlags(Qt::TextEditorInteraction);
 
-  connect(document(), SIGNAL(contentsChanged()), this,
-          SLOT(onContentsChanged()));
+  popup = new QMenu();
+  popup->setObjectName(QLatin1String("qt_edit_menu"));
+
+  actionCut = popup->addAction(tr("Cu&t") + ACCEL_KEY(QKeySequence::Cut), this,
+                               &SchematicName::onCut);
+  actionCut->setObjectName(QStringLiteral("edit-cut"));
+
+  actionCopy = popup->addAction(tr("&Copy") + ACCEL_KEY(QKeySequence::Copy),
+                                this, &SchematicName::onCopy);
+  actionCopy->setObjectName(QStringLiteral("edit-copy"));
+
+  actionPaste = popup->addAction(tr("&Paste") + ACCEL_KEY(QKeySequence::Paste),
+                                 this, &SchematicName::onPaste);
+  actionPaste->setObjectName(QStringLiteral("edit-paste"));
+
+  actionDelete =
+      popup->addAction(tr("&Delete") + ACCEL_KEY(QKeySequence::Delete), this,
+                       &SchematicName::onDelete);
+  actionDelete->setObjectName(QStringLiteral("edit-delete"));
+
+  popup->addSeparator();
+
+  actionSelectAll =
+      popup->addAction(tr("Select &All") + ACCEL_KEY(QKeySequence::SelectAll),
+                       this, &SchematicName::onSelectAll);
+  actionSelectAll->setObjectName(QStringLiteral("select-all"));
+
+  connect(document(), &QTextDocument::contentsChanged, this,
+          &SchematicName::onContentsChanged);
+  connect(popup, &QMenu::aboutToHide, this, &SchematicName::onPopupHide);
 }
 
 //--------------------------------------------------------
 
-SchematicName::~SchematicName() {}
+SchematicName::~SchematicName() { delete popup; }
 
 //--------------------------------------------------------
 
-void SchematicName::setName(const QString &name) { setPlainText(name); }
+void SchematicName::setName(const QString &name) {
+  m_defName = name;
+  setPlainText(name);
+}
+
+//--------------------------------------------------------
+
+void SchematicName::acceptName(const QString &name) {
+  m_curName = name;
+  static QRegularExpression newlines("[\\n\\r]");
+  m_curName.remove(newlines);  // remove all newlines
+  setPlainText(m_curName);
+}
 
 //--------------------------------------------------------
 
@@ -49,9 +103,9 @@ void SchematicName::onContentsChanged() {
   QTextCursor cursor = textCursor();
   int position       = cursor.position();
   if (position > 0 && text.at(position - 1) == '\n') {
-    text.remove("\n");
-    setPlainText(text);
-    ;
+    text.remove('\n');
+    if (text.isEmpty()) text = m_defName;
+    acceptName(text);
     emit focusOut();
   }
 }
@@ -60,7 +114,10 @@ void SchematicName::onContentsChanged() {
 
 void SchematicName::focusOutEvent(QFocusEvent *fe) {
   qApp->removeEventFilter(this);
-  if (fe->reason() == Qt::MouseFocusReason) emit focusOut();
+  if (fe->reason() == Qt::MouseFocusReason) {
+    acceptName(toPlainText());
+    emit focusOut();
+  }
 }
 
 //--------------------------------------------------------
@@ -74,8 +131,12 @@ void SchematicName::keyPressEvent(QKeyEvent *ke) {
     else
       cursor.setPosition(currentPos + 1);
     setTextCursor(cursor);
-  } else
+  } else if (ke->key() == Qt::Key_Escape) {
+    setPlainText(m_curName);
+    emit focusOut();
+  } else {
     QGraphicsTextItem::keyPressEvent(ke);
+  }
 }
 
 //--------------------------------------------------------
@@ -96,6 +157,118 @@ bool SchematicName::eventFilter(QObject *object, QEvent *event) {
 void SchematicName::focusInEvent(QFocusEvent *fe) {
   QGraphicsTextItem::focusInEvent(fe);
   qApp->installEventFilter(this);
+  if (!m_refocus) {
+    QTextDocument *doc = document();
+    QTextCursor cursor(doc->begin());
+    cursor.select(QTextCursor::Document);
+    setTextCursor(cursor);
+    m_curName = toPlainText();
+  }
+}
+
+//--------------------------------------------------------
+
+void SchematicName::contextMenuEvent(QGraphicsSceneContextMenuEvent *cme) {
+  QClipboard *clipboard = QApplication::clipboard();
+  QTextCursor cursor    = textCursor();
+
+  actionCut->setEnabled(cursor.hasSelection());
+  actionCopy->setEnabled(cursor.hasSelection());
+  actionPaste->setEnabled(!clipboard->text().isEmpty());
+  actionDelete->setEnabled(cursor.hasSelection());
+  actionSelectAll->setEnabled(cursor.selectedText() != toPlainText());
+
+  popup->popup(cme->screenPos());
+}
+
+//--------------------------------------------------------
+
+void SchematicName::onPopupHide() {
+  m_refocus = true;
+  setFocus();
+  m_refocus = false;
+}
+
+//--------------------------------------------------------
+
+void SchematicName::onCut() {
+  QClipboard *clipboard = QApplication::clipboard();
+  QTextCursor cursor    = textCursor();
+  QString plainText     = toPlainText();
+
+  if (cursor.hasSelection()) {
+    int p             = cursor.selectionStart();
+    int n             = cursor.selectionEnd() - p;
+    QString selection = plainText.mid(p, n);
+    clipboard->setText(selection);
+    plainText.remove(p, n);
+    acceptName(plainText);
+    cursor.setPosition(p);
+    setTextCursor(cursor);
+  }
+}
+
+//--------------------------------------------------------
+
+void SchematicName::onCopy() {
+  QClipboard *clipboard = QApplication::clipboard();
+  QTextCursor cursor    = textCursor();
+  QString plainText     = toPlainText();
+
+  if (cursor.hasSelection()) {
+    int p = cursor.selectionStart();
+    int n = cursor.selectionEnd() - p;
+    clipboard->setText(plainText.mid(p, n));
+  } else {
+    clipboard->setText(plainText);
+  }
+}
+
+//--------------------------------------------------------
+
+void SchematicName::onPaste() {
+  QClipboard *clipboard = QApplication::clipboard();
+  QTextCursor cursor    = textCursor();
+  QString plainText     = toPlainText();
+  QString clipboardText = clipboard->text();
+
+  static QRegularExpression newlines("[\\n\\r]");
+  clipboardText.remove(newlines);  // remove all newlines
+
+  int n, p = cursor.position();
+  if (cursor.hasSelection()) {
+    p = cursor.selectionStart();
+    n = cursor.selectionEnd() - p;
+    plainText.remove(p, n);
+    plainText.insert(p, clipboardText);
+  } else {
+    plainText.insert(p, clipboardText);
+  }
+
+  acceptName(plainText);
+  cursor.setPosition(p + clipboardText.length());
+  setTextCursor(cursor);
+}
+
+//--------------------------------------------------------
+
+void SchematicName::onDelete() {
+  QTextCursor cursor = textCursor();
+  QString plainText  = toPlainText();
+
+  if (cursor.hasSelection()) {
+    int p = cursor.selectionStart();
+    int n = cursor.selectionEnd() - p;
+    plainText.remove(p, n);
+    acceptName(plainText);
+    cursor.setPosition(p);
+    setTextCursor(cursor);
+  }
+}
+
+//--------------------------------------------------------
+
+void SchematicName::onSelectAll() {
   QTextDocument *doc = document();
   QTextCursor cursor(doc->begin());
   cursor.select(QTextCursor::Document);
@@ -128,31 +301,29 @@ void SchematicThumbnailToggle::paint(QPainter *painter,
                                      const QStyleOptionGraphicsItem *option,
                                      QWidget *widget) {
   QRect rect(3, 3, 8, 8);
-  QRect sourceRect = scene()->views()[0]->matrix().mapRect(rect);
+  QRect sourceRect = scene()->views()[0]->transform().mapRect(rect);
   static QIcon onIcon(":Resources/schematic_thumbtoggle_on.svg");
   static QIcon offIcon(":Resources/schematic_thumbtoggle_off.svg");
   QPixmap pixmap;
   if (m_isDown)
     pixmap = offIcon.pixmap(sourceRect.size());
   else
-    pixmap   = onIcon.pixmap(sourceRect.size());
-  sourceRect = QRect(0, 0, sourceRect.width() * getDevPixRatio(),
-                     sourceRect.height() * getDevPixRatio());
-  painter->drawPixmap(rect, pixmap, sourceRect);
+    pixmap = onIcon.pixmap(sourceRect.size());
+  painter->drawPixmap(rect, pixmap);
 }
 
 //--------------------------------------------------------
 
 void SchematicThumbnailToggle::setIsDown(bool value) {
   m_isDown = value;
-  emit(toggled(!m_isDown));
+  emit toggled(!m_isDown);
 }
 
 //--------------------------------------------------------
 
 void SchematicThumbnailToggle::mousePressEvent(QGraphicsSceneMouseEvent *me) {
   m_isDown = !m_isDown;
-  emit(toggled(!m_isDown));
+  emit toggled(!m_isDown);
 }
 
 //========================================================
@@ -166,8 +337,6 @@ SchematicToggle::SchematicToggle(SchematicNode *parent, const QIcon &imageOn,
                                  bool isNormalIconView)
     : QGraphicsItem(parent)
     , m_imageOn(imageOn)
-    , m_imageOn2()
-    , m_imageOff()
     , m_state(0)
     , m_flags(flags)
     , m_width(isNormalIconView ? 18 : 30)
@@ -183,7 +352,6 @@ SchematicToggle::SchematicToggle(SchematicNode *parent, const QIcon &imageOn,
                                  bool isNormalIconView)
     : QGraphicsItem(parent)
     , m_imageOn(imageOn)
-    , m_imageOn2()
     , m_imageOff(imageOff)
     , m_state(0)
     , m_flags(flags)
@@ -200,7 +368,6 @@ SchematicToggle::SchematicToggle(SchematicNode *parent, const QIcon &imageOn,
     : QGraphicsItem(parent)
     , m_imageOn(imageOn)
     , m_imageOn2(imageOn2)
-    , m_imageOff()
     , m_state(0)
     , m_flags(flags)
     , m_width(isNormalIconView ? 18 : 30)
@@ -250,15 +417,13 @@ void SchematicToggle::paint(QPainter *painter,
           .translated(rectX + (rectWidth / 2) - (rectHeight / 2), rectY);
 
   if (m_state != 0) {
-    QIcon &pix =
+    const QIcon &pix =
         (m_state == 2 && !m_imageOn2.isNull()) ? m_imageOn2 : m_imageOn;
     painter->fillRect(boundingRect().toRect(), m_colorOn);
     QRect sourceRect =
-        scene()->views()[0]->matrix().mapRect(QRect(0, 0, 18, 17));
+        scene()->views()[0]->transform().mapRect(QRect(0, 0, 18, 17));
     QPixmap redPm = pix.pixmap(sourceRect.size());
-    QRect newRect = QRect(0, 0, sourceRect.width() * getDevPixRatio(),
-                          sourceRect.height() * getDevPixRatio());
-    painter->drawPixmap(rect, redPm, newRect);
+    painter->drawPixmap(rect, redPm);
   } else if (!m_imageOff.isNull()) {
     QPen pen(m_colorOn);
     pen.setWidthF(0.5);
@@ -267,11 +432,9 @@ void SchematicToggle::paint(QPainter *painter,
     double d = pen.widthF() / 2.0;
     painter->drawRect(boundingRect().adjusted(d, d, -d, -d));
     QRect sourceRect =
-        scene()->views()[0]->matrix().mapRect(QRect(0, 0, 18, 17));
+        scene()->views()[0]->transform().mapRect(QRect(0, 0, 18, 17));
     QPixmap redPm = m_imageOff.pixmap(sourceRect.size());
-    QRect newRect = QRect(0, 0, sourceRect.width() * getDevPixRatio(),
-                          sourceRect.height() * getDevPixRatio());
-    painter->drawPixmap(rect, redPm, newRect);
+    painter->drawPixmap(rect, redPm);
   }
 }
 
@@ -281,64 +444,64 @@ void SchematicToggle::mousePressEvent(QGraphicsSceneMouseEvent *me) {
   if (me->button() == Qt::LeftButton) {
     if (m_imageOn2.isNull()) {
       m_state = 1 - m_state;
-      emit(toggled(m_state != 0));
+      emit toggled(m_state != 0);
     } else if (m_flags & eEnableNullState) {
       m_state = (m_state + 1) % 3;
-      emit(stateChanged(m_state));
+      emit stateChanged(m_state);
     } else {
       m_state = 3 - m_state;
-      emit(stateChanged(m_state));
+      emit stateChanged(m_state);
     }
   }
   if (me->button() == Qt::RightButton) {
-    SchematicNode *parent = dynamic_cast<SchematicNode *>(this->parentItem());
+    SchematicNode *parent = dynamic_cast<SchematicNode *>(parentItem());
     if (parent) parent->onClicked();
   }
 }
+
 //--------------------------------------------------------
 
 void SchematicToggle::contextMenuEvent(QGraphicsSceneContextMenuEvent *cme) {
   if (!(m_flags & eIsParentColumn)) return;
+
+  QMenu menu(nullptr);
+  CommandManager *cmdManager = CommandManager::instance();
+
   if (m_imageOn2.isNull()) {
-    QMenu *menu                = new QMenu(0);
-    CommandManager *cmdManager = CommandManager::instance();
-    menu->addAction(cmdManager->getAction("MI_EnableThisColumnOnly"));
-    menu->addAction(cmdManager->getAction("MI_EnableSelectedColumns"));
-    menu->addAction(cmdManager->getAction("MI_EnableAllColumns"));
-    menu->addAction(cmdManager->getAction("MI_DisableAllColumns"));
-    menu->addAction(cmdManager->getAction("MI_DisableSelectedColumns"));
-    menu->addAction(cmdManager->getAction("MI_SwapEnabledColumns"));
-    QAction *action = menu->exec(cme->screenPos());
+    menu.addAction(cmdManager->getAction("MI_EnableThisColumnOnly"));
+    menu.addAction(cmdManager->getAction("MI_EnableSelectedColumns"));
+    menu.addAction(cmdManager->getAction("MI_EnableAllColumns"));
+    menu.addAction(cmdManager->getAction("MI_DisableAllColumns"));
+    menu.addAction(cmdManager->getAction("MI_DisableSelectedColumns"));
+    menu.addAction(cmdManager->getAction("MI_SwapEnabledColumns"));
   } else {
-    QMenu *menu                = new QMenu(0);
-    CommandManager *cmdManager = CommandManager::instance();
-    menu->addAction(cmdManager->getAction("MI_ActivateThisColumnOnly"));
-    menu->addAction(cmdManager->getAction("MI_ActivateSelectedColumns"));
-    menu->addAction(cmdManager->getAction("MI_ActivateAllColumns"));
-    menu->addAction(cmdManager->getAction("MI_DeactivateAllColumns"));
-    menu->addAction(cmdManager->getAction("MI_DeactivateSelectedColumns"));
-    menu->addAction(cmdManager->getAction("MI_ToggleColumnsActivation"));
-    QAction *action = menu->exec(cme->screenPos());
+    menu.addAction(cmdManager->getAction("MI_ActivateThisColumnOnly"));
+    menu.addAction(cmdManager->getAction("MI_ActivateSelectedColumns"));
+    menu.addAction(cmdManager->getAction("MI_ActivateAllColumns"));
+    menu.addAction(cmdManager->getAction("MI_DeactivateAllColumns"));
+    menu.addAction(cmdManager->getAction("MI_DeactivateSelectedColumns"));
+    menu.addAction(cmdManager->getAction("MI_ToggleColumnsActivation"));
   }
+
+  menu.exec(cme->screenPos());
 }
+
 //========================================================
 
 //--------------------------------------------------------
 /*! for Spline Aim and CP toggles
-*/
+ */
 void SchematicToggle_SplineOptions::paint(
     QPainter *painter, const QStyleOptionGraphicsItem *option,
     QWidget *widget) {
   QRectF rect = boundingRect();
   painter->fillRect(rect, Qt::white);
   if (m_state != 0) {
-    QIcon &pix =
+    const QIcon &pix =
         (m_state == 2 && !m_imageOn2.isNull()) ? m_imageOn2 : m_imageOn;
-    QRect sourceRect = scene()->views()[0]->matrix().mapRect(rect.toRect());
+    QRect sourceRect = scene()->views()[0]->transform().mapRect(rect.toRect());
     QPixmap redPm    = pix.pixmap(sourceRect.size());
-    QRect newRect    = QRect(0, 0, sourceRect.width() * getDevPixRatio(),
-                          sourceRect.height() * getDevPixRatio());
-    painter->drawPixmap(rect, redPm, newRect);
+    painter->drawPixmap(rect.toRect(), redPm);
   }
   painter->setBrush(Qt::NoBrush);
   painter->setPen(QColor(180, 180, 180, 255));
@@ -347,7 +510,7 @@ void SchematicToggle_SplineOptions::paint(
 
 //--------------------------------------------------------
 /*! for Spline Aim and CP toggles
-*/
+ */
 void SchematicToggle_SplineOptions::mousePressEvent(
     QGraphicsSceneMouseEvent *me) {
   SchematicToggle::mousePressEvent(me);
@@ -393,15 +556,15 @@ void SchematicHandleSpinBox::paint(QPainter *painter,
 
 void SchematicHandleSpinBox::mouseMoveEvent(QGraphicsSceneMouseEvent *me) {
   if (m_buttonState == Qt::LeftButton) {
-    bool increase           = false;
-    int delta               = me->screenPos().y() - me->lastScreenPos().y();
+    bool increase = false;
+    int delta     = me->screenPos().y() - me->lastScreenPos().y();
     if (delta < 0) increase = true;
-    m_delta += abs(delta);
+    m_delta += std::abs(delta);
     if (m_delta > 5) {
       if (increase)
-        emit(modifyHandle(1));
+        emit modifyHandle(1);
       else
-        emit(modifyHandle(-1));
+        emit modifyHandle(-1);
       m_delta = 0;
       emit sceneChanged();
     }
@@ -431,20 +594,12 @@ void SchematicHandleSpinBox::mouseReleaseEvent(QGraphicsSceneMouseEvent *me) {
 //========================================================
 
 SchematicLink::SchematicLink(QGraphicsItem *parent, QGraphicsScene *scene)
-#if QT_VERSION >= 0x050000
     : QGraphicsItem(parent)
-#else
-    : QGraphicsItem(parent, scene)
-#endif
-    , m_startPort(0)
-    , m_endPort(0)
-    , m_path()
-    , m_hitPath()
+    , m_startPort(nullptr)
+    , m_endPort(nullptr)
     , m_lineShaped(false)
     , m_highlighted(false) {
-#if QT_VERSION >= 0x050000
   scene->addItem(this);
-#endif
   setFlag(QGraphicsItem::ItemIsMovable, false);
   setFlag(QGraphicsItem::ItemIsSelectable, true);
   setFlag(QGraphicsItem::ItemIsFocusable, false);
@@ -453,7 +608,10 @@ SchematicLink::SchematicLink(QGraphicsItem *parent, QGraphicsScene *scene)
 
 //--------------------------------------------------------
 
-SchematicLink::~SchematicLink() { m_startPort = m_endPort = 0; }
+SchematicLink::~SchematicLink() {
+  m_startPort = nullptr;
+  m_endPort   = nullptr;
+}
 
 //--------------------------------------------------------
 
@@ -470,19 +628,33 @@ QPainterPath SchematicLink::shape() const { return m_hitPath; }
 void SchematicLink::paint(QPainter *painter,
                           const QStyleOptionGraphicsItem *option,
                           QWidget *widget) {
+  SchematicViewer *viewer   = nullptr;
+  FxSchematicScene *fxScene = dynamic_cast<FxSchematicScene *>(scene());
+  StageSchematicScene *stageScene =
+      dynamic_cast<StageSchematicScene *>(scene());
+  if (fxScene) {
+    viewer = fxScene->getSchematicViewer();
+  } else if (stageScene) {
+    viewer = stageScene->getSchematicViewer();
+  } else {
+    return;
+  }
+
+  if (!viewer) return;
+
   if (getStartPort() && (getStartPort()->getType() == 100  // eStageSplinePort
                          || getStartPort()->getType() == 202)) {  // eFxLinkPort
     if (isSelected() || isHighlighted())
-      painter->setPen(QColor(255, 255, 10));
+      painter->setPen(QPen(viewer->getMotionPathSelectedLinkColor()));
     else
-      painter->setPen(QColor(50, 255, 50, 128));
-  } else if (isSelected() || isHighlighted())
-    painter->setPen(QPen(Qt::cyan));
-
-  else if (!m_lineShaped)
-    painter->setPen(QPen(Qt::white));
-  else
+      painter->setPen(QColor(viewer->getMotionPathLinkColor()));
+  } else if (isSelected() || isHighlighted()) {
+    painter->setPen(QPen(viewer->getSelectedLinkColor()));
+  } else if (!m_lineShaped) {
+    painter->setPen(QPen(viewer->getLinkColor()));
+  } else {
     painter->setPen(QPen(QColor(170, 170, 10), 0, Qt::DashLine));
+  }
 
   painter->setRenderHint(QPainter::Antialiasing, true);
   painter->drawPath(m_path);
@@ -526,7 +698,9 @@ void SchematicLink::updatePath(const QPointF &startPos, const QPointF &endPos) {
 
 void SchematicLink::updatePath(SchematicPort *startPort,
                                SchematicPort *endPort) {
-  updatePath(startPort->getLinkEndPoint(), endPort->getLinkEndPoint());
+  if (startPort && endPort) {
+    updatePath(startPort->getLinkEndPoint(), endPort->getLinkEndPoint());
+  }
 }
 
 //--------------------------------------------------------
@@ -543,52 +717,45 @@ SchematicPort *SchematicLink::getOtherPort(const SchematicPort *port) const {
   else if (port == m_endPort)
     return m_startPort;
   else
-    return 0;
+    return nullptr;
 }
 
 //--------------------------------------------------------
 
 SchematicNode *SchematicLink::getOtherNode(const SchematicNode *node) const {
+  if (!m_startPort || !m_endPort) return nullptr;
+
   if (node == m_startPort->getNode())
     return m_endPort->getNode();
   else if (node == m_endPort->getNode())
     return m_startPort->getNode();
   else
-    return 0;
+    return nullptr;
 }
 
 //--------------------------------------------------------
 
 void SchematicLink::mousePressEvent(QGraphicsSceneMouseEvent *me) {
-  QPointF pos              = me->scenePos();
-  SchematicPort *startPort = getStartPort();
-  SchematicPort *endPort   = getEndPort();
-
-  if (!startPort || !endPort) {
+  QPointF pos = me->scenePos();
+  if (!m_startPort || !m_endPort) {
     me->ignore();
     return;
   }
 
-  if (startPort && endPort) {
-    QRectF startRect = startPort->boundingRect();
-    startRect.moveTopLeft(startPort->scenePos());
-    QRectF endRect = endPort->boundingRect();
-    endRect.moveTopLeft(endPort->scenePos());
-    if (startRect.contains(pos) || endRect.contains(pos)) {
-      me->ignore();
-      return;
-    }
+  QRectF startRect = m_startPort->boundingRect();
+  startRect.moveTopLeft(m_startPort->scenePos());
+  QRectF endRect = m_endPort->boundingRect();
+  endRect.moveTopLeft(m_endPort->scenePos());
+  if (startRect.contains(pos) || endRect.contains(pos)) {
+    me->ignore();
+    return;
   }
 
-  QMatrix matrix = scene()->views()[0]->matrix();
-#if QT_VERSION >= 0x050000
-  double scaleFactor = sqrt(matrix.determinant());
-#else
-  double scaleFactor = sqrt(matrix.det());
-#endif
+  QTransform transform = scene()->views()[0]->transform();
+  double scaleFactor   = sqrt(transform.determinant());
 
-  QPointF startPos = getStartPort()->getLinkEndPoint();
-  QPointF endPos   = getEndPort()->getLinkEndPoint();
+  QPointF startPos = m_startPort->getLinkEndPoint();
+  QPointF endPos   = m_endPort->getLinkEndPoint();
   QPointF p0((endPos.x() - startPos.x()) * 0.5, 0);
   QPointF p1(p0.x(), endPos.y() - startPos.y());
   QPointF p2(endPos - startPos);
@@ -605,6 +772,7 @@ void SchematicLink::mousePressEvent(QGraphicsSceneMouseEvent *me) {
   path.lineTo(p2 - h);
   path.cubicTo(p1 - p, p0 - p, -h);
   path.lineTo(0, 0);
+
   if (!path.contains(me->scenePos() - scenePos())) {
     me->ignore();
     return;
@@ -640,21 +808,21 @@ SchematicPort::SchematicPort(QGraphicsItem *parent, SchematicNode *node,
     , m_node(node)
     , m_buttonState(Qt::NoButton)
     , m_highlighted(false)
-    , m_linkingTo(0)
+    , m_linkingTo(nullptr)
     , m_hook(0, 0)
     , m_type(type) {
-#if QT_VERSION >= 0x050000
   setAcceptHoverEvents(false);
-#else
-  setAcceptsHoverEvents(false);
-#endif
   setFlag(QGraphicsItem::ItemIsSelectable, false);
   setFlag(QGraphicsItem::ItemIsFocusable, false);
 }
 
 //--------------------------------------------------------
 
-SchematicPort::~SchematicPort() { m_links.clear(); }
+SchematicPort::~SchematicPort() {
+  // Do not clear m_links here: the scene already owns and destroys the links
+  // Just make sure the list is empty
+  m_links.clear();
+}
 
 //--------------------------------------------------------
 
@@ -664,6 +832,7 @@ void SchematicPort::mouseMoveEvent(QGraphicsSceneMouseEvent *me) {
 
   // Snapping
   SchematicPort *linkingTo = searchPort(me->scenePos());
+
   if (!linkingTo) {
     for (SchematicLink *ghostLink : m_ghostLinks) {
       ghostLink->updateEndPos(me->scenePos());
@@ -675,19 +844,26 @@ void SchematicPort::mouseMoveEvent(QGraphicsSceneMouseEvent *me) {
       m_linkingTo = nullptr;
     }
   }
-  // if to be connected something
-  else if (linkingTo != this) {
+  // if to be connected something new
+  else if (linkingTo != this && m_linkingTo != linkingTo) {
+    if (m_linkingTo) {
+      m_linkingTo->highLight(false);
+      m_linkingTo->update();
+    }
     m_linkingTo = linkingTo;
     for (SchematicLink *ghostLink : m_ghostLinks) {
       ghostLink->updatePath(ghostLink->getStartPort(), linkingTo);
       ghostLink->getStartPort()->hideSnappedLinks(m_linkingTo);
     }
   }
+
   // autopan
-  QGraphicsView *viewer = scene()->views()[0];
-  viewer->setInteractive(false);
-  viewer->ensureVisible(QRectF(me->scenePos(), QSizeF(1, 1)), 5, 5);
-  viewer->setInteractive(true);
+  if (!scene()->views().isEmpty()) {
+    QGraphicsView *viewer = scene()->views()[0];
+    viewer->setInteractive(false);
+    viewer->ensureVisible(QRectF(me->scenePos(), QSizeF(1, 1)), 5, 5);
+    viewer->setInteractive(true);
+  }
 }
 
 //--------------------------------------------------------
@@ -702,7 +878,9 @@ void SchematicPort::mousePressEvent(QGraphicsSceneMouseEvent *me) {
         me->button() == Qt::LeftButton)
       getNode()->setSelected(false);
   }
+
   getNode()->onClicked();
+
   if (me->button() == Qt::LeftButton && getType() != 202  // eFxLinkPort
       && getType() != 203                                 // eFxGroupedInPort
       && getType() != 204                                 // eFxGroupedOutPort
@@ -724,7 +902,7 @@ void SchematicPort::mousePressEvent(QGraphicsSceneMouseEvent *me) {
           SchematicPort *parentPort =
               node->getPort(0);  // id 0 is for parent port.
           if (parentPort) {
-            SchematicLink *ghostLink = new SchematicLink(0, scene());
+            SchematicLink *ghostLink = new SchematicLink(nullptr, scene());
             ghostLink->setStartPort(parentPort);
             ghostLink->setZValue(3.0);
             ghostLink->updateEndPos(me->scenePos());
@@ -733,13 +911,13 @@ void SchematicPort::mousePressEvent(QGraphicsSceneMouseEvent *me) {
         }
       }
     } else {
-      SchematicLink *ghostLink = new SchematicLink(0, scene());
+      SchematicLink *ghostLink = new SchematicLink(nullptr, scene());
       ghostLink->setStartPort(this);
       ghostLink->setZValue(3.0);
       ghostLink->updateEndPos(me->scenePos());
       m_ghostLinks.push_back(ghostLink);
     }
-    emit(isClicked());
+    emit isClicked();
   }
 }
 
@@ -749,7 +927,7 @@ void SchematicPort::mouseReleaseEvent(QGraphicsSceneMouseEvent *me) {
   if (me->modifiers() != Qt::ControlModifier && me->button() != Qt::RightButton)
     QGraphicsItem::mouseReleaseEvent(me);
 
-  if (m_buttonState == Qt::LeftButton) emit(isReleased(me->scenePos()));
+  if (m_buttonState == Qt::LeftButton) emit isReleased(me->scenePos());
 
   // The link is added to the scene only if the user released the left mouse
   // button over
@@ -763,11 +941,12 @@ void SchematicPort::mouseReleaseEvent(QGraphicsSceneMouseEvent *me) {
       if (!port->isLinkedTo(m_linkingTo) && port->linkTo(m_linkingTo, true)) {
         port->linkTo(m_linkingTo);
         somethingChanged = true;
-      } else
+      } else {
         port->showSnappedLinks(m_linkingTo);
+      }
     }
     m_buttonState = Qt::NoButton;
-    m_linkingTo   = 0;
+    m_linkingTo   = nullptr;
     TUndoManager::manager()->endBlock();
   }
 
@@ -807,8 +986,8 @@ void SchematicPort::eraseAllLinks() {
 //--------------------------------------------------------
 
 SchematicLink *SchematicPort::makeLink(SchematicPort *port) {
-  if (isLinkedTo(port) || !port) return 0;
-  SchematicLink *link = new SchematicLink(0, scene());
+  if (isLinkedTo(port) || !port) return nullptr;
+  SchematicLink *link = new SchematicLink(nullptr, scene());
   if (getType() == 202 && port->getType() == 202) link->setLineShaped(true);
 
   link->setStartPort(this);
@@ -822,10 +1001,9 @@ SchematicLink *SchematicPort::makeLink(SchematicPort *port) {
 //--------------------------------------------------------
 
 bool SchematicPort::isLinkedTo(SchematicPort *port) const {
-  if (m_links.size() == 0) return false;
-  int i;
-  for (i = 0; i < m_links.size(); i++) {
-    SchematicLink *link = m_links[i];
+  if (m_links.isEmpty()) return false;
+
+  for (SchematicLink *link : m_links) {
     if (((link->getStartPort() == this && link->getEndPort() == port) ||
          (link->getEndPort() == this && link->getStartPort() == port)) &&
         link->isVisible())
@@ -837,10 +1015,7 @@ bool SchematicPort::isLinkedTo(SchematicPort *port) const {
 //--------------------------------------------------------
 
 void SchematicPort::updateLinksGeometry() {
-  int linkCount = getLinkCount();
-  int i;
-  for (i = 0; i < linkCount; i++) {
-    SchematicLink *link      = getLink(i);
+  for (SchematicLink *link : m_links) {
     SchematicPort *startPort = link->getStartPort();
     SchematicPort *endPort   = link->getEndPort();
     if (startPort && endPort) {
@@ -860,7 +1035,7 @@ QPointF SchematicPort::getLinkEndPoint() const { return scenePos() + m_hook; }
 //
 //========================================================
 
-/*! \class SchematicNode schematicnode.h "../inlcude/toonzqt/schematicnode.h"
+/*! \class SchematicNode schematicnode.h <toonzqt/schematicnode.h>
         \brief The class provides methods to draw and handle a node item in the
    SchematicScene.
 */
@@ -878,18 +1053,12 @@ QPointF SchematicPort::getLinkEndPoint() const { return scenePos() + m_hook; }
 */
 
 SchematicNode::SchematicNode(SchematicScene *scene)
-#if QT_VERSION >= 0x050000
-    : QGraphicsItem(0)
-#else
-    : QGraphicsItem(0, scene)
-#endif
+    : QGraphicsItem(nullptr)
     , m_scene(scene)
     , m_width(0)
     , m_height(0)
     , m_buttonState(Qt::NoButton) {
-#if QT_VERSION >= 0x050000
   scene->addItem(this);
-#endif
   setFlag(QGraphicsItem::ItemIsMovable, false);
   setFlag(QGraphicsItem::ItemIsSelectable, true);
   setFlag(QGraphicsItem::ItemIsFocusable, false);
@@ -903,20 +1072,34 @@ SchematicNode::~SchematicNode() {}
 //--------------------------------------------------------
 
 /*!Reimplements the pure virtual QGraphicsItem::boundingRect() method.
-*/
+ */
 QRectF SchematicNode::boundingRect() const { return QRectF(0, 0, 1, 1); }
 
 //--------------------------------------------------------
 
 /*! Reimplements the pure virtual QGraphicsItem::paint() method.
-*/
+ */
 void SchematicNode::paint(QPainter *painter,
                           const QStyleOptionGraphicsItem *option,
                           QWidget *widget) {
+  SchematicViewer *viewer   = nullptr;
+  FxSchematicScene *fxScene = dynamic_cast<FxSchematicScene *>(scene());
+  StageSchematicScene *stageScene =
+      dynamic_cast<StageSchematicScene *>(scene());
+  if (fxScene) {
+    viewer = fxScene->getSchematicViewer();
+  } else if (stageScene) {
+    viewer = stageScene->getSchematicViewer();
+  } else {
+    return;
+  }
+
+  if (!viewer) return;
+
   QPen pen;
   if (isSelected()) {
     painter->setBrush(QColor(0, 0, 0, 0));
-    pen.setColor(QColor(255, 255, 255, 255));
+    pen.setColor(QColor(viewer->getSelectedBorderColor()));
 
     pen.setWidth(4.0);
     pen.setJoinStyle(Qt::RoundJoin);
@@ -931,23 +1114,44 @@ void SchematicNode::paint(QPainter *painter,
 //--------------------------------------------------------
 
 /*! Reimplements the QGraphicsItem::mouseMoveEvent() method.
-*/
+ */
 void SchematicNode::mouseMoveEvent(QGraphicsSceneMouseEvent *me) {
   QList<QGraphicsItem *> items = scene()->selectedItems();
-  if (items.empty()) return;
-  QPointF delta         = me->scenePos() - me->lastScenePos();
-  QGraphicsView *viewer = scene()->views()[0];
-  for (auto const &item : items) {
-    SchematicNode *node = dynamic_cast<SchematicNode *>(item);
-    if (node) {
-      node->setPosition(node->scenePos() + delta);
-      node->setSchematicNodePos(node->scenePos());
-      node->updateLinksGeometry();
-    }
+  if (items.isEmpty()) return;
+
+  QPointF delta = me->scenePos() - m_scene->mousePos();
+  // QPointF delta         = me->scenePos() - me->lastScenePos();
+
+  if (me->modifiers() & Qt::ShiftModifier) {
+    QPointF deltaFromStart = me->scenePos() - m_scene->clickedPos();
+    if (std::abs(deltaFromStart.x()) > std::abs(deltaFromStart.y()))
+      deltaFromStart.setY(0.0);
+    else
+      deltaFromStart.setX(0.0);
+    delta = m_scene->clickedPos() + deltaFromStart - m_scene->mousePos();
   }
-  viewer->setInteractive(false);
-  viewer->ensureVisible(QRectF(me->scenePos(), QSizeF(1, 1)), 5, 5);
-  viewer->setInteractive(true);
+
+  // snap to neighbor nodes
+  bool ctrlPressed = me->modifiers() & Qt::ControlModifier;
+  dynamic_cast<SchematicScene *>(scene())->computeSnap(this, delta,
+                                                       ctrlPressed);
+
+  m_scene->setMousePos(m_scene->mousePos() + delta);
+
+  if (!scene()->views().isEmpty()) {
+    QGraphicsView *viewer = scene()->views()[0];
+    for (auto const &item : items) {
+      SchematicNode *node = dynamic_cast<SchematicNode *>(item);
+      if (node) {
+        node->setPosition(node->scenePos() + delta);
+        node->setSchematicNodePos(node->scenePos());
+        node->updateLinksGeometry();
+      }
+    }
+    viewer->setInteractive(false);
+    viewer->ensureVisible(QRectF(me->scenePos(), QSizeF(1, 1)), 5, 5);
+    viewer->setInteractive(true);
+  }
 }
 
 //--------------------------------------------------------
@@ -963,6 +1167,11 @@ void SchematicNode::mousePressEvent(QGraphicsSceneMouseEvent *me) {
       setSelected(false);
   }
   onClicked();
+
+  m_scene->setMousePos(me->scenePos());
+  m_scene->setClickedPos(me->scenePos());
+
+  m_scene->updateSnapTarget(this);
 }
 
 //--------------------------------------------------------
@@ -970,14 +1179,15 @@ void SchematicNode::mousePressEvent(QGraphicsSceneMouseEvent *me) {
 void SchematicNode::mouseReleaseEvent(QGraphicsSceneMouseEvent *me) {
   if (me->modifiers() != Qt::ControlModifier && me->button() != Qt::RightButton)
     QGraphicsItem::mouseReleaseEvent(me);
+
+  m_scene->updateSnapTarget(nullptr);
 }
 
 //--------------------------------------------------------
 /* Add a pair (portId, SchematicPort*port) in the mapping
-*/
+ */
 SchematicPort *SchematicNode::addPort(int portId, SchematicPort *port) {
-  QMap<int, SchematicPort *>::iterator it;
-  it = m_ports.find(portId);
+  auto it = m_ports.find(portId);
   if (it != m_ports.end() && m_ports[portId] != port) {
     SchematicPort *oldPort = m_ports[portId];
     m_ports.erase(it);
@@ -992,7 +1202,7 @@ SchematicPort *SchematicNode::addPort(int portId, SchematicPort *port) {
 
 /*!Erase the pair (portId, SchematicPort*port) from the mapping*/
 void SchematicNode::erasePort(int portId) {
-  QMap<int, SchematicPort *>::iterator it = m_ports.find(portId);
+  auto it = m_ports.find(portId);
   if (it != m_ports.end()) {
     delete it.value();
     m_ports.erase(it);
@@ -1005,23 +1215,25 @@ void SchematicNode::erasePort(int portId) {
     Returns 0 if \b portId doesn't map no SchematicPort.
 */
 SchematicPort *SchematicNode::getPort(int portId) const {
-  QMap<int, SchematicPort *>::const_iterator it = m_ports.find(portId);
+  auto it = m_ports.find(portId);
   if (it != m_ports.end()) return it.value();
-  return 0;
+  return nullptr;
 }
 
 //--------------------------------------------------------
 
 /*! Returns a list of all node connected by links to a SchematicPort identified
  * by \b portId.
-*/
+ */
 QList<SchematicNode *> SchematicNode::getLinkedNodes(int portId) const {
   QList<SchematicNode *> list;
   SchematicPort *port = getPort(portId);
   if (port) {
+    //  Use index-based loop to match the original API
     int linkCount = port->getLinkCount();
-    int i;
-    for (i = 0; i < linkCount; i++) list.push_back(port->getLinkedNode(i));
+    for (int i = 0; i < linkCount; i++) {
+      list.push_back(port->getLinkedNode(i));
+    }
   }
   return list;
 }
@@ -1029,7 +1241,49 @@ QList<SchematicNode *> SchematicNode::getLinkedNodes(int portId) const {
 //--------------------------------------------------------
 
 void SchematicNode::updateLinksGeometry() {
-  QMap<int, SchematicPort *>::iterator it;
-  for (it = m_ports.begin(); it != m_ports.end(); ++it)
+  for (auto it = m_ports.begin(); it != m_ports.end(); ++it)
     it.value()->updateLinksGeometry();
+}
+
+//========================================================
+//
+// class SnapTargetItem
+//
+//========================================================
+
+SnapTargetItem::SnapTargetItem(const QPointF &pos, const QRectF &rect,
+                               const QPointF &theOtherEndPos,
+                               const QPointF &portEndOffset)
+    : m_rect(rect)
+    , m_theOtherEndPos(theOtherEndPos)
+    , m_portEndOffset(portEndOffset) {
+  setFlag(QGraphicsItem::ItemIsMovable, false);
+  setFlag(QGraphicsItem::ItemIsSelectable, false);
+  setFlag(QGraphicsItem::ItemIsFocusable, false);
+  setZValue(3.0);
+  setPos(pos);
+  setVisible(false);
+}
+
+QRectF SnapTargetItem::boundingRect() const {
+  QRectF linkRect(m_theOtherEndPos - scenePos(), m_portEndOffset);
+  return m_rect.united(linkRect);
+}
+
+void SnapTargetItem::paint(QPainter *painter,
+                           const QStyleOptionGraphicsItem *option,
+                           QWidget *widget) {
+  painter->setPen(QPen(Qt::magenta, 1, Qt::DashDotLine));
+  painter->drawRect(m_rect);
+
+  QPointF startPos = m_theOtherEndPos - scenePos();
+  QPointF endPos   = m_portEndOffset;
+  QPointF p0((endPos.x() + startPos.x()) * 0.5, startPos.y());
+  QPointF p1(p0.x(), endPos.y());
+  QPointF p2(endPos);
+
+  QPainterPath path(startPos);
+  path.cubicTo(p0, p1, p2);
+  painter->setRenderHint(QPainter::Antialiasing, true);
+  painter->drawPath(path);
 }

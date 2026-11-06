@@ -121,7 +121,7 @@ TFilePath ResourceImportStrategy::process(ToonzScene *scene,
   if (srcPath.getWideString().find(L'+') == 0)
     dstPath = srcPath;
   else
-    dstPath               = scene->getImportedLevelPath(srcPath);
+    dstPath = scene->getImportedLevelPath(srcPath);
   TFilePath actualDstPath = scene->decodeFilePath(dstPath);
   assert(actualDstPath != TFilePath());
 
@@ -334,7 +334,8 @@ bool SceneLevel::isDirty() {
 }
 //-----------------------------------------------------------------------------
 
-QString SceneLevel::getResourceName() {
+QStringList SceneLevel::getResourceName() {
+  QStringList ret;
   QString string;
   bool levelIsDirty = false;
   if (m_sl->getProperties()->getDirtyFlag()) {
@@ -342,16 +343,23 @@ QString SceneLevel::getResourceName() {
     levelIsDirty = true;
   }
   if (m_sl->getPalette() && m_sl->getPalette()->getDirtyFlag()) {
-    if (levelIsDirty) string += " and ";
-    if (m_sl->getPath().getType() == "pli")
-      string += QString::fromStdWString(m_sl->getPalette()->getPaletteName()) +
-                ".pli (palette)";
-    else
-      string += QString::fromStdWString(m_sl->getPalette()->getPaletteName()) +
-                ".tpl";
-  }
+    QString paletteName =
+        QString::fromStdWString(m_sl->getPalette()->getPaletteName());
+    if (m_sl->getType() & FULLCOLOR_TYPE) {
+      if (levelIsDirty) ret << string;
+      ret << paletteName + ".tpl";
+    } else {
+      if (levelIsDirty) string += " and ";
+      if (m_sl->getPath().getType() == "pli")
+        string += paletteName + ".pli (palette)";
+      else
+        string += paletteName + ".tpl";
+      ret << string;
+    }
+  } else if (levelIsDirty)
+    ret << string;
 
-  return string;
+  return ret;
 }
 
 //=============================================================================
@@ -399,12 +407,14 @@ void ScenePalette::rollbackPath() { m_pl->setPath(m_oldPath); }
 
 //-----------------------------------------------------------------------------
 
-bool ScenePalette::isDirty() { return m_pl->getPalette()->getDirtyFlag(); }
+bool ScenePalette::isDirty() {
+  return m_pl->getPalette() && m_pl->getPalette()->getDirtyFlag();
+}
 
 //-----------------------------------------------------------------------------
 
-QString ScenePalette::getResourceName() {
-  return QString::fromStdString(m_pl->getPath().getLevelName());
+QStringList ScenePalette::getResourceName() {
+  return QStringList(QString::fromStdString(m_pl->getPath().getLevelName()));
 }
 
 //=============================================================================
@@ -482,11 +492,20 @@ void SceneResources::getResources() {
 
   for (it = levels.begin(); it != levels.end(); ++it) {
     TXshSimpleLevel *sl = (*it)->getSimpleLevel();
-    if (sl) m_resources.push_back(new SceneLevel(scene, sl));
+    if (sl) {
+        m_resources.push_back(new SceneLevel(scene, sl));
+        continue;
+    }
     TXshPaletteLevel *pl = (*it)->getPaletteLevel();
-    if (pl) m_resources.push_back(new ScenePalette(scene, pl));
+    if (pl) { 
+        m_resources.push_back(new ScenePalette(scene, pl));
+        continue; 
+    }
     TXshSoundLevel *sdl = (*it)->getSoundLevel();
-    if (sdl) m_resources.push_back(new SceneSound(scene, sdl));
+    if (sdl) {
+        m_resources.push_back(new SceneSound(scene, sdl));
+        continue;
+    }
   }
 }
 
@@ -494,22 +513,29 @@ void SceneResources::getResources() {
 
 void SceneResources::save(const TFilePath newScenePath) {
   TFilePath oldScenePath = m_scene->getScenePath();
-  m_scene->setScenePath(newScenePath);
+  // TODO: The save path of resources should not be decided by changing scene's property,
+  // refactor and remove setScenePath
+  m_scene->setScenePath(newScenePath, false);
   bool failedSave = false;
-  QString failedList;
   for (int i = 0; i < (int)m_resources.size(); i++) {
     m_resources[i]->save();
-    if (m_resources[i]->isDirty())  // didn't save for some reason
-    {
-      failedList += "\n" + m_resources[i]->getResourceName();
-      failedSave = true;
-    }
   }
 
-  if (failedSave)
+  QStringList failedList;
+  getDirtyResources(failedList);
+
+  if (!failedList.isEmpty()) {  // didn't save for some reason
+    // show up to 5 items
+    int extraCount = failedList.count() - 5;
+    if (extraCount > 0) {
+      failedList = failedList.mid(0, 5);
+      failedList.append(QObject::tr("and %1 more item(s).").arg(extraCount));
+    }
+
     DVGui::warning(QObject::tr("Failed to save the following resources:\n") +
-                   failedList);
-  m_scene->setScenePath(oldScenePath);
+                   "  " + failedList.join("\n  "));
+  }
+  m_scene->setScenePath(oldScenePath, false);
 }
 
 //-----------------------------------------------------------------------------
@@ -536,11 +562,12 @@ void SceneResources::accept(ResourceProcessor *processor, bool autoCommit) {
 
 //-----------------------------------------------------------------------------
 // return the name list of dirty resources
-void SceneResources::getDirtyResources(std::vector<QString> &dirtyResources) {
-  for (int i = 0; i < (int)m_resources.size(); i++)
-    if (m_resources[i]->isDirty()) {
-      dirtyResources.push_back(m_resources[i]->getResourceName());
+void SceneResources::getDirtyResources(QStringList &dirtyResources) {
+  for (SceneResource *resource : m_resources)
+    if (resource->isDirty()) {
+      dirtyResources << resource->getResourceName();
     }
+  dirtyResources.removeDuplicates();
 }
 
 //=============================================================================
@@ -549,7 +576,7 @@ void SceneResources::getDirtyResources(std::vector<QString> &dirtyResources) {
 //
 //-----------------------------------------------------------------------------
 
-ResourceImporter::ResourceImporter(ToonzScene *scene, TProject *dstProject,
+ResourceImporter::ResourceImporter(ToonzScene *scene, std::shared_ptr<TProject> dstProject,
                                    ResourceImportStrategy &importStrategy)
     : m_scene(scene)
     , m_dstProject(dstProject)
@@ -562,7 +589,7 @@ ResourceImporter::ResourceImporter(ToonzScene *scene, TProject *dstProject,
       scene->getScenePath() - scene->getProject()->getScenesPath();
   if (relativeScenePath.isAbsolute())
     relativeScenePath = scene->getScenePath().withoutParentDir();
-  TFilePath newFp     = dstProject->getScenesPath() + relativeScenePath;
+  TFilePath newFp = dstProject->getScenesPath() + relativeScenePath;
   makeUnique(newFp);
   m_dstScene->setScenePath(newFp);
 }
@@ -680,7 +707,7 @@ void ResourceCollector::process(TXshSimpleLevel *sl) {
   std::string suffix = ResourceImporter::extractPsdSuffix(path);
   std::map<TFilePath, TFilePath>::iterator it = m_collectedFiles.find(path);
   if (it != m_collectedFiles.end()) {
-    TFilePath destPath         = it->second;
+    TFilePath destPath = it->second;
     if (suffix != "") destPath = ResourceImporter::buildPsd(destPath, suffix);
     sl->setPath(destPath);
   } else {
@@ -696,7 +723,7 @@ void ResourceCollector::process(TXshSimpleLevel *sl) {
         }
       }
       ++m_count;
-      TFilePath destPath         = collectedPath;
+      TFilePath destPath = collectedPath;
       if (suffix != "") destPath = ResourceImporter::buildPsd(destPath, suffix);
       sl->setPath(destPath);
       m_collectedFiles[path] = collectedPath;

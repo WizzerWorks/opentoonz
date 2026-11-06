@@ -26,7 +26,7 @@ using namespace TVER;
 #include <arpa/inet.h>  // inet_ntoa
 #else
 // these were included for OSX, i'm not sure if they are required for linux or
-// not? leaving them in as linux was building sucessfully already. damies13 -
+// not? leaving them in as linux was building successfully already. damies13 -
 // 2017-04-15.
 #include <netdb.h>      // gethostbyname
 #include <arpa/inet.h>  // inet_ntoa
@@ -368,8 +368,8 @@ static QString getExeName(bool isComposer) {
   return name + ".exe ";
 #elif defined(MACOSX)
   TVER::ToonzVersion tver;
-  return "\"./" + QString::fromStdString(tver.getAppName()) +
-         ".app/Contents/MacOS/" + name + "\" ";
+  return QString::fromStdString(tver.getAppName()) + ".app/Contents/MacOS/" +
+         name;
 #else
   return name;
 #endif
@@ -392,8 +392,7 @@ static TFilePath getFilePath(const QStringList &l, int &i) {
   if (outStr.startsWith('"')) {
     outStr = outStr.remove(0, 1);
     if (!outStr.endsWith('"')) {
-      do
-        outStr += " " + l.at(i);
+      do outStr += " " + l.at(i);
       while (i < l.size() && !l.at(i++).endsWith('"'));
     }
     outStr.chop(1);
@@ -405,7 +404,7 @@ static TFilePath getFilePath(const QStringList &l, int &i) {
 //------------------------------------------------------------------------------
 
 void TFarmTask::parseCommandLine(QString commandLine) {
-  QStringList l = commandLine.split(" ", QString::SkipEmptyParts);
+  QStringList l = commandLine.split(" ", Qt::SkipEmptyParts);
   assert(l.size() >= 2);
 
   // serve per skippare il path dell'eseguibile su mac che contiene spazi
@@ -452,11 +451,10 @@ void TFarmTask::parseCommandLine(QString commandLine) {
           QString::number(TOutputProperties::MediumVal),
           QString::number(TOutputProperties::SmallVal)};
 
-      m_maxTileSizeIndex = (str == maxTileSizeIndexes[2])
-                               ? 3
-                               : (str == maxTileSizeIndexes[1])
-                                     ? 2
-                                     : (str == maxTileSizeIndexes[0]) ? 1 : 0;
+      m_maxTileSizeIndex = (str == maxTileSizeIndexes[2])   ? 3
+                           : (str == maxTileSizeIndexes[1]) ? 2
+                           : (str == maxTileSizeIndexes[0]) ? 1
+                                                            : 0;
       i += 2;
     }
 
@@ -479,8 +477,12 @@ void TFarmTask::parseCommandLine(QString commandLine) {
 
 //------------------------------------------------------------------------------
 
-QString TFarmTask::getCommandLine(bool isFarmTask) const {
-  QString cmdline = getExeName(m_isComposerTask);
+QString TFarmTask::getCommandLinePrgName() const {
+  return getExeName(m_isComposerTask);
+}
+
+QString TFarmTask::getCommandLineArguments() const {
+  QString cmdline = "";
 
   if (!m_taskFilePath.isEmpty())
     cmdline += " \"" +
@@ -489,18 +491,10 @@ QString TFarmTask::getCommandLine(bool isFarmTask) const {
                "\"";
 
   if (m_callerMachineName != "") {
-#if QT_VERSION >= 0x050500
     struct hostent *he = gethostbyname(m_callerMachineName.toLatin1());
-#else
-    struct hostent *he = gethostbyname(m_callerMachineName.toAscii());
-#endif
     if (he) {
       char *ipAddress = inet_ntoa(*(struct in_addr *)*(he->h_addr_list));
-#if QT_VERSION >= 0x050500
       cmdline += " -tmsg " + QString::fromUtf8(ipAddress);
-#else
-      cmdline += " -tmsg " + QString::fromAscii(ipAddress);
-#endif
     }
   }
 
@@ -541,6 +535,63 @@ QString TFarmTask::getCommandLine(bool isFarmTask) const {
   QString appname = QSettings().applicationName();
 
   return cmdline;
+}
+
+QStringList TFarmTask::getCommandLineArgumentsList() const {
+  QStringList ret;
+
+  if (!m_taskFilePath.isEmpty())
+    ret << QString::fromStdWString(
+        TSystem::toUNC(m_taskFilePath).getWideString());
+
+  if (m_callerMachineName != "") {
+    struct hostent *he = gethostbyname(m_callerMachineName.toLatin1());
+    if (he) {
+      char *ipAddress = inet_ntoa(*(struct in_addr *)*(he->h_addr_list));
+      ret << "-tmsg" << QString::fromUtf8(ipAddress);
+    }
+  }
+
+  if (!m_isComposerTask) {
+    if (m_overwrite == Overwrite_All)
+      ret << "-overwriteAll";
+    else if (m_overwrite == Overwrite_NoPaint)
+      ret << "-overwriteNoPaint";
+    if (m_onlyVisible) ret << "-onlyvisible";
+    return ret;
+  }
+
+  if (!m_outputPath.isEmpty()) {
+    TFilePath outputPath;
+    try {
+      outputPath = TSystem::toUNC(m_outputPath);
+    } catch (TException &) {
+    }
+
+    ret << "-o" << QString::fromStdWString(outputPath.getWideString());
+  }
+
+  ret << "-range" << QString::number(m_from) << QString::number(m_to);
+  ret << "-step" << QString::number(m_step);
+  ret << "-shrink" << QString::number(m_shrink);
+  ret << "-multimedia" << QString::number(m_multimedia);
+
+  const QString threadCounts[3] = {"single", "half", "all"};
+  ret << "-nthreads" << threadCounts[m_threadsIndex];
+
+  const QString maxTileSizes[4] = {
+      "none", QString::number(TOutputProperties::LargeVal),
+      QString::number(TOutputProperties::MediumVal),
+      QString::number(TOutputProperties::SmallVal)};
+  ret << "-maxtilesize" << maxTileSizes[m_maxTileSizeIndex];
+
+  QString appname = QSettings().applicationName();
+
+  return ret;
+}
+
+QString TFarmTask::getCommandLine(bool) const {
+  return getCommandLinePrgName() + getCommandLineArguments();
 }
 
 //------------------------------------------------------------------------------

@@ -6,7 +6,7 @@
 #include <memory>
 
 #include "tparam.h"
-//#include "tfx.h"
+// #include "tfx.h"
 #include "tcommon.h"
 
 #undef DVAPI
@@ -26,6 +26,7 @@ class TParam;
 
 class DVAPI TParamVar {
   std::string m_name;
+  // hidden parameter will be hidden from the fx settings or the function editor
   bool m_isHidden;
   // Flag for an obsolete parameter used for maintaining backward-compatiblity.
   // - The obsolete parameter will call a special function
@@ -65,7 +66,7 @@ class TParamVarT final : public TParamVar {
 public:
   TParamVarT(std::string name, T *var = nullptr, TParamP pluginVar = 0,
              bool hidden = false, bool obsolete = false)
-      : TParamVar(name, hidden), m_var(var), m_pluginVar(pluginVar) {}
+      : TParamVar(name, hidden, obsolete), m_var(var), m_pluginVar(pluginVar) {}
   TParamVarT() = delete;
   void setParam(TParam *param) {
     if (m_var)
@@ -80,7 +81,8 @@ public:
       return m_pluginVar.getPointer();
   }
   TParamVar *clone() const {
-    return new TParamVarT<T>(getName(), m_var, m_pluginVar, isHidden());
+    return new TParamVarT<T>(getName(), m_var, m_pluginVar, isHidden(),
+                             isObsolete());
   }
 };
 

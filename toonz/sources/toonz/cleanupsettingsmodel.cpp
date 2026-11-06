@@ -59,8 +59,7 @@ public:
     if (!folderPath.isEmpty())
       folderPath = folderPath.getParentDir();
     else {
-      TProject *currentProject =
-          TProjectManager::instance()->getCurrentProject().getPointer();
+      auto currentProject = TProjectManager::instance()->getCurrentProject();
       if (currentProject)
         folderPath =
             currentProject->decode(currentProject->getFolder(TProject::Inputs));
@@ -128,7 +127,7 @@ public:
       return false;
     }
 
-    CleanupSettingsModel::instance()->loadSettings(loadPath);
+    CleanupSettingsModel::instance()->loadSettings(loadPath, true);
     return true;
   }
 };
@@ -350,19 +349,17 @@ void CleanupSettingsModel::commitChanges(int action) {
 
     // Deal with scene stuff
     if (m_clnPath.isEmpty()) {
-      TApp::instance()->getCurrentScene()->setDirtyFlag(
-          true);  // This should be moved outside... sadly not supported at the
-                  // moment...
-      CleanupParameters::GlobalParameters.assign(
-          currentParams);  // The global settings are being changed
+      CleanupParameters::GlobalParameters.assign(currentParams);
     }
+
+    TApp::instance()->getCurrentScene()->setDirtyFlag(true);
   }
 
   // Perform actions
   int maxAction =
       std::max(action, m_action);  // Add previuosly required actions
   action   = std::min(maxAction,
-                    m_allowedActions);  // But only up to the allowed action
+                      m_allowedActions);  // But only up to the allowed action
   m_action = (action == maxAction)
                  ? NONE
                  : maxAction;  // Then, update the previously required action
@@ -405,7 +402,7 @@ void CleanupSettingsModel::rebuildPreview() {
 void CleanupSettingsModel::processFrame(TXshSimpleLevel *sl, TFrameId fid) {
   assert(sl);
 
-  TRasterImageP imageToCleanup = sl->getFrameToCleanup(fid);
+  TRasterImageP imageToCleanup = sl->getFrameToCleanup(fid, true);
   if (!imageToCleanup) return;
 
   // Store the original image
@@ -467,7 +464,21 @@ void CleanupSettingsModel::onSceneSwitched() {
   TCleanupper::instance()->setParameters(params);
 
   // Finally, send notifications, deal with backups, etc.
-  restoreGlobalSettings();
+
+  // Make sure that the current cleanup palette is set to currentParams' palette
+  // This might refresh the StyleEditor
+  TApp::instance()
+      ->getPaletteController()
+      ->getCurrentCleanupPalette()
+      ->setPalette(params->m_cleanupPalette.getPointer());
+
+  m_clnPath = TFilePath();  // This Path won't be stored in scene or project
+  m_backupParams.assign(params, false);
+
+  if (m_previewersCount > 0 || m_cameraTestsCount > 0) rebuildPreview();
+
+  emit modelChanged(false);
+  emit clnLoaded();
 }
 
 //-----------------------------------------------------------------------
@@ -562,11 +573,7 @@ bool CleanupSettingsModel::saveSettingsIfNeeded() {
     int ret = DVGui::MsgBox(question, QObject::tr("Save"),
                             QObject::tr("Discard"), QObject::tr("Cancel"), 0);
     if (ret == 1) {
-      // WARNING: This is legacy behavior, but is it really needed? I think
-      // there should be no further
-      // request of user interaction - why invoking the popup to choose the save
-      // path?
-      promptSave();
+      saveSettings(m_clnPath);
     } else if (ret == 3)
       return false;
   }
@@ -581,12 +588,13 @@ void CleanupSettingsModel::restoreGlobalSettings() {
   currentParams->assign(&CleanupParameters::GlobalParameters);
 
   // Make sure that the current cleanup palette is set to currentParams' palette
+  // This would refresh the StyleEditor
   TApp::instance()
       ->getPaletteController()
       ->getCurrentCleanupPalette()
       ->setPalette(currentParams->m_cleanupPalette.getPointer());
 
-  m_clnPath = TFilePath();
+  m_clnPath = TFilePath();  // This Path won't be stored in scene or project
   m_backupParams.assign(currentParams, false);
 
   if (m_previewersCount > 0 || m_cameraTestsCount > 0) rebuildPreview();
@@ -657,26 +665,23 @@ bool CleanupSettingsModel::loadSettings(CleanupParameters *params,
 
 //-----------------------------------------------------------------------------
 
-bool CleanupSettingsModel::loadSettings(const TFilePath &clnPath) {
+bool CleanupSettingsModel::loadSettings(const TFilePath &clnPath,
+                                        bool isCalledFromLoadSettingsPopup) {
   CleanupParameters *cp = getCurrentParameters();
   if (!loadSettings(cp, clnPath)) return false;
 
-  // The same as restoreGlobalSettings()
   TApp::instance()
       ->getPaletteController()
       ->getCurrentCleanupPalette()
       ->setPalette(cp->m_cleanupPalette.getPointer());
 
-  /*---
-   * LoadSettingsPopupからこの関数が呼ばれたとき、ロードしたパラメータをGlobal設定に格納する---*/
-  if (m_clnPath.isEmpty()) {
-    TApp::instance()->getCurrentScene()->setDirtyFlag(
-        true);  // This should be moved outside... sadly not supported at the
-                // moment...
+  // When this function is called from LoadSettingsPopup, store the loaded
+  // parameters in the Global settings
+  if (isCalledFromLoadSettingsPopup && m_clnPath.isEmpty()) {
     CleanupParameters::GlobalParameters.assign(
         cp);  // The global settings are being changed
   }
-
+  TApp::instance()->getCurrentScene()->setDirtyFlag(true);
   m_backupParams.assign(cp, false);
 
   if (m_previewersCount > 0 || m_cameraTestsCount > 0) rebuildPreview();
@@ -741,5 +746,6 @@ TFilePath CleanupSettingsModel::getOutputPath(TXshSimpleLevel *sl,
   const TFilePath &outDir = params->getPath(scene);
 
   return lineProcessing ? (outDir + inPath.getWideName()).withType("tlv")
-                        : (outDir + inPath.getLevelNameW()).withType("tif");
+                        : (outDir + inPath.getLevelNameW())
+                              .withType(params->m_lpNoneFormat);
 }

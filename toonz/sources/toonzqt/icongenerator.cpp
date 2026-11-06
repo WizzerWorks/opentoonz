@@ -28,6 +28,7 @@
 // TnzLib includes
 #include "toonz/toonzscene.h"
 #include "toonz/sceneproperties.h"
+#include "toonz/tcamera.h"
 #include "toonz/txsheet.h"
 #include "toonz/tscenehandle.h"
 #include "toonz/txshlevel.h"
@@ -38,11 +39,14 @@
 #include "toonz/preferences.h"
 #include "toonz/sceneresources.h"
 #include "toonz/stage2.h"
+#include "trop.h"
 
 // TnzQt includes
 #include "toonzqt/gutil.h"
 
 #include "toonzqt/icongenerator.h"
+
+#include <QCoreApplication>
 
 //=============================================================================
 
@@ -91,6 +95,12 @@ bool getIcon(const std::string &iconName, QPixmap &pix,
         s.m_paintIndex        = settings.m_paintIndex;
         Preferences::instance()->getTranspCheckData(
             s.m_transpCheckBg, s.m_transpCheckInk, s.m_transpCheckPaint);
+        s.m_inkCheckEnabled   = settings.m_inkCheckEnabled;
+        s.m_ink1CheckEnabled  = settings.m_ink1CheckEnabled;
+        s.m_paintCheckEnabled = settings.m_paintCheckEnabled;
+        s.m_inkCheckColor     = Preferences::instance()->getInkCheckColor();
+        s.m_ink1CheckColor    = Preferences::instance()->getInk1CheckColor();
+        s.m_paintCheckColor   = Preferences::instance()->getPaintCheckColor();
 
         TRop::quickPut(icon, timgp->getRaster(), simpleLevel->getPalette(),
                        TAffine(), s);
@@ -200,11 +210,12 @@ void makeChessBackground(const TRaster32P &ras) {
 
 //==========================================
 //
-//    Image-to-Icon convertion methods
+//    Image-to-Icon conversion methods
 //
 //------------------------------------------
 
 namespace {
+
 TRaster32P convertToIcon(TVectorImageP vimage, int frame,
                          const TDimension &iconSize,
                          const IconGenerator::Settings &settings) {
@@ -216,51 +227,63 @@ TRaster32P convertToIcon(TVectorImageP vimage, int frame,
 
   TOfflineGL *glContext = IconGenerator::instance()->getOfflineGLContext();
 
-  // The image and contained within Imagebox
-  // (add a small margin also to prevent problems with empty images)
+  // Image bounding box with a small margin to prevent issues with empty images
   TRectD imageBox;
   {
     QMutexLocker sl(vimage->getMutex());
     imageBox = vimage->getBBox().enlarge(.1);
   }
+
   TPointD imageCenter = (imageBox.getP00() + imageBox.getP11()) * 0.5;
 
-  // Calculate a transformation matrix that moves the image inside the icon.
-  // The scale factor is chosen so that the image is entirely
-  // contained in the icon (with a margin of 'margin' pixels)
+  // Calculate transformation matrix to fit the image inside the icon
   const int margin = 10;
   double scx       = (iconSize.lx - margin) / imageBox.getLx();
   double scy       = (iconSize.ly - margin) / imageBox.getLy();
   double sc        = std::min(scx, scy);
-  // Add the translation: the center point of the image is at the point
-  // middle of the pixmap.
+  //  The center point of the image is at the point middle of the pixmap.
   TPointD iconCenter(iconSize.lx * 0.5, iconSize.ly * 0.5);
   TAffine aff = TScale(sc).place(imageCenter, iconCenter);
 
-  // RenderData
+  // Initialize VectorRenderData
   TVectorRenderData rd(aff, TRect(iconSize), plt, 0, true);
 
-  rd.m_tcheckEnabled     = settings.m_transparencyCheck;
-  rd.m_blackBgEnabled    = settings.m_blackBgCheck;
-  rd.m_drawRegions       = !settings.m_inksOnly;
-  rd.m_inkCheckEnabled   = settings.m_inkIndex != -1;
-  rd.m_paintCheckEnabled = settings.m_paintIndex != -1;
-  rd.m_colorCheckIndex =
-      rd.m_inkCheckEnabled ? settings.m_inkIndex : settings.m_paintIndex;
-  rd.m_isIcon = true;
+  rd.m_tcheckEnabled  = settings.m_transparencyCheck;
+  rd.m_blackBgEnabled = settings.m_blackBgCheck;
+  rd.m_drawRegions    = !settings.m_inksOnly;
+  rd.m_isIcon         = true;
 
-  // Draw the image.
+  // Sync Check Flags
+  rd.m_inkCheckEnabled   = settings.m_inkCheckEnabled;
+  rd.m_ink1CheckEnabled  = settings.m_ink1CheckEnabled;
+  rd.m_paintCheckEnabled = settings.m_paintCheckEnabled;
+  rd.m_paintIndex        = settings.m_paintIndex;
+
+  // Define the target color index for highlighting (Priority: Ink > Paint)
+  if (rd.m_inkCheckEnabled || rd.m_ink1CheckEnabled)
+    rd.m_colorCheckIndex = settings.m_inkIndex;
+  else if (rd.m_paintCheckEnabled)
+    rd.m_colorCheckIndex = settings.m_paintIndex;
+  else
+    rd.m_colorCheckIndex = -1;
+
+  // Set check colors from Preferences
+  Preferences *pref    = Preferences::instance();
+  rd.m_inkCheckColor   = pref->getInkCheckColor();
+  rd.m_ink1CheckColor  = pref->getInk1CheckColor();
+  rd.m_paintCheckColor = pref->getPaintCheckColor();
+
+  // Draw the vector image to the offline GL context
   glContext->makeCurrent();
   glContext->clear(rd.m_blackBgEnabled ? TPixel::Black : TPixel32::White);
   glContext->draw(vimage, rd);
 
+  // Retrieve the rendered raster
   TRaster32P ras(iconSize);
   glContext->getRaster(ras);
-
   glContext->doneCurrent();
 
   delete plt;
-
   return ras;
 }
 
@@ -288,7 +311,6 @@ TRaster32P convertToIcon(TToonzImageP timage, int frame,
   else
     iconLy = tround((double(ly) * iconSize.lx) / lx);
 
-  // icon size with correct aspect ratio
   TDimension iconSize2 = TDimension(iconLx, iconLy);
 
   TRaster32P icon(iconSize2);
@@ -314,6 +336,12 @@ TRaster32P convertToIcon(TToonzImageP timage, int frame,
     s.m_paintIndex        = settings.m_paintIndex;
     Preferences::instance()->getTranspCheckData(
         s.m_transpCheckBg, s.m_transpCheckInk, s.m_transpCheckPaint);
+    s.m_inkCheckEnabled   = settings.m_inkCheckEnabled;
+    s.m_ink1CheckEnabled  = settings.m_ink1CheckEnabled;
+    s.m_paintCheckEnabled = settings.m_paintCheckEnabled;
+    s.m_inkCheckColor     = Preferences::instance()->getInkCheckColor();
+    s.m_ink1CheckColor    = Preferences::instance()->getInk1CheckColor();
+    s.m_paintCheckColor   = Preferences::instance()->getPaintCheckColor();
 
     TRop::quickPut(icon, rasCM32, timage->getPalette(), TAffine(), s);
   } else
@@ -335,11 +363,8 @@ TRaster32P convertToIcon(TToonzImageP timage, int frame,
 
 TRaster32P convertToIcon(TRasterImageP rimage, const TDimension &iconSize) {
   if (!rimage) return TRaster32P();
-
   TRasterP ras = rimage->getRaster();
-
   if (!(TRaster32P)ras && !(TRasterGR8P)ras) return TRaster32P();
-
   if (ras->getSize() == iconSize) return ras;
 
   TRaster32P icon(iconSize);
@@ -363,50 +388,33 @@ TRaster32P convertToIcon(TMeshImageP mi, int frame, const TDimension &iconSize,
   if (!mi) return TRaster32P();
 
   TOfflineGL *glContext = IconGenerator::instance()->getOfflineGLContext();
-
-  // The image and contained within Imagebox
-  // (add a small margin also to prevent problems with empty images)
-  TRectD imageBox;
-  imageBox = mi->getBBox().enlarge(.1);
-
+  TRectD imageBox       = mi->getBBox().enlarge(.1);
   TPointD imageCenter(0.5 * (imageBox.getP00() + imageBox.getP11()));
 
-  // Calculate a transformation matrix that moves the image inside the icon.
-  // The scale factor is chosen so that the image is entirely
-  // contained in the icon (with a margin of 'margin' pixels)
   const int margin = 10;
   double scx       = (iconSize.lx - margin) / imageBox.getLx();
   double scy       = (iconSize.ly - margin) / imageBox.getLy();
   double sc        = std::min(scx, scy);
 
-  // Add the translation: the center point of the image is at the point
-  // middle of the pixmap.
   TPointD iconCenter(iconSize.lx * 0.5, iconSize.ly * 0.5);
   TAffine aff = TScale(sc).place(imageCenter, iconCenter);
 
-  // Draw the image.
   glContext->makeCurrent();
   glContext->clear(settings.m_blackBgCheck ? TPixel::Black : TPixel32::White);
 
   glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT);
   glEnable(GL_BLEND);
   glEnable(GL_LINE_SMOOTH);
-
   glPushMatrix();
   tglMultMatrix(aff);
-
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
   glColor4f(0.0f, 1.0f, 0.0f, 0.7f);
   tglDrawEdges(*mi);
-
   glPopMatrix();
-
   glPopAttrib();
 
   TRaster32P ras(iconSize);
   glContext->getRaster(ras);
-
   glContext->doneCurrent();
 
   return ras;
@@ -473,15 +481,14 @@ IconRenderer::IconRenderer(const std::string &id, const TDimension &iconSize)
     , m_id(id)
     , m_started(false)
     , m_terminated(false) {
-  connect(this, SIGNAL(started(TThread::RunnableP)), IconGenerator::instance(),
-          SLOT(onStarted(TThread::RunnableP)));
-  connect(this, SIGNAL(finished(TThread::RunnableP)), IconGenerator::instance(),
-          SLOT(onFinished(TThread::RunnableP)));
-  connect(this, SIGNAL(canceled(TThread::RunnableP)), IconGenerator::instance(),
-          SLOT(onCanceled(TThread::RunnableP)), Qt::QueuedConnection);
-  connect(this, SIGNAL(terminated(TThread::RunnableP)),
-          IconGenerator::instance(), SLOT(onTerminated(TThread::RunnableP)),
-          Qt::QueuedConnection);
+  connect(this, &IconRenderer::started, IconGenerator::instance(),
+          &IconGenerator::onStarted);
+  connect(this, &IconRenderer::finished, IconGenerator::instance(),
+          &IconGenerator::onFinished);
+  connect(this, &IconRenderer::canceled, IconGenerator::instance(),
+          &IconGenerator::onCanceled, Qt::QueuedConnection);
+  connect(this, &IconRenderer::terminated, IconGenerator::instance(),
+          &IconGenerator::onTerminated, Qt::QueuedConnection);
 }
 
 //-----------------------------------------------------------------------------
@@ -495,6 +502,26 @@ IconRenderer::~IconRenderer() {}
 //    Specific icon renderers
 //
 //-----------------------------------
+
+//=============================================================================
+
+//======================================
+//    NoImageIconRenderer class
+//--------------------------------------
+
+class NoImageIconRenderer final : public IconRenderer {
+public:
+  NoImageIconRenderer(const std::string &id, const TDimension &iconSize)
+      : IconRenderer(id, iconSize) {}
+  void run() override {
+    try {
+      TRaster32P ras(getIconSize());
+      ras->fill(TPixel32::Gray);
+      setIcon(ras);
+    } catch (...) {
+    }
+  }
+};
 
 //=============================================================================
 
@@ -878,8 +905,19 @@ public:
 TRaster32P XsheetIconRenderer::generateRaster(
     const TDimension &iconSize) const {
   ToonzScene *scene = m_xsheet->getScene();
+  TDimension res    = iconSize;
+  if (QCoreApplication::applicationName() == "ToonzPreview") {
+    res = scene->getCurrentCamera()->getRes();
+    if (res.lx > iconSize.lx || res.ly > iconSize.ly) {
+      double sx = (double)iconSize.lx / res.lx;
+      double sy = (double)iconSize.ly / res.ly;
 
-  TRaster32P ras(iconSize);
+      double s = std::min(sx, sy);
+      res.lx   = tround(res.lx * s);
+      res.ly   = tround(res.ly * s);
+    }
+  }
+  TRaster32P ras(res);
 
   TPixel32 bgColor = scene->getProperties()->getBgColor();
   bgColor.m        = 255;
@@ -1014,8 +1052,9 @@ TRaster32P IconGenerator::generateRasterFileIcon(const TFilePath &path,
 
       if (shrink > 1) ir->setShrink(shrink);
     }
-
-    img = (toUpper(path.getType()) == "TLV") ? ir->loadIcon() : ir->load();
+    bool isDll = QCoreApplication::applicationName() == "ToonzPreview";
+    img        = (toUpper(path.getType()) == "TLV" && !isDll) ? ir->loadIcon()
+                                                              : ir->load();
   } catch (...) {
   }
 
@@ -1040,8 +1079,9 @@ TRaster32P IconGenerator::generateRasterFileIcon(const TFilePath &path,
       TRop::convert(dstRaster, auxRaster, plt, false);
     else
       dstRaster->fill(TPixel32::Magenta);
-
-    ras32 = dstRaster;
+    ras32 = TRaster32P(dstRaster->getLx(), dstRaster->getLy());
+    ras32->fill(TPixel32::White);
+    TRop::over(ras32, dstRaster);
   }
 
   if (!ras32) return TRaster32P();
@@ -1060,16 +1100,22 @@ Qt::transparent)
 }
 */
 
-  TRaster32P icon(iconSize);
-
   double sx = double(iconSize.lx) / ras32->getLx();
   double sy = double(iconSize.ly) / ras32->getLy();
-  double sc = std::min(sx, sy);  // show all the image, possibly adding bands
+  double sc = std::min(sx, sy);
+
+  TDimension finalIconSize(tround(ras32->getLx() * sc),
+                           tround(ras32->getLy() * sc));
+
+  TRaster32P icon(finalIconSize);
 
   TAffine aff = TScale(sc).place(ras32->getCenterD(), icon->getCenterD());
 
-  icon->fill(TPixel32(160, 160, 160));  // "bands" color
-  TRop::resample(icon, ras32, aff, TRop::Triangle);
+  // Fill with transparent color (no bands/borders needed in this mode)
+  icon->fill(TPixel32::Magenta);
+
+  // Perform resampling and scaling
+  TRop::resample(icon, ras32, aff, TRop::ClosestPixel);
 
   if (icon) {
     if (::isUnpremultiplied(icon))  // APPALLING. I'm not touching this, but
@@ -1086,15 +1132,14 @@ Qt::transparent)
 
     bbox = (bbox * icon->getBounds())
                .enlarge(-1);  // Add a 1 pixel transparent margin - this
-    if (bbox.getLx() > 0 &&
-        bbox.getLy() > 0)  // way the actual content doesn't look trimmed.
-      ::makeChessBackground(icon->extract(bbox));
+    // if (bbox.getLx() > 0 &&
+    //     bbox.getLy() > 0)  // way the actual content doesn't look trimmed.
+    //   ::makeChessBackground(icon->extract(bbox));
   } else
     icon->fill(TPixel32(255, 0, 0));
 
   return icon;
 }
-
 //-----------------------------------------------------------------------------
 
 TRaster32P IconGenerator::generateSplineFileIcon(const TFilePath &path,
@@ -1138,9 +1183,15 @@ TRaster32P IconGenerator::generateSceneFileIcon(const TFilePath &path,
         path.getParentDir() + "sceneIcons" + (path.getWideName() + L" .png");
     return generateRasterFileIcon(iconPath, iconSize, TFrameId::NO_FRAME);
   } else {
+    if (row < 0) row = 0;
     // obsolete
     ToonzScene scene;
-    scene.load(path);
+    try {
+      scene.load(path);
+    } catch (...) {
+      scene.clear();
+      return TRaster32P();
+    }
     XsheetIconRenderer ir("", iconSize, scene.getXsheet(), row);
     return ir.generateRaster(iconSize);
   }
@@ -1150,7 +1201,6 @@ TRaster32P IconGenerator::generateSceneFileIcon(const TFilePath &path,
 
 void FileIconRenderer::run() {
   TDimension iconSize(getIconSize());
-
   try {
     TRaster32P iconRaster;
     std::string type(m_path.getType());
@@ -1170,30 +1220,24 @@ void FileIconRenderer::run() {
       setIcon(rasterFromQImage(palette));
       return;
     } else if (type == "svg") {
-      QPixmap palette(svgToPixmap(":Resources/svg.svg",
-                                  QSize(iconSize.lx, iconSize.ly),
-                                  Qt::KeepAspectRatio));
-      setIcon(rasterFromQPixmap(palette));
+      QImage svg(getIconPath("svg_icon"));
+      setIcon(rasterFromQImage(svg));
       return;
     } else if (type == "tzu") {
       QImage palette(":Resources/tzuicon.png");
       setIcon(rasterFromQImage(palette));
       return;
     } else if (TFileType::getInfo(m_path) == TFileType::AUDIO_LEVEL) {
-      QPixmap loudspeaker(svgToPixmap(":Resources/audio.svg",
-                                      QSize(iconSize.lx, iconSize.ly),
-                                      Qt::KeepAspectRatio));
-      setIcon(rasterFromQPixmap(loudspeaker));
+      QImage loudspeaker(getIconPath("audio_icon"));
+      setIcon(rasterFromQImage(loudspeaker));
       return;
     } else if (type == "scr") {
       QImage screensaver(":Resources/savescreen.png");
       setIcon(rasterFromQImage(screensaver));
       return;
     } else if (type == "psd") {
-      QPixmap psdPath(svgToPixmap(":Resources/psd.svg",
-                                  QSize(iconSize.lx, iconSize.ly),
-                                  Qt::KeepAspectRatio));
-      setIcon(rasterFromQPixmap(psdPath));
+      QImage psdPath(getIconPath("psd_icon"));
+      setIcon(rasterFromQImage(psdPath));
       return;
     } else if (type == "mesh")
       iconRaster = IconGenerator::generateMeshFileIcon(m_path, iconSize, m_fid);
@@ -1201,72 +1245,56 @@ void FileIconRenderer::run() {
       iconRaster =
           IconGenerator::generateRasterFileIcon(m_path, iconSize, m_fid);
     else if (type == "mpath") {
-      QPixmap motionPath(svgToPixmap(":Resources/motionpath_fileicon.svg",
-                                     QSize(iconSize.lx, iconSize.ly),
-                                     Qt::KeepAspectRatio));
-      setIcon(rasterFromQPixmap(motionPath));
+      QImage motionPath(getIconPath("motionpath_icon"));
+      setIcon(rasterFromQImage(motionPath));
       return;
     } else if (type == "curve") {
-      QPixmap motionPath(svgToPixmap(":Resources/curve.svg",
-                                     QSize(iconSize.lx, iconSize.ly),
-                                     Qt::KeepAspectRatio));
-      setIcon(rasterFromQPixmap(motionPath));
+      QImage curve(getIconPath("curve_icon"));
+      setIcon(rasterFromQImage(curve));
       return;
     } else if (type == "cln") {
-      QPixmap motionPath(svgToPixmap(":Resources/cleanup.svg",
-                                     QSize(iconSize.lx, iconSize.ly),
-                                     Qt::KeepAspectRatio));
-      setIcon(rasterFromQPixmap(motionPath));
+      QImage cln(getIconPath("cleanup_icon"));
+      setIcon(rasterFromQImage(cln));
       return;
     } else if (type == "tnzbat") {
-      QPixmap motionPath(svgToPixmap(":Resources/tasklist.svg",
-                                     QSize(iconSize.lx, iconSize.ly),
-                                     Qt::KeepAspectRatio));
-      setIcon(rasterFromQPixmap(motionPath));
+      QImage tnzBat(getIconPath("tasklist_icon"));
+      setIcon(rasterFromQImage(tnzBat));
       return;
     } else if (type == "tls") {
-      QPixmap magpie(svgToPixmap(":Resources/magpie.svg",
-                                 QSize(iconSize.lx, iconSize.ly),
-                                 Qt::KeepAspectRatio));
-      setIcon(rasterFromQPixmap(magpie));
+      QImage tls(":Resources/magpie.svg");
+      setIcon(rasterFromQImage(tls));
       return;
     } else if (type == "xdts") {
-      QPixmap xdts(svgToPixmap(":Resources/xdts.svg",
-                               QSize(iconSize.lx, iconSize.ly),
-                               Qt::KeepAspectRatio));
-      setIcon(rasterFromQPixmap(xdts));
+      QImage xdts(getIconPath("xdts_icon"));
+      setIcon(rasterFromQImage(xdts));
       return;
     } else if (type == "js") {
-      QImage script(":Resources/scripticon.png");
+      QImage script(getIconPath("script_icon"));
       setIcon(rasterFromQImage(script));
+      return;
+    } else if (type == "json") {
+      QImage json(getIconPath("json_icon"));
+      setIcon(rasterFromQImage(json));
       return;
     }
 
     else {
-      QPixmap unknown(svgToPixmap(":Resources/unknown.svg",
-                                  QSize(iconSize.lx, iconSize.ly),
-                                  Qt::KeepAspectRatio));
-      setIcon(rasterFromQPixmap(unknown));
+      QImage unknown(getIconPath("unknown_icon"));
+      setIcon(rasterFromQImage(unknown));
       return;
     }
     if (!iconRaster) {
-      QPixmap broken(svgToPixmap(":Resources/broken.svg",
-                                 QSize(iconSize.lx, iconSize.ly),
-                                 Qt::KeepAspectRatio));
-      setIcon(rasterFromQPixmap(broken));
+      QImage broken(getIconPath("broken_icon"));
+      setIcon(rasterFromQImage(broken));
       return;
     }
     setIcon(iconRaster);
   } catch (const TImageVersionException &) {
-    QPixmap unknown(svgToPixmap(":Resources/unknown.svg",
-                                QSize(iconSize.lx, iconSize.ly),
-                                Qt::KeepAspectRatio));
-    setIcon(rasterFromQPixmap(unknown));
+    QImage unknown(getIconPath("unknown_icon"));
+    setIcon(rasterFromQImage(unknown));
   } catch (...) {
-    QPixmap broken(svgToPixmap(":Resources/broken.svg",
-                               QSize(iconSize.lx, iconSize.ly),
-                               Qt::KeepAspectRatio));
-    setIcon(rasterFromQPixmap(broken));
+    QImage broken(getIconPath("broken_icon"));
+    setIcon(rasterFromQImage(broken));
   }
 }
 
@@ -1327,6 +1355,16 @@ IconGenerator::~IconGenerator() {}
 //-----------------------------------------------------------------------------
 
 IconGenerator *IconGenerator::instance() {
+  bool isShellExtension = false;
+  if (QCoreApplication::instance()) {
+    if (QCoreApplication::applicationName() == "ToonzPreview") {
+      isShellExtension = true;
+    }
+  }
+  if (isShellExtension) {
+    static IconGenerator *_instance = new IconGenerator();
+    return _instance;
+  }
   static IconGenerator _instance;
   return &_instance;
 }
@@ -1344,15 +1382,27 @@ TDimension IconGenerator::getIconSize() const { return FilmstripIconSize; }
 //-----------------------------------------------------------------------------
 
 TOfflineGL *IconGenerator::getOfflineGLContext() {
+  TOfflineGL *context = m_contexts.localData();
   // One context per rendering thread
-  if (!m_contexts.hasLocalData()) {
-    TDimension contextSize(std::max(FilmstripIconSize.lx, IconSize.lx),
-                           std::max(FilmstripIconSize.ly, IconSize.ly));
-    m_contexts.setLocalData(new TOfflineGL(contextSize));
+  if (!context) {
+    context =
+        new TOfflineGL(TDimension(std::max(FilmstripIconSize.lx, IconSize.lx),
+                                  std::max(FilmstripIconSize.ly, IconSize.ly)));
+    m_contexts.setLocalData(context);
+    return context;
   }
-  return m_contexts.localData();
-}
+  TDimension requiredSize(std::max(FilmstripIconSize.lx, IconSize.lx),
+                          std::max(FilmstripIconSize.ly, IconSize.ly));
+  TDimension actualSize = context->getSize();
 
+  if (actualSize.lx < requiredSize.lx || actualSize.ly < requiredSize.ly) {
+    context = new TOfflineGL(requiredSize);
+
+    m_contexts.setLocalData(context);
+  }
+
+  return context;
+}
 //-----------------------------------------------------------------------------
 
 void IconGenerator::addTask(const std::string &id,
@@ -1435,6 +1485,94 @@ QPixmap IconGenerator::getIcon(TXshLevel *xl, const TFrameId &fid,
       addTask(id, new MeshImageIconRenderer(id, iconSize, sl, fid, m_settings));
       break;
     default:
+      addTask(id, new NoImageIconRenderer(id, iconSize));
+      break;
+    }
+
+    m_settings = oldSettings;
+  }
+
+  return QPixmap();
+}
+
+//-----------------------------------------------------------------------------
+
+QPixmap IconGenerator::getSizedIcon(TXshLevel *xl, const TFrameId &fid,
+                                    std::string newId, TDimension dim) {
+  if (!xl) return QPixmap();
+
+  if (TXshChildLevel *cl = xl->getChildLevel()) {
+    std::string id = XsheetIconRenderer::getId(cl, fid.getNumber() - 1);
+    QPixmap pix;
+    if (::getIcon(id, pix)) return pix;
+
+    // if (onDemand) return pix;
+
+    TDimension iconSize = TDimension(80, 60);
+    if (dim != TDimension(0, 0)) {
+      iconSize = dim;
+    }
+
+    // The icon must be calculated - add an IconRenderer task.
+    // storeIcon(id, QPixmap());   //It was automatically added by the former
+    // access
+    addTask(id, new XsheetIconRenderer(id, iconSize, cl->getXsheet()));
+  }
+
+  if (TXshSimpleLevel *sl = xl->getSimpleLevel()) {
+    // make thumbnails for cleanup preview and cameratest to be the same as
+    // normal TLV
+    std::string id;
+    int status = sl->getFrameStatus(fid);
+    if (sl->getType() == TZP_XSHLEVEL &&
+        status & TXshSimpleLevel::CleanupPreview) {
+      sl->setFrameStatus(fid, status & ~TXshSimpleLevel::CleanupPreview);
+      id = sl->getIconId(fid);
+      sl->setFrameStatus(fid, status);
+    } else
+      id = sl->getIconId(fid);
+
+    id += newId;
+
+    QPixmap pix;
+    if (::getIcon(id, pix, xl->getSimpleLevel())) return pix;
+
+    // if (onDemand) return pix;
+
+    IconGenerator::Settings oldSettings = m_settings;
+
+    // Disable transparency check for cast and xsheet icons
+    // if (!filmStrip) m_settings = IconGenerator::Settings();
+
+    TDimension iconSize = TDimension(80, 60);
+    if (dim != TDimension(0, 0)) {
+      iconSize = dim;
+    }
+
+    // storeIcon(id, QPixmap());
+
+    int type = sl->getType();
+    switch (type) {
+    case OVL_XSHLEVEL:
+    case TZI_XSHLEVEL:
+      addTask(id, new RasterImageIconRenderer(id, iconSize, sl, fid));
+      break;
+    case PLI_XSHLEVEL:
+      addTask(id,
+              new VectorImageIconRenderer(id, iconSize, sl, fid, m_settings));
+      break;
+    case TZP_XSHLEVEL:
+      // Yep, we could have rasters, due to a cleanupping process
+      if (status == TXshSimpleLevel::Scanned)
+        addTask(id, new RasterImageIconRenderer(id, iconSize, sl, fid));
+      else
+        addTask(id,
+                new ToonzImageIconRenderer(id, iconSize, sl, fid, m_settings));
+      break;
+    case MESH_XSHLEVEL:
+      addTask(id, new MeshImageIconRenderer(id, iconSize, sl, fid, m_settings));
+      break;
+    default:
       assert(false);
       break;
     }
@@ -1478,7 +1616,7 @@ void IconGenerator::invalidate(TXshLevel *xl, const TFrameId &fid,
                                             m_settings));
       break;
     default:
-      assert(false);
+      addTask(id, new NoImageIconRenderer(id, getIconSize()));
       break;
     }
 
@@ -1487,7 +1625,7 @@ void IconGenerator::invalidate(TXshLevel *xl, const TFrameId &fid,
     id += "_small";
     if (iconsMap.find(id) == iconsMap.end()) return;
 
-    // Not-filmstrip icons diable all checks
+    // Not-filmstrip icons disable all checks
     IconGenerator::Settings oldSettings = m_settings;
     m_settings.m_transparencyCheck      = false;
     m_settings.m_inkIndex               = -1;
@@ -1516,7 +1654,7 @@ void IconGenerator::invalidate(TXshLevel *xl, const TFrameId &fid,
                                             m_settings));
       break;
     default:
-      assert(false);
+      addTask(id, new NoImageIconRenderer(id, TDimension(80, 60)));
       break;
     }
 
