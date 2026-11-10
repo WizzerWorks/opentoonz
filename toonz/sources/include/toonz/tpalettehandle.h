@@ -27,7 +27,10 @@
 class DVAPI TPaletteHandle final : public QObject {
   Q_OBJECT
 
-  TPalette *m_palette;
+  // Ref-counted: the handle must keep its palette alive. A raw pointer dangled when the
+  // owner (e.g. CleanupParameters::m_cleanupPalette) replaced and freed the palette,
+  // crashing Cleanup Settings in CleanupPaletteViewer::buildGUI.
+  TPaletteP m_palette;
 
   int m_styleIndex;
   int m_styleParamIndex;

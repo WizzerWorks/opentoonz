@@ -52,7 +52,7 @@ public:
 //-----------------------------------------------------------------------------
 
 TPaletteHandle::TPaletteHandle()
-    : m_palette(nullptr), m_styleIndex(-1), m_styleParamIndex(-1) {
+    : m_palette(), m_styleIndex(-1), m_styleParamIndex(-1) {
   connectBroadcasts(this);
 }
 
@@ -62,7 +62,7 @@ TPaletteHandle::~TPaletteHandle() {}
 
 //-----------------------------------------------------------------------------
 
-TPalette *TPaletteHandle::getPalette() const { return m_palette; }
+TPalette *TPaletteHandle::getPalette() const { return m_palette.getPointer(); }
 
 //-----------------------------------------------------------------------------
 
@@ -141,7 +141,7 @@ void TPaletteHandle::setPalette(TPalette *palette, int styleIndex) {
       palette->setCurrentStyleId(styleIndex);
   }
 
-  if (m_palette == palette)
+  if (m_palette.getPointer() == palette)
     setStyleIndex(styleIndex);
   else {
     m_palette         = palette;
