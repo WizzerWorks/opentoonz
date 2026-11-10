@@ -10,9 +10,10 @@
 // SANE (Scanner Access Now Easy) driver. Built only when libsane is found
 // (HAVE_SANE). See doc/MLW_OpenToonz_Scanner-Arch.docx, section 6.
 //
-// Phase 2 status: device selection, option probing and single-sheet scans
-// (gray/colour/B&W, resolution, area, crop box). Brightness, contrast, the
-// feeder (ADF) and cancel during a scan come in phase 3.
+// Features: device selection, option probing, scans in gray / colour / B&W
+// (resolution, area, crop box, preview), brightness and threshold, flatbed
+// multi-sheet scans and the automatic document feeder, cancel while scanning.
+// Contrast is not offered (the settings popup has no control for it).
 class TScannerSane final : public TScanner {
 public:
   TScannerSane();

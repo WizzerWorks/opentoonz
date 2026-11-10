@@ -3,6 +3,7 @@
 #include "trasterimage.h"
 #include "traster.h"
 
+#include <QCoreApplication>
 #include <QSettings>
 #include <QString>
 
@@ -67,7 +68,9 @@ struct NumOpt {
 };
 
 struct Caps {
-  NumOpt resolution, tlx, tly, brx, bry;
+  NumOpt resolution, tlx, tly, brx, bry, brightness, threshold;
+  int sourceIndex = -1;
+  QString srcFlatbed, srcAdf;  // device spelling of the paper sources
   int modeIndex = -1;
   QString modeBW, modeGray, modeColor;  // device spelling of each mode
 };
@@ -120,6 +123,39 @@ void classifyMode(const QString &m, Caps &c) {
   if (slot && slot->isEmpty()) *slot = m;
 }
 
+void classifySource(const QString &m, Caps &c) {
+  QString l = m.toLower();
+  if (l.contains("flatbed")) {
+    if (c.srcFlatbed.isEmpty()) c.srcFlatbed = m;
+  } else if (l.contains("adf") || l.contains("feeder")) {
+    // prefer a simplex source over "ADF Duplex" / "ADF Back"
+    bool simplex = !l.contains("duplex") && !l.contains("back");
+    if (c.srcAdf.isEmpty() || (simplex && c.srcAdf.toLower().contains("duplex")))
+      c.srcAdf = m;
+  }
+}
+
+// Human readable explanation of a SANE status
+std::string describe(SANE_Status st) {
+  switch (st) {
+  case SANE_STATUS_ACCESS_DENIED:
+    return "access to the scanner was denied (check that your user is allowed "
+           "to use scanners, e.g. membership of the 'scanner' group)";
+  case SANE_STATUS_DEVICE_BUSY:
+    return "the scanner is busy";
+  case SANE_STATUS_COVER_OPEN:
+    return "the scanner cover is open";
+  case SANE_STATUS_JAMMED:
+    return "paper jam in the feeder";
+  case SANE_STATUS_NO_DOCS:
+    return "no paper in the feeder";
+  case SANE_STATUS_IO_ERROR:
+    return "communication error with the scanner";
+  default:
+    return sane_strstatus(st);
+  }
+}
+
 Caps probe(SANE_Handle h) {
   Caps c;
   const SANE_Option_Descriptor *d0 = sane_get_option_descriptor(h, 0);
@@ -142,7 +178,17 @@ Caps probe(SANE_Handle h) {
       c.brx = readNumOpt(d, i);
     else if (n == "br-y")
       c.bry = readNumOpt(d, i);
-    else if (n == "mode" && d->type == SANE_TYPE_STRING &&
+    else if (n == "brightness")
+      c.brightness = readNumOpt(d, i);
+    else if (n == "threshold")
+      c.threshold = readNumOpt(d, i);
+    else if (n == "source" && d->type == SANE_TYPE_STRING &&
+             d->constraint_type == SANE_CONSTRAINT_STRING_LIST &&
+             SANE_OPTION_IS_SETTABLE(d->cap)) {
+      c.sourceIndex = i;
+      for (const SANE_String_Const *s = d->constraint.string_list; s && *s; ++s)
+        classifySource(QString::fromUtf8(*s), c);
+    } else if (n == "mode" && d->type == SANE_TYPE_STRING &&
              d->constraint_type == SANE_CONSTRAINT_STRING_LIST &&
              SANE_OPTION_IS_SETTABLE(d->cap)) {
       c.modeIndex = i;
@@ -160,7 +206,7 @@ public:
     SANE_Status st = sane_open(name.toUtf8().constData(), &m_h);
     if (st != SANE_STATUS_GOOD)
       throw TException(std::string("Cannot open SANE device: ") +
-                       sane_strstatus(st));
+                       describe(st));
   }
   ~Device() {
     if (m_h) {
@@ -195,21 +241,27 @@ void setNumeric(SANE_Handle h, Caps &caps, const NumOpt &o, double value) {
       sane_control_option(h, o.index, SANE_ACTION_SET_VALUE, &w, &info);
   if (st != SANE_STATUS_GOOD)
     throw TException(std::string("Cannot set SANE option: ") +
-                     sane_strstatus(st));
+                     describe(st));
   if (info & SANE_INFO_RELOAD_OPTIONS) caps = probe(h);
 }
 
-void setMode(SANE_Handle h, Caps &caps, const QString &mode) {
+void setStringOption(SANE_Handle h, Caps &caps, int index,
+                     const QString &mode) {
   QByteArray b = mode.toUtf8();
   std::vector<char> buf(std::max<int>(b.size() + 1, 64), 0);
   memcpy(buf.data(), b.constData(), b.size());
   SANE_Int info = 0;
   SANE_Status st =
-      sane_control_option(h, caps.modeIndex, SANE_ACTION_SET_VALUE, buf.data(), &info);
+      sane_control_option(h, index, SANE_ACTION_SET_VALUE, buf.data(), &info);
   if (st != SANE_STATUS_GOOD)
-    throw TException(std::string("Cannot set SANE scan mode: ") +
-                     sane_strstatus(st));
+    throw TException(std::string("Cannot set a SANE option: ") +
+                     describe(st));
   if (info & SANE_INFO_RELOAD_OPTIONS) caps = probe(h);
+}
+
+// OpenToonz brightness/threshold use 0..255; map that onto the device range
+double fromUiRange(const NumOpt &o, double v) {
+  return o.min + std::min(std::max(v, 0.0), 255.0) / 255.0 * (o.max - o.min);
 }
 
 double getNumeric(SANE_Handle h, const NumOpt &o, double fallback) {
@@ -402,12 +454,23 @@ void TScannerSane::updateParameters(TScannerParameters &param) {
   } else
     param.m_dpi.m_supported = false;
 
-  // the threshold is applied by OpenToonz on a gray scan
+  // the threshold is applied by OpenToonz on a gray scan (or by the device in
+  // its own lineart mode); both use the 0..255 scale of the settings popup
   param.m_threshold.update(TScanParam(0.f, 255.f, 127.f, 1.f));
 
-  param.m_brightness.m_supported  = false;
-  param.m_contrast.m_supported    = false;
-  param.m_paperFeeder.m_supported = false;
+  // brightness is shown on a 0..255 scale and mapped onto the device range.
+  // There is no contrast control in the settings popup, so it is not offered.
+  if (caps.brightness.valid())
+    param.m_brightness.update(TScanParam(0.f, 255.f, 127.f, 1.f));
+  else
+    param.m_brightness.m_supported = false;
+  param.m_contrast.m_supported = false;
+
+  // automatic document feeder
+  if (!caps.srcAdf.isEmpty())
+    param.m_paperFeeder.update(TScanParam(0.f, 1.f, 0.f, 1.f));
+  else
+    param.m_paperFeeder.m_supported = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -420,6 +483,21 @@ void TScannerSane::acquire(const TScannerParameters &params, int paperCount) {
   Device dev(deviceToOpen());
   SANE_Handle h = dev.handle();
   Caps caps     = probe(h);
+
+  // paper source: flatbed, or the feeder (never for a preview)
+  const bool useFeeder =
+      params.isPaperFeederEnabled() && !caps.srcAdf.isEmpty() &&
+      !params.isPreview();
+  if (caps.sourceIndex >= 0) {
+    const QString &src = useFeeder ? caps.srcAdf : caps.srcFlatbed;
+    if (!src.isEmpty()) setStringOption(h, caps, caps.sourceIndex, src);
+  }
+  // The feeder shows a modal progress dialog with a Cancel button, so events
+  // must be processed while scanning for it to react. A flatbed scan has no
+  // dialog and the rest of the UI must not be re-entered, so it just blocks.
+  auto pump = [useFeeder]() {
+    if (useFeeder) QCoreApplication::processEvents();
+  };
 
   // pixel type
   QString mode;
@@ -443,7 +521,7 @@ void TScannerSane::acquire(const TScannerParameters &params, int paperCount) {
   }
   if (mode.isEmpty() || caps.modeIndex < 0)
     throw TException("The scanner does not support the selected scan mode");
-  setMode(h, caps, mode);
+  setStringOption(h, caps, caps.modeIndex, mode);
 
   // resolution (the device may round it)
   double dpi = params.m_dpi.m_supported ? params.m_dpi.m_value : 100;
@@ -461,13 +539,30 @@ void TScannerSane::acquire(const TScannerParameters &params, int paperCount) {
   setNumeric(h, caps, caps.brx, mmToDevice(caps.brx, region.x1, dpi));
   setNumeric(h, caps, caps.bry, mmToDevice(caps.bry, region.y1, dpi));
 
+  // brightness (left at the device default when the slider is centred) and,
+  // in the device's own lineart mode, the threshold
+  if (params.m_brightness.m_supported && caps.brightness.valid() &&
+      std::fabs(params.m_brightness.m_value - 127.5) > 1.0)
+    setNumeric(h, caps, caps.brightness,
+               fromUiRange(caps.brightness, params.m_brightness.m_value));
+  if (params.getScanType() == TScannerParameters::BW && !softwareThreshold &&
+      caps.threshold.valid())
+    setNumeric(h, caps, caps.threshold,
+               fromUiRange(caps.threshold, params.m_threshold.m_value));
+
   for (int i = 0; i < paperCount; ++i) {
     if (isScanningCanceled()) break;
 
+    pump();
+    if (isScanningCanceled()) break;
+
     SANE_Status st = sane_start(h);
-    if (st == SANE_STATUS_NO_DOCS) break;
+    if (st == SANE_STATUS_NO_DOCS) {
+      if (i == 0) throw TException("Nothing to scan: " + describe(st));
+      break;  // feeder emptied before paperCount sheets
+    }
     if (st != SANE_STATUS_GOOD)
-      throw TException(std::string("Cannot start scan: ") + sane_strstatus(st));
+      throw TException(std::string("Cannot start scan: ") + describe(st));
 
     Image img;
     st = sane_get_parameters(h, &img.p);
@@ -482,6 +577,7 @@ void TScannerSane::acquire(const TScannerParameters &params, int paperCount) {
     // read until EOF; the height may be unknown (lines == -1)
     std::vector<unsigned char> chunk(1 << 16);
     for (;;) {
+      pump();
       if (isScanningCanceled()) {
         sane_cancel(h);
         return;
@@ -493,7 +589,7 @@ void TScannerSane::acquire(const TScannerParameters &params, int paperCount) {
       if (st != SANE_STATUS_GOOD) {
         sane_cancel(h);
         throw TException(std::string("Error reading image data: ") +
-                         sane_strstatus(st));
+                         describe(st));
       }
     }
     sane_cancel(h);
@@ -545,6 +641,10 @@ void TScannerSane::acquire(const TScannerParameters &params, int paperCount) {
     rasImg->setSavebox(ras->getBounds());
     notifyImageDone(rasImg);
 
-    if (paperCount - i > 1) notifyNextPaper();
+    // feeder: the next sheet is fetched automatically; flatbed: ask the user
+    if (useFeeder)
+      notifyAutomaticallyNextPaper();
+    else if (paperCount - i > 1)
+      notifyNextPaper();
   }
 }
