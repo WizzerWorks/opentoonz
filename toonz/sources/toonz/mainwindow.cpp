@@ -4,6 +4,7 @@
 
 // Tnz6 includes
 #include "menubar.h"
+#include "tscanner.h"
 #include "menubarcommandids.h"
 #include "xsheetviewer.h"
 #include "viewerpane.h"
@@ -2115,10 +2116,12 @@ void MainWindow::defineActions() {
                          MenuScanCleanupCommandType, "set_cropbox");
   SetScanCropboxCheck::instance()->setToggle(menuAct);
   QString scannerType = QSettings().value("CurrentScannerType").toString();
-  if (scannerType == "TWAIN") menuAct->setDisabled(true);
+  if (TScanner::typeHasOwnUI(TScanner::typeFromName(scannerType)))
+    menuAct->setDisabled(true);
   menuAct = createMenuScanCleanupAction(
       MI_ResetScanCropbox, QT_TR_NOOP("&Reset Cropbox"), "", "reset_cropbox");
-  if (scannerType == "TWAIN") menuAct->setDisabled(true);
+  if (TScanner::typeHasOwnUI(TScanner::typeFromName(scannerType)))
+    menuAct->setDisabled(true);
   createMenuScanCleanupAction(MI_CleanupSettings,
                               QT_TR_NOOP("&Cleanup Settings..."), "",
                               "cleanup_settings");

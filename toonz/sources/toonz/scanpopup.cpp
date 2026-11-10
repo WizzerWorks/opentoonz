@@ -71,16 +71,16 @@ bool defineScanner(const QString &scannerType) {
   bool ret = false;
   QApplication::setOverrideCursor(Qt::WaitCursor);
 
-  TScanner::m_isTwain = (scannerType == "TWAIN");
-  TScanner::m_isSane  = (scannerType == "SANE");
+  TScanner::setScannerType(TScanner::typeFromName(scannerType));
 
   try {
     if (!TScanner::instance()->isDeviceAvailable()) {
-      DVGui::warning(TScanner::m_isTwain
-                         ? QObject::tr("No TWAIN scanner is available")
-                         : TScanner::m_isSane
-                               ? QObject::tr("No SANE scanner is available")
-                               : QObject::tr("No scanner is available"));
+      DVGui::warning(
+          TScanner::scannerType() == TScanner::Twain
+              ? QObject::tr("No TWAIN scanner is available")
+              : TScanner::scannerType() == TScanner::Sane
+                    ? QObject::tr("No SANE scanner is available")
+                    : QObject::tr("No scanner is available"));
       /* FIXME: try/catch からの goto
 って合法じゃないだろ……。とりあえず応急処置したところ"例外ってナニ?"って感じになったのが
 indent も腐っておりつらいので後で直す */
@@ -122,12 +122,37 @@ indent も腐っておりつらいので後で直す */
 
 //-----------------------------------------------------------------------------
 
+// Driver used when the user has not chosen one. The Epson "Internal" driver
+// only works on Windows; elsewhere prefer SANE when it was built in.
+QString defaultScannerType() {
+#ifndef _WIN32
+  if (TScanner::isSaneBuiltIn()) return "SANE";
+#endif
+  return "Internal";
+}
+
+//-----------------------------------------------------------------------------
+
+// Message for a scanner that is not reachable, appropriate for the driver
+QString scannerNotAvailableMessage() {
+  switch (TScanner::scannerType()) {
+  case TScanner::Twain:
+    return QObject::tr("TWAIN is not available.");
+  case TScanner::Sane:
+    return QObject::tr("SANE is not available.");
+  default:
+    return QObject::tr("The scanner is not available.");
+  }
+}
+
+//-----------------------------------------------------------------------------
+
 bool checkScannerDefinition() {
   if (!ScannerHasBeenDefined) {
     QString scannerType = QSettings().value("CurrentScannerType").toString();
     if (scannerType == "") {
-      QSettings().setValue("CurrentScannerType", "Internal");
-      scannerType = "Internal";
+      scannerType = defaultScannerType();
+      QSettings().setValue("CurrentScannerType", scannerType);
     }
     ScannerHasBeenDefined = defineScanner(scannerType);
   }
@@ -276,10 +301,8 @@ void DefineScannerPopup::accept() {
         CommandManager::instance()->getAction("MI_SetScanCropbox");
     QAction *resetCropAction =
         CommandManager::instance()->getAction("MI_ResetScanCropbox");
-    if (scannerType == "TWAIN")
-      setCropAction->setDisabled(true);
-    else
-      setCropAction->setDisabled(false);
+    setCropAction->setDisabled(
+        TScanner::typeHasOwnUI(TScanner::typeFromName(scannerType)));
     resetCropAction->setDisabled(true);
   }
   QDialog::accept();
@@ -497,7 +520,7 @@ void ScanSettingsPopup::updateUI() {
   } else
     m_dpi->hide(), m_dpiLbl->hide();
 
-  if (TScanner::m_isTwain) {
+  if (scanner && scanner->hasOwnUI()) {
     m_paperFeederCB->hide();
     m_modeOm->hide(), m_modeLbl->hide();
     m_paperFormatOm->hide(), m_formatLbl->hide();
@@ -807,7 +830,7 @@ void MyScannerListener::onError() {
 
 void MyScannerListener::onNextPaper() {
   assert(!m_isPreview);
-  if (TScanner::instance()->m_isTwain)
+  if (TScanner::instance()->hasOwnUI())
     DVGui::info(
         tr("Please, place the next paper drawing on the scanner flatbed, then "
            "select the relevant command in the TWAIN interface."));
@@ -878,7 +901,7 @@ static void doScan() {
 
     int rc = scanner->isDeviceAvailable();
     if (!rc) {
-      DVGui::warning(QObject::tr("TWAIN is not available."));
+      DVGui::warning(scannerNotAvailableMessage());
       return;
     }
 
@@ -977,7 +1000,7 @@ public:
 
       int rc = scanner->isDeviceAvailable();
       if (!rc) {
-        DVGui::warning(QObject::tr("TWAIN is not available."));
+        DVGui::warning(scannerNotAvailableMessage());
         return;
       }
 

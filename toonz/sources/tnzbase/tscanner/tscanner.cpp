@@ -313,8 +313,32 @@ TScanner *instanceSane  = 0;
 
 //-------------------------------------------------------------------
 
-bool TScanner::m_isTwain = true;
-bool TScanner::m_isSane  = false;
+namespace {
+TScanner::ScannerType currentType = TScanner::Twain;
+}
+
+TScanner::ScannerType TScanner::scannerType() { return currentType; }
+
+void TScanner::setScannerType(ScannerType type) { currentType = type; }
+
+TScanner::ScannerType TScanner::typeFromName(const QString &name) {
+  if (name == "TWAIN") return Twain;
+  if (name == "SANE") return Sane;
+  return Internal;
+}
+
+QString TScanner::typeName(ScannerType type) {
+  switch (type) {
+  case Twain:
+    return "TWAIN";
+  case Sane:
+    return "SANE";
+  default:
+    return "Internal";
+  }
+}
+
+bool TScanner::typeHasOwnUI(ScannerType type) { return type == Twain; }
 
 //-------------------------------------------------------------------
 
@@ -387,32 +411,24 @@ TScanner *TScanner::instance() {
   static TScannerDummy dummy = TScannerDummy();
   return &dummy;
 #else
+  // Release whichever drivers are not the current one.
+  if (currentType != Internal && instanceEpson)
+    static_cast<TScannerEpson *>(instanceEpson)->closeIO();
+  if (currentType != Twain && instanceTwain) TTWAIN_CloseAll(0);
+
+  switch (currentType) {
+  case Twain:
+    if (!instanceTwain) instanceTwain = new TScannerTwain();
+    return instanceTwain;
 #ifdef HAVE_SANE
-  if (m_isSane) {
-    if (instanceEpson) static_cast<TScannerEpson *>(instanceEpson)->closeIO();
-    if (instanceTwain) TTWAIN_CloseAll(0);
+  case Sane:
     if (!instanceSane) instanceSane = new TScannerSane();
     return instanceSane;
-  }
 #endif
-  if (m_isTwain) {
-    if (instanceEpson) {
-      TScannerEpson *se = (TScannerEpson *)instanceEpson;
-      se->closeIO();
-      // delete m_instanceEpson; //e' singletone, perche' buttarlo? (vinz)
-      // m_instanceEpson=0;
-    }
-    if (!instanceTwain) instanceTwain = new TScannerTwain();
-  } else if (!m_isTwain) {
-    if (instanceTwain) {
-      // delete m_instanceTwain;  //e' singletone, perche' buttarlo? (vinz)
-      // m_instanceTwain=0;
-      TTWAIN_CloseAll(0);
-    }
+  default:
     if (!instanceEpson) instanceEpson = new TScannerEpson();
+    return instanceEpson;
   }
-
-  return (m_isTwain ? instanceTwain : instanceEpson);
 #endif
 }
 

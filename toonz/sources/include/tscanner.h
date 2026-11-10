@@ -173,8 +173,20 @@ public:
   TScanner();
   virtual ~TScanner();
 
-  static bool m_isTwain;  // brutto, brutto :(
-  static bool m_isSane;   // true when the SANE driver is the current one
+  // The available drivers. The current one is process-global and selects what
+  // instance() returns.
+  enum ScannerType { Twain, Internal, Sane };
+  static ScannerType scannerType();
+  static void setScannerType(ScannerType type);
+  // Persistent name of a driver ("TWAIN", "Internal", "SANE"); unknown names
+  // map to Internal.
+  static ScannerType typeFromName(const QString &name);
+  static QString typeName(ScannerType type);
+  // True if the driver shows its own scanning dialog (TWAIN), so OpenToonz
+  // does not offer its own mode/paper/threshold/brightness controls nor the
+  // crop-box preview.
+  static bool typeHasOwnUI(ScannerType type);
+  bool hasOwnUI() const { return typeHasOwnUI(scannerType()); }
   // SANE support is optional (HAVE_SANE); these are always declared so the UI
   // does not need to know how tnzbase was built.
   static bool isSaneBuiltIn();
