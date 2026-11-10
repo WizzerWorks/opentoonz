@@ -15,6 +15,8 @@ class CheckBox;
 }
 
 class QComboBox;
+class QPushButton;
+class QWidget;
 class ProgressDialog;
 
 //=============================================================================
@@ -49,12 +51,18 @@ protected slots:
 class DefineScannerPopup final : public DVGui::Dialog {
   Q_OBJECT
   QComboBox *m_scanDriverOm;
+  QComboBox *m_saneDeviceOm;
+  QPushButton *m_saneRefreshBtn;
+  QWidget *m_saneRow;
+  QLabel *m_saneLabel;
 
 public:
   DefineScannerPopup();
 
 public slots:
   void accept() override;
+  void onDriverChanged();
+  void refreshSaneDevices();
 };
 
 //=============================================================================

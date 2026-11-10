@@ -6,6 +6,7 @@
 #include "trasterimage.h"
 #include <set>
 #include <QString>
+#include <QStringList>
 #undef DVAPI
 #undef DVVAR
 #ifdef TNZBASE_EXPORTS
@@ -173,6 +174,11 @@ public:
   virtual ~TScanner();
 
   static bool m_isTwain;  // brutto, brutto :(
+  static bool m_isSane;   // true when the SANE driver is the current one
+  // SANE support is optional (HAVE_SANE); these are always declared so the UI
+  // does not need to know how tnzbase was built.
+  static bool isSaneBuiltIn();
+  static QStringList saneDevices();  // names reported by sane_get_devices()
   static TScanner *instance();
 
   virtual void selectDevice()      = 0;

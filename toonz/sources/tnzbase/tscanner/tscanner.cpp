@@ -4,6 +4,9 @@
 #include "tscannertwain.h"
 #include "texception.h"
 #include "tscannerepson.h"
+#ifdef HAVE_SANE
+#include "tscannersane.h"
+#endif
 #include "tstream.h"
 #include "tconvert.h"
 #include "tfilepath.h"
@@ -305,11 +308,33 @@ void TScannerParameters::loadData(TIStream &is) {
 namespace {
 TScanner *instanceTwain = 0;
 TScanner *instanceEpson = 0;
+TScanner *instanceSane  = 0;
 }
 
 //-------------------------------------------------------------------
 
 bool TScanner::m_isTwain = true;
+bool TScanner::m_isSane  = false;
+
+//-------------------------------------------------------------------
+
+bool TScanner::isSaneBuiltIn() {
+#ifdef HAVE_SANE
+  return true;
+#else
+  return false;
+#endif
+}
+
+//-------------------------------------------------------------------
+
+QStringList TScanner::saneDevices() {
+#ifdef HAVE_SANE
+  return TScannerSane::listDevices();
+#else
+  return QStringList();
+#endif
+}
 
 //-------------------------------------------------------------------
 
@@ -362,6 +387,14 @@ TScanner *TScanner::instance() {
   static TScannerDummy dummy = TScannerDummy();
   return &dummy;
 #else
+#ifdef HAVE_SANE
+  if (m_isSane) {
+    if (instanceEpson) static_cast<TScannerEpson *>(instanceEpson)->closeIO();
+    if (instanceTwain) TTWAIN_CloseAll(0);
+    if (!instanceSane) instanceSane = new TScannerSane();
+    return instanceSane;
+  }
+#endif
   if (m_isTwain) {
     if (instanceEpson) {
       TScannerEpson *se = (TScannerEpson *)instanceEpson;

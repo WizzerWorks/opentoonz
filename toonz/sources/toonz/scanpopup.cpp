@@ -72,12 +72,15 @@ bool defineScanner(const QString &scannerType) {
   QApplication::setOverrideCursor(Qt::WaitCursor);
 
   TScanner::m_isTwain = (scannerType == "TWAIN");
+  TScanner::m_isSane  = (scannerType == "SANE");
 
   try {
     if (!TScanner::instance()->isDeviceAvailable()) {
       DVGui::warning(TScanner::m_isTwain
                          ? QObject::tr("No TWAIN scanner is available")
-                         : QObject::tr("No scanner is available"));
+                         : TScanner::m_isSane
+                               ? QObject::tr("No SANE scanner is available")
+                               : QObject::tr("No scanner is available"));
       /* FIXME: try/catch からの goto
 って合法じゃないだろ……。とりあえず応急処置したところ"例外ってナニ?"って感じになったのが
 indent も腐っておりつらいので後で直す */
@@ -192,10 +195,34 @@ DefineScannerPopup::DefineScannerPopup()
   m_scanDriverOm->setFixedSize(150, WidgetHeight);
   m_scanDriverOm->addItem(tr("TWAIN"), "TWAIN");
   m_scanDriverOm->addItem(tr("Internal"), "Internal");
+  if (TScanner::isSaneBuiltIn()) m_scanDriverOm->addItem(tr("SANE"), "SANE");
   addWidget(tr("Scanner Driver:"), m_scanDriverOm);
 
-  if (QSettings().value("CurrentScannerType").toString() == "Internal")
-    m_scanDriverOm->setCurrentIndex(m_scanDriverOm->findData("Internal"));
+  QString currentType = QSettings().value("CurrentScannerType").toString();
+  if (currentType == "Internal" || currentType == "SANE")
+    m_scanDriverOm->setCurrentIndex(m_scanDriverOm->findData(currentType));
+
+  // SANE device chooser (only meaningful for the SANE driver)
+  m_saneDeviceOm = new QComboBox();
+  m_saneDeviceOm->setFixedSize(300, WidgetHeight);
+  m_saneRefreshBtn = new QPushButton(tr("Refresh"));
+  QWidget *saneRow = new QWidget();
+  QHBoxLayout *saneLay = new QHBoxLayout(saneRow);
+  saneLay->setContentsMargins(0, 0, 0, 0);
+  saneLay->addWidget(m_saneDeviceOm);
+  saneLay->addWidget(m_saneRefreshBtn);
+  saneLay->addStretch();
+  saneRow->setFixedHeight(WidgetHeight);
+  m_saneLabel = new QLabel(tr("SANE Device:"));
+  m_saneLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+  m_saneLabel->setFixedSize(m_labelWidth, WidgetHeight);
+  addWidgets(m_saneLabel, saneRow);
+  m_saneRow = saneRow;
+  connect(m_saneRefreshBtn, SIGNAL(clicked()), this, SLOT(refreshSaneDevices()));
+  connect(m_scanDriverOm, SIGNAL(currentIndexChanged(int)), this,
+          SLOT(onDriverChanged()));
+  refreshSaneDevices();
+  onDriverChanged();
 
   QPushButton *okBtn = new QPushButton(tr("OK"), this);
   okBtn->setDefault(true);
@@ -208,8 +235,38 @@ DefineScannerPopup::DefineScannerPopup()
 
 //-----------------------------------------------------------------------------
 
+void DefineScannerPopup::onDriverChanged() {
+  bool isSane = m_scanDriverOm->currentData().toString() == "SANE";
+  m_saneRow->setVisible(isSane);
+  m_saneLabel->setVisible(isSane);
+}
+
+//-----------------------------------------------------------------------------
+
+// Re-queries SANE (may take a few seconds with network backends)
+void DefineScannerPopup::refreshSaneDevices() {
+  if (!TScanner::isSaneBuiltIn()) return;
+  QApplication::setOverrideCursor(Qt::WaitCursor);
+  QString wanted = m_saneDeviceOm->count() ? m_saneDeviceOm->currentText()
+                                           : QSettings()
+                                                 .value("CurrentSaneDevice")
+                                                 .toString();
+  m_saneDeviceOm->clear();
+  m_saneDeviceOm->addItems(TScanner::saneDevices());
+  int idx = m_saneDeviceOm->findText(wanted);
+  if (idx >= 0) m_saneDeviceOm->setCurrentIndex(idx);
+  QApplication::restoreOverrideCursor();
+}
+
+//-----------------------------------------------------------------------------
+
 void DefineScannerPopup::accept() {
   QString scannerType = m_scanDriverOm->currentData().toString();
+
+  if (scannerType == "SANE") {
+    QSettings().setValue("CurrentSaneDevice", m_saneDeviceOm->currentText());
+    ScannerHasBeenDefined = false;  // device may have changed: redefine
+  }
 
   if (QSettings().value("CurrentScannerType").toString() != scannerType ||
       !ScannerHasBeenDefined) {
