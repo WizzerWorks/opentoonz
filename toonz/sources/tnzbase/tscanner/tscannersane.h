@@ -10,8 +10,9 @@
 // SANE (Scanner Access Now Easy) driver. Built only when libsane is found
 // (HAVE_SANE). See doc/MLW_OpenToonz_Scanner-Arch.docx, section 6.
 //
-// Phase 0 status: device enumeration and selection only. updateParameters()
-// and acquire() are stubs that are completed in later phases.
+// Phase 2 status: device selection, option probing and single-sheet scans
+// (gray/colour/B&W, resolution, area, crop box). Brightness, contrast, the
+// feeder (ADF) and cancel during a scan come in phase 3.
 class TScannerSane final : public TScanner {
 public:
   TScannerSane();
