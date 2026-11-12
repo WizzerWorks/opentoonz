@@ -21,12 +21,24 @@ const char *SettingsKey = "CurrentSaneDevice";
 bool saneInitialized = false;
 bool deviceSelected  = false;
 
+// sane_exit() must run while the application is still alive: backends are dlopen()ed and
+// use their own statics/atexit-style cleanup lists (e.g. genesys), which are already gone
+// by the time TScanner's static Cleaner runs during C++ static destruction (SIGSEGV at
+// exit). It is registered as a Qt post routine, which runs when the QCoreApplication is
+// destroyed, i.e. before static destruction.
+void shutdownSane() {
+  if (!saneInitialized) return;
+  saneInitialized = false;
+  sane_exit();
+}
+
 // sane_init() must be called once per process, sane_exit() at the end.
 bool ensureInit() {
   if (saneInitialized) return true;
   SANE_Int version = 0;
   if (sane_init(&version, nullptr) != SANE_STATUS_GOOD) return false;
   saneInitialized = true;
+  qAddPostRoutine(shutdownSane);
   return true;
 }
 
@@ -361,10 +373,9 @@ TScannerSane::TScannerSane() {}
 //-----------------------------------------------------------------------------
 
 TScannerSane::~TScannerSane() {
-  if (saneInitialized) {
-    sane_exit();
-    saneInitialized = false;
-  }
+  // Intentionally does not call sane_exit(): this runs during static destruction, too late
+  // for SANE backends (see shutdownSane()). If no QCoreApplication ever ran the post
+  // routine, the OS reclaims everything at process exit.
 }
 
 //-----------------------------------------------------------------------------
