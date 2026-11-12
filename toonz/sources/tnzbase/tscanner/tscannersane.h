@@ -8,7 +8,7 @@
 #include <QStringList>
 
 // SANE (Scanner Access Now Easy) driver. Built only when libsane is found
-// (HAVE_SANE). See doc/MLW_OpenToonz_Scanner-Arch.docx, section 6.
+// (HAVE_SANE). See doc/MLW_OpenToonz_Scanner-Proposal.docx, section 6 (design) and doc/MLW_OpenToonz_Scanner-Arch.docx (as built).
 //
 // Features: device selection, option probing, scans in gray / colour / B&W
 // (resolution, area, crop box, preview), brightness and threshold, flatbed
